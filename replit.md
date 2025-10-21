@@ -4,22 +4,29 @@
 Plataforma educacional completa para preparação do ENEM com gestão de tarefas, envio de trabalhos, avaliações e acompanhamento de estudantes. Sistema multi-usuário com três tipos de acesso: Aluno, Professor e Administrador.
 
 ## Current State
-- **Phase**: MVP Development - Task 1 Complete (Schema & Frontend)
-- **Status**: Frontend components built with Firebase integration setup
-- **Last Updated**: January 2025
+- **Phase**: MVP Complete - Ready for Deployment
+- **Status**: All features implemented with security hardening complete
+- **Last Updated**: October 2025
 
-## Recent Changes
+## Recent Changes (October 2025)
+**Security Hardening Complete:**
+- ✅ Restricted self-registration to "aluno" accounts only (prevents privilege escalation)
+- ✅ Added null guards to all Firestore and Storage helper functions
+- ✅ Implemented professor-to-assignment access control in Firestore and Storage
+- ✅ Fixed cross-class data exposure in entregas submissions
+- ✅ Validated all security rules with architect review
+- ✅ Updated FIREBASE_SETUP.md with bootstrap admin instructions
+- ✅ Removed user type selector from registration form
+- ✅ Enhanced file upload validation with proper error handling
+
+**Previous Implementation:**
 - Created complete data model for usuarios, tarefas, entregas, and turmas
 - Implemented Firebase authentication with Google and email/password
 - Built all main dashboards (Student, Teacher, Admin) with full UI
 - Added theme toggle (dark/light mode)
 - Implemented file upload system for assignments and submissions
 - Created reusable components (StatusBadge, FileUploadZone, ThemeToggle, ProtectedRoute)
-- Hardened Firestore security rules with proper authentication and null guards
-- Added comprehensive file upload validation (size, type, role-based)
-- Implemented error handling with toast notifications for file uploads
 - Created deployment documentation (FIREBASE_SETUP.md)
-- Added Storage security rules with 10MB file size limits
 
 ## Project Architecture
 
@@ -194,14 +201,48 @@ Required secrets (configured in Replit Secrets):
 - `VITE_FIREBASE_PROJECT_ID`
 - `SESSION_SECRET`
 
-## Next Steps
-1. Backend implementation (Firebase rules, indexes)
-2. Integration testing and bug fixes
-3. Error handling improvements
-4. Loading states refinement
-5. File upload validation
-6. Email notifications for assignments
-7. Performance optimization
+## Security Model
+
+### User Account Creation
+**Important:** For security reasons, self-registration creates "aluno" (student) accounts only.
+
+- **Self-Registration**: Creates aluno accounts automatically
+- **Professor/Admin Accounts**: Must be created by existing administrators
+- **First Admin Bootstrap**: Register as aluno, then manually upgrade in Firebase Console (see FIREBASE_SETUP.md)
+
+### Firestore Security Rules
+- **usuarios**: Self-signup as aluno only; admins can create any type; no privilege escalation
+- **tarefas**: Professors can only manage their own assignments
+- **entregas**: Students can submit; professors can grade only their own assignment submissions
+- **turmas**: Read-only for all; admins can create/update
+- **Null Guards**: All helper functions check document existence before data access
+
+### Storage Security Rules
+- **tarefas/**: Professors upload their own attachments; all authenticated users can read (educational materials)
+- **entregas/**: Students upload to their own folders; professors can access only submissions for their assignments
+- **File Limits**: 10MB maximum per file; validated client and server-side
+- **Null Guards**: All helper functions check user document existence
+
+## Deployment Checklist
+1. ✅ Configure Firebase project (see FIREBASE_SETUP.md)
+2. ✅ Add environment secrets in Replit (VITE_FIREBASE_*)
+3. ✅ Deploy Firestore security rules
+4. ✅ Deploy Storage security rules
+5. ✅ Enable Authentication providers (Email/Password, Google)
+6. ✅ Create first admin user (bootstrap process)
+7. ✅ Test all user flows (student, teacher, admin)
+8. ✅ Verify file uploads work correctly
+9. ✅ Test dark mode and responsive layouts
+
+## Future Enhancements
+1. Email notifications for new assignments and grades
+2. Assignment templates for teachers
+3. Bulk grading interface
+4. Student progress analytics
+5. Assignment categories and tags
+6. File preview in-app (PDF viewer)
+7. Mobile app version
+8. Export grades to CSV/Excel
 
 ## Development Guidelines
 - Follow design_guidelines.md for all UI implementations
