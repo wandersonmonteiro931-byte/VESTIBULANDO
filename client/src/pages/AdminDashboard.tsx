@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { collection, getDocs, addDoc, updateDoc, doc, deleteDoc } from "firebase/firestore";
+import { collection, getDocs, addDoc, updateDoc, doc, deleteDoc, setDoc } from "firebase/firestore";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -67,7 +67,7 @@ export default function AdminDashboard() {
     queryKey: ["/api/usuarios"],
     queryFn: async () => {
       const snapshot = await getDocs(collection(db, "usuarios"));
-      return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as User));
+      return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as any));
     },
   });
 
@@ -95,6 +95,60 @@ export default function AdminDashboard() {
     },
   });
 
+  const { data: pendingUsers, isLoading: loadingPendingUsers } = useQuery({
+    queryKey: ["/api/usuarios/pendentes"],
+    queryFn: async () => {
+      const snapshot = await getDocs(collection(db, "usuarios"));
+      return snapshot.docs
+        .map(doc => ({ ...doc.data(), id: doc.id, docId: doc.id } as any))
+        .filter((user: any) => user.status === "pendente");
+    },
+  });
+
+  const approveUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const userRef = doc(db, "usuarios", userId);
+      await updateDoc(userRef, { status: "aprovado" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/usuarios/pendentes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
+      toast({
+        title: "Conta aprovada!",
+        description: "O usuário agora pode acessar a plataforma.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao aprovar conta",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const rejectUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const userRef = doc(db, "usuarios", userId);
+      await updateDoc(userRef, { status: "reprovado" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/usuarios/pendentes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
+      toast({
+        title: "Conta reprovada",
+        description: "O usuário não poderá acessar a plataforma.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao reprovar conta",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const createUserMutation = useMutation({
     mutationFn: async (data: z.infer<typeof userFormSchema>) => {
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
@@ -106,9 +160,10 @@ export default function AdminDashboard() {
         tipo: data.tipo,
         turma: data.tipo === "aluno" ? data.turma : undefined,
         ativo: true,
+        status: "aprovado",
       };
       
-      await addDoc(collection(db, "usuarios"), userData);
+      await setDoc(doc(db, "usuarios", userCredential.user.uid), userData);
       
       await auth.signOut();
       
@@ -185,6 +240,7 @@ export default function AdminDashboard() {
     totalUsers: users?.length || 0,
     alunos: users?.filter(u => u.tipo === "aluno").length || 0,
     professores: users?.filter(u => u.tipo === "professor").length || 0,
+    pendentes: pendingUsers?.length || 0,
     tarefas: tarefas?.length || 0,
     entregas: entregas?.length || 0,
     turmas: turmas?.length || 0,
@@ -260,11 +316,92 @@ export default function AdminDashboard() {
           </Card>
         </div>
 
-        <Tabs defaultValue="usuarios" className="space-y-4">
+        <Tabs defaultValue="aprovacoes" className="space-y-4">
           <TabsList>
+            <TabsTrigger value="aprovacoes" data-testid="tab-aprovacoes">
+              Aprovações
+              {pendingUsers && pendingUsers.length > 0 && (
+                <Badge variant="destructive" className="ml-2">{pendingUsers.length}</Badge>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="usuarios" data-testid="tab-usuarios">Usuários</TabsTrigger>
             <TabsTrigger value="turmas" data-testid="tab-turmas">Turmas</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="aprovacoes" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-xl font-semibold">Aprovar Contas Pendentes</h3>
+              <Badge variant="secondary">{pendingUsers?.length || 0} pendente(s)</Badge>
+            </div>
+
+            <Card>
+              <CardContent className="p-0">
+                {loadingPendingUsers ? (
+                  <div className="p-8">
+                    <Skeleton className="h-12 w-full mb-4" />
+                    <Skeleton className="h-12 w-full mb-4" />
+                    <Skeleton className="h-12 w-full" />
+                  </div>
+                ) : pendingUsers && pendingUsers.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nome</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead>Turma</TableHead>
+                          <TableHead className="text-right">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {pendingUsers.map((user) => (
+                          <TableRow key={user.uid} data-testid={`row-pending-${user.uid}`}>
+                            <TableCell className="font-medium">{user.nome}</TableCell>
+                            <TableCell>{user.email}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{user.tipo}</Badge>
+                            </TableCell>
+                            <TableCell>{user.turma || "-"}</TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  onClick={() => approveUserMutation.mutate(user.docId)}
+                                  disabled={approveUserMutation.isPending || rejectUserMutation.isPending}
+                                  data-testid="button-approve"
+                                >
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  Aprovar
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => rejectUserMutation.mutate(user.docId)}
+                                  disabled={approveUserMutation.isPending || rejectUserMutation.isPending}
+                                  data-testid="button-reject"
+                                >
+                                  <XCircle className="h-4 w-4 mr-1" />
+                                  Reprovar
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <CheckCircle className="h-16 w-16 text-green-600 mb-4" />
+                    <p className="text-lg font-medium mb-2">Nenhuma conta pendente</p>
+                    <p className="text-sm text-muted-foreground">Todas as contas foram revisadas</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="usuarios" className="space-y-4">
             <div className="flex justify-between items-center">
