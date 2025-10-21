@@ -188,6 +188,9 @@ export default function Login() {
           return;
         }
         
+        console.log("Dados do usuário:", userData);
+        console.log("Tipo do usuário:", userData.tipo);
+        
         await refreshUserData();
         
         toast({
@@ -195,7 +198,9 @@ export default function Login() {
           description: "Bem-vindo de volta!",
         });
         
+        console.log("Redirecionando para:", userData.tipo);
         redirectByUserType(userData.tipo);
+        console.log("Redirecionamento executado");
       }
     } catch (error: any) {
       let message = "Ocorreu um erro. Tente novamente.";
