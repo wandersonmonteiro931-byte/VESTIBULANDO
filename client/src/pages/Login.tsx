@@ -198,10 +198,6 @@ export default function Login() {
         redirectByUserType(userData.tipo);
       }
     } catch (error: any) {
-      console.error("Erro completo:", error);
-      console.error("Código do erro:", error.code);
-      console.error("Mensagem do erro:", error.message);
-      
       let message = "Ocorreu um erro. Tente novamente.";
       if (error.code === "auth/email-already-in-use") {
         message = "Este email já está em uso";
@@ -213,8 +209,6 @@ export default function Login() {
         message = "Email ou senha incorretos";
       } else if (error.code === "auth/invalid-credential") {
         message = "Email ou senha incorretos";
-      } else {
-        message = error.message || "Ocorreu um erro. Tente novamente.";
       }
       
       toast({
