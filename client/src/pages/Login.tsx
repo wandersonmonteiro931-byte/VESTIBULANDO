@@ -43,7 +43,41 @@ export default function Login() {
           tipo: "aluno",
           turma: formData.turma || "",
           ativo: true,
+          status: "pendente",
         });
+
+        toast({
+          title: "Conta criada!",
+          description: "Sua conta está aguardando aprovação do administrador. Você será notificado por email.",
+        });
+        
+        await auth.signOut();
+        setLoading(false);
+        return;
+      }
+      
+      const userData = userDoc.data();
+      
+      if (userData.status === "reprovado") {
+        toast({
+          title: "Acesso negado",
+          description: "Sua conta foi reprovada pelo administrador. Entre em contato para mais informações.",
+          variant: "destructive",
+        });
+        await auth.signOut();
+        setLoading(false);
+        return;
+      }
+      
+      if (userData.status === "pendente") {
+        toast({
+          title: "Conta pendente",
+          description: "Sua conta está aguardando aprovação do administrador.",
+          variant: "destructive",
+        });
+        await auth.signOut();
+        setLoading(false);
+        return;
       }
       
       await refreshUserData();
@@ -53,7 +87,6 @@ export default function Login() {
         description: "Bem-vindo à Plataforma ENEM+",
       });
       
-      const userData = userDoc.exists() ? userDoc.data() : { tipo: userType };
       redirectByUserType(userData.tipo);
     } catch (error: any) {
       toast({
@@ -103,27 +136,65 @@ export default function Login() {
           tipo: "aluno",
           turma: formData.turma || "",
           ativo: true,
+          status: "pendente",
         });
         
         toast({
           title: "Conta criada com sucesso!",
-          description: "Bem-vindo à Plataforma ENEM+",
+          description: "Sua conta está aguardando aprovação do administrador. Você será notificado quando for aprovada.",
         });
+        
+        await auth.signOut();
+        setMode("login");
+        setFormData({ email: "", password: "", nome: "", turma: "" });
+        setLoading(false);
+        return;
       } else {
         userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
+        
+        const userDoc = await getDoc(doc(db, "usuarios", userCredential.user.uid));
+        const userData = userDoc.data();
+        
+        if (!userData) {
+          toast({
+            title: "Erro",
+            description: "Dados do usuário não encontrados",
+            variant: "destructive",
+          });
+          await auth.signOut();
+          setLoading(false);
+          return;
+        }
+        
+        if (userData.status === "reprovado") {
+          toast({
+            title: "Acesso negado",
+            description: "Sua conta foi reprovada pelo administrador. Entre em contato para mais informações.",
+            variant: "destructive",
+          });
+          await auth.signOut();
+          setLoading(false);
+          return;
+        }
+        
+        if (userData.status === "pendente") {
+          toast({
+            title: "Conta pendente",
+            description: "Sua conta ainda está aguardando aprovação do administrador.",
+            variant: "destructive",
+          });
+          await auth.signOut();
+          setLoading(false);
+          return;
+        }
+        
+        await refreshUserData();
         
         toast({
           title: "Login realizado com sucesso!",
           description: "Bem-vindo de volta!",
         });
-      }
-      
-      await refreshUserData();
-      
-      const userDoc = await getDoc(doc(db, "usuarios", userCredential.user.uid));
-      const userData = userDoc.data();
-      
-      if (userData) {
+        
         redirectByUserType(userData.tipo);
       }
     } catch (error: any) {
@@ -135,6 +206,8 @@ export default function Login() {
       } else if (error.code === "auth/invalid-email") {
         message = "Email inválido";
       } else if (error.code === "auth/user-not-found" || error.code === "auth/wrong-password") {
+        message = "Email ou senha incorretos";
+      } else if (error.code === "auth/invalid-credential") {
         message = "Email ou senha incorretos";
       }
       
@@ -251,7 +324,7 @@ export default function Login() {
             
             {mode === "register" && (
               <div className="p-3 bg-muted rounded-lg text-sm text-muted-foreground">
-                Novos cadastros são criados como <strong>Aluno</strong>. Para contas de Professor ou Administrador, contate um administrador da plataforma.
+                Novos cadastros são criados como <strong>Aluno</strong> e precisam de aprovação do administrador para acessar a plataforma.
               </div>
             )}
             

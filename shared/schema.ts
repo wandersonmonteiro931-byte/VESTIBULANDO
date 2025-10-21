@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 // User schema - tipos: aluno, professor, admin
+// status: pendente (aguardando aprovação), aprovado (pode logar), reprovado (não pode logar)
 export const userSchema = z.object({
   uid: z.string(),
   nome: z.string().min(1, "Nome é obrigatório"),
@@ -8,6 +9,7 @@ export const userSchema = z.object({
   tipo: z.enum(["aluno", "professor", "admin"]),
   turma: z.string().optional(),
   ativo: z.boolean().default(true),
+  status: z.enum(["pendente", "aprovado", "reprovado"]).default("pendente"),
 });
 
 export const insertUserSchema = userSchema.omit({ uid: true });
