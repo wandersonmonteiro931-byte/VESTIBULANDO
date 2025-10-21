@@ -256,10 +256,14 @@ export default function AdminDashboard() {
 
   const deleteUserMutation = useMutation({
     mutationFn: async (user: any) => {
-      if (user.tipo === "admin") {
-        throw new Error("Não é permitido excluir administradores");
+      if (user.tipo === "admin" && user.status === "aprovado") {
+        throw new Error("Não é permitido excluir administradores ativos");
       }
-      await deleteDoc(doc(db, "usuarios", user.uid));
+      const docId = user.docId || user.uid || user.id;
+      if (!docId) {
+        throw new Error("ID do documento não encontrado");
+      }
+      await deleteDoc(doc(db, "usuarios", docId));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
@@ -267,13 +271,13 @@ export default function AdminDashboard() {
       setDeleteDialogOpen(false);
       setUserToDelete(null);
       toast({
-        title: "Usuário excluído",
-        description: "O usuário foi removido da plataforma.",
+        title: "Registro excluído",
+        description: "O registro foi removido da base de dados.",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Erro ao excluir usuário",
+        title: "Erro ao excluir registro",
         description: error.message,
         variant: "destructive",
       });
@@ -392,6 +396,16 @@ export default function AdminDashboard() {
                 </Button>
               </div>
             </div>
+            
+            {pendingUsers && pendingUsers.length > 0 && (
+              <div className="bg-muted/50 border border-border rounded-lg p-4">
+                <p className="text-sm text-muted-foreground">
+                  <strong>Dica:</strong> Verifique a coluna <strong>UID</strong> para identificar registros duplicados. 
+                  Registros com emails idênticos mas UIDs diferentes podem ser duplicatas de testes - 
+                  use o botão de lixeira para removê-los.
+                </p>
+              </div>
+            )}
 
             <Card>
               <CardContent className="p-0">
@@ -409,6 +423,7 @@ export default function AdminDashboard() {
                           <TableHead>Código</TableHead>
                           <TableHead>Nome</TableHead>
                           <TableHead>Email</TableHead>
+                          <TableHead>UID</TableHead>
                           <TableHead>Tipo</TableHead>
                           <TableHead>Turma</TableHead>
                           <TableHead>Data</TableHead>
@@ -424,7 +439,12 @@ export default function AdminDashboard() {
                               </code>
                             </TableCell>
                             <TableCell className="font-medium">{user.nome}</TableCell>
-                            <TableCell>{user.email}</TableCell>
+                            <TableCell className="text-sm">{user.email}</TableCell>
+                            <TableCell>
+                              <code className="text-xs font-mono text-muted-foreground">
+                                {user.uid ? user.uid.substring(0, 8) : user.docId?.substring(0, 8) || "N/A"}...
+                              </code>
+                            </TableCell>
                             <TableCell>
                               <Badge variant="outline">{user.tipo}</Badge>
                             </TableCell>
@@ -435,7 +455,7 @@ export default function AdminDashboard() {
                                 : "-"}
                             </TableCell>
                             <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
+                              <div className="flex justify-end gap-1">
                                 <Button
                                   variant="default"
                                   size="sm"
@@ -458,6 +478,18 @@ export default function AdminDashboard() {
                                 >
                                   <XCircle className="h-4 w-4 mr-1" />
                                   Reprovar
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setUserToDelete(user);
+                                    setDeleteDialogOpen(true);
+                                  }}
+                                  disabled={approveUserMutation.isPending || rejectUserMutation.isPending}
+                                  data-testid="button-delete"
+                                >
+                                  <Trash2 className="h-4 w-4" />
                                 </Button>
                               </div>
                             </TableCell>
