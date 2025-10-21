@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { collection, addDoc, updateDoc, doc, where, setDoc, deleteDoc, getDoc } from "firebase/firestore";
 import { db, auth as firebaseAuth } from "@/lib/firebase";
-import { createUserWithEmailAndPassword, deleteUser } from "firebase/auth";
+import { createUserWithEmailAndPassword, deleteUser, fetchSignInMethodsForEmail } from "firebase/auth";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -123,29 +123,67 @@ export default function AdminDashboard() {
         throw new Error("Solicitação não encontrada");
       }
       
-      const userCredential = await createUserWithEmailAndPassword(firebaseAuth, solicitacao.email, senha);
+      let userId: string;
+      let userAlreadyExists = false;
       
-      await setDoc(doc(db, "usuarios", userCredential.user.uid), {
-        uid: userCredential.user.uid,
-        nome: solicitacao.nome,
-        email: solicitacao.email,
-        tipo: solicitacao.tipo,
-        turma: solicitacao.turma || "",
-        ativo: true,
-        status: "aprovado",
-        codigoSolicitacao: solicitacao.codigoSolicitacao,
-        dataSolicitacao: solicitacao.dataSolicitacao,
-        dataAprovacao: new Date().toISOString(),
-      });
+      try {
+        const signInMethods = await fetchSignInMethodsForEmail(firebaseAuth, solicitacao.email);
+        userAlreadyExists = signInMethods.length > 0;
+      } catch (error) {
+        console.error("Erro ao verificar email:", error);
+      }
+      
+      if (userAlreadyExists) {
+        const usersSnapshot = await import("firebase/firestore").then(m => 
+          m.getDocs(m.query(m.collection(db, "usuarios"), m.where("email", "==", solicitacao.email)))
+        );
+        
+        if (!usersSnapshot.empty) {
+          userId = usersSnapshot.docs[0].id;
+          
+          await updateDoc(doc(db, "usuarios", userId), {
+            nome: solicitacao.nome,
+            tipo: solicitacao.tipo,
+            turma: solicitacao.turma || "",
+            ativo: true,
+            status: "aprovado",
+            codigoSolicitacao: solicitacao.codigoSolicitacao,
+            dataSolicitacao: solicitacao.dataSolicitacao,
+            dataAprovacao: new Date().toISOString(),
+          });
+        } else {
+          throw new Error("Usuário existe no Authentication mas não no Firestore. Entre em contato com o suporte.");
+        }
+      } else {
+        const userCredential = await createUserWithEmailAndPassword(firebaseAuth, solicitacao.email, senha);
+        userId = userCredential.user.uid;
+        
+        await setDoc(doc(db, "usuarios", userId), {
+          uid: userId,
+          nome: solicitacao.nome,
+          email: solicitacao.email,
+          tipo: solicitacao.tipo,
+          turma: solicitacao.turma || "",
+          ativo: true,
+          status: "aprovado",
+          codigoSolicitacao: solicitacao.codigoSolicitacao,
+          dataSolicitacao: solicitacao.dataSolicitacao,
+          dataAprovacao: new Date().toISOString(),
+        });
+      }
       
       await deleteDoc(doc(db, "solicitacoes", solicitacaoId));
+      
+      return { userAlreadyExists };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/solicitacoes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
       toast({
-        title: "Conta aprovada e criada!",
-        description: "O usuário agora pode fazer login com a senha definida.",
+        title: data.userAlreadyExists ? "Conta aprovada!" : "Conta aprovada e criada!",
+        description: data.userAlreadyExists 
+          ? "O usuário foi aprovado e pode continuar usando a conta existente."
+          : "O usuário agora pode fazer login com a senha definida.",
       });
     },
     onError: (error: any) => {
