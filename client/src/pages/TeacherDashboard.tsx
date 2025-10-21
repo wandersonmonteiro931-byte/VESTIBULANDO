@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { collection, query, where, getDocs, addDoc, updateDoc, doc } from "firebase/firestore";
+import { useMutation } from "@tanstack/react-query";
+import { collection, where, addDoc, updateDoc, doc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,6 +19,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { FileUploadZone } from "@/components/FileUploadZone";
 import { LogOut, Plus, FileText, Users, Download, Edit, Calendar, Award } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
+import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 import type { Tarefa, Entrega } from "@shared/schema";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -78,23 +79,18 @@ export default function TeacherDashboard() {
     },
   });
 
-  const { data: tarefas, isLoading: loadingTarefas } = useQuery({
+  const { data: tarefas, isLoading: loadingTarefas } = useRealtimeQuery<Tarefa>({
+    collectionName: "tarefas",
     queryKey: ["/api/tarefas", userData?.uid],
-    queryFn: async () => {
-      if (!userData?.uid) return [];
-      const q = query(collection(db, "tarefas"), where("professorId", "==", userData.uid));
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Tarefa));
-    },
+    constraints: userData?.uid ? [where("professorId", "==", userData.uid)] : [],
+    transform: (docs) => docs as Tarefa[],
     enabled: !!userData?.uid,
   });
 
-  const { data: entregas, isLoading: loadingEntregas } = useQuery({
+  const { data: entregas, isLoading: loadingEntregas } = useRealtimeQuery<Entrega>({
+    collectionName: "entregas",
     queryKey: ["/api/entregas"],
-    queryFn: async () => {
-      const snapshot = await getDocs(collection(db, "entregas"));
-      return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Entrega));
-    },
+    transform: (docs) => docs as Entrega[],
   });
 
   const createTarefaMutation = useMutation({

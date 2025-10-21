@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { collection, getDocs, addDoc, updateDoc, doc, deleteDoc } from "firebase/firestore";
+import { useMutation } from "@tanstack/react-query";
+import { collection, addDoc, updateDoc, doc, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
+import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 import type { User, Turma } from "@shared/schema";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -42,47 +43,38 @@ export default function AdminDashboard() {
     },
   });
 
-  const { data: users, isLoading: loadingUsers } = useQuery({
+  const { data: users, isLoading: loadingUsers } = useRealtimeQuery({
+    collectionName: "usuarios",
     queryKey: ["/api/usuarios"],
-    queryFn: async () => {
-      const snapshot = await getDocs(collection(db, "usuarios"));
-      return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as any));
-    },
   });
 
-  const { data: turmas, isLoading: loadingTurmas } = useQuery({
+  const { data: turmas, isLoading: loadingTurmas } = useRealtimeQuery<Turma>({
+    collectionName: "turmas",
     queryKey: ["/api/turmas"],
-    queryFn: async () => {
-      const snapshot = await getDocs(collection(db, "turmas"));
-      return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Turma));
-    },
+    transform: (docs) => docs as Turma[],
   });
 
-  const { data: tarefas } = useQuery({
+  const { data: tarefas } = useRealtimeQuery({
+    collectionName: "tarefas",
     queryKey: ["/api/tarefas/all"],
-    queryFn: async () => {
-      const snapshot = await getDocs(collection(db, "tarefas"));
-      return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-    },
   });
 
-  const { data: entregas } = useQuery({
+  const { data: entregas } = useRealtimeQuery({
+    collectionName: "entregas",
     queryKey: ["/api/entregas/all"],
-    queryFn: async () => {
-      const snapshot = await getDocs(collection(db, "entregas"));
-      return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-    },
   });
 
-  const { data: pendingUsers, isLoading: loadingPendingUsers } = useQuery({
-    queryKey: ["/api/usuarios/pendentes"],
-    queryFn: async () => {
-      const snapshot = await getDocs(collection(db, "usuarios"));
-      return snapshot.docs
-        .map(doc => ({ ...doc.data(), id: doc.id, docId: doc.id } as any))
-        .filter((user: any) => user.status === "pendente");
-    },
+  const { data: allUsers } = useRealtimeQuery({
+    collectionName: "usuarios",
+    queryKey: ["/api/usuarios/all"],
   });
+
+  const pendingUsers = allUsers?.filter((user: any) => user.status === "pendente").map((user: any) => ({
+    ...user,
+    docId: user.id
+  }));
+  
+  const loadingPendingUsers = !allUsers;
 
   const approveUserMutation = useMutation({
     mutationFn: async (userId: string) => {
