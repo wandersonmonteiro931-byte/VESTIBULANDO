@@ -14,10 +14,19 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { GraduationCap, Loader2, Copy, Check } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
-function generateRequestCode(): string {
-  const timestamp = Date.now().toString(36).toUpperCase();
-  const random = Math.random().toString(36).substring(2, 8).toUpperCase();
-  return `SOL-${timestamp}-${random}`;
+async function generateUniqueRequestCode(): Promise<string> {
+  const { collection, query, where, getDocs } = await import("firebase/firestore");
+  
+  while (true) {
+    const code = Math.floor(1000 + Math.random() * 9000).toString();
+    
+    const q = query(collection(db, "usuarios"), where("codigoSolicitacao", "==", code));
+    const querySnapshot = await getDocs(q);
+    
+    if (querySnapshot.empty) {
+      return code;
+    }
+  }
 }
 
 export default function Login() {
@@ -46,7 +55,7 @@ export default function Login() {
       const userDoc = await getDoc(doc(db, "usuarios", result.user.uid));
       
       if (!userDoc.exists()) {
-        const codigo = generateRequestCode();
+        const codigo = await generateUniqueRequestCode();
         const dataSolicitacao = new Date().toISOString();
         
         await setDoc(doc(db, "usuarios", result.user.uid), {
@@ -141,15 +150,10 @@ export default function Login() {
           return;
         }
         
-        console.log("1. Iniciando criação de usuário...");
         userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-        console.log("2. Usuário criado no Firebase Auth:", userCredential.user.uid);
         
-        const codigo = generateRequestCode();
+        const codigo = await generateUniqueRequestCode();
         const dataSolicitacao = new Date().toISOString();
-        console.log("3. Código gerado:", codigo);
-        
-        console.log("4. Salvando no Firestore...");
         
         setDoc(doc(db, "usuarios", userCredential.user.uid), {
           uid: userCredential.user.uid,
@@ -161,33 +165,22 @@ export default function Login() {
           status: "pendente",
           codigoSolicitacao: codigo,
           dataSolicitacao: dataSolicitacao,
-        }).then(() => {
-          console.log("5. Dados salvos no Firestore com sucesso");
         }).catch((error) => {
           console.error("Erro ao salvar no Firestore:", error);
         });
         
-        console.log("5. Continuando sem aguardar Firestore...");
-        
-        console.log("6. Configurando estados ANTES do logout...");
         setRequestCode(codigo);
         setMode("login");
         setFormData({ email: "", password: "", nome: "", turma: "" });
         setCodeCopied(false);
         
-        console.log("7. Fazendo logout...");
         await auth.signOut();
-        console.log("8. Logout concluído");
-        
-        console.log("9. Parando loading e mostrando dialog");
         setLoading(false);
         
         setTimeout(() => {
-          console.log("10. Abrindo dialog...");
           setShowCodeDialog(true);
         }, 100);
         
-        console.log("11. Processo completo!");
         return;
       } else {
         userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
@@ -228,9 +221,6 @@ export default function Login() {
           return;
         }
         
-        console.log("Dados do usuário:", userData);
-        console.log("Tipo do usuário:", userData.tipo);
-        
         await refreshUserData();
         
         toast({
@@ -238,12 +228,9 @@ export default function Login() {
           description: "Bem-vindo de volta!",
         });
         
-        console.log("Redirecionando para:", userData.tipo);
         redirectByUserType(userData.tipo);
-        console.log("Redirecionamento executado");
       }
     } catch (error: any) {
-      console.error("Erro completo:", error);
       let message = "Ocorreu um erro. Tente novamente.";
       if (error.code === "auth/email-already-in-use") {
         message = "Este email já está em uso";
