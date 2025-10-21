@@ -132,5 +132,16 @@ service cloud.firestore {
       // Only admins can delete turmas
       allow delete: if isAdmin() && isUserActive();
     }
+    
+    // Solicitacoes collection - for pending user registrations
+    match /solicitacoes/{solicitacaoId} {
+      // Anyone can create a solicitacao (unauthenticated registration)
+      allow create: if true;
+      
+      // Only admins can read, update, and delete solicitacoes
+      allow read: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
   }
 }

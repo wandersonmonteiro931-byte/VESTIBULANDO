@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { collection, addDoc, updateDoc, doc, where, setDoc, deleteDoc } from "firebase/firestore";
+import { collection, addDoc, updateDoc, doc, where, setDoc, deleteDoc, getDoc } from "firebase/firestore";
 import { db, auth as firebaseAuth } from "@/lib/firebase";
 import { createUserWithEmailAndPassword, deleteUser } from "firebase/auth";
 import { useAuth } from "@/contexts/AuthContext";
