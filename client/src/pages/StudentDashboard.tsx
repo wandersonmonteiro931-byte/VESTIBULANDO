@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { collection, query, where, getDocs, addDoc, updateDoc, doc } from "firebase/firestore";
+import { useMutation } from "@tanstack/react-query";
+import { collection, where, addDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,6 +16,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { FileUploadZone } from "@/components/FileUploadZone";
 import { LogOut, FileText, Upload, Download, Calendar, Award, CheckCircle2, Clock } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
+import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 import type { Tarefa, Entrega } from "@shared/schema";
 import { format, formatDistanceToNow, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -40,25 +41,19 @@ export default function StudentDashboard() {
     return () => window.removeEventListener('file-upload-error', handleFileError);
   }, [toast]);
 
-  const { data: tarefas, isLoading: loadingTarefas } = useQuery({
+  const { data: tarefas, isLoading: loadingTarefas } = useRealtimeQuery<Tarefa>({
+    collectionName: "tarefas",
     queryKey: ["/api/tarefas", userData?.turma],
-    queryFn: async () => {
-      if (!userData?.turma) return [];
-      const q = query(collection(db, "tarefas"), where("turma", "==", userData.turma));
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Tarefa));
-    },
+    constraints: userData?.turma ? [where("turma", "==", userData.turma)] : [],
+    transform: (docs) => docs as Tarefa[],
     enabled: !!userData?.turma,
   });
 
-  const { data: entregas, isLoading: loadingEntregas } = useQuery({
+  const { data: entregas, isLoading: loadingEntregas } = useRealtimeQuery<Entrega>({
+    collectionName: "entregas",
     queryKey: ["/api/entregas", userData?.uid],
-    queryFn: async () => {
-      if (!userData?.uid) return [];
-      const q = query(collection(db, "entregas"), where("alunoId", "==", userData.uid));
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Entrega));
-    },
+    constraints: userData?.uid ? [where("alunoId", "==", userData.uid)] : [],
+    transform: (docs) => docs as Entrega[],
     enabled: !!userData?.uid,
   });
 
