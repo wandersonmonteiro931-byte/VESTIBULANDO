@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -34,6 +35,9 @@ export default function AdminDashboard() {
   const { toast } = useToast();
   const [createTurmaDialogOpen, setCreateTurmaDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [userToReject, setUserToReject] = useState<any | null>(null);
+  const [rejectComment, setRejectComment] = useState("");
 
   const turmaForm = useForm<z.infer<typeof turmaFormSchema>>({
     resolver: zodResolver(turmaFormSchema),
@@ -99,13 +103,19 @@ export default function AdminDashboard() {
   });
 
   const rejectUserMutation = useMutation({
-    mutationFn: async (userId: string) => {
+    mutationFn: async ({ userId, comentario }: { userId: string; comentario?: string }) => {
       const userRef = doc(db, "usuarios", userId);
-      await updateDoc(userRef, { status: "reprovado" });
+      await updateDoc(userRef, { 
+        status: "reprovado",
+        comentarioReprovacao: comentario || ""
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/usuarios/pendentes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
+      setRejectDialogOpen(false);
+      setUserToReject(null);
+      setRejectComment("");
       toast({
         title: "Conta reprovada",
         description: "O usuário não poderá acessar a plataforma.",
@@ -278,22 +288,34 @@ export default function AdminDashboard() {
                     <Table>
                       <TableHeader>
                         <TableRow>
+                          <TableHead>Código</TableHead>
                           <TableHead>Nome</TableHead>
                           <TableHead>Email</TableHead>
                           <TableHead>Tipo</TableHead>
                           <TableHead>Turma</TableHead>
+                          <TableHead>Data</TableHead>
                           <TableHead className="text-right">Ações</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {pendingUsers.map((user) => (
                           <TableRow key={user.uid} data-testid={`row-pending-${user.uid}`}>
+                            <TableCell>
+                              <code className="text-xs font-mono bg-muted px-2 py-1 rounded" data-testid={`code-${user.uid}`}>
+                                {user.codigoSolicitacao || "N/A"}
+                              </code>
+                            </TableCell>
                             <TableCell className="font-medium">{user.nome}</TableCell>
                             <TableCell>{user.email}</TableCell>
                             <TableCell>
                               <Badge variant="outline">{user.tipo}</Badge>
                             </TableCell>
                             <TableCell>{user.turma || "-"}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {user.dataSolicitacao 
+                                ? new Date(user.dataSolicitacao).toLocaleDateString('pt-BR')
+                                : "-"}
+                            </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
                                 <Button
@@ -309,7 +331,10 @@ export default function AdminDashboard() {
                                 <Button
                                   variant="destructive"
                                   size="sm"
-                                  onClick={() => rejectUserMutation.mutate(user.docId)}
+                                  onClick={() => {
+                                    setUserToReject(user);
+                                    setRejectDialogOpen(true);
+                                  }}
                                   disabled={approveUserMutation.isPending || rejectUserMutation.isPending}
                                   data-testid="button-reject"
                                 >
@@ -484,6 +509,80 @@ export default function AdminDashboard() {
           </TabsContent>
         </Tabs>
       </main>
+
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogContent data-testid="dialog-reject-user">
+          <DialogHeader>
+            <DialogTitle>Reprovar Cadastro</DialogTitle>
+            <DialogDescription>
+              Você está prestes a reprovar o cadastro de <strong>{userToReject?.nome}</strong>.
+              Adicione um comentário explicando o motivo (opcional).
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {userToReject && (
+              <div className="p-4 bg-muted rounded-lg space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Código:</span>
+                  <code className="font-mono">{userToReject.codigoSolicitacao}</code>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Email:</span>
+                  <span>{userToReject.email}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Turma:</span>
+                  <span>{userToReject.turma || "-"}</span>
+                </div>
+              </div>
+            )}
+            
+            <div className="space-y-2">
+              <Label htmlFor="reject-comment">Comentário (opcional)</Label>
+              <Textarea
+                id="reject-comment"
+                placeholder="Ex: Turma não encontrada no sistema, dados incorretos, etc."
+                value={rejectComment}
+                onChange={(e) => setRejectComment(e.target.value)}
+                rows={4}
+                data-testid="textarea-reject-comment"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setRejectDialogOpen(false);
+                setUserToReject(null);
+                setRejectComment("");
+              }}
+              data-testid="button-cancel-reject"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                if (userToReject) {
+                  rejectUserMutation.mutate({ 
+                    userId: userToReject.docId, 
+                    comentario: rejectComment 
+                  });
+                }
+              }}
+              disabled={rejectUserMutation.isPending}
+              data-testid="button-confirm-reject"
+            >
+              {rejectUserMutation.isPending ? "Reprovando..." : "Reprovar Cadastro"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={createTurmaDialogOpen} onOpenChange={setCreateTurmaDialogOpen}>
         <DialogContent data-testid="dialog-create-turma">

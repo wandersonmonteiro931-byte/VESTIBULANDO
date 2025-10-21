@@ -8,10 +8,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { GraduationCap, Loader2 } from "lucide-react";
+import { GraduationCap, Loader2, Copy, Check } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+
+function generateRequestCode(): string {
+  const timestamp = Date.now().toString(36).toUpperCase();
+  const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+  return `SOL-${timestamp}-${random}`;
+}
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -20,6 +27,9 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<"login" | "register">("login");
   const [userType, setUserType] = useState<"aluno" | "professor" | "admin">("aluno");
+  const [showCodeDialog, setShowCodeDialog] = useState(false);
+  const [requestCode, setRequestCode] = useState("");
+  const [codeCopied, setCodeCopied] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -36,6 +46,9 @@ export default function Login() {
       const userDoc = await getDoc(doc(db, "usuarios", result.user.uid));
       
       if (!userDoc.exists()) {
+        const codigo = generateRequestCode();
+        const dataSolicitacao = new Date().toISOString();
+        
         await setDoc(doc(db, "usuarios", result.user.uid), {
           uid: result.user.uid,
           nome: result.user.displayName || "Usuário",
@@ -44,14 +57,15 @@ export default function Login() {
           turma: formData.turma || "",
           ativo: true,
           status: "pendente",
+          codigoSolicitacao: codigo,
+          dataSolicitacao: dataSolicitacao,
         });
 
-        toast({
-          title: "Conta criada!",
-          description: "Sua conta está aguardando aprovação do administrador. Você será notificado por email.",
-        });
-        
         await auth.signOut();
+        
+        setRequestCode(codigo);
+        setShowCodeDialog(true);
+        setCodeCopied(false);
         setLoading(false);
         return;
       }
@@ -129,6 +143,9 @@ export default function Login() {
         
         userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
         
+        const codigo = generateRequestCode();
+        const dataSolicitacao = new Date().toISOString();
+        
         await setDoc(doc(db, "usuarios", userCredential.user.uid), {
           uid: userCredential.user.uid,
           nome: formData.nome,
@@ -137,14 +154,15 @@ export default function Login() {
           turma: formData.turma || "",
           ativo: true,
           status: "pendente",
-        });
-        
-        toast({
-          title: "Conta criada com sucesso!",
-          description: "Sua conta está aguardando aprovação do administrador. Você será notificado quando for aprovada.",
+          codigoSolicitacao: codigo,
+          dataSolicitacao: dataSolicitacao,
         });
         
         await auth.signOut();
+        
+        setRequestCode(codigo);
+        setShowCodeDialog(true);
+        setCodeCopied(false);
         setMode("login");
         setFormData({ email: "", password: "", nome: "", turma: "" });
         setLoading(false);
@@ -239,6 +257,24 @@ export default function Login() {
         break;
       default:
         setLocation("/");
+    }
+  };
+
+  const handleCopyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(requestCode);
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 2000);
+      toast({
+        title: "Código copiado!",
+        description: "O código foi copiado para a área de transferência.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao copiar",
+        description: "Não foi possível copiar o código.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -406,6 +442,49 @@ export default function Login() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={showCodeDialog} onOpenChange={setShowCodeDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Cadastro Enviado para Análise</DialogTitle>
+            <DialogDescription>
+              Seu cadastro foi enviado para análise do diretor. Guarde seu código único para acompanhar sua solicitação.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex items-center justify-center p-6 bg-muted rounded-lg">
+              <code className="text-2xl font-bold text-primary" data-testid="text-request-code">
+                {requestCode}
+              </code>
+            </div>
+            <Button
+              onClick={handleCopyCode}
+              className="w-full"
+              variant="outline"
+              data-testid="button-copy-code"
+            >
+              {codeCopied ? (
+                <>
+                  <Check className="mr-2 h-4 w-4" />
+                  Copiado!
+                </>
+              ) : (
+                <>
+                  <Copy className="mr-2 h-4 w-4" />
+                  Copiar Código
+                </>
+              )}
+            </Button>
+            <Button
+              onClick={() => setShowCodeDialog(false)}
+              className="w-full"
+              data-testid="button-close-dialog"
+            >
+              Entendi
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
