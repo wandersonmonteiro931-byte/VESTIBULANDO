@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
@@ -32,7 +32,7 @@ async function generateUniqueRequestCode(): Promise<string> {
 export default function Login() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { refreshUserData } = useAuth();
+  const { userData, refreshUserData } = useAuth();
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<"login" | "register">("login");
   const [userType, setUserType] = useState<"aluno" | "professor" | "admin">("aluno");
@@ -45,6 +45,22 @@ export default function Login() {
     nome: "",
     turma: "",
   });
+
+  useEffect(() => {
+    if (userData && !showCodeDialog) {
+      switch (userData.tipo) {
+        case "aluno":
+          setLocation("/aluno");
+          break;
+        case "professor":
+          setLocation("/professor");
+          break;
+        case "admin":
+          setLocation("/admin");
+          break;
+      }
+    }
+  }, [userData, showCodeDialog, setLocation]);
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
@@ -109,8 +125,6 @@ export default function Login() {
         title: "Login realizado com sucesso!",
         description: "Bem-vindo à Plataforma ENEM+",
       });
-      
-      redirectByUserType(userData.tipo);
     } catch (error: any) {
       toast({
         title: "Erro ao fazer login",
@@ -227,8 +241,6 @@ export default function Login() {
           title: "Login realizado com sucesso!",
           description: "Bem-vindo de volta!",
         });
-        
-        redirectByUserType(userData.tipo);
       }
     } catch (error: any) {
       let message = "Ocorreu um erro. Tente novamente.";
@@ -255,22 +267,6 @@ export default function Login() {
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const redirectByUserType = (tipo: string) => {
-    switch (tipo) {
-      case "aluno":
-        setLocation("/aluno");
-        break;
-      case "professor":
-        setLocation("/professor");
-        break;
-      case "admin":
-        setLocation("/admin");
-        break;
-      default:
-        setLocation("/");
     }
   };
 

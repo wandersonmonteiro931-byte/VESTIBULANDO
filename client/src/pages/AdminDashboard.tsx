@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle } from "lucide-react";
+import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 import type { User, Turma } from "@shared/schema";
@@ -99,7 +99,7 @@ export default function AdminDashboard() {
     queryKey: ["/api/entregas/all"],
   });
 
-  const { data: allUsers } = useRealtimeQuery({
+  const { data: allUsers, refetch: refetchAllUsers } = useRealtimeQuery({
     collectionName: "usuarios",
     queryKey: ["/api/usuarios/all"],
   });
@@ -373,7 +373,24 @@ export default function AdminDashboard() {
           <TabsContent value="aprovacoes" className="space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-xl font-semibold">Aprovar Contas Pendentes</h3>
-              <Badge variant="secondary">{pendingUsers?.length || 0} pendente(s)</Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">{pendingUsers?.length || 0} pendente(s)</Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    await refetchAllUsers();
+                    toast({
+                      title: "Atualizado!",
+                      description: "Lista de solicitações atualizada.",
+                    });
+                  }}
+                  data-testid="button-refresh-pending"
+                >
+                  <RefreshCw className="h-4 w-4 mr-1" />
+                  Atualizar
+                </Button>
+              </div>
             </div>
 
             <Card>
