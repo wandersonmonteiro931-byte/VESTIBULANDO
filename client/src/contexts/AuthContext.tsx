@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, signOut as firebaseSignOut, User as FirebaseUser } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { auth, db, firebaseError } from "@/lib/firebase";
 import type { User } from "@shared/schema";
 
@@ -9,7 +9,7 @@ interface AuthContextType {
   userData: User | null;
   loading: boolean;
   signOut: () => Promise<void>;
-  refreshUserData: () => Promise<void>;
+  refreshUserData: () => Promise<boolean>;
   firebaseError: Error | null;
 }
 
@@ -20,21 +20,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userData, setUserData] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUserData = async (uid: string) => {
+  const fetchUserData = async (uid: string): Promise<boolean> => {
     try {
       const userDoc = await getDoc(doc(db, "usuarios", uid));
       if (userDoc.exists()) {
-        setUserData(userDoc.data() as User);
+        const data = userDoc.data() as User;
+        
+        if (data.status === "reprovado" || data.status === "pendente") {
+          await firebaseSignOut(auth);
+          setUserData(null);
+          setCurrentUser(null);
+          return false;
+        }
+        
+        setUserData(data);
+        return true;
       }
+      return false;
     } catch (error) {
       console.error("Error fetching user data:", error);
+      return false;
     }
   };
 
   const refreshUserData = async () => {
     if (currentUser) {
-      await fetchUserData(currentUser.uid);
+      return await fetchUserData(currentUser.uid);
     }
+    return false;
   };
 
   useEffect(() => {
@@ -45,10 +58,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const unsubscribe = onAuthStateChanged(auth, async (user) => {
-        setCurrentUser(user);
         if (user) {
-          await fetchUserData(user.uid);
+          const isApproved = await fetchUserData(user.uid);
+          if (isApproved) {
+            setCurrentUser(user);
+          } else {
+            setCurrentUser(null);
+            setUserData(null);
+          }
         } else {
+          setCurrentUser(null);
           setUserData(null);
         }
         setLoading(false);
@@ -60,6 +79,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const unsubscribe = onSnapshot(
+      doc(db, "usuarios", currentUser.uid),
+      async (docSnapshot) => {
+        if (docSnapshot.exists()) {
+          const data = docSnapshot.data() as User;
+          setUserData(data);
+          
+          if (data.status === "reprovado" || data.status === "pendente") {
+            await firebaseSignOut(auth);
+            setUserData(null);
+            setCurrentUser(null);
+          }
+        }
+      },
+      (error) => {
+        console.error("Error listening to user document:", error);
+      }
+    );
+
+    return unsubscribe;
+  }, [currentUser]);
 
   const signOut = async () => {
     if (!auth) return;

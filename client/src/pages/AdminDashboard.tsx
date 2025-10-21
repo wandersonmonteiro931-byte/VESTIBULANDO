@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { collection, getDocs, addDoc, updateDoc, doc, deleteDoc, setDoc } from "firebase/firestore";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth, db } from "@/lib/firebase";
+import { collection, getDocs, addDoc, updateDoc, doc, deleteDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,36 +23,16 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
-const userFormSchema = z.object({
-  nome: z.string().min(1, "Nome é obrigatório"),
-  email: z.string().email("Email inválido"),
-  password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
-  tipo: z.enum(["aluno", "professor", "admin"]),
-  turma: z.string().optional(),
-});
-
 const turmaFormSchema = z.object({
   nome: z.string().min(1, "Nome da turma é obrigatório"),
   ano: z.string().min(1, "Ano é obrigatório"),
 });
 
 export default function AdminDashboard() {
-  const { userData, signOut } = useAuth();
+  const { userData, signOut, refreshUserData } = useAuth();
   const { toast } = useToast();
-  const [createUserDialogOpen, setCreateUserDialogOpen] = useState(false);
   const [createTurmaDialogOpen, setCreateTurmaDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-
-  const userForm = useForm<z.infer<typeof userFormSchema>>({
-    resolver: zodResolver(userFormSchema),
-    defaultValues: {
-      nome: "",
-      email: "",
-      password: "",
-      tipo: "aluno",
-      turma: "",
-    },
-  });
 
   const turmaForm = useForm<z.infer<typeof turmaFormSchema>>({
     resolver: zodResolver(turmaFormSchema),
@@ -149,44 +128,6 @@ export default function AdminDashboard() {
     },
   });
 
-  const createUserMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof userFormSchema>) => {
-      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-      
-      const userData = {
-        uid: userCredential.user.uid,
-        nome: data.nome,
-        email: data.email,
-        tipo: data.tipo,
-        turma: data.tipo === "aluno" ? data.turma : undefined,
-        ativo: true,
-        status: "aprovado",
-      };
-      
-      await setDoc(doc(db, "usuarios", userCredential.user.uid), userData);
-      
-      await auth.signOut();
-      
-      return userData;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
-      toast({
-        title: "Usuário criado com sucesso!",
-        description: "O novo usuário já pode fazer login.",
-      });
-      setCreateUserDialogOpen(false);
-      userForm.reset();
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Erro ao criar usuário",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
   const toggleUserStatusMutation = useMutation({
     mutationFn: async ({ userId, ativo }: { userId: string; ativo: boolean }) => {
       const userRef = doc(db, "usuarios", userId);
@@ -245,8 +186,6 @@ export default function AdminDashboard() {
     entregas: entregas?.length || 0,
     turmas: turmas?.length || 0,
   };
-
-  const userType = userForm.watch("tipo");
 
   return (
     <div className="min-h-screen bg-background">
@@ -406,10 +345,9 @@ export default function AdminDashboard() {
           <TabsContent value="usuarios" className="space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-xl font-semibold">Gerenciar Usuários</h3>
-              <Button onClick={() => setCreateUserDialogOpen(true)} data-testid="button-create-user">
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Usuário
-              </Button>
+              <div className="text-sm text-muted-foreground">
+                Novos usuários devem se cadastrar e aguardar aprovação
+              </div>
             </div>
 
             <Card>
@@ -482,11 +420,7 @@ export default function AdminDashboard() {
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <Users className="h-16 w-16 text-muted-foreground mb-4" />
                     <p className="text-lg font-medium mb-2">Nenhum usuário cadastrado</p>
-                    <p className="text-sm text-muted-foreground mb-4">Comece criando o primeiro usuário</p>
-                    <Button onClick={() => setCreateUserDialogOpen(true)}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Criar Usuário
-                    </Button>
+                    <p className="text-sm text-muted-foreground">Novos usuários devem se cadastrar na tela de login e aguardar aprovação</p>
                   </div>
                 )}
               </CardContent>
@@ -558,119 +492,6 @@ export default function AdminDashboard() {
           </TabsContent>
         </Tabs>
       </main>
-
-      <Dialog open={createUserDialogOpen} onOpenChange={setCreateUserDialogOpen}>
-        <DialogContent data-testid="dialog-create-user">
-          <DialogHeader>
-            <DialogTitle>Novo Usuário</DialogTitle>
-            <DialogDescription>
-              Crie uma nova conta de usuário
-            </DialogDescription>
-          </DialogHeader>
-
-          <Form {...userForm}>
-            <form onSubmit={userForm.handleSubmit((data) => createUserMutation.mutate(data))} className="space-y-4">
-              <FormField
-                control={userForm.control}
-                name="nome"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome Completo</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Nome do usuário" {...field} data-testid="input-nome" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={userForm.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input type="email" placeholder="email@exemplo.com" {...field} data-testid="input-email" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={userForm.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Senha</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} data-testid="input-password" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={userForm.control}
-                name="tipo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tipo de Usuário</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger data-testid="select-tipo">
-                          <SelectValue placeholder="Selecione o tipo" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="aluno">Aluno</SelectItem>
-                        <SelectItem value="professor">Professor</SelectItem>
-                        <SelectItem value="admin">Administrador</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {userType === "aluno" && (
-                <FormField
-                  control={userForm.control}
-                  name="turma"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Turma</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ex: 3A" {...field} data-testid="input-turma" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setCreateUserDialogOpen(false);
-                    userForm.reset();
-                  }}
-                  data-testid="button-cancel"
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={createUserMutation.isPending} data-testid="button-save">
-                  Criar Usuário
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={createTurmaDialogOpen} onOpenChange={setCreateTurmaDialogOpen}>
         <DialogContent data-testid="dialog-create-turma">
