@@ -127,34 +127,6 @@ export default function AdminDashboard() {
       let userAlreadyExists = false;
       
       try {
-        const signInMethods = await fetchSignInMethodsForEmail(firebaseAuth, solicitacao.email);
-        userAlreadyExists = signInMethods.length > 0;
-      } catch (error) {
-        console.error("Erro ao verificar email:", error);
-      }
-      
-      if (userAlreadyExists) {
-        const usersSnapshot = await import("firebase/firestore").then(m => 
-          m.getDocs(m.query(m.collection(db, "usuarios"), m.where("email", "==", solicitacao.email)))
-        );
-        
-        if (!usersSnapshot.empty) {
-          userId = usersSnapshot.docs[0].id;
-          
-          await updateDoc(doc(db, "usuarios", userId), {
-            nome: solicitacao.nome,
-            tipo: solicitacao.tipo,
-            turma: solicitacao.turma || "",
-            ativo: true,
-            status: "aprovado",
-            codigoSolicitacao: solicitacao.codigoSolicitacao,
-            dataSolicitacao: solicitacao.dataSolicitacao,
-            dataAprovacao: new Date().toISOString(),
-          });
-        } else {
-          throw new Error("Usuário existe no Authentication mas não no Firestore. Entre em contato com o suporte.");
-        }
-      } else {
         const userCredential = await createUserWithEmailAndPassword(firebaseAuth, solicitacao.email, senha);
         userId = userCredential.user.uid;
         
@@ -170,6 +142,32 @@ export default function AdminDashboard() {
           dataSolicitacao: solicitacao.dataSolicitacao,
           dataAprovacao: new Date().toISOString(),
         });
+      } catch (error: any) {
+        if (error.code === "auth/email-already-in-use") {
+          userAlreadyExists = true;
+          
+          const { getDocs, query, collection, where } = await import("firebase/firestore");
+          const usersSnapshot = await getDocs(query(collection(db, "usuarios"), where("email", "==", solicitacao.email)));
+          
+          if (!usersSnapshot.empty) {
+            userId = usersSnapshot.docs[0].id;
+            
+            await updateDoc(doc(db, "usuarios", userId), {
+              nome: solicitacao.nome,
+              tipo: solicitacao.tipo,
+              turma: solicitacao.turma || "",
+              ativo: true,
+              status: "aprovado",
+              codigoSolicitacao: solicitacao.codigoSolicitacao,
+              dataSolicitacao: solicitacao.dataSolicitacao,
+              dataAprovacao: new Date().toISOString(),
+            });
+          } else {
+            throw new Error("Usuário existe no Authentication mas não no Firestore. Por favor, remova a solicitação duplicada.");
+          }
+        } else {
+          throw error;
+        }
       }
       
       await deleteDoc(doc(db, "solicitacoes", solicitacaoId));
