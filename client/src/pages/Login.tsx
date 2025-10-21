@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, deleteUser } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
@@ -169,19 +169,31 @@ export default function Login() {
         const codigo = await generateUniqueRequestCode();
         const dataSolicitacao = new Date().toISOString();
         
-        setDoc(doc(db, "usuarios", userCredential.user.uid), {
-          uid: userCredential.user.uid,
-          nome: formData.nome,
-          email: formData.email,
-          tipo: "aluno",
-          turma: formData.turma || "",
-          ativo: true,
-          status: "pendente",
-          codigoSolicitacao: codigo,
-          dataSolicitacao: dataSolicitacao,
-        }).catch((error) => {
-          console.error("Erro ao salvar no Firestore:", error);
-        });
+        try {
+          await setDoc(doc(db, "usuarios", userCredential.user.uid), {
+            uid: userCredential.user.uid,
+            nome: formData.nome,
+            email: formData.email,
+            tipo: "aluno",
+            turma: formData.turma || "",
+            ativo: true,
+            status: "pendente",
+            codigoSolicitacao: codigo,
+            dataSolicitacao: dataSolicitacao,
+          });
+        } catch (firestoreError: any) {
+          console.error("Erro ao salvar no Firestore:", firestoreError);
+          
+          await deleteUser(userCredential.user);
+          
+          toast({
+            title: "Erro ao criar cadastro",
+            description: "Não foi possível salvar seus dados. Verifique se o Firebase está configurado corretamente.",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
         
         setRequestCode(codigo);
         setMode("login");

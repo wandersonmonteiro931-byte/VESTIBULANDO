@@ -214,3 +214,98 @@ Firebase automatically backs up your data, but for extra safety:
 ```bash
 firebase firestore:export gs://your-bucket/backups/$(date +%Y%m%d)
 ```
+
+## IMPORTANTE: Regras do Firestore para Permitir Cadastros
+
+### Problema Atual
+Se novos usuários não conseguem se cadastrar (os dados não aparecem no Firestore), isso acontece porque as regras de segurança do Firestore estão bloqueando a criação de documentos.
+
+### Solução: Atualizar as Regras do Firestore
+
+1. **Acesse o Console do Firebase**
+   - https://console.firebase.google.com/
+   - Selecione seu projeto
+
+2. **Navegue até Firestore Database > Regras**
+
+3. **Substitua as regras existentes pelo código abaixo:**
+
+```javascript
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Permite que qualquer usuário autenticado crie seu próprio documento
+    match /usuarios/{userId} {
+      // Permite leitura apenas para o próprio usuário ou administradores
+      allow read: if request.auth != null && 
+                     (request.auth.uid == userId || 
+                      get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'admin');
+      
+      // Permite criação apenas para o próprio usuário (durante cadastro)
+      allow create: if request.auth != null && 
+                       request.auth.uid == userId &&
+                       request.resource.data.uid == userId;
+      
+      // Permite atualização apenas para administradores
+      allow update: if request.auth != null && 
+                       get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'admin';
+      
+      // Permite exclusão apenas para administradores
+      allow delete: if request.auth != null && 
+                       get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'admin';
+    }
+    
+    // Regras para turmas
+    match /turmas/{turmaId} {
+      // Todos usuários autenticados podem ler turmas
+      allow read: if request.auth != null;
+      
+      // Apenas administradores podem criar, atualizar e excluir turmas
+      allow write: if request.auth != null && 
+                      get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'admin';
+    }
+    
+    // Regras para tarefas
+    match /tarefas/{tarefaId} {
+      // Todos usuários autenticados podem ler tarefas
+      allow read: if request.auth != null;
+      
+      // Apenas professores e administradores podem criar/atualizar/excluir tarefas
+      allow write: if request.auth != null && 
+                      (get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'professor' ||
+                       get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'admin');
+    }
+    
+    // Regras para entregas
+    match /entregas/{entregaId} {
+      // Todos usuários autenticados podem ler entregas
+      allow read: if request.auth != null;
+      
+      // Usuários podem criar suas próprias entregas
+      allow create: if request.auth != null && 
+                       request.resource.data.alunoId == request.auth.uid;
+      
+      // Apenas o próprio aluno ou professores/admins podem atualizar
+      allow update: if request.auth != null && 
+                       (request.resource.data.alunoId == request.auth.uid ||
+                        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'professor' ||
+                        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'admin');
+      
+      // Apenas professores e administradores podem excluir
+      allow delete: if request.auth != null && 
+                      (get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'professor' ||
+                       get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'admin');
+    }
+  }
+}
+```
+
+4. **Clique em "Publicar"** para aplicar as novas regras
+
+### Teste Após Atualizar as Regras
+
+1. Tente criar uma nova conta de aluno
+2. Verifique no Firestore se o documento foi criado na coleção `usuarios`
+3. O novo usuário deve aparecer na lista "Aprovar Contas Pendentes" no painel administrativo
