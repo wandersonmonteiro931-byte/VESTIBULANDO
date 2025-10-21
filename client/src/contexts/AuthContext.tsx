@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, signOut as firebaseSignOut, User as FirebaseUser } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { auth, db, firebaseError } from "@/lib/firebase";
 import type { User } from "@shared/schema";
 
 interface AuthContextType {
@@ -10,6 +10,7 @@ interface AuthContextType {
   loading: boolean;
   signOut: () => Promise<void>;
   refreshUserData: () => Promise<void>;
+  firebaseError: Error | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -37,26 +38,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setCurrentUser(user);
-      if (user) {
-        await fetchUserData(user.uid);
-      } else {
-        setUserData(null);
-      }
+    if (firebaseError) {
       setLoading(false);
-    });
+      return;
+    }
 
-    return unsubscribe;
+    try {
+      const unsubscribe = onAuthStateChanged(auth, async (user) => {
+        setCurrentUser(user);
+        if (user) {
+          await fetchUserData(user.uid);
+        } else {
+          setUserData(null);
+        }
+        setLoading(false);
+      });
+
+      return unsubscribe;
+    } catch (error) {
+      console.error("Auth state change error:", error);
+      setLoading(false);
+    }
   }, []);
 
   const signOut = async () => {
+    if (!auth) return;
     await firebaseSignOut(auth);
     setUserData(null);
   };
 
   return (
-    <AuthContext.Provider value={{ currentUser, userData, loading, signOut, refreshUserData }}>
+    <AuthContext.Provider value={{ currentUser, userData, loading, signOut, refreshUserData, firebaseError }}>
       {children}
     </AuthContext.Provider>
   );

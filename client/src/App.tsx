@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { FirebaseErrorScreen } from "@/components/FirebaseErrorScreen";
 import Login from "@/pages/Login";
 import StudentDashboard from "@/pages/StudentDashboard";
 import TeacherDashboard from "@/pages/TeacherDashboard";
@@ -36,6 +37,12 @@ function RootRedirect() {
 }
 
 function Router() {
+  const { firebaseError } = useAuth();
+
+  if (firebaseError) {
+    return <FirebaseErrorScreen error={firebaseError} />;
+  }
+
   return (
     <Switch>
       <Route path="/" component={RootRedirect} />
