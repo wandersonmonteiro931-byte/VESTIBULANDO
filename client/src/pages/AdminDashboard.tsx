@@ -138,9 +138,20 @@ export default function AdminDashboard() {
           turma: solicitacao.turma || "",
           ativo: true,
           status: "aprovado",
-          codigoSolicitacao: solicitacao.codigoSolicitacao,
+          matricula: solicitacao.matricula,
           dataSolicitacao: solicitacao.dataSolicitacao,
           dataAprovacao: new Date().toISOString(),
+          // Campos adicionais do cadastro
+          dataNascimento: solicitacao.dataNascimento,
+          cpf: solicitacao.cpf,
+          escolaridade: solicitacao.escolaridade,
+          telefone: solicitacao.telefone,
+          cep: solicitacao.cep,
+          rua: solicitacao.rua,
+          bairro: solicitacao.bairro,
+          cidade: solicitacao.cidade,
+          estado: solicitacao.estado,
+          disponibilidade: solicitacao.disponibilidade || [],
         });
       } catch (error: any) {
         if (error.code === "auth/email-already-in-use") {
@@ -158,9 +169,20 @@ export default function AdminDashboard() {
               turma: solicitacao.turma || "",
               ativo: true,
               status: "aprovado",
-              codigoSolicitacao: solicitacao.codigoSolicitacao,
+              matricula: solicitacao.matricula,
               dataSolicitacao: solicitacao.dataSolicitacao,
               dataAprovacao: new Date().toISOString(),
+              // Campos adicionais do cadastro
+              dataNascimento: solicitacao.dataNascimento,
+              cpf: solicitacao.cpf,
+              escolaridade: solicitacao.escolaridade,
+              telefone: solicitacao.telefone,
+              cep: solicitacao.cep,
+              rua: solicitacao.rua,
+              bairro: solicitacao.bairro,
+              cidade: solicitacao.cidade,
+              estado: solicitacao.estado,
+              disponibilidade: solicitacao.disponibilidade || [],
             });
           } else {
             throw new Error("Usuário existe no Authentication mas não no Firestore. Por favor, remova a solicitação duplicada.");
@@ -213,7 +235,7 @@ export default function AdminDashboard() {
           nome: solicitacao.nome,
           comentario: comentario || "Sua solicitação foi reprovada pelo administrador.",
           dataReprovacao: new Date().toISOString(),
-          codigoSolicitacao: solicitacao.codigoSolicitacao,
+          matricula: solicitacao.matricula,
         });
         
         await deleteDoc(doc(db, "usuarios", userId));
@@ -223,7 +245,7 @@ export default function AdminDashboard() {
           nome: solicitacao.nome,
           comentario: comentario || "Sua solicitação foi reprovada pelo administrador.",
           dataReprovacao: new Date().toISOString(),
-          codigoSolicitacao: solicitacao.codigoSolicitacao,
+          matricula: solicitacao.matricula,
         });
       }
       
@@ -508,7 +530,7 @@ export default function AdminDashboard() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Código</TableHead>
+                          <TableHead>Matrícula</TableHead>
                           <TableHead>Nome</TableHead>
                           <TableHead>Email</TableHead>
                           <TableHead>UID</TableHead>
@@ -523,7 +545,7 @@ export default function AdminDashboard() {
                           <TableRow key={user.uid} data-testid={`row-pending-${user.uid}`}>
                             <TableCell>
                               <code className="text-xs font-mono bg-muted px-2 py-1 rounded" data-testid={`code-${user.uid}`}>
-                                {user.codigoSolicitacao || "N/A"}
+                                {user.matricula || "N/A"}
                               </code>
                             </TableCell>
                             <TableCell className="font-medium">{user.nome}</TableCell>

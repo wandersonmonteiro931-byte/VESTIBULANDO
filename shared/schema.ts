@@ -10,15 +10,44 @@ export const userSchema = z.object({
   turma: z.string().optional(),
   ativo: z.boolean().default(true),
   status: z.enum(["pendente", "aprovado", "reprovado"]).default("pendente"),
-  codigoSolicitacao: z.string().optional(),
+  matricula: z.string().optional(), // 4 dígitos - número da matrícula do aluno
   comentarioReprovacao: z.string().optional(),
   dataSolicitacao: z.string().optional(),
+  // Campos obrigatórios para alunos
+  dataNascimento: z.string().optional(),
+  cpf: z.string().optional(),
+  escolaridade: z.string().optional(), // ensino fundamental, médio, superior
+  telefone: z.string().optional(), // WhatsApp
+  cep: z.string().optional(),
+  rua: z.string().optional(),
+  bairro: z.string().optional(),
+  cidade: z.string().optional(),
+  estado: z.string().optional(),
+  disponibilidade: z.array(z.string()).optional(), // horários disponíveis para estudo
+});
+
+// Schema para cadastro de aluno (todos os campos obrigatórios)
+export const alunoRegistrationSchema = z.object({
+  nome: z.string().min(1, "Nome é obrigatório"),
+  email: z.string().email("Email inválido"),
+  dataNascimento: z.string().min(1, "Data de nascimento é obrigatória"),
+  cpf: z.string().min(1, "CPF é obrigatório"),
+  escolaridade: z.string().min(1, "Escolaridade é obrigatória"),
+  telefone: z.string().min(1, "Telefone é obrigatório"),
+  turma: z.string().min(1, "Turma é obrigatória"),
+  cep: z.string().min(1, "CEP é obrigatório"),
+  rua: z.string().min(1, "Rua é obrigatória"),
+  bairro: z.string().min(1, "Bairro é obrigatório"),
+  cidade: z.string().min(1, "Cidade é obrigatória"),
+  estado: z.string().min(1, "Estado é obrigatório"),
+  disponibilidade: z.array(z.string()).min(1, "Selecione pelo menos uma disponibilidade"),
 });
 
 export const insertUserSchema = userSchema.omit({ uid: true });
 
 export type User = z.infer<typeof userSchema>;
 export type InsertUser = z.infer<typeof insertUserSchema>;
+export type AlunoRegistration = z.infer<typeof alunoRegistrationSchema>;
 
 // Tarefa (Assignment) schema
 export const tarefaSchema = z.object({
@@ -66,6 +95,7 @@ export const turmaSchema = z.object({
   nome: z.string().min(1, "Nome da turma é obrigatório"),
   ano: z.string(),
   ativa: z.boolean().default(true),
+  vagasDisponiveis: z.number().optional(),
 });
 
 export const insertTurmaSchema = turmaSchema.omit({ id: true });
