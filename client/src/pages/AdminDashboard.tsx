@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { collection, addDoc, updateDoc, doc, where } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { collection, addDoc, updateDoc, doc, where, setDoc, deleteDoc } from "firebase/firestore";
+import { db, auth as firebaseAuth } from "@/lib/firebase";
+import { createUserWithEmailAndPassword, deleteUser } from "firebase/auth";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,20 +31,50 @@ const turmaFormSchema = z.object({
   ano: z.string().min(1, "Ano é obrigatório"),
 });
 
+const alunoFormSchema = z.object({
+  nome: z.string().min(1, "Nome é obrigatório"),
+  email: z.string().email("Email inválido"),
+  senha: z.string().min(6, "A senha deve ter pelo menos 6 caracteres"),
+  turma: z.string().optional(),
+  tipo: z.enum(["aluno", "professor", "admin"]).default("aluno"),
+}).refine((data) => {
+  if (data.tipo === "aluno" && !data.turma) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Turma é obrigatória para alunos",
+  path: ["turma"],
+});
+
 export default function AdminDashboard() {
   const { userData, signOut, refreshUserData } = useAuth();
   const { toast } = useToast();
   const [createTurmaDialogOpen, setCreateTurmaDialogOpen] = useState(false);
+  const [createAlunoDialogOpen, setCreateAlunoDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [userToReject, setUserToReject] = useState<any | null>(null);
   const [rejectComment, setRejectComment] = useState("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<any | null>(null);
 
   const turmaForm = useForm<z.infer<typeof turmaFormSchema>>({
     resolver: zodResolver(turmaFormSchema),
     defaultValues: {
       nome: "",
       ano: new Date().getFullYear().toString(),
+    },
+  });
+
+  const alunoForm = useForm<z.infer<typeof alunoFormSchema>>({
+    resolver: zodResolver(alunoFormSchema),
+    defaultValues: {
+      nome: "",
+      email: "",
+      senha: "",
+      turma: "",
+      tipo: "aluno",
     },
   });
 
@@ -173,6 +204,76 @@ export default function AdminDashboard() {
     onError: (error: any) => {
       toast({
         title: "Erro ao criar turma",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const createAlunoMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof alunoFormSchema>) => {
+      const userCredential = await createUserWithEmailAndPassword(firebaseAuth, data.email, data.senha);
+      
+      await setDoc(doc(db, "usuarios", userCredential.user.uid), {
+        uid: userCredential.user.uid,
+        nome: data.nome,
+        email: data.email,
+        tipo: data.tipo,
+        turma: data.turma || "",
+        ativo: true,
+        status: "aprovado",
+      });
+      
+      return userCredential.user;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/usuarios/all"] });
+      toast({
+        title: "Usuário criado com sucesso!",
+        description: "O usuário pode acessar a plataforma.",
+      });
+      setCreateAlunoDialogOpen(false);
+      alunoForm.reset();
+    },
+    onError: (error: any) => {
+      let message = error.message;
+      if (error.code === "auth/email-already-in-use") {
+        message = "Este email já está em uso";
+      } else if (error.code === "auth/weak-password") {
+        message = "A senha deve ter pelo menos 6 caracteres";
+      } else if (error.code === "auth/invalid-email") {
+        message = "Email inválido";
+      }
+      
+      toast({
+        title: "Erro ao criar usuário",
+        description: message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (user: any) => {
+      if (user.tipo === "admin") {
+        throw new Error("Não é permitido excluir administradores");
+      }
+      await deleteDoc(doc(db, "usuarios", user.uid));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/usuarios/all"] });
+      setDeleteDialogOpen(false);
+      setUserToDelete(null);
+      toast({
+        title: "Usuário excluído",
+        description: "O usuário foi removido da plataforma.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao excluir usuário",
         description: error.message,
         variant: "destructive",
       });
@@ -362,9 +463,10 @@ export default function AdminDashboard() {
           <TabsContent value="usuarios" className="space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-xl font-semibold">Gerenciar Usuários</h3>
-              <div className="text-sm text-muted-foreground">
-                Novos usuários devem se cadastrar e aguardar aprovação
-              </div>
+              <Button onClick={() => setCreateAlunoDialogOpen(true)} data-testid="button-create-user">
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar Usuário
+              </Button>
             </div>
 
             <Card>
@@ -416,17 +518,32 @@ export default function AdminDashboard() {
                               )}
                             </TableCell>
                             <TableCell className="text-right">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => toggleUserStatusMutation.mutate({ 
-                                  userId: user.uid, 
-                                  ativo: !user.ativo 
-                                })}
-                                data-testid="button-toggle-status"
-                              >
-                                {user.ativo ? "Desativar" : "Ativar"}
-                              </Button>
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => toggleUserStatusMutation.mutate({ 
+                                    userId: user.uid, 
+                                    ativo: !user.ativo 
+                                  })}
+                                  data-testid="button-toggle-status"
+                                >
+                                  {user.ativo ? "Desativar" : "Ativar"}
+                                </Button>
+                                {user.tipo !== "admin" && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setUserToDelete(user);
+                                      setDeleteDialogOpen(true);
+                                    }}
+                                    data-testid="button-delete-user"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -641,6 +758,179 @@ export default function AdminDashboard() {
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={createAlunoDialogOpen} onOpenChange={setCreateAlunoDialogOpen}>
+        <DialogContent data-testid="dialog-create-user">
+          <DialogHeader>
+            <DialogTitle>Adicionar Usuário</DialogTitle>
+            <DialogDescription>
+              Crie um novo usuário com acesso imediato à plataforma
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...alunoForm}>
+            <form onSubmit={alunoForm.handleSubmit((data) => createAlunoMutation.mutate(data))} className="space-y-4">
+              <FormField
+                control={alunoForm.control}
+                name="nome"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome Completo</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Nome do usuário" {...field} data-testid="input-user-nome" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={alunoForm.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="email@exemplo.com" {...field} data-testid="input-user-email" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={alunoForm.control}
+                name="senha"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Senha</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="Mínimo 6 caracteres" {...field} data-testid="input-user-senha" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={alunoForm.control}
+                name="tipo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tipo</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-user-tipo">
+                          <SelectValue placeholder="Selecione o tipo" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="aluno">Aluno</SelectItem>
+                        <SelectItem value="professor">Professor</SelectItem>
+                        <SelectItem value="admin">Administrador</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={alunoForm.control}
+                name="turma"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Turma</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: 3A, 2B" {...field} data-testid="input-user-turma" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setCreateAlunoDialogOpen(false);
+                    alunoForm.reset();
+                  }}
+                  data-testid="button-cancel-create-user"
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={createAlunoMutation.isPending} data-testid="button-save-user">
+                  {createAlunoMutation.isPending ? "Criando..." : "Criar Usuário"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent data-testid="dialog-delete-user">
+          <DialogHeader>
+            <DialogTitle>Excluir Usuário</DialogTitle>
+            <DialogDescription>
+              Você está prestes a excluir <strong>{userToDelete?.nome}</strong>.
+              Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {userToDelete && (
+            <div className="p-4 bg-muted rounded-lg space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Nome:</span>
+                <span className="font-medium">{userToDelete.nome}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Email:</span>
+                <span>{userToDelete.email}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Tipo:</span>
+                <span>{userToDelete.tipo}</span>
+              </div>
+              {userToDelete.turma && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Turma:</span>
+                  <span>{userToDelete.turma}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setUserToDelete(null);
+              }}
+              data-testid="button-cancel-delete"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                if (userToDelete) {
+                  deleteUserMutation.mutate(userToDelete);
+                }
+              }}
+              disabled={deleteUserMutation.isPending}
+              data-testid="button-confirm-delete"
+            >
+              {deleteUserMutation.isPending ? "Excluindo..." : "Excluir Usuário"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
