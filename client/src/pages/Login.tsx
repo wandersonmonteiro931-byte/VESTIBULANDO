@@ -15,18 +15,9 @@ import { GraduationCap, Loader2, Copy, Check } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 async function generateUniqueRequestCode(): Promise<string> {
-  const { collection, query, where, getDocs } = await import("firebase/firestore");
-  
-  while (true) {
-    const code = Math.floor(1000 + Math.random() * 9000).toString();
-    
-    const q = query(collection(db, "usuarios"), where("codigoSolicitacao", "==", code));
-    const querySnapshot = await getDocs(q);
-    
-    if (querySnapshot.empty) {
-      return code;
-    }
-  }
+  const timestamp = Date.now().toString().slice(-6);
+  const random = Math.floor(1000 + Math.random() * 9000).toString();
+  return timestamp + random.slice(0, 2);
 }
 
 export default function Login() {
