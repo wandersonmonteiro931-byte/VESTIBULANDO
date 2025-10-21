@@ -9,6 +9,13 @@ Plataforma educacional completa para preparação do ENEM com gestão de tarefas
 - **Last Updated**: October 2025
 
 ## Recent Changes (October 2025)
+**Real-time Synchronization (Latest):**
+- ✅ Implemented Firebase Firestore real-time listeners using onSnapshot
+- ✅ Created useRealtimeQuery hook for automatic data synchronization
+- ✅ Updated all dashboards (Student, Teacher, Admin) to use real-time data
+- ✅ Configured TanStack Query for automatic refetch on window focus and reconnect
+- ✅ Data now updates automatically across all clients when changes occur in Firebase
+
 **Security Hardening Complete:**
 - ✅ Restricted self-registration to "aluno" accounts only (prevents privilege escalation)
 - ✅ Added null guards to all Firestore and Storage helper functions
@@ -35,6 +42,7 @@ Plataforma educacional completa para preparação do ENEM com gestão de tarefas
 - **Styling**: TailwindCSS + Shadcn UI Components
 - **Backend**: Firebase (Auth, Firestore, Storage)
 - **State Management**: TanStack Query + React Context
+- **Real-time Sync**: Firebase onSnapshot listeners with custom useRealtimeQuery hook
 - **Routing**: Wouter
 - **Forms**: React Hook Form + Zod validation
 
