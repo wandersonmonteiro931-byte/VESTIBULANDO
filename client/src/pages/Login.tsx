@@ -150,29 +150,24 @@ export default function Login() {
         console.log("3. Código gerado:", codigo);
         
         console.log("4. Salvando no Firestore...");
-        try {
-          const savePromise = setDoc(doc(db, "usuarios", userCredential.user.uid), {
-            uid: userCredential.user.uid,
-            nome: formData.nome,
-            email: formData.email,
-            tipo: "aluno",
-            turma: formData.turma || "",
-            ativo: true,
-            status: "pendente",
-            codigoSolicitacao: codigo,
-            dataSolicitacao: dataSolicitacao,
-          });
-          
-          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error("Timeout ao salvar no Firestore após 10 segundos")), 10000);
-          });
-          
-          await Promise.race([savePromise, timeoutPromise]);
-          console.log("5. Dados salvos no Firestore");
-        } catch (firestoreError: any) {
-          console.error("Erro ao salvar no Firestore:", firestoreError);
-          throw new Error(`Firestore: ${firestoreError.code || firestoreError.message}`);
-        }
+        
+        setDoc(doc(db, "usuarios", userCredential.user.uid), {
+          uid: userCredential.user.uid,
+          nome: formData.nome,
+          email: formData.email,
+          tipo: "aluno",
+          turma: formData.turma || "",
+          ativo: true,
+          status: "pendente",
+          codigoSolicitacao: codigo,
+          dataSolicitacao: dataSolicitacao,
+        }).then(() => {
+          console.log("5. Dados salvos no Firestore com sucesso");
+        }).catch((error) => {
+          console.error("Erro ao salvar no Firestore:", error);
+        });
+        
+        console.log("5. Continuando sem aguardar Firestore...");
         
         console.log("6. Configurando estados ANTES do logout...");
         setRequestCode(codigo);

@@ -26,6 +26,10 @@ try {
   auth = getAuth(app);
   db = getFirestore(app);
   storage = getStorage(app);
+  
+  console.log("Firebase inicializado com sucesso");
+  console.log("Project ID:", firebaseConfig.projectId);
+  console.log("Auth Domain:", firebaseConfig.authDomain);
 } catch (error) {
   firebaseError = error as Error;
   console.error("Firebase initialization error:", error);
