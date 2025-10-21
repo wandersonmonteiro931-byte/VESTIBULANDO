@@ -221,6 +221,7 @@ export default function Login() {
         console.log("Redirecionamento executado");
       }
     } catch (error: any) {
+      console.error("Erro completo:", error);
       let message = "Ocorreu um erro. Tente novamente.";
       if (error.code === "auth/email-already-in-use") {
         message = "Este email já está em uso";
@@ -232,6 +233,10 @@ export default function Login() {
         message = "Email ou senha incorretos";
       } else if (error.code === "auth/invalid-credential") {
         message = "Email ou senha incorretos";
+      } else if (error.code) {
+        message = `${error.code}: ${error.message}`;
+      } else {
+        message = error.message || "Erro desconhecido";
       }
       
       toast({
