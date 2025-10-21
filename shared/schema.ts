@@ -10,6 +10,9 @@ export const userSchema = z.object({
   turma: z.string().optional(),
   ativo: z.boolean().default(true),
   status: z.enum(["pendente", "aprovado", "reprovado"]).default("pendente"),
+  codigoSolicitacao: z.string().optional(),
+  comentarioReprovacao: z.string().optional(),
+  dataSolicitacao: z.string().optional(),
 });
 
 export const insertUserSchema = userSchema.omit({ uid: true });
