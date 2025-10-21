@@ -119,6 +119,7 @@ export default function AdminDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/usuarios/pendentes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/usuarios/all"] });
       toast({
         title: "Conta aprovada!",
         description: "O usuário agora pode acessar a plataforma.",
@@ -144,6 +145,7 @@ export default function AdminDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/usuarios/pendentes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/usuarios/all"] });
       setRejectDialogOpen(false);
       setUserToReject(null);
       setRejectComment("");
@@ -168,6 +170,7 @@ export default function AdminDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/usuarios/all"] });
       toast({
         title: "Status atualizado",
         description: "O status do usuário foi alterado.",
