@@ -58,6 +58,9 @@ export default function AdminDashboard() {
   const [rejectComment, setRejectComment] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<any | null>(null);
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [solicitacaoToApprove, setSolicitacaoToApprove] = useState<any | null>(null);
+  const [senhaInicial, setSenhaInicial] = useState("");
 
   const turmaForm = useForm<z.infer<typeof turmaFormSchema>>({
     resolver: zodResolver(turmaFormSchema),
@@ -99,30 +102,50 @@ export default function AdminDashboard() {
     queryKey: ["/api/entregas/all"],
   });
 
-  const { data: allUsers, refetch: refetchAllUsers } = useRealtimeQuery({
-    collectionName: "usuarios",
-    queryKey: ["/api/usuarios/all"],
+  const { data: solicitacoes, refetch: refetchSolicitacoes, isLoading: loadingSolicitacoes } = useRealtimeQuery({
+    collectionName: "solicitacoes",
+    queryKey: ["/api/solicitacoes"],
   });
 
-  const pendingUsers = allUsers?.filter((user: any) => user.status === "pendente").map((user: any) => ({
-    ...user,
-    docId: user.id
+  const pendingUsers = solicitacoes?.map((sol: any) => ({
+    ...sol,
+    docId: sol.id
   }));
   
-  const loadingPendingUsers = !allUsers;
+  const loadingPendingUsers = loadingSolicitacoes;
 
   const approveUserMutation = useMutation({
-    mutationFn: async (userId: string) => {
-      const userRef = doc(db, "usuarios", userId);
-      await updateDoc(userRef, { status: "aprovado" });
+    mutationFn: async ({ solicitacaoId, senha }: { solicitacaoId: string; senha: string }) => {
+      const solicitacaoDoc = await getDoc(doc(db, "solicitacoes", solicitacaoId));
+      const solicitacao = solicitacaoDoc.data();
+      
+      if (!solicitacao) {
+        throw new Error("Solicitação não encontrada");
+      }
+      
+      const userCredential = await createUserWithEmailAndPassword(firebaseAuth, solicitacao.email, senha);
+      
+      await setDoc(doc(db, "usuarios", userCredential.user.uid), {
+        uid: userCredential.user.uid,
+        nome: solicitacao.nome,
+        email: solicitacao.email,
+        tipo: solicitacao.tipo,
+        turma: solicitacao.turma || "",
+        ativo: true,
+        status: "aprovado",
+        codigoSolicitacao: solicitacao.codigoSolicitacao,
+        dataSolicitacao: solicitacao.dataSolicitacao,
+        dataAprovacao: new Date().toISOString(),
+      });
+      
+      await deleteDoc(doc(db, "solicitacoes", solicitacaoId));
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/usuarios/pendentes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solicitacoes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/usuarios/all"] });
       toast({
-        title: "Conta aprovada!",
-        description: "O usuário agora pode acessar a plataforma.",
+        title: "Conta aprovada e criada!",
+        description: "O usuário agora pode fazer login com a senha definida.",
       });
     },
     onError: (error: any) => {
@@ -135,28 +158,22 @@ export default function AdminDashboard() {
   });
 
   const rejectUserMutation = useMutation({
-    mutationFn: async ({ userId, comentario }: { userId: string; comentario?: string }) => {
-      const userRef = doc(db, "usuarios", userId);
-      await updateDoc(userRef, { 
-        status: "reprovado",
-        comentarioReprovacao: comentario || ""
-      });
+    mutationFn: async ({ solicitacaoId, comentario }: { solicitacaoId: string; comentario?: string }) => {
+      await deleteDoc(doc(db, "solicitacoes", solicitacaoId));
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/usuarios/pendentes"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/usuarios/all"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solicitacoes"] });
       setRejectDialogOpen(false);
       setUserToReject(null);
       setRejectComment("");
       toast({
-        title: "Conta reprovada",
-        description: "O usuário não poderá acessar a plataforma.",
+        title: "Solicitação rejeitada",
+        description: "A solicitação foi removida.",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Erro ao reprovar conta",
+        title: "Erro ao rejeitar solicitação",
         description: error.message,
         variant: "destructive",
       });
@@ -386,7 +403,7 @@ export default function AdminDashboard() {
                   variant="outline"
                   size="sm"
                   onClick={async () => {
-                    await refetchAllUsers();
+                    await refetchSolicitacoes();
                     toast({
                       title: "Atualizado!",
                       description: "Lista de solicitações atualizada.",
@@ -462,7 +479,10 @@ export default function AdminDashboard() {
                                 <Button
                                   variant="default"
                                   size="sm"
-                                  onClick={() => approveUserMutation.mutate(user.docId)}
+                                  onClick={() => {
+                                    setSolicitacaoToApprove(user);
+                                    setApproveDialogOpen(true);
+                                  }}
                                   disabled={approveUserMutation.isPending || rejectUserMutation.isPending}
                                   data-testid="button-approve"
                                 >
@@ -739,7 +759,7 @@ export default function AdminDashboard() {
               onClick={() => {
                 if (userToReject) {
                   rejectUserMutation.mutate({ 
-                    userId: userToReject.docId, 
+                    solicitacaoId: userToReject.docId, 
                     comentario: rejectComment 
                   });
                 }
@@ -748,6 +768,87 @@ export default function AdminDashboard() {
               data-testid="button-confirm-reject"
             >
               {rejectUserMutation.isPending ? "Reprovando..." : "Reprovar Cadastro"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
+        <DialogContent data-testid="dialog-approve-user">
+          <DialogHeader>
+            <DialogTitle>Aprovar Cadastro</DialogTitle>
+            <DialogDescription>
+              Defina uma senha inicial para <strong>{solicitacaoToApprove?.nome}</strong>.
+              O usuário poderá fazer login com esta senha.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {solicitacaoToApprove && (
+              <div className="p-4 bg-muted rounded-lg space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Código:</span>
+                  <code className="font-mono">{solicitacaoToApprove.codigoSolicitacao}</code>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Email:</span>
+                  <span>{solicitacaoToApprove.email}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Turma:</span>
+                  <span>{solicitacaoToApprove.turma || "-"}</span>
+                </div>
+              </div>
+            )}
+            
+            <div className="space-y-2">
+              <Label htmlFor="senha-inicial">Senha Inicial</Label>
+              <Input
+                id="senha-inicial"
+                type="password"
+                placeholder="Defina uma senha de pelo menos 6 caracteres"
+                value={senhaInicial}
+                onChange={(e) => setSenhaInicial(e.target.value)}
+                minLength={6}
+                data-testid="input-senha-inicial"
+              />
+              <p className="text-sm text-muted-foreground">
+                Informe esta senha ao usuário após a aprovação.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setApproveDialogOpen(false);
+                setSolicitacaoToApprove(null);
+                setSenhaInicial("");
+              }}
+              data-testid="button-cancel-approve"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="default"
+              onClick={() => {
+                if (solicitacaoToApprove && senhaInicial.length >= 6) {
+                  approveUserMutation.mutate({ 
+                    solicitacaoId: solicitacaoToApprove.docId, 
+                    senha: senhaInicial
+                  });
+                  setApproveDialogOpen(false);
+                  setSolicitacaoToApprove(null);
+                  setSenhaInicial("");
+                }
+              }}
+              disabled={approveUserMutation.isPending || senhaInicial.length < 6}
+              data-testid="button-confirm-approve"
+            >
+              {approveUserMutation.isPending ? "Aprovando..." : "Aprovar e Criar Conta"}
             </Button>
           </DialogFooter>
         </DialogContent>

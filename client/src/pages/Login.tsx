@@ -155,31 +155,27 @@ export default function Login() {
           return;
         }
         
-        userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-        
         const codigo = await generateUniqueRequestCode();
         const dataSolicitacao = new Date().toISOString();
         
+        const { collection, addDoc } = await import("firebase/firestore");
+        
         try {
-          await setDoc(doc(db, "usuarios", userCredential.user.uid), {
-            uid: userCredential.user.uid,
+          await addDoc(collection(db, "solicitacoes"), {
             nome: formData.nome,
             email: formData.email,
             tipo: "aluno",
             turma: formData.turma || "",
-            ativo: true,
             status: "pendente",
             codigoSolicitacao: codigo,
             dataSolicitacao: dataSolicitacao,
           });
         } catch (firestoreError: any) {
-          console.error("Erro ao salvar no Firestore:", firestoreError);
-          
-          await deleteUser(userCredential.user);
+          console.error("Erro ao salvar solicitação:", firestoreError);
           
           toast({
-            title: "Erro ao criar cadastro",
-            description: "Não foi possível salvar seus dados. Verifique se o Firebase está configurado corretamente.",
+            title: "Erro ao criar solicitação",
+            description: "Não foi possível enviar sua solicitação. Tente novamente.",
             variant: "destructive",
           });
           setLoading(false);
@@ -190,8 +186,6 @@ export default function Login() {
         setMode("login");
         setFormData({ email: "", password: "", nome: "", turma: "" });
         setCodeCopied(false);
-        
-        await auth.signOut();
         setLoading(false);
         
         setTimeout(() => {
@@ -342,19 +336,21 @@ export default function Login() {
               />
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                required
-                minLength={6}
-                data-testid="input-password"
-              />
-            </div>
+            {mode === "login" && (
+              <div className="space-y-2">
+                <Label htmlFor="password">Senha</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  required
+                  minLength={6}
+                  data-testid="input-password"
+                />
+              </div>
+            )}
             
             {mode === "login" && (
               <div className="space-y-2">
@@ -378,7 +374,7 @@ export default function Login() {
             
             {mode === "register" && (
               <div className="p-3 bg-muted rounded-lg text-sm text-muted-foreground">
-                Novos cadastros são criados como <strong>Aluno</strong> e precisam de aprovação do administrador para acessar a plataforma.
+                Sua solicitação será enviada para análise do administrador. Após a aprovação, você receberá suas credenciais de acesso.
               </div>
             )}
             
