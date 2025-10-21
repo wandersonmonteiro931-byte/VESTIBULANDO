@@ -141,11 +141,15 @@ export default function Login() {
           return;
         }
         
+        console.log("1. Iniciando criação de usuário...");
         userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+        console.log("2. Usuário criado no Firebase Auth:", userCredential.user.uid);
         
         const codigo = generateRequestCode();
         const dataSolicitacao = new Date().toISOString();
+        console.log("3. Código gerado:", codigo);
         
+        console.log("4. Salvando no Firestore...");
         await setDoc(doc(db, "usuarios", userCredential.user.uid), {
           uid: userCredential.user.uid,
           nome: formData.nome,
@@ -157,15 +161,27 @@ export default function Login() {
           codigoSolicitacao: codigo,
           dataSolicitacao: dataSolicitacao,
         });
+        console.log("5. Dados salvos no Firestore");
         
-        await auth.signOut();
-        
+        console.log("6. Configurando estados ANTES do logout...");
         setRequestCode(codigo);
-        setShowCodeDialog(true);
-        setCodeCopied(false);
         setMode("login");
         setFormData({ email: "", password: "", nome: "", turma: "" });
+        setCodeCopied(false);
+        
+        console.log("7. Fazendo logout...");
+        await auth.signOut();
+        console.log("8. Logout concluído");
+        
+        console.log("9. Parando loading e mostrando dialog");
         setLoading(false);
+        
+        setTimeout(() => {
+          console.log("10. Abrindo dialog...");
+          setShowCodeDialog(true);
+        }, 100);
+        
+        console.log("11. Processo completo!");
         return;
       } else {
         userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
