@@ -30,6 +30,8 @@ export default function Login() {
   const [showCodeDialog, setShowCodeDialog] = useState(false);
   const [requestCode, setRequestCode] = useState("");
   const [codeCopied, setCodeCopied] = useState(false);
+  const [showRejectionDialog, setShowRejectionDialog] = useState(false);
+  const [rejectionComment, setRejectionComment] = useState("");
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -158,9 +160,17 @@ export default function Login() {
         const codigo = await generateUniqueRequestCode();
         const dataSolicitacao = new Date().toISOString();
         
-        const { collection, addDoc } = await import("firebase/firestore");
+        const { collection, addDoc, getDocs, query, where, deleteDoc } = await import("firebase/firestore");
         
         try {
+          const reprovacaoSnapshot = await getDocs(query(collection(db, "reprovacoes"), where("email", "==", formData.email)));
+          
+          if (!reprovacaoSnapshot.empty) {
+            for (const docRef of reprovacaoSnapshot.docs) {
+              await deleteDoc(doc(db, "reprovacoes", docRef.id));
+            }
+          }
+          
           await addDoc(collection(db, "solicitacoes"), {
             nome: formData.nome,
             email: formData.email,
@@ -240,6 +250,23 @@ export default function Login() {
         });
       }
     } catch (error: any) {
+      if (mode === "login" && (error.code === "auth/user-not-found" || error.code === "auth/invalid-credential")) {
+        try {
+          const { getDocs, query, collection, where } = await import("firebase/firestore");
+          const reprovacaoSnapshot = await getDocs(query(collection(db, "reprovacoes"), where("email", "==", formData.email)));
+          
+          if (!reprovacaoSnapshot.empty) {
+            const reprovacaoData = reprovacaoSnapshot.docs[0].data();
+            setRejectionComment(reprovacaoData.comentario || "Sua solicitação foi reprovada pelo administrador.");
+            setShowRejectionDialog(true);
+            setLoading(false);
+            return;
+          }
+        } catch (checkError) {
+          console.error("Erro ao verificar reprovação:", checkError);
+        }
+      }
+      
       let message = "Ocorreu um erro. Tente novamente.";
       if (error.code === "auth/email-already-in-use") {
         message = "Este email já está em uso";
@@ -451,6 +478,38 @@ export default function Login() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={showRejectionDialog} onOpenChange={setShowRejectionDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Cadastro Reprovado</DialogTitle>
+            <DialogDescription>
+              Seu cadastro foi analisado pelo administrador e foi reprovado.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+              <p className="text-sm text-foreground whitespace-pre-wrap">
+                <strong>Motivo:</strong><br />
+                {rejectionComment}
+              </p>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Você pode se cadastrar novamente com as informações corretas.
+            </p>
+            <Button
+              onClick={() => {
+                setShowRejectionDialog(false);
+                setMode("register");
+              }}
+              className="w-full"
+              data-testid="button-recadastrar"
+            >
+              Fazer Novo Cadastro
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showCodeDialog} onOpenChange={setShowCodeDialog}>
         <DialogContent className="sm:max-w-md">

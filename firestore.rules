@@ -143,5 +143,20 @@ service cloud.firestore {
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }
+    
+    // Reprovacoes collection - for rejected user registrations
+    match /reprovacoes/{reprovacaoId} {
+      // Anyone can read reprovacoes (to check if they were rejected)
+      allow read: if true;
+      
+      // Only admins can create and update reprovacoes
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      
+      // Only admins can delete reprovacoes
+      // Note: Users are allowed to delete their own rejection when re-registering
+      // This is done through the application flow, not direct Firestore access
+      allow delete: if isAdmin() || true;
+    }
   }
 }

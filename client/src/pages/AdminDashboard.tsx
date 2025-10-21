@@ -195,6 +195,38 @@ export default function AdminDashboard() {
 
   const rejectUserMutation = useMutation({
     mutationFn: async ({ solicitacaoId, comentario }: { solicitacaoId: string; comentario?: string }) => {
+      const solicitacaoDoc = await getDoc(doc(db, "solicitacoes", solicitacaoId));
+      const solicitacao = solicitacaoDoc.data();
+      
+      if (!solicitacao) {
+        throw new Error("Solicitação não encontrada");
+      }
+      
+      const { getDocs, query, collection: firestoreCollection, where } = await import("firebase/firestore");
+      const usersSnapshot = await getDocs(query(firestoreCollection(db, "usuarios"), where("email", "==", solicitacao.email)));
+      
+      if (!usersSnapshot.empty) {
+        const userId = usersSnapshot.docs[0].id;
+        
+        await setDoc(doc(db, "reprovacoes", userId), {
+          email: solicitacao.email,
+          nome: solicitacao.nome,
+          comentario: comentario || "Sua solicitação foi reprovada pelo administrador.",
+          dataReprovacao: new Date().toISOString(),
+          codigoSolicitacao: solicitacao.codigoSolicitacao,
+        });
+        
+        await deleteDoc(doc(db, "usuarios", userId));
+      } else {
+        await setDoc(doc(db, "reprovacoes", solicitacao.email.replace(/[.@]/g, "_")), {
+          email: solicitacao.email,
+          nome: solicitacao.nome,
+          comentario: comentario || "Sua solicitação foi reprovada pelo administrador.",
+          dataReprovacao: new Date().toISOString(),
+          codigoSolicitacao: solicitacao.codigoSolicitacao,
+        });
+      }
+      
       await deleteDoc(doc(db, "solicitacoes", solicitacaoId));
     },
     onSuccess: () => {
@@ -204,7 +236,7 @@ export default function AdminDashboard() {
       setRejectComment("");
       toast({
         title: "Solicitação rejeitada",
-        description: "A solicitação foi removida.",
+        description: "O usuário foi notificado sobre a reprovação.",
       });
     },
     onError: (error: any) => {
