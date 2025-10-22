@@ -10,7 +10,17 @@ Plataforma educacional completa para preparação do ENEM com gestão de tarefas
 
 ## Recent Changes (October 2025)
 
-**Enrollment Management System (Latest):**
+**Vacancy Count Fix (Latest - October 22, 2025):**
+- ✅ Fixed critical bug where vacancy counts (vagasPreenchidas) were not updating correctly
+- ✅ Corrected all student filters and selections to use turma ID instead of turma name
+- ✅ Fixed all SelectItem components to use turma IDs for proper referencing
+- ✅ Updated bulkTransferStudentsMutation to use IDs throughout the transaction
+- ✅ Updated bulkRemoveStudentsMutation to use IDs directly without name lookups
+- ✅ Added automatic query invalidation for /api/turmas in all student-affecting mutations
+- ✅ Ensured all mutations (add, transfer, remove students) properly update vagasPreenchidas atomically
+- ✅ Vacancy counts now update automatically and correctly for all operations
+
+**Enrollment Management System:**
 - ✅ Added "Edit" button for directors to edit pending solicitations directly
 - ✅ Created comprehensive edit solicitation dialog with all student data fields
 - ✅ Implemented "Stand By" (waitlist) status with dedicated mutation and dialog
