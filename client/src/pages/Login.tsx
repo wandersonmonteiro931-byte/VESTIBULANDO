@@ -90,11 +90,10 @@ function validarCPF(cpf: string): boolean {
 // Função para formatar Telefone (WhatsApp)
 function formatarTelefone(valor: string): string {
   const apenasNumeros = valor.replace(/\D/g, '');
-  const limitado = apenasNumeros.slice(0, 11);
   
-  if (limitado.length <= 2) return limitado;
-  if (limitado.length <= 7) return `(${limitado.slice(0, 2)})${limitado.slice(2)}`;
-  return `(${limitado.slice(0, 2)})${limitado.slice(2, 7)}-${limitado.slice(7)}`;
+  if (apenasNumeros.length <= 2) return apenasNumeros;
+  if (apenasNumeros.length <= 7) return `(${apenasNumeros.slice(0, 2)})${apenasNumeros.slice(2)}`;
+  return `(${apenasNumeros.slice(0, 2)})${apenasNumeros.slice(2, 7)}-${apenasNumeros.slice(7)}`;
 }
 
 // Função para formatar CEP
@@ -1263,7 +1262,6 @@ export default function Login() {
                         value={formData.telefone}
                         onChange={(e) => setFormData({ ...formData, telefone: formatarTelefone(e.target.value) })}
                         required
-                        maxLength={14}
                         data-testid="input-telefone"
                       />
                     </div>

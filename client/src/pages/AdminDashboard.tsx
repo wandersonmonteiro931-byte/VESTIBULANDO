@@ -20,7 +20,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { PresenceIndicator } from "@/components/PresenceIndicator";
 import { MonitoringTab } from "@/components/MonitoringTab";
 import { DocumentationTab } from "@/components/DocumentationTab";
-import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, MessageCircle, ArrowRightLeft, Clock } from "lucide-react";
+import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, MessageCircle, ArrowRightLeft, Clock, Search, Eye, AlertTriangle } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
@@ -117,6 +117,14 @@ export default function AdminDashboard() {
   const [standbyComment, setStandbyComment] = useState("");
   const [editTurmaDialogOpen, setEditTurmaDialogOpen] = useState(false);
   const [turmaToEdit, setTurmaToEdit] = useState<Turma | null>(null);
+  const [studentSearchTerm, setStudentSearchTerm] = useState("");
+  const [studentDetailsDialogOpen, setStudentDetailsDialogOpen] = useState(false);
+  const [selectedStudentDetails, setSelectedStudentDetails] = useState<User | null>(null);
+  const [disciplinarySearchTerm, setDisciplinarySearchTerm] = useState("");
+  const [warningDialogOpen, setWarningDialogOpen] = useState(false);
+  const [suspensionDialogOpen, setSuspensionDialogOpen] = useState(false);
+  const [selectedStudentForDisciplinary, setSelectedStudentForDisciplinary] = useState<User | null>(null);
+  const [disciplinaryReason, setDisciplinaryReason] = useState("");
 
   const turmaForm = useForm<z.infer<typeof turmaFormSchema>>({
     resolver: zodResolver(turmaFormSchema),
@@ -185,6 +193,11 @@ export default function AdminDashboard() {
   const { data: solicitacoes, refetch: refetchSolicitacoes, isLoading: loadingSolicitacoes } = useRealtimeQuery({
     collectionName: "solicitacoes",
     queryKey: ["/api/solicitacoes"],
+  });
+
+  const { data: disciplinaryActions } = useRealtimeQuery({
+    collectionName: "disciplinaryActions",
+    queryKey: ["/api/disciplinaryActions"],
   });
 
   const pendingUsers = solicitacoes?.map((sol: any) => ({
@@ -777,6 +790,76 @@ export default function AdminDashboard() {
     },
   });
 
+  const applyWarningMutation = useMutation({
+    mutationFn: async ({ student, motivo }: { student: User; motivo?: string }) => {
+      if (!userData) throw new Error("Usuário não autenticado");
+      
+      await addDoc(collection(db, "disciplinaryActions"), {
+        alunoId: student.uid,
+        alunoNome: student.nome,
+        alunoMatricula: student.matricula || "",
+        alunoTurma: student.turma || "",
+        tipo: "advertencia",
+        motivo: motivo || "",
+        aplicadoPor: userData.uid,
+        aplicadoPorNome: userData.nome,
+        dataAplicacao: new Date().toISOString(),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/disciplinaryActions"] });
+      toast({
+        title: "Advertência aplicada",
+        description: "A advertência disciplinar foi registrada com sucesso.",
+      });
+      setWarningDialogOpen(false);
+      setSelectedStudentForDisciplinary(null);
+      setDisciplinaryReason("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao aplicar advertência",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const applySuspensionMutation = useMutation({
+    mutationFn: async ({ student, motivo }: { student: User; motivo?: string }) => {
+      if (!userData) throw new Error("Usuário não autenticado");
+      
+      await addDoc(collection(db, "disciplinaryActions"), {
+        alunoId: student.uid,
+        alunoNome: student.nome,
+        alunoMatricula: student.matricula || "",
+        alunoTurma: student.turma || "",
+        tipo: "suspensao",
+        motivo: motivo || "",
+        aplicadoPor: userData.uid,
+        aplicadoPorNome: userData.nome,
+        dataAplicacao: new Date().toISOString(),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/disciplinaryActions"] });
+      toast({
+        title: "Suspensão aplicada",
+        description: "A suspensão disciplinar foi registrada com sucesso.",
+      });
+      setSuspensionDialogOpen(false);
+      setSelectedStudentForDisciplinary(null);
+      setDisciplinaryReason("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao aplicar suspensão",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const removeStudentFromTurmaMutation = useMutation({
     mutationFn: async ({ userId }: { userId: string }) => {
       const userRef = doc(db, "usuarios", userId);
@@ -1315,6 +1398,7 @@ export default function AdminDashboard() {
             </TabsTrigger>
             <TabsTrigger value="usuarios" data-testid="tab-usuarios">Alunos</TabsTrigger>
             <TabsTrigger value="turmas" data-testid="tab-turmas">Turmas</TabsTrigger>
+            <TabsTrigger value="disciplinares" data-testid="tab-disciplinares">Advertências e Suspensões</TabsTrigger>
             <TabsTrigger value="monitoramento" data-testid="tab-monitoramento">Monitoramento</TabsTrigger>
             <TabsTrigger value="documentacao" data-testid="tab-documentacao">Documentação</TabsTrigger>
           </TabsList>
@@ -1521,6 +1605,17 @@ export default function AdminDashboard() {
               </div>
             </div>
 
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Pesquisar por nome ou matrícula..."
+                value={studentSearchTerm}
+                onChange={(e) => setStudentSearchTerm(e.target.value)}
+                className="pl-10"
+                data-testid="input-search-student"
+              />
+            </div>
+
             <Card>
               <CardContent className="p-0">
                 {loadingUsers ? (
@@ -1538,13 +1633,21 @@ export default function AdminDashboard() {
                           <TableHead>Email</TableHead>
                           <TableHead>Tipo</TableHead>
                           <TableHead>Turma</TableHead>
+                          <TableHead>Matrícula</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Presença</TableHead>
                           <TableHead className="text-right">Ações</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {users.map((user) => (
+                        {users.filter((user) => {
+                          if (!studentSearchTerm) return true;
+                          const searchLower = studentSearchTerm.toLowerCase();
+                          return (
+                            user.nome?.toLowerCase().includes(searchLower) ||
+                            user.matricula?.toLowerCase().includes(searchLower)
+                          );
+                        }).map((user) => (
                           <TableRow key={user.uid} data-testid={`row-user-${user.uid}`}>
                             <TableCell className="font-medium">{user.nome}</TableCell>
                             <TableCell>{user.email}</TableCell>
@@ -1557,6 +1660,7 @@ export default function AdminDashboard() {
                               </Badge>
                             </TableCell>
                             <TableCell>{getTurmaNome(user.turma)}</TableCell>
+                            <TableCell>{user.matricula || "-"}</TableCell>
                             <TableCell>
                               {user.ativo ? (
                                 <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
@@ -1580,6 +1684,19 @@ export default function AdminDashboard() {
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
+                                {user.tipo === "aluno" && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedStudentDetails(user);
+                                      setStudentDetailsDialogOpen(true);
+                                    }}
+                                    data-testid={`button-view-details-${user.uid}`}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                )}
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -1850,6 +1967,127 @@ export default function AdminDashboard() {
                 </Card>
               )}
             </div>
+          </TabsContent>
+
+          <TabsContent value="disciplinares" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-xl font-semibold">Advertências e Suspensões Disciplinares</h3>
+            </div>
+
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Pesquisar por nome ou matrícula..."
+                value={disciplinarySearchTerm}
+                onChange={(e) => setDisciplinarySearchTerm(e.target.value)}
+                className="pl-10"
+                data-testid="input-search-disciplinary"
+              />
+            </div>
+
+            <Card>
+              <CardContent className="p-0">
+                {loadingUsers ? (
+                  <div className="p-8">
+                    <Skeleton className="h-12 w-full mb-4" />
+                    <Skeleton className="h-12 w-full mb-4" />
+                    <Skeleton className="h-12 w-full" />
+                  </div>
+                ) : users && users.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nome</TableHead>
+                          <TableHead>Matrícula</TableHead>
+                          <TableHead>Turma</TableHead>
+                          <TableHead>Histórico</TableHead>
+                          <TableHead className="text-right">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {users
+                          .filter((user) => user.tipo === "aluno")
+                          .filter((user) => {
+                            if (!disciplinarySearchTerm) return true;
+                            const searchLower = disciplinarySearchTerm.toLowerCase();
+                            return (
+                              user.nome?.toLowerCase().includes(searchLower) ||
+                              user.matricula?.toLowerCase().includes(searchLower)
+                            );
+                          })
+                          .sort((a, b) => a.nome.localeCompare(b.nome))
+                          .map((student) => {
+                            const studentActions = disciplinaryActions?.filter((action: any) => action.alunoId === student.uid) || [];
+                            const warningsCount = studentActions.filter((action: any) => action.tipo === "advertencia").length;
+                            const suspensionsCount = studentActions.filter((action: any) => action.tipo === "suspensao").length;
+
+                            return (
+                              <TableRow key={student.uid} data-testid={`row-student-disciplinary-${student.uid}`}>
+                                <TableCell className="font-medium">{student.nome}</TableCell>
+                                <TableCell>{student.matricula || "-"}</TableCell>
+                                <TableCell>{getTurmaNome(student.turma)}</TableCell>
+                                <TableCell>
+                                  <div className="flex gap-2">
+                                    {warningsCount > 0 && (
+                                      <Badge variant="outline" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                                        {warningsCount} Advertência{warningsCount > 1 ? 's' : ''}
+                                      </Badge>
+                                    )}
+                                    {suspensionsCount > 0 && (
+                                      <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                                        {suspensionsCount} Suspensão{suspensionsCount > 1 ? 'ões' : ''}
+                                      </Badge>
+                                    )}
+                                    {warningsCount === 0 && suspensionsCount === 0 && (
+                                      <span className="text-sm text-muted-foreground">Nenhum registro</span>
+                                    )}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex justify-end gap-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="border-yellow-500 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20"
+                                      onClick={() => {
+                                        setSelectedStudentForDisciplinary(student);
+                                        setWarningDialogOpen(true);
+                                      }}
+                                      data-testid={`button-warning-${student.uid}`}
+                                    >
+                                      <AlertTriangle className="h-4 w-4 mr-1" />
+                                      Advertência
+                                    </Button>
+                                    <Button
+                                      variant="destructive"
+                                      size="sm"
+                                      onClick={() => {
+                                        setSelectedStudentForDisciplinary(student);
+                                        setSuspensionDialogOpen(true);
+                                      }}
+                                      data-testid={`button-suspension-${student.uid}`}
+                                    >
+                                      <XCircle className="h-4 w-4 mr-1" />
+                                      Suspensão
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <Users className="h-16 w-16 text-muted-foreground mb-4" />
+                    <p className="text-lg font-medium mb-2">Nenhum aluno cadastrado</p>
+                    <p className="text-sm text-muted-foreground">Nenhum aluno disponível para ações disciplinares</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="monitoramento" className="space-y-4">
@@ -3070,6 +3308,303 @@ export default function AdminDashboard() {
               data-testid="button-save-whatsapp"
             >
               {updateWhatsAppMutation.isPending ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={studentDetailsDialogOpen} onOpenChange={setStudentDetailsDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="dialog-student-details">
+          <DialogHeader>
+            <DialogTitle>Detalhes do Aluno</DialogTitle>
+            <DialogDescription>
+              Informações completas do aluno
+            </DialogDescription>
+          </DialogHeader>
+          {selectedStudentDetails && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Dados Pessoais</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div>
+                      <Label className="text-muted-foreground">Nome</Label>
+                      <p className="font-medium">{selectedStudentDetails.nome}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Email</Label>
+                      <p className="font-medium">{selectedStudentDetails.email}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Matrícula</Label>
+                      <p className="font-medium">{selectedStudentDetails.matricula || "Não informada"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">CPF</Label>
+                      <p className="font-medium">{selectedStudentDetails.cpf || "Não informado"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Data de Nascimento</Label>
+                      <p className="font-medium">{selectedStudentDetails.dataNascimento || "Não informada"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Telefone (WhatsApp)</Label>
+                      <p className="font-medium">{selectedStudentDetails.telefone || "Não informado"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Escolaridade</Label>
+                      <p className="font-medium">{selectedStudentDetails.escolaridade || "Não informada"}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Endereço</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div>
+                      <Label className="text-muted-foreground">CEP</Label>
+                      <p className="font-medium">{selectedStudentDetails.cep || "Não informado"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Rua</Label>
+                      <p className="font-medium">{selectedStudentDetails.rua || "Não informada"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Bairro</Label>
+                      <p className="font-medium">{selectedStudentDetails.bairro || "Não informado"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Cidade</Label>
+                      <p className="font-medium">{selectedStudentDetails.cidade || "Não informada"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Estado</Label>
+                      <p className="font-medium">{selectedStudentDetails.estado || "Não informado"}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Informações Acadêmicas</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <Label className="text-muted-foreground">Turma Alocada</Label>
+                    <p className="font-medium">{getTurmaNome(selectedStudentDetails.turma)}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Status</Label>
+                    <div>
+                      {selectedStudentDetails.ativo ? (
+                        <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Ativo
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                          <XCircle className="h-3 w-3 mr-1" />
+                          Inativo
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Disponibilidade de Horários</Label>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {selectedStudentDetails.disponibilidade && selectedStudentDetails.disponibilidade.length > 0 ? (
+                        selectedStudentDetails.disponibilidade.map((horario, index) => (
+                          <Badge key={index} variant="secondary">{horario}</Badge>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Não informado</p>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Presença e Atividade</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <Label className="text-muted-foreground">Status de Presença</Label>
+                    <div className="mt-2">
+                      <PresenceIndicator
+                        isOnline={selectedStudentDetails.isOnline}
+                        lastSeen={selectedStudentDetails.lastSeen}
+                        lastActivity={selectedStudentDetails.lastActivity}
+                        variant="badge"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              type="button"
+              onClick={() => {
+                setStudentDetailsDialogOpen(false);
+                setSelectedStudentDetails(null);
+              }}
+              data-testid="button-close-details"
+            >
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={warningDialogOpen} onOpenChange={setWarningDialogOpen}>
+        <DialogContent data-testid="dialog-warning">
+          <DialogHeader>
+            <DialogTitle>Aplicar Advertência Disciplinar</DialogTitle>
+            <DialogDescription>
+              Você está prestes a aplicar uma advertência disciplinar para <strong>{selectedStudentForDisciplinary?.nome}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedStudentForDisciplinary && (
+            <div className="space-y-4">
+              <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Nome:</span>
+                  <span className="font-medium">{selectedStudentForDisciplinary.nome}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Matrícula:</span>
+                  <span className="font-medium">{selectedStudentForDisciplinary.matricula || "Não informada"}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Turma:</span>
+                  <span className="font-medium">{getTurmaNome(selectedStudentForDisciplinary.turma)}</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="warning-reason">Motivo (opcional)</Label>
+                <Textarea
+                  id="warning-reason"
+                  placeholder="Descreva o motivo da advertência..."
+                  value={disciplinaryReason}
+                  onChange={(e) => setDisciplinaryReason(e.target.value)}
+                  rows={3}
+                  data-testid="textarea-warning-reason"
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setWarningDialogOpen(false);
+                setSelectedStudentForDisciplinary(null);
+                setDisciplinaryReason("");
+              }}
+              data-testid="button-cancel-warning"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="default"
+              onClick={() => {
+                if (selectedStudentForDisciplinary) {
+                  applyWarningMutation.mutate({
+                    student: selectedStudentForDisciplinary,
+                    motivo: disciplinaryReason
+                  });
+                }
+              }}
+              disabled={applyWarningMutation.isPending}
+              data-testid="button-confirm-warning"
+            >
+              {applyWarningMutation.isPending ? "Aplicando..." : "Aplicar Advertência"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={suspensionDialogOpen} onOpenChange={setSuspensionDialogOpen}>
+        <DialogContent data-testid="dialog-suspension">
+          <DialogHeader>
+            <DialogTitle>Aplicar Suspensão Disciplinar</DialogTitle>
+            <DialogDescription>
+              Você está prestes a aplicar uma suspensão disciplinar para <strong>{selectedStudentForDisciplinary?.nome}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedStudentForDisciplinary && (
+            <div className="space-y-4">
+              <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Nome:</span>
+                  <span className="font-medium">{selectedStudentForDisciplinary.nome}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Matrícula:</span>
+                  <span className="font-medium">{selectedStudentForDisciplinary.matricula || "Não informada"}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Turma:</span>
+                  <span className="font-medium">{getTurmaNome(selectedStudentForDisciplinary.turma)}</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="suspension-reason">Motivo (opcional)</Label>
+                <Textarea
+                  id="suspension-reason"
+                  placeholder="Descreva o motivo da suspensão..."
+                  value={disciplinaryReason}
+                  onChange={(e) => setDisciplinaryReason(e.target.value)}
+                  rows={3}
+                  data-testid="textarea-suspension-reason"
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setSuspensionDialogOpen(false);
+                setSelectedStudentForDisciplinary(null);
+                setDisciplinaryReason("");
+              }}
+              data-testid="button-cancel-suspension"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                if (selectedStudentForDisciplinary) {
+                  applySuspensionMutation.mutate({
+                    student: selectedStudentForDisciplinary,
+                    motivo: disciplinaryReason
+                  });
+                }
+              }}
+              disabled={applySuspensionMutation.isPending}
+              data-testid="button-confirm-suspension"
+            >
+              {applySuspensionMutation.isPending ? "Aplicando..." : "Aplicar Suspensão"}
             </Button>
           </DialogFooter>
         </DialogContent>

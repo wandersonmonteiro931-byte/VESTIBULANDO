@@ -132,3 +132,22 @@ export const insertLoginHistorySchema = loginHistorySchema.omit({ id: true });
 
 export type LoginHistory = z.infer<typeof loginHistorySchema>;
 export type InsertLoginHistory = z.infer<typeof insertLoginHistorySchema>;
+
+// Disciplinary Action schema - advertências e suspensões disciplinares
+export const disciplinaryActionSchema = z.object({
+  id: z.string(),
+  alunoId: z.string(),
+  alunoNome: z.string(),
+  alunoMatricula: z.string(),
+  alunoTurma: z.string(),
+  tipo: z.enum(["advertencia", "suspensao"]),
+  motivo: z.string().optional(),
+  aplicadoPor: z.string(), // ID do diretor que aplicou
+  aplicadoPorNome: z.string(), // Nome do diretor
+  dataAplicacao: z.string(), // ISO datetime
+});
+
+export const insertDisciplinaryActionSchema = disciplinaryActionSchema.omit({ id: true });
+
+export type DisciplinaryAction = z.infer<typeof disciplinaryActionSchema>;
+export type InsertDisciplinaryAction = z.infer<typeof insertDisciplinaryActionSchema>;
