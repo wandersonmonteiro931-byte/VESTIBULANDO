@@ -406,15 +406,21 @@ export default function Login() {
           return;
         }
         
+        console.log("🔑 Tentando login de diretor com email:", formData.email);
+        
         const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
+        console.log("✅ Autenticação bem-sucedida, UID:", userCredential.user.uid);
         
         const userDoc = await getDoc(doc(db, "usuarios", userCredential.user.uid));
         const currentUserData = userDoc.data();
         
+        console.log("📄 Dados do usuário:", currentUserData);
+        
         if (!currentUserData) {
+          console.error("❌ Documento do usuário não encontrado no Firestore");
           toast({
             title: "Erro",
-            description: "Dados do usuário não encontrados",
+            description: "Dados do usuário não encontrados no banco de dados. Por favor, contate o administrador.",
             variant: "destructive",
           });
           await auth.signOut();
@@ -423,6 +429,7 @@ export default function Login() {
         }
         
         if (currentUserData.tipo !== "diretor") {
+          console.warn("⚠️ Tipo de usuário incorreto:", currentUserData.tipo);
           toast({
             title: "Acesso negado",
             description: "Esta área é restrita à diretoria",
@@ -433,6 +440,7 @@ export default function Login() {
           return;
         }
         
+        console.log("✅ Login de diretor bem-sucedido!");
         await refreshUserData();
         
         toast({
