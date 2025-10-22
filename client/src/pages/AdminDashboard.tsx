@@ -125,6 +125,8 @@ export default function AdminDashboard() {
   const [suspensionDialogOpen, setSuspensionDialogOpen] = useState(false);
   const [selectedStudentForDisciplinary, setSelectedStudentForDisciplinary] = useState<User | null>(null);
   const [disciplinaryReason, setDisciplinaryReason] = useState("");
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  const [selectedStudentForHistory, setSelectedStudentForHistory] = useState<User | null>(null);
 
   const turmaForm = useForm<z.infer<typeof turmaFormSchema>>({
     resolver: zodResolver(turmaFormSchema),
@@ -791,8 +793,22 @@ export default function AdminDashboard() {
   });
 
   const applyWarningMutation = useMutation({
-    mutationFn: async ({ student, motivo }: { student: User; motivo?: string }) => {
+    mutationFn: async ({ student, comentario }: { student: User; comentario?: string }) => {
       if (!userData) throw new Error("Usuário não autenticado");
+      
+      // Verificar quantas advertências ativas o aluno já tem
+      const actionsQuery = query(
+        collection(db, "disciplinaryActions"),
+        where("alunoId", "==", student.uid),
+        where("tipo", "==", "advertencia"),
+        where("ativo", "==", true)
+      );
+      const actionsSnapshot = await getDocs(actionsQuery);
+      const activeWarnings = actionsSnapshot.docs.length;
+      
+      if (activeWarnings >= 3) {
+        throw new Error("Este aluno já possui 3 advertências ativas. Não é possível adicionar mais advertências.");
+      }
       
       await addDoc(collection(db, "disciplinaryActions"), {
         alunoId: student.uid,
@@ -800,10 +816,11 @@ export default function AdminDashboard() {
         alunoMatricula: student.matricula || "",
         alunoTurma: student.turma || "",
         tipo: "advertencia",
-        motivo: motivo || "",
+        comentario: comentario || "",
         aplicadoPor: userData.uid,
         aplicadoPorNome: userData.nome,
         dataAplicacao: new Date().toISOString(),
+        ativo: true,
       });
     },
     onSuccess: () => {
@@ -826,26 +843,39 @@ export default function AdminDashboard() {
   });
 
   const applySuspensionMutation = useMutation({
-    mutationFn: async ({ student, motivo }: { student: User; motivo?: string }) => {
+    mutationFn: async ({ student, comentario }: { student: User; comentario?: string }) => {
       if (!userData) throw new Error("Usuário não autenticado");
       
+      // Calcular data de término da suspensão (2 dias a partir de agora)
+      const dataTermino = new Date();
+      dataTermino.setDate(dataTermino.getDate() + 2);
+      
+      // Criar registro da suspensão
       await addDoc(collection(db, "disciplinaryActions"), {
         alunoId: student.uid,
         alunoNome: student.nome,
         alunoMatricula: student.matricula || "",
         alunoTurma: student.turma || "",
         tipo: "suspensao",
-        motivo: motivo || "",
+        comentario: comentario || "",
         aplicadoPor: userData.uid,
         aplicadoPorNome: userData.nome,
         dataAplicacao: new Date().toISOString(),
+        dataTerminoSuspensao: dataTermino.toISOString(),
+        ativo: true,
+      });
+      
+      // Desativar a conta do aluno
+      await updateDoc(doc(db, "usuarios", student.uid), {
+        ativo: false,
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/disciplinaryActions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
       toast({
         title: "Suspensão aplicada",
-        description: "A suspensão disciplinar foi registrada com sucesso.",
+        description: "A suspensão disciplinar foi registrada e a conta do aluno foi bloqueada por 2 dias.",
       });
       setSuspensionDialogOpen(false);
       setSelectedStudentForDisciplinary(null);
@@ -854,6 +884,42 @@ export default function AdminDashboard() {
     onError: (error: any) => {
       toast({
         title: "Erro ao aplicar suspensão",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const removeDisciplinaryActionMutation = useMutation({
+    mutationFn: async ({ actionId, tipo, alunoId }: { actionId: string; tipo: string; alunoId: string }) => {
+      if (!userData) throw new Error("Usuário não autenticado");
+      
+      // Atualizar o registro para marcar como removido
+      await updateDoc(doc(db, "disciplinaryActions", actionId), {
+        ativo: false,
+        dataRemocao: new Date().toISOString(),
+        removidoPor: userData.uid,
+        removidoPorNome: userData.nome,
+      });
+      
+      // Se for uma suspensão, reativar a conta do aluno
+      if (tipo === "suspensao") {
+        await updateDoc(doc(db, "usuarios", alunoId), {
+          ativo: true,
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/disciplinaryActions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
+      toast({
+        title: "Ação disciplinar removida",
+        description: "A ação disciplinar foi removida com sucesso.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao remover ação disciplinar",
         description: error.message,
         variant: "destructive",
       });
@@ -2018,7 +2084,7 @@ export default function AdminDashboard() {
                           })
                           .sort((a, b) => a.nome.localeCompare(b.nome))
                           .map((student) => {
-                            const studentActions = disciplinaryActions?.filter((action: any) => action.alunoId === student.uid) || [];
+                            const studentActions = disciplinaryActions?.filter((action: any) => action.alunoId === student.uid && action.ativo === true) || [];
                             const warningsCount = studentActions.filter((action: any) => action.tipo === "advertencia").length;
                             const suspensionsCount = studentActions.filter((action: any) => action.tipo === "suspensao").length;
 
@@ -2047,6 +2113,18 @@ export default function AdminDashboard() {
                                 <TableCell className="text-right">
                                   <div className="flex justify-end gap-2">
                                     <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        setSelectedStudentForHistory(student);
+                                        setHistoryDialogOpen(true);
+                                      }}
+                                      data-testid={`button-history-${student.uid}`}
+                                    >
+                                      <Eye className="h-4 w-4 mr-1" />
+                                      Histórico
+                                    </Button>
+                                    <Button
                                       variant="outline"
                                       size="sm"
                                       className="border-yellow-500 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20"
@@ -2054,6 +2132,7 @@ export default function AdminDashboard() {
                                         setSelectedStudentForDisciplinary(student);
                                         setWarningDialogOpen(true);
                                       }}
+                                      disabled={warningsCount >= 3}
                                       data-testid={`button-warning-${student.uid}`}
                                     >
                                       <AlertTriangle className="h-4 w-4 mr-1" />
@@ -3524,7 +3603,7 @@ export default function AdminDashboard() {
                 if (selectedStudentForDisciplinary) {
                   applyWarningMutation.mutate({
                     student: selectedStudentForDisciplinary,
-                    motivo: disciplinaryReason
+                    comentario: disciplinaryReason
                   });
                 }
               }}
@@ -3597,7 +3676,7 @@ export default function AdminDashboard() {
                 if (selectedStudentForDisciplinary) {
                   applySuspensionMutation.mutate({
                     student: selectedStudentForDisciplinary,
-                    motivo: disciplinaryReason
+                    comentario: disciplinaryReason
                   });
                 }
               }}
@@ -3605,6 +3684,154 @@ export default function AdminDashboard() {
               data-testid="button-confirm-suspension"
             >
               {applySuspensionMutation.isPending ? "Aplicando..." : "Aplicar Suspensão"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={historyDialogOpen} onOpenChange={setHistoryDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="dialog-history">
+          <DialogHeader>
+            <DialogTitle>Histórico de Advertências e Suspensões</DialogTitle>
+            <DialogDescription>
+              Histórico completo de ações disciplinares para <strong>{selectedStudentForHistory?.nome}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedStudentForHistory && (
+            <div className="space-y-4">
+              <div className="p-4 bg-muted rounded-lg space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Matrícula:</span>
+                  <span className="font-medium">{selectedStudentForHistory.matricula || "Não informada"}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Turma:</span>
+                  <span className="font-medium">{getTurmaNome(selectedStudentForHistory.turma)}</span>
+                </div>
+              </div>
+
+              {disciplinaryActions
+                ?.filter((action: any) => action.alunoId === selectedStudentForHistory.uid)
+                .sort((a: any, b: any) => new Date(b.dataAplicacao).getTime() - new Date(a.dataAplicacao).getTime())
+                .map((action: any) => {
+                  const isActive = action.ativo === true;
+                  const isSuspension = action.tipo === "suspensao";
+                  const dataAplicacao = new Date(action.dataAplicacao);
+                  const dataTermino = action.dataTerminoSuspensao ? new Date(action.dataTerminoSuspensao) : null;
+                  const dataRemocao = action.dataRemocao ? new Date(action.dataRemocao) : null;
+
+                  return (
+                    <Card key={action.id} className={!isActive ? "opacity-60" : ""}>
+                      <CardHeader className="pb-3">
+                        <div className="flex justify-between items-start">
+                          <div className="flex items-center gap-2">
+                            <Badge 
+                              variant={isSuspension ? "destructive" : "outline"}
+                              className={isSuspension ? "" : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"}
+                            >
+                              {isSuspension ? "Suspensão" : "Advertência"}
+                            </Badge>
+                            {isActive ? (
+                              <Badge variant="default">Ativa</Badge>
+                            ) : (
+                              <Badge variant="secondary">Removida</Badge>
+                            )}
+                          </div>
+                          {isActive && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                if (confirm(`Tem certeza que deseja remover esta ${isSuspension ? 'suspensão' : 'advertência'}?`)) {
+                                  removeDisciplinaryActionMutation.mutate({
+                                    actionId: action.id,
+                                    tipo: action.tipo,
+                                    alunoId: selectedStudentForHistory.uid
+                                  });
+                                }
+                              }}
+                              data-testid={`button-remove-action-${action.id}`}
+                            >
+                              <Trash2 className="h-4 w-4 mr-1" />
+                              Remover
+                            </Button>
+                          )}
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <p className="text-muted-foreground">Aplicada em:</p>
+                            <p className="font-medium">
+                              {dataAplicacao.toLocaleDateString('pt-BR')} às {dataAplicacao.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                          {dataTermino && (
+                            <div>
+                              <p className="text-muted-foreground">Término da suspensão:</p>
+                              <p className="font-medium">
+                                {dataTermino.toLocaleDateString('pt-BR')} às {dataTermino.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div>
+                          <p className="text-muted-foreground text-sm">Aplicada por:</p>
+                          <p className="font-medium">{action.aplicadoPorNome}</p>
+                        </div>
+
+                        {action.comentario && (
+                          <div>
+                            <p className="text-muted-foreground text-sm">Comentário:</p>
+                            <p className="text-sm bg-muted p-2 rounded-md">{action.comentario}</p>
+                          </div>
+                        )}
+
+                        {!isActive && dataRemocao && (
+                          <div className="pt-2 border-t">
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                              <div>
+                                <p className="text-muted-foreground">Removida em:</p>
+                                <p className="font-medium">
+                                  {dataRemocao.toLocaleDateString('pt-BR')} às {dataRemocao.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Removida por:</p>
+                                <p className="font-medium">{action.removidoPorNome}</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+
+              {!disciplinaryActions?.some((action: any) => action.alunoId === selectedStudentForHistory.uid) && (
+                <div className="flex flex-col items-center justify-center py-12 text-center border rounded-lg">
+                  <FileText className="h-16 w-16 text-muted-foreground mb-4" />
+                  <p className="text-lg font-medium mb-2">Nenhum registro</p>
+                  <p className="text-sm text-muted-foreground">
+                    Este aluno não possui histórico de ações disciplinares
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              type="button"
+              onClick={() => {
+                setHistoryDialogOpen(false);
+                setSelectedStudentForHistory(null);
+              }}
+              data-testid="button-close-history"
+            >
+              Fechar
             </Button>
           </DialogFooter>
         </DialogContent>
