@@ -633,22 +633,65 @@ export default function AdminDashboard() {
           throw new Error("Turma não encontrada");
         }
         
+        // Verificar quais alunos realmente precisam ser movidos (não estão na turma atual)
+        const studentsToMove: string[] = [];
+        const turmasOrigemMap = new Map<string, number>();
+        
+        for (const uid of studentIds) {
+          const userRef = doc(db, "usuarios", uid);
+          const userDoc = await transaction.get(userRef);
+          
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            const turmaAtual = userData.turma;
+            
+            // Só adicionar se não estiver na turma de destino
+            if (turmaAtual !== turmaNome) {
+              studentsToMove.push(uid);
+              
+              // Rastrear turma de origem para decrementar
+              if (turmaAtual) {
+                turmasOrigemMap.set(turmaAtual, (turmasOrigemMap.get(turmaAtual) || 0) + 1);
+              }
+            }
+          }
+        }
+        
+        if (studentsToMove.length === 0) {
+          throw new Error("Todos os alunos selecionados já estão nesta turma");
+        }
+        
         const turmaData = turmaDoc.data();
         const vagasTotais = turmaData.vagasTotais || 0;
         const vagasPreenchidas = turmaData.vagasPreenchidas || 0;
         const vagasDisponiveis = vagasTotais - vagasPreenchidas;
         
-        if (studentIds.length > vagasDisponiveis) {
-          throw new Error(`Não há vagas suficientes. Disponíveis: ${vagasDisponiveis}, Selecionados: ${studentIds.length}`);
+        if (studentsToMove.length > vagasDisponiveis) {
+          throw new Error(`Não há vagas suficientes. Disponíveis: ${vagasDisponiveis}, Necessárias: ${studentsToMove.length}`);
         }
         
-        // Atualizar vagasPreenchidas atomicamente
+        // Decrementar vagasPreenchidas das turmas de origem
+        for (const [turmaNomeOrigem, count] of turmasOrigemMap.entries()) {
+          const turmaOrigemQuery = await getDocs(query(collection(db, "turmas"), where("nome", "==", turmaNomeOrigem)));
+          if (!turmaOrigemQuery.empty) {
+            const turmaOrigemRef = doc(db, "turmas", turmaOrigemQuery.docs[0].id);
+            const turmaOrigemDoc = await transaction.get(turmaOrigemRef);
+            if (turmaOrigemDoc.exists()) {
+              const vagasPreencidasOrigem = turmaOrigemDoc.data().vagasPreenchidas || 0;
+              transaction.update(turmaOrigemRef, {
+                vagasPreenchidas: Math.max(0, vagasPreencidasOrigem - count)
+              });
+            }
+          }
+        }
+        
+        // Atualizar vagasPreenchidas da turma de destino
         transaction.update(turmaRef, {
-          vagasPreenchidas: vagasPreenchidas + studentIds.length
+          vagasPreenchidas: vagasPreenchidas + studentsToMove.length
         });
         
-        // Atualizar cada aluno
-        for (const uid of studentIds) {
+        // Atualizar cada aluno que precisa ser movido
+        for (const uid of studentsToMove) {
           const userRef = doc(db, "usuarios", uid);
           transaction.update(userRef, { turma: turmaNome });
         }
