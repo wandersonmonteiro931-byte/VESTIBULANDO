@@ -774,28 +774,16 @@ export default function Login() {
     setStatusResult(null);
 
     try {
-      const { collection, getDocs, query, where } = await import("firebase/firestore");
-      
-      // Buscar nas solicitações
-      const solicitacoesSnapshot = await getDocs(
-        query(collection(db, "solicitacoes"), where("matricula", "==", statusMatricula))
-      );
-      
-      if (!solicitacoesSnapshot.empty) {
-        const solicitacao = solicitacoesSnapshot.docs[0].data();
-        setStatusResult(solicitacao);
-        setStatusChecking(false);
-        return;
+      // Usar endpoint Express seguro ao invés de consultar Firestore diretamente
+      const response = await fetch(`/api/verificar-status/${statusMatricula}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Erro ao verificar status");
       }
 
-      // Buscar nos usuários aprovados
-      const usuariosSnapshot = await getDocs(
-        query(collection(db, "usuarios"), where("matricula", "==", statusMatricula))
-      );
-      
-      if (!usuariosSnapshot.empty) {
-        const usuario = usuariosSnapshot.docs[0].data();
-        setStatusResult(usuario);
+      if (data.found) {
+        setStatusResult(data.data);
         setStatusChecking(false);
         return;
       }
@@ -803,15 +791,15 @@ export default function Login() {
       // Não encontrou
       toast({
         title: "Matrícula não encontrada",
-        description: "Não foi encontrada nenhuma solicitação com esta matrícula.",
+        description: data.message || "Não foi encontrada nenhuma solicitação com esta matrícula.",
         variant: "destructive",
       });
       setStatusChecking(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao verificar status:", error);
       toast({
         title: "Erro ao verificar",
-        description: "Não foi possível verificar o status. Tente novamente.",
+        description: error.message || "Não foi possível verificar o status. Tente novamente.",
         variant: "destructive",
       });
       setStatusChecking(false);
