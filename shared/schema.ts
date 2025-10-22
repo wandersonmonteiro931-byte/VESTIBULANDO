@@ -95,7 +95,12 @@ export const turmaSchema = z.object({
   nome: z.string().min(1, "Nome da turma é obrigatório"),
   ano: z.string(),
   ativa: z.boolean().default(true),
-  vagasDisponiveis: z.number().optional(),
+  vagasTotais: z.number().optional(),
+  vagasPreenchidas: z.number().optional(),
+  periodoMatriculaInicio: z.string().optional(),
+  periodoMatriculaFim: z.string().optional(),
+  linkWhatsApp: z.string().optional(),
+  vagasDisponiveis: z.number().optional(), // deprecated - usar vagasTotais - vagasPreenchidas
 });
 
 export const insertTurmaSchema = turmaSchema.omit({ id: true });

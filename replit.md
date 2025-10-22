@@ -10,7 +10,21 @@ Plataforma educacional completa para preparação do ENEM com gestão de tarefas
 
 ## Recent Changes (October 2025)
 
-**Brazilian Localization & Authentication (Latest):**
+**Admin Panel Enhancements & Class Management (Latest):**
+- ✅ Implemented violet/purple color scheme across all dashboards (Login, Student, Teacher, Admin)
+- ✅ Admin can create teacher/admin accounts directly with password setting
+- ✅ Teachers can be assigned to multiple classes
+- ✅ Added comprehensive class management features:
+  - Total and filled vacancy tracking (vagasTotais, vagasPreenchidas)
+  - Enrollment period configuration (periodoMatriculaInicio, periodoMatriculaFim)
+  - WhatsApp group link integration with edit dialog
+  - Open/close toggle functionality for classes
+- ✅ Student transfer feature between classes with dialog interface
+- ✅ Updated Turma schema in shared/schema.ts with new fields
+- ✅ Enhanced user table with transfer and delete action buttons
+- ✅ Updated all UI text on Login page with enrollment requirements
+
+**Brazilian Localization & Authentication:**
 - ✅ Changed authentication from email to CPF/Matrícula login system
 - ✅ Implemented sequential matricula generation starting from 0100 using atomic Firestore transactions
 - ✅ Added Brazilian formatting: CPF (xxx.xxx.xxx-xx), Phone ((XX)XXXXX-XXXX), CEP (XXXXX-XXX)
@@ -139,6 +153,11 @@ Plataforma educacional completa para preparação do ENEM com gestão de tarefas
   nome: string (e.g., "3A", "2B")
   ano: string
   ativa: boolean
+  vagasTotais?: number (total vacancies)
+  vagasPreenchidas?: number (filled vacancies)
+  periodoMatriculaInicio?: string (enrollment start date)
+  periodoMatriculaFim?: string (enrollment end date)
+  linkWhatsApp?: string (WhatsApp group link)
 }
 ```
 
