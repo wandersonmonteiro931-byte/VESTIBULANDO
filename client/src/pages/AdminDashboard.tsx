@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { PresenceIndicator } from "@/components/PresenceIndicator";
 import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, MessageCircle, ArrowRightLeft } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { queryClient } from "@/lib/queryClient";
@@ -92,6 +93,8 @@ export default function AdminDashboard() {
   const [newTurma, setNewTurma] = useState("");
   const [disponibilidadeHorario, setDisponibilidadeHorario] = useState<string[]>([]);
   const [turmasSelecionadas, setTurmasSelecionadas] = useState<string[]>([]);
+  const [viewTurmaStudentsDialogOpen, setViewTurmaStudentsDialogOpen] = useState(false);
+  const [selectedTurmaForStudents, setSelectedTurmaForStudents] = useState<Turma | null>(null);
 
   const turmaForm = useForm<z.infer<typeof turmaFormSchema>>({
     resolver: zodResolver(turmaFormSchema),
@@ -240,7 +243,7 @@ export default function AdminDashboard() {
               disponibilidade: solicitacao.disponibilidade || [],
             });
           } else {
-            throw new Error("Usuário existe no Authentication mas não no Firestore. Por favor, remova a solicitação duplicada.");
+            throw new Error("Conta existe no Authentication mas não no Firestore. Por favor, remova a solicitação duplicada.");
           }
         } else {
           throw error;
@@ -257,8 +260,8 @@ export default function AdminDashboard() {
       toast({
         title: data.userAlreadyExists ? "Conta aprovada!" : "Conta aprovada e criada!",
         description: data.userAlreadyExists 
-          ? "O usuário foi aprovado e pode continuar usando a conta existente."
-          : "O usuário agora pode fazer login com a senha definida.",
+          ? "O aluno foi aprovado e pode continuar usando a conta existente."
+          : "O aluno agora pode fazer login com a senha definida.",
       });
     },
     onError: (error: any) => {
@@ -313,7 +316,7 @@ export default function AdminDashboard() {
       setRejectComment("");
       toast({
         title: "Solicitação rejeitada",
-        description: "O usuário foi notificado sobre a reprovação.",
+        description: "O aluno foi notificado sobre a reprovação.",
       });
     },
     onError: (error: any) => {
@@ -335,7 +338,7 @@ export default function AdminDashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/usuarios/all"] });
       toast({
         title: "Status atualizado",
-        description: "O status do usuário foi alterado.",
+        description: "O status do aluno foi alterado.",
       });
     },
     onError: (error: any) => {
@@ -396,8 +399,8 @@ export default function AdminDashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
       queryClient.invalidateQueries({ queryKey: ["/api/usuarios/all"] });
       toast({
-        title: "Usuário criado com sucesso!",
-        description: "O usuário pode acessar a plataforma.",
+        title: "Aluno criado com sucesso!",
+        description: "O aluno pode acessar a plataforma.",
       });
       setCreateAlunoDialogOpen(false);
       alunoForm.reset();
@@ -413,7 +416,7 @@ export default function AdminDashboard() {
       }
       
       toast({
-        title: "Erro ao criar usuário",
+        title: "Erro ao criar aluno",
         description: message,
         variant: "destructive",
       });
@@ -469,10 +472,10 @@ export default function AdminDashboard() {
         return String(ultimaMatricula + 1).padStart(4, '0');
       });
 
-      // Criar usuário no Firebase Auth
+      // Criar conta no Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(firebaseAuth, data.email, data.senha);
       
-      // Criar documento do usuário
+      // Criar documento do aluno/professor/diretor
       await setDoc(doc(db, "usuarios", userCredential.user.uid), {
         uid: userCredential.user.uid,
         nome: data.nome,
@@ -564,6 +567,27 @@ export default function AdminDashboard() {
     onError: (error: any) => {
       toast({
         title: "Erro ao transferir aluno",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const removeStudentFromTurmaMutation = useMutation({
+    mutationFn: async ({ userId }: { userId: string }) => {
+      const userRef = doc(db, "usuarios", userId);
+      await updateDoc(userRef, { turma: "" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
+      toast({
+        title: "Aluno removido!",
+        description: "O aluno foi removido da turma.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao remover aluno",
         description: error.message,
         variant: "destructive",
       });
@@ -915,6 +939,7 @@ export default function AdminDashboard() {
                           <TableHead>Tipo</TableHead>
                           <TableHead>Turma</TableHead>
                           <TableHead>Status</TableHead>
+                          <TableHead>Presença</TableHead>
                           <TableHead className="text-right">Ações</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -944,6 +969,14 @@ export default function AdminDashboard() {
                                   Inativo
                                 </Badge>
                               )}
+                            </TableCell>
+                            <TableCell>
+                              <PresenceIndicator
+                                isOnline={user.isOnline}
+                                lastSeen={user.lastSeen}
+                                lastActivity={user.lastActivity}
+                                variant="badge"
+                              />
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
@@ -1078,7 +1111,20 @@ export default function AdminDashboard() {
                           </div>
                         )}
 
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => {
+                              setSelectedTurmaForStudents(turma);
+                              setViewTurmaStudentsDialogOpen(true);
+                            }}
+                            data-testid={`button-view-students-${turma.id}`}
+                          >
+                            <Users className="h-4 w-4 mr-1" />
+                            Ver Alunos
+                          </Button>
                           <Button
                             variant="outline"
                             size="sm"
@@ -1196,7 +1242,7 @@ export default function AdminDashboard() {
             <DialogTitle>Aprovar Cadastro</DialogTitle>
             <DialogDescription>
               Defina uma senha inicial para <strong>{solicitacaoToApprove?.nome}</strong>.
-              O usuário poderá fazer login com esta senha.
+              O aluno poderá fazer login com esta senha.
             </DialogDescription>
           </DialogHeader>
           
@@ -1230,7 +1276,7 @@ export default function AdminDashboard() {
                 data-testid="input-senha-inicial"
               />
               <p className="text-sm text-muted-foreground">
-                Informe esta senha ao usuário após a aprovação.
+                Informe esta senha ao aluno após a aprovação.
               </p>
             </div>
           </div>
@@ -1400,9 +1446,9 @@ export default function AdminDashboard() {
       <Dialog open={createAlunoDialogOpen} onOpenChange={setCreateAlunoDialogOpen}>
         <DialogContent data-testid="dialog-create-user">
           <DialogHeader>
-            <DialogTitle>Adicionar Usuário</DialogTitle>
+            <DialogTitle>Adicionar Aluno</DialogTitle>
             <DialogDescription>
-              Crie um novo usuário com acesso imediato à plataforma
+              Crie um novo aluno com acesso imediato à plataforma
             </DialogDescription>
           </DialogHeader>
 
@@ -1415,7 +1461,7 @@ export default function AdminDashboard() {
                   <FormItem>
                     <FormLabel>Nome Completo</FormLabel>
                     <FormControl>
-                      <Input placeholder="Nome do usuário" {...field} data-testid="input-user-nome" />
+                      <Input placeholder="Nome do aluno" {...field} data-testid="input-user-nome" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1836,7 +1882,7 @@ export default function AdminDashboard() {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent data-testid="dialog-delete-user">
           <DialogHeader>
-            <DialogTitle>Excluir Usuário</DialogTitle>
+            <DialogTitle>Excluir Aluno</DialogTitle>
             <DialogDescription>
               Você está prestes a excluir <strong>{userToDelete?.nome}</strong>.
               Esta ação não pode ser desfeita.
@@ -1889,7 +1935,7 @@ export default function AdminDashboard() {
               disabled={deleteUserMutation.isPending}
               data-testid="button-confirm-delete"
             >
-              {deleteUserMutation.isPending ? "Excluindo..." : "Excluir Usuário"}
+              {deleteUserMutation.isPending ? "Excluindo..." : "Excluir Aluno"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2003,6 +2049,125 @@ export default function AdminDashboard() {
               data-testid="button-confirm-transfer"
             >
               {transferUserMutation.isPending ? "Transferindo..." : "Transferir"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={viewTurmaStudentsDialogOpen} onOpenChange={setViewTurmaStudentsDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="dialog-view-students">
+          <DialogHeader>
+            <DialogTitle>Alunos da Turma: {selectedTurmaForStudents?.nome}</DialogTitle>
+            <DialogDescription>
+              Visualize e gerencie os alunos matriculados nesta turma
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedTurmaForStudents && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total de alunos</p>
+                  <p className="text-2xl font-bold">
+                    {users?.filter(u => u.turma === selectedTurmaForStudents.nome && u.tipo === "aluno").length || 0} / {selectedTurmaForStudents.vagasTotais}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Vagas disponíveis</p>
+                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                    {(selectedTurmaForStudents.vagasTotais || 0) - (users?.filter(u => u.turma === selectedTurmaForStudents.nome && u.tipo === "aluno").length || 0)}
+                  </p>
+                </div>
+              </div>
+
+              {users && users.filter(u => u.turma === selectedTurmaForStudents.nome && u.tipo === "aluno").length > 0 ? (
+                <div className="border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Matrícula</TableHead>
+                        <TableHead>Presença</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {users
+                        .filter(u => u.turma === selectedTurmaForStudents.nome && u.tipo === "aluno")
+                        .map((student) => (
+                          <TableRow key={student.uid}>
+                            <TableCell className="font-medium">{student.nome}</TableCell>
+                            <TableCell>{student.email}</TableCell>
+                            <TableCell>
+                              <code className="text-xs">{student.matricula || "-"}</code>
+                            </TableCell>
+                            <TableCell>
+                              <PresenceIndicator
+                                isOnline={student.isOnline}
+                                lastSeen={student.lastSeen}
+                                lastActivity={student.lastActivity}
+                                variant="icon"
+                                showLabel={false}
+                              />
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setUserToTransfer(student);
+                                    setTransferDialogOpen(true);
+                                    setViewTurmaStudentsDialogOpen(false);
+                                  }}
+                                  data-testid={`button-transfer-student-${student.uid}`}
+                                >
+                                  <ArrowRightLeft className="h-4 w-4 mr-1" />
+                                  Transferir
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    if (confirm(`Tem certeza que deseja remover ${student.nome} da turma?`)) {
+                                      removeStudentFromTurmaMutation.mutate({ userId: student.uid });
+                                    }
+                                  }}
+                                  data-testid={`button-remove-student-${student.uid}`}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-1" />
+                                  Remover
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-center border rounded-lg">
+                  <Users className="h-16 w-16 text-muted-foreground mb-4" />
+                  <p className="text-lg font-medium mb-2">Nenhum aluno nesta turma</p>
+                  <p className="text-sm text-muted-foreground">
+                    Adicione alunos transferindo de outras turmas ou criando novos cadastros
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button
+              type="button"
+              onClick={() => {
+                setViewTurmaStudentsDialogOpen(false);
+                setSelectedTurmaForStudents(null);
+              }}
+              data-testid="button-close-students-dialog"
+            >
+              Fechar
             </Button>
           </DialogFooter>
         </DialogContent>
