@@ -705,10 +705,42 @@ export default function AdminDashboard() {
   const transferUserMutation = useMutation({
     mutationFn: async ({ userId, novaTurma }: { userId: string; novaTurma: string }) => {
       const userRef = doc(db, "usuarios", userId);
+      const userDoc = await getDoc(userRef);
+      
+      if (!userDoc.exists()) {
+        throw new Error("Usuário não encontrado");
+      }
+      
+      const userData = userDoc.data();
+      const turmaAntiga = userData.turma;
+      
+      if (userData.tipo === "aluno") {
+        if (turmaAntiga) {
+          const turmaAntigaRef = doc(db, "turmas", turmaAntiga);
+          const turmaAntigaDoc = await getDoc(turmaAntigaRef);
+          if (turmaAntigaDoc.exists()) {
+            const turmaAntigaData = turmaAntigaDoc.data();
+            await updateDoc(turmaAntigaRef, {
+              vagasPreenchidas: Math.max(0, (turmaAntigaData.vagasPreenchidas || 0) - 1)
+            });
+          }
+        }
+        
+        const novaTurmaRef = doc(db, "turmas", novaTurma);
+        const novaTurmaDoc = await getDoc(novaTurmaRef);
+        if (novaTurmaDoc.exists()) {
+          const novaTurmaData = novaTurmaDoc.data();
+          await updateDoc(novaTurmaRef, {
+            vagasPreenchidas: (novaTurmaData.vagasPreenchidas || 0) + 1
+          });
+        }
+      }
+      
       await updateDoc(userRef, { turma: novaTurma });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/turmas"] });
       toast({
         title: "Aluno transferido!",
         description: "O aluno foi transferido para a nova turma.",
