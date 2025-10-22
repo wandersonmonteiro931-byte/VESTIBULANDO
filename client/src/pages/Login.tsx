@@ -144,6 +144,7 @@ export default function Login() {
   const [statusMatricula, setStatusMatricula] = useState("");
   const [statusChecking, setStatusChecking] = useState(false);
   const [statusResult, setStatusResult] = useState<any>(null);
+  const [statusError, setStatusError] = useState<string>("");
   const [turmasDisponiveis, setTurmasDisponiveis] = useState<any[]>([]);
   const [buscandoCep, setBuscandoCep] = useState(false);
   
@@ -762,16 +763,13 @@ export default function Login() {
 
   const handleVerificarStatus = async () => {
     if (!statusMatricula || statusMatricula.length !== 4) {
-      toast({
-        title: "Matrícula inválida",
-        description: "Por favor, informe uma matrícula válida de 4 dígitos",
-        variant: "destructive",
-      });
+      setStatusError("Por favor, informe uma matrícula válida de 4 dígitos.");
       return;
     }
 
     setStatusChecking(true);
     setStatusResult(null);
+    setStatusError("");
 
     try {
       const { collection, query, where, getDocs } = await import("firebase/firestore");
@@ -792,6 +790,7 @@ export default function Login() {
           dataSolicitacao: solicitacao.dataSolicitacao,
           comentarioReprovacao: solicitacao.comentarioReprovacao || null
         });
+        setStatusError("");
         setStatusChecking(false);
         return;
       }
@@ -811,33 +810,22 @@ export default function Login() {
           turma: usuario.turma,
           ativo: usuario.ativo
         });
+        setStatusError("");
         setStatusChecking(false);
         return;
       }
 
       // Não encontrou
-      toast({
-        title: "Matrícula não encontrada",
-        description: "Não foi encontrada nenhuma solicitação com esta matrícula.",
-        variant: "destructive",
-      });
+      setStatusError("Não foi encontrada nenhuma solicitação com esta matrícula.");
       setStatusChecking(false);
     } catch (error: any) {
       console.error("Erro ao verificar status:", error);
       
       // Mensagem mais específica se for erro de permissões
       if (error.code === "permission-denied") {
-        toast({
-          title: "Configuração necessária",
-          description: "É necessário ajustar as regras do Firestore. Veja o arquivo FIREBASE_RULES_SETUP.md para instruções.",
-          variant: "destructive",
-        });
+        setStatusError("É necessário ajustar as regras do Firestore. Veja o arquivo FIREBASE_RULES_SETUP.md para instruções.");
       } else {
-        toast({
-          title: "Erro ao verificar",
-          description: error.message || "Não foi possível verificar o status. Tente novamente.",
-          variant: "destructive",
-        });
+        setStatusError(error.message || "Não foi possível verificar o status. Tente novamente.");
       }
       setStatusChecking(false);
     }
@@ -1424,7 +1412,12 @@ export default function Login() {
               type="button"
               variant="outline"
               className="w-full"
-              onClick={() => setShowStatusDialog(true)}
+              onClick={() => {
+                setShowStatusDialog(true);
+                setStatusError("");
+                setStatusResult(null);
+                setStatusMatricula("");
+              }}
               data-testid="button-verificar-status"
             >
               <Search className="mr-2 h-4 w-4" />
@@ -1467,10 +1460,22 @@ export default function Login() {
                 placeholder="0000"
                 maxLength={4}
                 value={statusMatricula}
-                onChange={(e) => setStatusMatricula(e.target.value.replace(/\D/g, ''))}
+                onChange={(e) => {
+                  setStatusMatricula(e.target.value.replace(/\D/g, ''));
+                  setStatusError("");
+                }}
                 data-testid="input-status-matricula"
               />
             </div>
+
+            {statusError && (
+              <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg" data-testid="text-status-error">
+                <p className="text-sm font-medium text-destructive">Matrícula não encontrada</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {statusError}
+                </p>
+              </div>
+            )}
 
             {statusResult && (
               <div className="p-4 border rounded-lg space-y-3">
