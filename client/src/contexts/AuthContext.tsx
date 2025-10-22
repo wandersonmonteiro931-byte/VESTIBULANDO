@@ -26,7 +26,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserData = async (uid: string): Promise<boolean> => {
     try {
-      const userDoc = await getDoc(doc(db, "usuarios", uid));
+      const userDocRef = doc(db, "usuarios", uid);
+      const userDoc = await getDoc(userDocRef);
       if (userDoc.exists()) {
         const data = userDoc.data() as User;
         
@@ -35,6 +36,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUserData(null);
           setCurrentUser(null);
           return false;
+        }
+        
+        // Atualizar o documento se o campo uid estiver faltando
+        if (!data.uid) {
+          const { updateDoc } = await import("firebase/firestore");
+          await updateDoc(userDocRef, { uid });
+          data.uid = uid;
         }
         
         setUserData(data);

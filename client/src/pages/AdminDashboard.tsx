@@ -794,8 +794,12 @@ export default function AdminDashboard() {
 
   const applyWarningMutation = useMutation({
     mutationFn: async ({ student, comentario }: { student: User; comentario?: string }) => {
-      if (!userData) throw new Error("Usuário não autenticado");
-      if (!userData.uid || !userData.nome) throw new Error("Dados do usuário incompletos");
+      if (!userData || !firebaseAuth.currentUser) throw new Error("Usuário não autenticado");
+      
+      const directorUid = userData.uid || firebaseAuth.currentUser.uid;
+      const directorNome = userData.nome;
+      
+      if (!directorUid || !directorNome) throw new Error("Dados do usuário incompletos");
       if (!student.uid || !student.nome) throw new Error("Dados do aluno incompletos");
       
       // Verificar quantas advertências ativas o aluno já tem
@@ -819,8 +823,8 @@ export default function AdminDashboard() {
         alunoTurma: String(student.turma || ""),
         tipo: "advertencia",
         comentario: String(comentario || ""),
-        aplicadoPor: String(userData.uid),
-        aplicadoPorNome: String(userData.nome),
+        aplicadoPor: String(directorUid),
+        aplicadoPorNome: String(directorNome),
         dataAplicacao: new Date().toISOString(),
         ativo: true,
       };
@@ -848,8 +852,12 @@ export default function AdminDashboard() {
 
   const applySuspensionMutation = useMutation({
     mutationFn: async ({ student, comentario }: { student: User; comentario?: string }) => {
-      if (!userData) throw new Error("Usuário não autenticado");
-      if (!userData.uid || !userData.nome) throw new Error("Dados do usuário incompletos");
+      if (!userData || !firebaseAuth.currentUser) throw new Error("Usuário não autenticado");
+      
+      const directorUid = userData.uid || firebaseAuth.currentUser.uid;
+      const directorNome = userData.nome;
+      
+      if (!directorUid || !directorNome) throw new Error("Dados do usuário incompletos");
       if (!student.uid || !student.nome) throw new Error("Dados do aluno incompletos");
       
       // Calcular data de término da suspensão (2 dias a partir de agora)
@@ -864,8 +872,8 @@ export default function AdminDashboard() {
         alunoTurma: String(student.turma || ""),
         tipo: "suspensao",
         comentario: String(comentario || ""),
-        aplicadoPor: String(userData.uid),
-        aplicadoPorNome: String(userData.nome),
+        aplicadoPor: String(directorUid),
+        aplicadoPorNome: String(directorNome),
         dataAplicacao: new Date().toISOString(),
         dataTerminoSuspensao: dataTermino.toISOString(),
         ativo: true,
@@ -900,14 +908,17 @@ export default function AdminDashboard() {
 
   const removeDisciplinaryActionMutation = useMutation({
     mutationFn: async ({ actionId, tipo, alunoId }: { actionId: string; tipo: string; alunoId: string }) => {
-      if (!userData) throw new Error("Usuário não autenticado");
+      if (!userData || !firebaseAuth.currentUser) throw new Error("Usuário não autenticado");
+      
+      const directorUid = userData.uid || firebaseAuth.currentUser.uid;
+      const directorNome = userData.nome;
       
       // Atualizar o registro para marcar como removido
       await updateDoc(doc(db, "disciplinaryActions", actionId), {
         ativo: false,
         dataRemocao: new Date().toISOString(),
-        removidoPor: userData.uid,
-        removidoPorNome: userData.nome,
+        removidoPor: directorUid,
+        removidoPorNome: directorNome,
       });
       
       // Se for uma suspensão, reativar a conta do aluno
