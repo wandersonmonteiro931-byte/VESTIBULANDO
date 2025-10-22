@@ -16,8 +16,6 @@ import { PhotoUpload } from "@/components/PhotoUpload";
 import { Badge } from "@/components/ui/badge";
 import { GraduationCap, Loader2, Copy, Check, Search, AlertCircle, Shield, Users, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { storage } from "@/lib/firebase";
 
 // Gera uma matrícula sequencial única usando transação atômica
 async function generateUniqueMatricula(db: any): Promise<string> {
@@ -179,6 +177,7 @@ export default function Login() {
   const [disponibilidade, setDisponibilidade] = useState<string[]>([]);
   const [cpfValido, setCpfValido] = useState<boolean | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoBase64, setPhotoBase64] = useState<string | null>(null);
   const [photoPublic, setPhotoPublic] = useState(false);
 
   // Validar CPF em tempo real quando usuário digitar 11 números
@@ -363,27 +362,6 @@ export default function Login() {
         const matricula = await generateUniqueMatricula(db);
         const dataSolicitacao = new Date().toISOString();
         
-        // Upload da foto para o Firebase Storage
-        let fotoUrl = "";
-        try {
-          const photoPath = photoPublic 
-            ? `photos/public/${matricula}_${Date.now()}.jpg`
-            : `photos/private/${matricula}_${Date.now()}.jpg`;
-          
-          const photoRef = ref(storage, photoPath);
-          await uploadBytes(photoRef, photoFile);
-          fotoUrl = await getDownloadURL(photoRef);
-        } catch (photoError) {
-          console.error("Erro ao fazer upload da foto:", photoError);
-          toast({
-            title: "Erro ao enviar foto",
-            description: "Não foi possível fazer upload da foto. Tente novamente.",
-            variant: "destructive",
-          });
-          setLoading(false);
-          return;
-        }
-        
         const { collection, addDoc, getDocs, query, where, deleteDoc } = await import("firebase/firestore");
         
         try {
@@ -413,7 +391,7 @@ export default function Login() {
             cidade: formData.cidade,
             estado: formData.estado,
             disponibilidade: disponibilidade,
-            fotoUrl: fotoUrl,
+            fotoBase64: photoBase64,
             fotoPublica: photoPublic,
           });
         } catch (firestoreError: any) {
@@ -448,6 +426,7 @@ export default function Login() {
         });
         setDisponibilidade([]);
         setPhotoFile(null);
+        setPhotoBase64(null);
         setPhotoPublic(false);
         setCodeCopied(false);
         setLoading(false);
@@ -1277,7 +1256,10 @@ export default function Login() {
                   </div>
 
                   <PhotoUpload
-                    onPhotoChange={setPhotoFile}
+                    onPhotoChange={(file, base64) => {
+                      setPhotoFile(file);
+                      setPhotoBase64(base64 || null);
+                    }}
                     onPublicChange={setPhotoPublic}
                     initialPublic={false}
                     required={true}

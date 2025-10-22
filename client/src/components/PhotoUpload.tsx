@@ -7,7 +7,7 @@ import { Upload, X, Camera } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface PhotoUploadProps {
-  onPhotoChange: (file: File | null) => void;
+  onPhotoChange: (file: File | null, base64?: string | null) => void;
   onPublicChange: (isPublic: boolean) => void;
   initialPublic?: boolean;
   required?: boolean;
@@ -52,21 +52,22 @@ export function PhotoUpload({
       return;
     }
 
-    // Criar preview
+    // Criar preview e converter para Base64
     const reader = new FileReader();
     reader.onload = (e) => {
-      setPhotoPreview(e.target?.result as string);
+      const base64 = e.target?.result as string;
+      setPhotoPreview(base64);
+      setPhotoFile(file);
+      // Passar tanto o file quanto o base64 para o componente pai
+      onPhotoChange(file, base64);
     };
     reader.readAsDataURL(file);
-
-    setPhotoFile(file);
-    onPhotoChange(file);
   };
 
   const handleRemovePhoto = () => {
     setPhotoPreview(null);
     setPhotoFile(null);
-    onPhotoChange(null);
+    onPhotoChange(null, null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
