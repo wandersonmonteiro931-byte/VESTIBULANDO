@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { collection, addDoc, updateDoc, doc, where, setDoc, deleteDoc, getDoc, getDocs, query, runTransaction } from "firebase/firestore";
+import { collection, addDoc, updateDoc, doc, where, setDoc, deleteDoc, getDoc, getDocs, query, runTransaction, increment } from "firebase/firestore";
 import { db, auth as firebaseAuth } from "@/lib/firebase";
 import { createUserWithEmailAndPassword, deleteUser, fetchSignInMethodsForEmail } from "firebase/auth";
 import { useAuth } from "@/contexts/AuthContext";
@@ -260,9 +260,8 @@ export default function AdminDashboard() {
           const turmaRef = doc(db, "turmas", solicitacao.turma);
           const turmaDoc = await getDoc(turmaRef);
           if (turmaDoc.exists()) {
-            const turmaData = turmaDoc.data();
             await updateDoc(turmaRef, {
-              vagasPreenchidas: (turmaData.vagasPreenchidas || 0) + 1
+              vagasPreenchidas: increment(1)
             });
           }
         }
@@ -308,9 +307,8 @@ export default function AdminDashboard() {
               const turmaRef = doc(db, "turmas", solicitacao.turma);
               const turmaDoc = await getDoc(turmaRef);
               if (turmaDoc.exists()) {
-                const turmaData = turmaDoc.data();
                 await updateDoc(turmaRef, {
-                  vagasPreenchidas: (turmaData.vagasPreenchidas || 0) + 1
+                  vagasPreenchidas: increment(1)
                 });
               }
             }
@@ -546,11 +544,22 @@ export default function AdminDashboard() {
         status: "aprovado",
       });
       
+      if (data.tipo === "aluno" && data.turma) {
+        const turmaRef = doc(db, "turmas", data.turma);
+        const turmaDoc = await getDoc(turmaRef);
+        if (turmaDoc.exists()) {
+          await updateDoc(turmaRef, {
+            vagasPreenchidas: increment(1)
+          });
+        }
+      }
+      
       return userCredential.user;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
       queryClient.invalidateQueries({ queryKey: ["/api/usuarios/all"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/turmas"] });
       toast({
         title: "Aluno criado com sucesso!",
         description: "O aluno pode acessar a plataforma.",
@@ -590,9 +599,8 @@ export default function AdminDashboard() {
         const turmaRef = doc(db, "turmas", user.turma);
         const turmaDoc = await getDoc(turmaRef);
         if (turmaDoc.exists()) {
-          const turmaData = turmaDoc.data();
           await updateDoc(turmaRef, {
-            vagasPreenchidas: Math.max(0, (turmaData.vagasPreenchidas || 0) - 1)
+            vagasPreenchidas: increment(-1)
           });
         }
       }
@@ -732,9 +740,8 @@ export default function AdminDashboard() {
           const turmaAntigaRef = doc(db, "turmas", turmaAntiga);
           const turmaAntigaDoc = await getDoc(turmaAntigaRef);
           if (turmaAntigaDoc.exists()) {
-            const turmaAntigaData = turmaAntigaDoc.data();
             await updateDoc(turmaAntigaRef, {
-              vagasPreenchidas: Math.max(0, (turmaAntigaData.vagasPreenchidas || 0) - 1)
+              vagasPreenchidas: increment(-1)
             });
           }
         }
@@ -742,9 +749,8 @@ export default function AdminDashboard() {
         const novaTurmaRef = doc(db, "turmas", novaTurma);
         const novaTurmaDoc = await getDoc(novaTurmaRef);
         if (novaTurmaDoc.exists()) {
-          const novaTurmaData = novaTurmaDoc.data();
           await updateDoc(novaTurmaRef, {
-            vagasPreenchidas: (novaTurmaData.vagasPreenchidas || 0) + 1
+            vagasPreenchidas: increment(1)
           });
         }
       }
@@ -787,9 +793,8 @@ export default function AdminDashboard() {
         const turmaRef = doc(db, "turmas", turmaAtual);
         const turmaDoc = await getDoc(turmaRef);
         if (turmaDoc.exists()) {
-          const turmaData = turmaDoc.data();
           await updateDoc(turmaRef, {
-            vagasPreenchidas: Math.max(0, (turmaData.vagasPreenchidas || 0) - 1)
+            vagasPreenchidas: increment(-1)
           });
         }
       }
@@ -1649,9 +1654,9 @@ export default function AdminDashboard() {
                       <CardContent className="space-y-3">
                         <div className="flex items-center gap-2 flex-wrap">
                           {foraDoPeríodo ? (
-                            <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Aberta
+                            <Badge variant="outline" className="bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400">
+                              <Clock className="h-3 w-3 mr-1" />
+                              Aberta fora do período
                             </Badge>
                           ) : turma.ativa ? (
                             <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
