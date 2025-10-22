@@ -17,6 +17,9 @@ export const userSchema = z.object({
   isOnline: z.boolean().optional().default(false),
   lastSeen: z.string().optional(), // timestamp do último acesso
   lastActivity: z.string().optional(), // timestamp da última atividade
+  // Campos de foto
+  fotoUrl: z.string().optional(), // URL da foto 3x4 no Firebase Storage
+  fotoPublica: z.boolean().optional().default(false), // se true, foto visível para todos; se false, apenas para diretor
   // Campos obrigatórios para alunos
   dataNascimento: z.string().optional(),
   cpf: z.string().optional(),
@@ -111,3 +114,20 @@ export const insertTurmaSchema = turmaSchema.omit({ id: true });
 
 export type Turma = z.infer<typeof turmaSchema>;
 export type InsertTurma = z.infer<typeof insertTurmaSchema>;
+
+// LoginHistory schema - rastreia login/logout dos usuários
+export const loginHistorySchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  userNome: z.string(),
+  userTipo: z.enum(["aluno", "professor", "diretor"]),
+  action: z.enum(["login", "logout"]),
+  timestamp: z.string(), // ISO datetime em horário de Brasília
+  ipAddress: z.string().optional(),
+  userAgent: z.string().optional(),
+});
+
+export const insertLoginHistorySchema = loginHistorySchema.omit({ id: true });
+
+export type LoginHistory = z.infer<typeof loginHistorySchema>;
+export type InsertLoginHistory = z.infer<typeof insertLoginHistorySchema>;

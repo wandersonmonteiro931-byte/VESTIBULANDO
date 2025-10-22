@@ -625,26 +625,34 @@ export default function AdminDashboard() {
 
   const addStudentsToTurmaMutation = useMutation({
     mutationFn: async ({ studentIds, turmaNome, turmaId }: { studentIds: string[]; turmaNome: string; turmaId: string }) => {
-      const turmaRef = doc(db, "turmas", turmaId);
-      const turmaDoc = await getDoc(turmaRef);
-      
-      if (!turmaDoc.exists()) {
-        throw new Error("Turma não encontrada");
-      }
-      
-      const turmaData = turmaDoc.data();
-      const vagasTotais = turmaData.vagasTotais || 0;
-      const alunosAtuais = users?.filter(u => u.turma === turmaNome && u.tipo === "aluno").length || 0;
-      const vagasDisponiveis = vagasTotais - alunosAtuais;
-      
-      if (studentIds.length > vagasDisponiveis) {
-        throw new Error(`Não há vagas suficientes. Disponíveis: ${vagasDisponiveis}, Selecionados: ${studentIds.length}`);
-      }
-      
-      const updatePromises = studentIds.map(uid => 
-        updateDoc(doc(db, "usuarios", uid), { turma: turmaNome })
-      );
-      await Promise.all(updatePromises);
+      await runTransaction(db, async (transaction) => {
+        const turmaRef = doc(db, "turmas", turmaId);
+        const turmaDoc = await transaction.get(turmaRef);
+        
+        if (!turmaDoc.exists()) {
+          throw new Error("Turma não encontrada");
+        }
+        
+        const turmaData = turmaDoc.data();
+        const vagasTotais = turmaData.vagasTotais || 0;
+        const vagasPreenchidas = turmaData.vagasPreenchidas || 0;
+        const vagasDisponiveis = vagasTotais - vagasPreenchidas;
+        
+        if (studentIds.length > vagasDisponiveis) {
+          throw new Error(`Não há vagas suficientes. Disponíveis: ${vagasDisponiveis}, Selecionados: ${studentIds.length}`);
+        }
+        
+        // Atualizar vagasPreenchidas atomicamente
+        transaction.update(turmaRef, {
+          vagasPreenchidas: vagasPreenchidas + studentIds.length
+        });
+        
+        // Atualizar cada aluno
+        for (const uid of studentIds) {
+          const userRef = doc(db, "usuarios", uid);
+          transaction.update(userRef, { turma: turmaNome });
+        }
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
@@ -689,25 +697,70 @@ export default function AdminDashboard() {
 
   const bulkTransferStudentsMutation = useMutation({
     mutationFn: async ({ studentIds, novaTurma }: { studentIds: string[]; novaTurma: string }) => {
-      const turmaDoc = await getDocs(query(collection(db, "turmas"), where("nome", "==", novaTurma)));
-      
-      if (turmaDoc.empty) {
-        throw new Error("Turma de destino não encontrada");
-      }
-      
-      const turmaData = turmaDoc.docs[0].data();
-      const vagasTotais = turmaData.vagasTotais || 0;
-      const alunosAtuais = users?.filter(u => u.turma === novaTurma && u.tipo === "aluno").length || 0;
-      const vagasDisponiveis = vagasTotais - alunosAtuais;
-      
-      if (studentIds.length > vagasDisponiveis) {
-        throw new Error(`Não há vagas suficientes na turma ${novaTurma}. Disponíveis: ${vagasDisponiveis}, Selecionados: ${studentIds.length}`);
-      }
-      
-      const updatePromises = studentIds.map(uid => 
-        updateDoc(doc(db, "usuarios", uid), { turma: novaTurma })
-      );
-      await Promise.all(updatePromises);
+      await runTransaction(db, async (transaction) => {
+        // Buscar turma de destino
+        const turmaQuerySnapshot = await getDocs(query(collection(db, "turmas"), where("nome", "==", novaTurma)));
+        
+        if (turmaQuerySnapshot.empty) {
+          throw new Error("Turma de destino não encontrada");
+        }
+        
+        const turmaDestinoDocs = turmaQuerySnapshot.docs[0];
+        const turmaDestinoRef = doc(db, "turmas", turmaDestinoDocs.id);
+        const turmaDestinoDoc = await transaction.get(turmaDestinoRef);
+        
+        if (!turmaDestinoDoc.exists()) {
+          throw new Error("Turma de destino não encontrada");
+        }
+        
+        const turmaDestinoData = turmaDestinoDoc.data();
+        const vagasTotais = turmaDestinoData.vagasTotais || 0;
+        const vagasPreenchidas = turmaDestinoData.vagasPreenchidas || 0;
+        const vagasDisponiveis = vagasTotais - vagasPreenchidas;
+        
+        if (studentIds.length > vagasDisponiveis) {
+          throw new Error(`Não há vagas suficientes na turma ${novaTurma}. Disponíveis: ${vagasDisponiveis}, Selecionados: ${studentIds.length}`);
+        }
+        
+        // Buscar turmas de origem e decrementar vagasPreenchidas
+        const turmasOrigemMap = new Map<string, number>();
+        
+        for (const uid of studentIds) {
+          const userRef = doc(db, "usuarios", uid);
+          const userDoc = await transaction.get(userRef);
+          
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            const turmaOrigem = userData.turma;
+            
+            if (turmaOrigem && turmaOrigem !== novaTurma) {
+              turmasOrigemMap.set(turmaOrigem, (turmasOrigemMap.get(turmaOrigem) || 0) + 1);
+            }
+            
+            transaction.update(userRef, { turma: novaTurma });
+          }
+        }
+        
+        // Decrementar vagasPreenchidas das turmas de origem
+        for (const [turmaNome, count] of turmasOrigemMap.entries()) {
+          const turmaOrigemQuery = await getDocs(query(collection(db, "turmas"), where("nome", "==", turmaNome)));
+          if (!turmaOrigemQuery.empty) {
+            const turmaOrigemRef = doc(db, "turmas", turmaOrigemQuery.docs[0].id);
+            const turmaOrigemDoc = await transaction.get(turmaOrigemRef);
+            if (turmaOrigemDoc.exists()) {
+              const vagasPreencidasOrigem = turmaOrigemDoc.data().vagasPreenchidas || 0;
+              transaction.update(turmaOrigemRef, {
+                vagasPreenchidas: Math.max(0, vagasPreencidasOrigem - count)
+              });
+            }
+          }
+        }
+        
+        // Incrementar vagasPreenchidas da turma destino
+        transaction.update(turmaDestinoRef, {
+          vagasPreenchidas: vagasPreenchidas + studentIds.length
+        });
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
@@ -730,10 +783,41 @@ export default function AdminDashboard() {
 
   const bulkRemoveStudentsMutation = useMutation({
     mutationFn: async ({ studentIds }: { studentIds: string[] }) => {
-      const updatePromises = studentIds.map(uid => 
-        updateDoc(doc(db, "usuarios", uid), { turma: "" })
-      );
-      await Promise.all(updatePromises);
+      await runTransaction(db, async (transaction) => {
+        // Contar quantos alunos serão removidos de cada turma
+        const turmasMap = new Map<string, number>();
+        
+        for (const uid of studentIds) {
+          const userRef = doc(db, "usuarios", uid);
+          const userDoc = await transaction.get(userRef);
+          
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            const turmaAtual = userData.turma;
+            
+            if (turmaAtual) {
+              turmasMap.set(turmaAtual, (turmasMap.get(turmaAtual) || 0) + 1);
+            }
+            
+            transaction.update(userRef, { turma: "" });
+          }
+        }
+        
+        // Decrementar vagasPreenchidas de cada turma
+        for (const [turmaNome, count] of turmasMap.entries()) {
+          const turmaQuery = await getDocs(query(collection(db, "turmas"), where("nome", "==", turmaNome)));
+          if (!turmaQuery.empty) {
+            const turmaRef = doc(db, "turmas", turmaQuery.docs[0].id);
+            const turmaDoc = await transaction.get(turmaRef);
+            if (turmaDoc.exists()) {
+              const vagasPreenchidas = turmaDoc.data().vagasPreenchidas || 0;
+              transaction.update(turmaRef, {
+                vagasPreenchidas: Math.max(0, vagasPreenchidas - count)
+              });
+            }
+          }
+        }
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
