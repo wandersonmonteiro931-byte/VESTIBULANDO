@@ -556,20 +556,29 @@ export default function Login() {
         });
       }
     } catch (error: any) {
+      console.error("❌ Erro durante login:", error);
+      console.error("Código do erro:", error.code);
+      console.error("Mensagem do erro:", error.message);
+      
       let message = "Ocorreu um erro. Tente novamente.";
       if (error.code === "auth/wrong-password") {
         message = "Senha incorreta";
       } else if (error.code === "auth/invalid-credential") {
         // Mensagem diferente dependendo do modo de login
         message = mode === "diretorLogin" 
-          ? "Email ou senha incorretos" 
+          ? "Email ou senha incorretos. Verifique suas credenciais e tente novamente." 
           : "CPF/Matrícula ou senha incorretos";
       } else if (error.code === "auth/user-not-found") {
         message = mode === "diretorLogin"
-          ? "Usuário não encontrado"
+          ? "Este email não está registrado no sistema. Por favor, contate o administrador."
           : "CPF/Matrícula não encontrado";
+      } else if (error.code === "auth/invalid-email") {
+        message = "Email inválido. Verifique o formato do email.";
+      } else if (error.code === "auth/too-many-requests") {
+        message = "Muitas tentativas de login. Aguarde alguns minutos e tente novamente.";
       } else if (error.code) {
-        message = `${error.code}: ${error.message}`;
+        message = `Erro: ${error.code}`;
+        console.error("Detalhes do erro:", error);
       } else {
         message = error.message || "Erro desconhecido";
       }
