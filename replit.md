@@ -9,31 +9,39 @@ Plataforma educacional completa para preparação do ENEM com gestão de tarefas
 - **Last Updated**: October 2025
 
 ## Recent Changes (October 2025)
-**Real-time Synchronization (Latest):**
+
+**Brazilian Localization & Authentication (Latest):**
+- ✅ Changed authentication from email to CPF/Matrícula login system
+- ✅ Implemented sequential matricula generation starting from 0100 using atomic Firestore transactions
+- ✅ Added Brazilian formatting: CPF (xxx.xxx.xxx-xx), Phone ((XX)XXXXX-XXXX), CEP (XXXXX-XXX)
+- ✅ Integrated ViaCEP API for automatic address lookup by postal code
+- ✅ Implemented CPF-based password recovery flow
+- ✅ Updated all UI text to Portuguese (student registration, security notices)
+- ✅ Created Firestore security rules for matriculaCounter with monotonic increment validation
+- ✅ Documented admin setup process (CPF: 709.731.041-39, Matrícula: 9318) in CRIAR_ADMIN.md
+- ⚠️ Matricula counter accessible to unauthenticated users - suitable for dev/test, requires Cloud Functions for production
+
+**Real-time Synchronization:**
 - ✅ Implemented Firebase Firestore real-time listeners using onSnapshot
 - ✅ Created useRealtimeQuery hook for automatic data synchronization
 - ✅ Updated all dashboards (Student, Teacher, Admin) to use real-time data
 - ✅ Configured TanStack Query for automatic refetch on window focus and reconnect
 - ✅ Data now updates automatically across all clients when changes occur in Firebase
 
-**Security Hardening Complete:**
+**Security Hardening:**
 - ✅ Restricted self-registration to "aluno" accounts only (prevents privilege escalation)
 - ✅ Added null guards to all Firestore and Storage helper functions
 - ✅ Implemented professor-to-assignment access control in Firestore and Storage
 - ✅ Fixed cross-class data exposure in entregas submissions
 - ✅ Validated all security rules with architect review
-- ✅ Updated FIREBASE_SETUP.md with bootstrap admin instructions
-- ✅ Removed user type selector from registration form
 - ✅ Enhanced file upload validation with proper error handling
 
-**Previous Implementation:**
+**Core Implementation:**
 - Created complete data model for usuarios, tarefas, entregas, and turmas
-- Implemented Firebase authentication with Google and email/password
 - Built all main dashboards (Student, Teacher, Admin) with full UI
 - Added theme toggle (dark/light mode)
 - Implemented file upload system for assignments and submissions
 - Created reusable components (StatusBadge, FileUploadZone, ThemeToggle, ProtectedRoute)
-- Created deployment documentation (FIREBASE_SETUP.md)
 
 ## Project Architecture
 
@@ -77,9 +85,16 @@ Plataforma educacional completa para preparação do ENEM com gestão de tarefas
   uid: string
   nome: string
   email: string
+  cpf: string (formatted: xxx.xxx.xxx-xx)
+  matricula: string (sequential 4-digit, e.g., "0100", "9318")
   tipo: "aluno" | "professor" | "admin"
   turma?: string (for students)
+  telefone?: string (formatted: (XX)XXXXX-XXXX)
+  cep?: string (formatted: XXXXX-XXX)
+  endereco?: string (auto-filled via ViaCEP)
   ativo: boolean
+  status: "pendente" | "aprovado" | "reprovado"
+  dataCriacao: timestamp
 }
 ```
 
@@ -142,11 +157,13 @@ Plataforma educacional completa para preparação do ENEM com gestão de tarefas
 ### Key Features Implemented
 
 #### Authentication
-- Email/password authentication
-- Google Sign-In
+- CPF/Matrícula-based login system (Brazilian format)
+- Password recovery using CPF verification
+- Sequential matricula generation (starting from 0100)
 - Auto-redirect based on user type
 - Protected routes with role-based access control
 - Session persistence
+- Integrated ViaCEP for address auto-fill
 
 #### Student Dashboard
 - Assignment cards with status badges
@@ -216,14 +233,24 @@ Required secrets (configured in Replit Secrets):
 
 - **Self-Registration**: Creates aluno accounts automatically
 - **Professor/Admin Accounts**: Must be created by existing administrators
-- **First Admin Bootstrap**: Register as aluno, then manually upgrade in Firebase Console (see FIREBASE_SETUP.md)
+- **First Admin Bootstrap**: Register as aluno, then manually upgrade in Firebase Console (see CRIAR_ADMIN.md)
 
 ### Firestore Security Rules
 - **usuarios**: Self-signup as aluno only; admins can create any type; no privilege escalation
 - **tarefas**: Professors can only manage their own assignments
 - **entregas**: Students can submit; professors can grade only their own assignment submissions
 - **turmas**: Read-only for all; admins can create/update
+- **system/matriculaCounter**: Read-only for all; write restricted to monotonic +1 increments or admin override
 - **Null Guards**: All helper functions check document existence before data access
+
+### Matricula Counter Security
+The sequential matricula generation uses Firestore transactions with the following rules:
+- **Read**: Anyone can read the counter (required for atomic transactions)
+- **Write**: Only allowed if:
+  - Document doesn't exist (initialization)
+  - New value is exactly previous + 1 (monotonic increment)
+  - User is admin (maintenance override)
+- **⚠️ Production Note**: Current implementation allows unauthenticated increments during registration. For production deployment, implement Cloud Functions for full security. See CRIAR_ADMIN.md for details.
 
 ### Storage Security Rules
 - **tarefas/**: Professors upload their own attachments; all authenticated users can read (educational materials)
@@ -232,15 +259,17 @@ Required secrets (configured in Replit Secrets):
 - **Null Guards**: All helper functions check user document existence
 
 ## Deployment Checklist
-1. ✅ Configure Firebase project (see FIREBASE_SETUP.md)
+1. ✅ Configure Firebase project (see CRIAR_ADMIN.md)
 2. ✅ Add environment secrets in Replit (VITE_FIREBASE_*)
-3. ✅ Deploy Firestore security rules
-4. ✅ Deploy Storage security rules
-5. ✅ Enable Authentication providers (Email/Password, Google)
-6. ✅ Create first admin user (bootstrap process)
-7. ✅ Test all user flows (student, teacher, admin)
-8. ✅ Verify file uploads work correctly
-9. ✅ Test dark mode and responsive layouts
+3. ✅ Deploy Firestore security rules (`firebase deploy --only firestore:rules`)
+4. ✅ Deploy Storage security rules (`firebase deploy --only storage`)
+5. ✅ Initialize matricula counter in Firestore (`system/matriculaCounter` with `ultimaMatricula: 9317`)
+6. ✅ Create first admin user (see CRIAR_ADMIN.md for manual setup)
+7. ✅ Enable Authentication providers (Email/Password only - Google removed)
+8. ✅ Test all user flows (student, teacher, admin)
+9. ✅ Verify file uploads work correctly
+10. ✅ Test CPF/Matricula login and password recovery
+11. ✅ Verify sequential matricula generation (starts at 0100, admin at 9318)
 
 ## Future Enhancements
 1. Email notifications for new assignments and grades
