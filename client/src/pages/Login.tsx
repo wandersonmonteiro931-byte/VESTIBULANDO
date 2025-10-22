@@ -48,6 +48,17 @@ async function generateUniqueMatricula(db: any): Promise<string> {
   return timestamp;
 }
 
+// Função para formatar CPF
+function formatarCPF(valor: string): string {
+  const apenasNumeros = valor.replace(/\D/g, '');
+  const limitado = apenasNumeros.slice(0, 11);
+  
+  if (limitado.length <= 3) return limitado;
+  if (limitado.length <= 6) return `${limitado.slice(0, 3)}.${limitado.slice(3)}`;
+  if (limitado.length <= 9) return `${limitado.slice(0, 3)}.${limitado.slice(3, 6)}.${limitado.slice(6)}`;
+  return `${limitado.slice(0, 3)}.${limitado.slice(3, 6)}.${limitado.slice(6, 9)}-${limitado.slice(9)}`;
+}
+
 // Função para buscar CEP na API ViaCEP
 async function buscarCEP(cep: string) {
   try {
@@ -570,8 +581,9 @@ export default function Login() {
                       type="text"
                       placeholder="000.000.000-00"
                       value={formData.cpf}
-                      onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, cpf: formatarCPF(e.target.value) })}
                       required
+                      maxLength={14}
                       data-testid="input-cpf"
                     />
                   </div>
@@ -609,6 +621,19 @@ export default function Login() {
                       data-testid="input-telefone"
                     />
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    required
+                    data-testid="input-email"
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -751,19 +776,21 @@ export default function Login() {
                 </div>
               </>
             )}
-            
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="seu@email.com"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                required
-                data-testid="input-email"
-              />
-            </div>
+
+            {mode === "login" && (
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="seu@email.com"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  required
+                  data-testid="input-email"
+                />
+              </div>
+            )}
             
             {mode === "login" && (
               <div className="space-y-2">
