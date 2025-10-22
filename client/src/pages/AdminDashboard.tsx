@@ -1537,7 +1537,7 @@ export default function AdminDashboard() {
                 </>
               ) : turmas && turmas.length > 0 ? (
                 turmas.map((turma) => {
-                  const alunosTurma = users?.filter(u => u.turma === turma.nome).length || 0;
+                  const alunosTurma = turma.vagasPreenchidas || 0;
                   const vagasDisponiveis = (turma.vagasTotais || 0) - alunosTurma;
                   
                   // Verificar se a turma está aberta fora do período
