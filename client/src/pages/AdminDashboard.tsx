@@ -1625,6 +1625,24 @@ export default function AdminDashboard() {
                         )}
 
                         <div className="flex flex-col gap-2">
+                          <Button
+                            variant={turma.ativa ? "destructive" : "default"}
+                            size="sm"
+                            onClick={() => toggleTurmaStatusMutation.mutate({ turmaId: turma.id, ativa: !turma.ativa })}
+                            data-testid={`button-toggle-status-${turma.id}`}
+                          >
+                            {turma.ativa ? (
+                              <>
+                                <XCircle className="h-4 w-4 mr-1" />
+                                Fechar Turma
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle className="h-4 w-4 mr-1" />
+                                Abrir Turma
+                              </>
+                            )}
+                          </Button>
                           <div className="flex gap-2">
                             <Button
                               variant="outline"
