@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { StatusBadge } from "@/components/StatusBadge";
 import { FileUploadZone } from "@/components/FileUploadZone";
-import { LogOut, FileText, Upload, Download, Calendar, Award, CheckCircle2, Clock } from "lucide-react";
+import { LogOut, FileText, Upload, Download, Calendar, Award, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 import type { Tarefa, Entrega } from "@shared/schema";
@@ -61,6 +61,13 @@ export default function StudentDashboard() {
     queryKey: ["/api/entregas", userData?.uid],
     constraints: userData?.uid ? [where("alunoId", "==", userData.uid)] : [],
     transform: (docs) => docs as Entrega[],
+    enabled: !!userData?.uid,
+  });
+
+  const { data: disciplinaryActions, isLoading: loadingDisciplinary } = useRealtimeQuery({
+    collectionName: "disciplinaryActions",
+    queryKey: ["/api/disciplinaryActions", userData?.uid],
+    constraints: userData?.uid ? [where("alunoId", "==", userData.uid)] : [],
     enabled: !!userData?.uid,
   });
 
@@ -219,6 +226,16 @@ export default function StudentDashboard() {
             <TabsTrigger value="pendentes" data-testid="tab-pendentes">Pendentes</TabsTrigger>
             <TabsTrigger value="entregues" data-testid="tab-entregues">Entregues</TabsTrigger>
             <TabsTrigger value="notas" data-testid="tab-notas">Notas</TabsTrigger>
+            <TabsTrigger value="advertencias" data-testid="tab-advertencias">
+              <div className="flex items-center gap-2">
+                Advertências
+                {disciplinaryActions && disciplinaryActions.filter((a: any) => a.ativo).length > 0 && (
+                  <Badge variant="destructive" className="h-5 min-w-5 rounded-full p-1 text-xs">
+                    {disciplinaryActions.filter((a: any) => a.ativo).length}
+                  </Badge>
+                )}
+              </div>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="todas" className="space-y-4">
@@ -431,6 +448,140 @@ export default function StudentDashboard() {
                     )}
                   </Card>
                 ))
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="advertencias">
+            <div className="space-y-4">
+              {loadingDisciplinary ? (
+                <>
+                  <Skeleton className="h-32 w-full" />
+                  <Skeleton className="h-32 w-full" />
+                </>
+              ) : !disciplinaryActions || disciplinaryActions.length === 0 ? (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                    <CheckCircle2 className="h-16 w-16 text-green-600 mb-4" />
+                    <p className="text-lg font-medium mb-2">Nenhuma advertência</p>
+                    <p className="text-sm text-muted-foreground">
+                      Você não possui advertências ou suspensões registradas
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <>
+                  {disciplinaryActions
+                    .filter((action: any) => action.ativo)
+                    .sort((a: any, b: any) => new Date(b.dataAplicacao).getTime() - new Date(a.dataAplicacao).getTime())
+                    .map((action: any) => {
+                      const isSuspension = action.tipo === "suspensao";
+                      const dataAplicacao = new Date(action.dataAplicacao);
+                      const dataTermino = action.dataTerminoSuspensao ? new Date(action.dataTerminoSuspensao) : null;
+
+                      return (
+                        <Card key={action.id} className={isSuspension ? "border-red-500" : "border-yellow-500"}>
+                          <CardHeader className="pb-3">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <AlertTriangle className={`h-5 w-5 ${isSuspension ? 'text-red-600' : 'text-yellow-600'}`} />
+                                <CardTitle className="text-lg">
+                                  {isSuspension ? "Suspensão Disciplinar" : "Advertência"}
+                                </CardTitle>
+                              </div>
+                              <Badge 
+                                variant={isSuspension ? "destructive" : "outline"}
+                                className={isSuspension ? "" : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"}
+                              >
+                                Ativa
+                              </Badge>
+                            </div>
+                            <CardDescription>
+                              Aplicada em {dataAplicacao.toLocaleDateString('pt-BR')} às {dataAplicacao.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            {isSuspension && dataTermino && (
+                              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                                <p className="text-sm font-medium text-red-900 dark:text-red-100 mb-1">
+                                  Sua conta está suspensa
+                                </p>
+                                <p className="text-sm text-red-700 dark:text-red-300">
+                                  Término: {dataTermino.toLocaleDateString('pt-BR')} às {dataTermino.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                              </div>
+                            )}
+
+                            <div>
+                              <p className="text-sm text-muted-foreground mb-1">Aplicada por:</p>
+                              <p className="text-sm font-medium">{action.aplicadoPorNome}</p>
+                            </div>
+
+                            {action.comentario && (
+                              <div>
+                                <p className="text-sm text-muted-foreground mb-1">Motivo:</p>
+                                <div className="p-3 bg-muted rounded-lg">
+                                  <p className="text-sm">{action.comentario}</p>
+                                </div>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+
+                  {disciplinaryActions.filter((action: any) => action.ativo).length === 0 && (
+                    <Card>
+                      <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                        <CheckCircle2 className="h-16 w-16 text-green-600 mb-4" />
+                        <p className="text-lg font-medium mb-2">Nenhuma advertência ativa</p>
+                        <p className="text-sm text-muted-foreground">
+                          Você não possui advertências ou suspensões ativas
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {disciplinaryActions.filter((action: any) => !action.ativo).length > 0 && (
+                    <div className="mt-6">
+                      <h3 className="text-sm font-medium mb-3 text-muted-foreground">Histórico (Removidas)</h3>
+                      <div className="space-y-3">
+                        {disciplinaryActions
+                          .filter((action: any) => !action.ativo)
+                          .sort((a: any, b: any) => new Date(b.dataAplicacao).getTime() - new Date(a.dataAplicacao).getTime())
+                          .map((action: any) => {
+                            const isSuspension = action.tipo === "suspensao";
+                            const dataAplicacao = new Date(action.dataAplicacao);
+                            const dataRemocao = action.dataRemocao ? new Date(action.dataRemocao) : null;
+
+                            return (
+                              <Card key={action.id} className="opacity-60">
+                                <CardHeader className="pb-2">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="flex items-center gap-2">
+                                      <CardTitle className="text-base">
+                                        {isSuspension ? "Suspensão" : "Advertência"}
+                                      </CardTitle>
+                                    </div>
+                                    <Badge variant="secondary">Removida</Badge>
+                                  </div>
+                                  <CardDescription className="text-xs">
+                                    Aplicada em {dataAplicacao.toLocaleDateString('pt-BR')}
+                                    {dataRemocao && ` • Removida em ${dataRemocao.toLocaleDateString('pt-BR')}`}
+                                  </CardDescription>
+                                </CardHeader>
+                                {action.comentario && (
+                                  <CardContent className="pt-2">
+                                    <p className="text-xs text-muted-foreground">{action.comentario}</p>
+                                  </CardContent>
+                                )}
+                              </Card>
+                            );
+                          })}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </TabsContent>
