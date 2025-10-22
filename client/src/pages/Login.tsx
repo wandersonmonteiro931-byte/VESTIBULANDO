@@ -173,6 +173,20 @@ export default function Login() {
   const [userDataForReset, setUserDataForReset] = useState<any>(null);
   
   const [disponibilidade, setDisponibilidade] = useState<string[]>([]);
+  const [cpfValido, setCpfValido] = useState<boolean | null>(null);
+
+  // Validar CPF em tempo real quando usuário digitar 11 números
+  useEffect(() => {
+    if (mode === "register" && formData.cpf) {
+      const apenasNumeros = formData.cpf.replace(/\D/g, '');
+      if (apenasNumeros.length === 11) {
+        const valido = validarCPF(formData.cpf);
+        setCpfValido(valido);
+      } else {
+        setCpfValido(null);
+      }
+    }
+  }, [formData.cpf, mode]);
 
   useEffect(() => {
     if (userData && !showCodeDialog) {
@@ -869,16 +883,31 @@ export default function Login() {
 
                     <div className="space-y-2">
                       <Label htmlFor="cpf">CPF *</Label>
-                      <Input
-                        id="cpf"
-                        type="text"
-                        placeholder="000.000.000-00"
-                        value={formData.cpf}
-                        onChange={(e) => setFormData({ ...formData, cpf: formatarCPF(e.target.value) })}
-                        required
-                        maxLength={14}
-                        data-testid="input-cpf"
-                      />
+                      <div className="relative">
+                        <Input
+                          id="cpf"
+                          type="text"
+                          placeholder="000.000.000-00"
+                          value={formData.cpf}
+                          onChange={(e) => setFormData({ ...formData, cpf: formatarCPF(e.target.value) })}
+                          required
+                          maxLength={14}
+                          className={cpfValido === false ? "border-destructive" : cpfValido === true ? "border-green-500" : ""}
+                          data-testid="input-cpf"
+                        />
+                        {cpfValido === true && (
+                          <Check className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-green-500" data-testid="icon-cpf-valido" />
+                        )}
+                        {cpfValido === false && (
+                          <AlertCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-destructive" data-testid="icon-cpf-invalido" />
+                        )}
+                      </div>
+                      {cpfValido === false && (
+                        <p className="text-sm text-destructive">CPF inválido. Verifique os números digitados.</p>
+                      )}
+                      {cpfValido === true && (
+                        <p className="text-sm text-green-600 dark:text-green-400">CPF válido ✓</p>
+                      )}
                     </div>
                   </div>
 
