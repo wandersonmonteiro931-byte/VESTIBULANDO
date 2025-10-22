@@ -1,3 +1,33 @@
+# 🚨 DEPLOY URGENTE - Regras do Firestore Atualizadas
+
+## ⚠️ CORREÇÃO APLICADA
+Corrigi o problema de permissões nas regras do Firestore. Agora você precisa publicar essas regras.
+
+## 📝 PASSOS PARA RESOLVER O ERRO
+
+### 1️⃣ Acesse o Firebase Console
+🔗 https://console.firebase.google.com/project/plataforma-enem-f3682/firestore/rules
+
+### 2️⃣ Cole as Novas Regras
+- No editor que aparece, **DELETE TUDO** que está lá
+- **COPIE** o conteúdo do arquivo `firestore.rules` deste projeto (veja abaixo)
+- **COLE** no editor do Firebase Console
+
+### 3️⃣ Publique
+- Clique no botão **"Publicar"** (azul, no canto superior direito)
+- Aguarde a confirmação (leva 5-10 segundos)
+
+### 4️⃣ Teste
+- Recarregue a página da aplicação (F5)
+- Tente aplicar a advertência/suspensão novamente
+
+---
+
+## 📋 COPIE ESTE CONTEÚDO COMPLETO
+
+Copie tudo entre as linhas abaixo (inclusive a primeira e última linha):
+
+```
 rules_version = '2';
 
 service cloud.firestore {
@@ -34,24 +64,17 @@ service cloud.firestore {
     
     // Usuarios collection
     match /usuarios/{userId} {
-      // Anyone authenticated can read their own user doc
-      // Admins can read all individual documents AND perform queries (list operation)
       allow get: if isAuthenticated() && (
         request.auth.uid == userId || 
         (exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) && 
          get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'diretor')
       );
       
-      // Allow list/query operation for admins only
       allow list: if isAuthenticated() && 
                      exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) && 
                      get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'diretor';
       
-      // Allow creating user doc in two scenarios:
-      // 1. Self-registration: User creating their own 'aluno' account
-      // 2. Admin creation: Director creating any type of account (approval process)
       allow create: if isAuthenticated() && (
-        // Scenario 1: Self-registration (aluno only)
         (request.auth.uid == userId &&
          !exists(/databases/$(database)/documents/usuarios/$(userId)) &&
          request.resource.data.uid == request.auth.uid &&
@@ -59,14 +82,12 @@ service cloud.firestore {
          request.resource.data.tipo == 'aluno' &&
          request.resource.data.email == request.auth.token.email &&
          request.resource.data.ativo == true) ||
-        // Scenario 2: Admin creating account for approval
         (exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) && 
          get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'diretor' &&
          request.resource.data.uid == userId &&
          request.resource.data.keys().hasAll(['uid', 'nome', 'email', 'tipo', 'ativo']))
       );
       
-      // Users can update their own basic info, admins can update all
       allow update: if isAuthenticated() && (
         (request.auth.uid == userId && 
          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['uid', 'tipo', 'ativo'])) ||
@@ -74,29 +95,24 @@ service cloud.firestore {
          get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'diretor')
       );
       
-      // Only admins can delete users
       allow delete: if exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) && 
                        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'diretor';
     }
     
     // Tarefas collection
     match /tarefas/{tarefaId} {
-      // Professors can read their own tarefas, alunos can read tarefas for their turma, admins can read all
       allow read: if isAuthenticated() && isUserActive() && (
         isAdmin() ||
         (isProfessor() && resource.data.professorId == request.auth.uid) ||
         (isAluno() && resource.data.turma == getUserData().turma)
       );
       
-      // Only professors can create tarefas
       allow create: if isProfessor() && isUserActive() && 
                        request.resource.data.professorId == request.auth.uid;
       
-      // Only the professor who created can update
       allow update: if isProfessor() && isUserActive() && 
                        resource.data.professorId == request.auth.uid;
       
-      // Only admins or the professor who created can delete
       allow delete: if isUserActive() && (
         isAdmin() ||
         (isProfessor() && resource.data.professorId == request.auth.uid)
@@ -105,141 +121,123 @@ service cloud.firestore {
     
     // Entregas collection
     match /entregas/{entregaId} {
-      // Helper to check if professor owns the tarefa
       function professorOwnsTarefa(tarefaId) {
         return exists(/databases/$(database)/documents/tarefas/$(tarefaId)) &&
                get(/databases/$(database)/documents/tarefas/$(tarefaId)).data.professorId == request.auth.uid;
       }
       
-      // Alunos can read their own entregas, professors can read submissions for their tarefas, admins can read all
       allow read: if isAuthenticated() && isUserActive() && (
         isAdmin() ||
         (isAluno() && resource.data.alunoId == request.auth.uid) ||
         (isProfessor() && professorOwnsTarefa(resource.data.tarefaId))
       );
       
-      // Only alunos can create entregas for themselves
       allow create: if isAluno() && isUserActive() && 
                        request.resource.data.alunoId == request.auth.uid;
       
-      // Only professors who own the tarefa and admins can update entregas (for grading)
       allow update: if isUserActive() && (
         isAdmin() ||
         (isProfessor() && professorOwnsTarefa(resource.data.tarefaId))
       );
       
-      // Only admins can delete entregas
       allow delete: if isAdmin() && isUserActive();
     }
     
     // Turmas collection
     match /turmas/{turmaId} {
-      // Anyone can read turmas (needed for registration page)
       allow read: if true;
-      
-      // Only admins can create turmas
       allow create: if isAdmin() && isUserActive();
-      
-      // Only admins can update turmas
       allow update: if isAdmin() && isUserActive();
-      
-      // Only admins can delete turmas
       allow delete: if isAdmin() && isUserActive();
     }
     
-    // Solicitacoes collection - for pending user registrations
+    // Solicitacoes collection
     match /solicitacoes/{solicitacaoId} {
-      // Anyone can create a solicitacao (unauthenticated registration)
       allow create: if true;
-      
-      // Anyone can read solicitacoes (needed for status verification)
       allow read: if true;
-      
-      // Only admins can delete solicitacoes
       allow delete: if isAdmin();
-      
-      // Admins can update any solicitacao
-      // Anyone can update solicitacao if it's "devolvido" or "reprovado"
       allow update: if isAdmin() || 
                        (resource.data.status in ['devolvido', 'reprovado']);
     }
     
-    // Reprovacoes collection - for rejected user registrations
+    // Reprovacoes collection
     match /reprovacoes/{reprovacaoId} {
-      // Anyone can read reprovacoes (to check if they were rejected)
       allow read: if true;
-      
-      // Only admins can create and update reprovacoes
       allow create: if isAdmin();
       allow update: if isAdmin();
-      
-      // Only admins can delete reprovacoes
-      // Note: Users are allowed to delete their own rejection when re-registering
-      // This is done through the application flow, not direct Firestore access
       allow delete: if isAdmin() || true;
     }
     
-    // Disciplinary Actions collection - advertências e suspensões
+    // Disciplinary Actions collection
     match /disciplinaryActions/{actionId} {
-      // Alunos podem ler suas próprias ações disciplinares
-      // Diretores podem ler todas as ações disciplinares
       allow read: if isAuthenticated() && (
         isAdmin() ||
         (isAluno() && resource.data.alunoId == request.auth.uid)
       );
       
-      // Apenas diretores podem criar ações disciplinares
       allow create: if isAdmin() && isUserActive() &&
                        request.resource.data.aplicadoPor == request.auth.uid;
       
-      // Apenas diretores podem atualizar ações disciplinares (para remover)
       allow update: if isAdmin() && isUserActive();
-      
-      // Apenas diretores podem deletar ações disciplinares
       allow delete: if isAdmin() && isUserActive();
     }
     
-    // Login History collection - histórico de login/logout
+    // Login History collection
     match /loginHistory/{historyId} {
-      // Apenas diretores podem ler o histórico
       allow read: if isAdmin();
-      
-      // Qualquer usuário autenticado pode criar seu próprio registro
       allow create: if isAuthenticated() &&
                        request.resource.data.userId == request.auth.uid;
-      
-      // Ninguém pode atualizar ou deletar registros de histórico
       allow update, delete: if false;
     }
     
-    // System collection - for counters and system-wide settings
+    // System collection
     match /system/{documentId} {
-      // Matricula counter can be read by anyone (needed for transactions)
       allow read: if documentId == 'matriculaCounter';
       
-      // Write restrictions for matricula counter:
-      // - Must include valid timestamp field
-      // - Must be exactly +1 increment (no jumps or decrements)
-      // - Admins can bypass for maintenance
-      // Note: This still allows unauthenticated writes during registration
-      // For production, consider moving to Cloud Functions for better security
       allow write: if documentId == 'matriculaCounter' && (
-        // Admin override for maintenance
         isAdmin() ||
-        // Valid increment with timestamp
         (
           request.resource.data.keys().hasAll(['ultimaMatricula', 'ultimaAtualizacao']) &&
           (
-            // First initialization
             !exists(/databases/$(database)/documents/system/matriculaCounter) ||
-            // Monotonic increment only
             request.resource.data.ultimaMatricula == resource.data.ultimaMatricula + 1
           )
         )
       );
       
-      // Other system documents are admin-only
       allow read, write: if documentId != 'matriculaCounter' && isAdmin();
     }
   }
 }
+```
+
+---
+
+## 🔍 O QUE FOI CORRIGIDO
+
+A função `isUserActive()` agora aceita tanto o valor booleano `true` quanto a string `"true"`, resolvendo o problema de permissão.
+
+**Antes:**
+```javascript
+function isUserActive() {
+  return userDocExists() && getUserData().ativo == true;
+}
+```
+
+**Depois (CORRIGIDO):**
+```javascript
+function isUserActive() {
+  return userDocExists() && (getUserData().ativo == true || getUserData().ativo == 'true');
+}
+```
+
+## ✅ Após Publicar
+
+Aguarde 10-15 segundos e então:
+1. Recarregue a página (F5)
+2. Tente aplicar a advertência/suspensão novamente
+3. Deve funcionar perfeitamente!
+
+---
+
+Se tiver qualquer dúvida, me avise!
