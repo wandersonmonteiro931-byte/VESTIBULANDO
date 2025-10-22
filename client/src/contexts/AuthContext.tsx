@@ -39,10 +39,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         
         // Atualizar o documento se o campo uid estiver faltando
+        // Isso é feito de forma silenciosa, ignorando erros de permissão
         if (!data.uid) {
-          const { updateDoc } = await import("firebase/firestore");
-          await updateDoc(userDocRef, { uid });
-          data.uid = uid;
+          try {
+            const { updateDoc } = await import("firebase/firestore");
+            await updateDoc(userDocRef, { uid });
+            data.uid = uid;
+          } catch (updateError: any) {
+            // Ignorar erro de permissão - o campo uid será usado do auth diretamente
+            if (updateError.code !== "permission-denied") {
+              console.error("Error updating uid field:", updateError);
+            }
+            // Usar uid do auth se não conseguir atualizar
+            data.uid = uid;
+          }
         }
         
         setUserData(data);
