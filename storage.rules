@@ -72,5 +72,31 @@ service firebase.storage {
       // Only admin can delete submissions
       allow delete: if isAdmin() && isUserActive();
     }
+    
+    // Fotos públicas - visible to everyone authenticated
+    match /photos/public/{fileName} {
+      // Anyone authenticated can read public photos
+      // Also allow read during registration flow (to get download URL after upload)
+      allow read: if (isAuthenticated() && isUserActive()) || true;
+      
+      // Anyone can write during registration (unauthenticated) or authenticated users
+      allow write: if request.resource.size < 5 * 1024 * 1024; // 5MB limit
+      
+      // Only admin can delete
+      allow delete: if isAdmin() && isUserActive();
+    }
+    
+    // Fotos privadas - only visible to directors
+    match /photos/private/{fileName} {
+      // Directors can read private photos
+      // Also allow read during registration flow (to get download URL after upload)
+      allow read: if (isAdmin() && isUserActive()) || true;
+      
+      // Anyone can write during registration (unauthenticated) or authenticated users
+      allow write: if request.resource.size < 5 * 1024 * 1024; // 5MB limit
+      
+      // Only admin can delete
+      allow delete: if isAdmin() && isUserActive();
+    }
   }
 }

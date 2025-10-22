@@ -18,6 +18,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { PresenceIndicator } from "@/components/PresenceIndicator";
+import { MonitoringTab } from "@/components/MonitoringTab";
+import { DocumentationTab } from "@/components/DocumentationTab";
 import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, MessageCircle, ArrowRightLeft } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { queryClient } from "@/lib/queryClient";
@@ -1030,6 +1032,8 @@ export default function AdminDashboard() {
             </TabsTrigger>
             <TabsTrigger value="usuarios" data-testid="tab-usuarios">Alunos</TabsTrigger>
             <TabsTrigger value="turmas" data-testid="tab-turmas">Turmas</TabsTrigger>
+            <TabsTrigger value="monitoramento" data-testid="tab-monitoramento">Monitoramento</TabsTrigger>
+            <TabsTrigger value="documentacao" data-testid="tab-documentacao">Documentação</TabsTrigger>
           </TabsList>
 
           <TabsContent value="aprovacoes" className="space-y-4">
@@ -1438,6 +1442,14 @@ export default function AdminDashboard() {
                 </Card>
               )}
             </div>
+          </TabsContent>
+
+          <TabsContent value="monitoramento" className="space-y-4">
+            <MonitoringTab />
+          </TabsContent>
+
+          <TabsContent value="documentacao" className="space-y-4">
+            <DocumentationTab />
           </TabsContent>
         </Tabs>
       </main>

@@ -12,8 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { PhotoUpload } from "@/components/PhotoUpload";
 import { GraduationCap, Loader2, Copy, Check, Search, AlertCircle, Shield } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { storage } from "@/lib/firebase";
 
 // Gera uma matrícula sequencial única usando transação atômica
 async function generateUniqueMatricula(db: any): Promise<string> {
@@ -174,6 +177,8 @@ export default function Login() {
   
   const [disponibilidade, setDisponibilidade] = useState<string[]>([]);
   const [cpfValido, setCpfValido] = useState<boolean | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPublic, setPhotoPublic] = useState(false);
 
   // Validar CPF em tempo real quando usuário digitar 11 números
   useEffect(() => {
@@ -269,6 +274,17 @@ export default function Login() {
           setLoading(false);
           return;
         }
+
+        // Validar foto obrigatória
+        if (!photoFile) {
+          toast({
+            title: "Foto obrigatória",
+            description: "Por favor, selecione uma foto 3x4",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
         
         // Validar CPF
         if (!validarCPF(formData.cpf)) {
@@ -283,6 +299,27 @@ export default function Login() {
         
         const matricula = await generateUniqueMatricula(db);
         const dataSolicitacao = new Date().toISOString();
+        
+        // Upload da foto para o Firebase Storage
+        let fotoUrl = "";
+        try {
+          const photoPath = photoPublic 
+            ? `photos/public/${matricula}_${Date.now()}.jpg`
+            : `photos/private/${matricula}_${Date.now()}.jpg`;
+          
+          const photoRef = ref(storage, photoPath);
+          await uploadBytes(photoRef, photoFile);
+          fotoUrl = await getDownloadURL(photoRef);
+        } catch (photoError) {
+          console.error("Erro ao fazer upload da foto:", photoError);
+          toast({
+            title: "Erro ao enviar foto",
+            description: "Não foi possível fazer upload da foto. Tente novamente.",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
         
         const { collection, addDoc, getDocs, query, where, deleteDoc } = await import("firebase/firestore");
         
@@ -313,6 +350,8 @@ export default function Login() {
             cidade: formData.cidade,
             estado: formData.estado,
             disponibilidade: disponibilidade,
+            fotoUrl: fotoUrl,
+            fotoPublica: photoPublic,
           });
         } catch (firestoreError: any) {
           console.error("Erro ao salvar solicitação:", firestoreError);
@@ -345,6 +384,8 @@ export default function Login() {
           email: "",
         });
         setDisponibilidade([]);
+        setPhotoFile(null);
+        setPhotoPublic(false);
         setCodeCopied(false);
         setLoading(false);
         
@@ -511,7 +552,14 @@ export default function Login() {
       if (error.code === "auth/wrong-password") {
         message = "Senha incorreta";
       } else if (error.code === "auth/invalid-credential") {
-        message = "CPF/Matrícula ou senha incorretos";
+        // Mensagem diferente dependendo do modo de login
+        message = mode === "diretorLogin" 
+          ? "Email ou senha incorretos" 
+          : "CPF/Matrícula ou senha incorretos";
+      } else if (error.code === "auth/user-not-found") {
+        message = mode === "diretorLogin"
+          ? "Usuário não encontrado"
+          : "CPF/Matrícula não encontrado";
       } else if (error.code) {
         message = `${error.code}: ${error.message}`;
       } else {
@@ -1098,6 +1146,14 @@ export default function Login() {
                       ))}
                     </div>
                   </div>
+
+                  <PhotoUpload
+                    onPhotoChange={setPhotoFile}
+                    onPublicChange={setPhotoPublic}
+                    initialPublic={false}
+                    required={true}
+                    label="Foto 3x4 (Obrigatória)"
+                  />
 
                   <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
                     <div className="flex gap-2">
