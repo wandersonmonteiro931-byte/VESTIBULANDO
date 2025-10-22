@@ -1105,13 +1105,14 @@ export default function Login() {
                       <div className="text-sm">
                         <strong className="text-destructive">ATENÇÃO:</strong>
                         <p className="mt-1 text-foreground">
-                          Novos cadastros passarão por análise do Diretor e serão criados apenas para Alunos. Para contas de Professor, entre em contato com um administrador da plataforma.
+                          Novos cadastros passarão por análise do Diretor e serão criados exclusivamente para alunos.
+                          Para contas de professor, entre em contato com um administrador da plataforma.
                         </p>
                         <p className="mt-2 text-foreground">
-                          Acompanhe sua solicitação através da interface inicial, com o número da sua matrícula que será gerado após o cadastro.
+                          Você poderá acompanhar o status da sua solicitação pela interface inicial, utilizando o número de matrícula que será gerado após o envio do cadastro.
                         </p>
                         <p className="mt-2 text-foreground">
-                          Após aprovação da matrícula, é necessário ter presença ativa e manter as notas dentro das médias indicadas em cada bimestre, caso contrário, o aluno pode ter sua conta suspensa da plataforma.
+                          Após a aprovação da matrícula, é necessário manter presença ativa e alcançar as médias mínimas exigidas em cada bimestre. O descumprimento desses e outros critérios poderá resultar na suspensão definitiva da conta na plataforma e o encerramento da matrícula.
                         </p>
                       </div>
                     </div>
