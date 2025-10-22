@@ -194,6 +194,7 @@ export default function AdminDashboard() {
 
   const approveUserMutation = useMutation({
     mutationFn: async ({ solicitacaoId, senha }: { solicitacaoId: string; senha: string }) => {
+      console.log("🔄 Iniciando aprovação da conta...");
       const solicitacaoDoc = await getDoc(doc(db, "solicitacoes", solicitacaoId));
       const solicitacao = solicitacaoDoc.data();
       
@@ -201,14 +202,19 @@ export default function AdminDashboard() {
         throw new Error("Solicitação não encontrada");
       }
       
+      console.log("📋 Dados da solicitação:", solicitacao);
+      
       let userId: string;
       let userAlreadyExists = false;
       
       try {
+        console.log("🔐 Criando usuário no Firebase Auth...");
         const userCredential = await createUserWithEmailAndPassword(firebaseAuth, solicitacao.email, senha);
         userId = userCredential.user.uid;
+        console.log("✅ Usuário criado no Auth, UID:", userId);
         
-        await setDoc(doc(db, "usuarios", userId), {
+        console.log("📝 Criando documento no Firestore...");
+        const userData = {
           uid: userId,
           nome: solicitacao.nome,
           email: solicitacao.email,
@@ -230,7 +236,18 @@ export default function AdminDashboard() {
           cidade: solicitacao.cidade,
           estado: solicitacao.estado,
           disponibilidade: solicitacao.disponibilidade || [],
-        });
+        };
+        console.log("📄 Dados do usuário a serem salvos:", userData);
+        
+        try {
+          await setDoc(doc(db, "usuarios", userId), userData);
+          console.log("✅ Documento criado no Firestore!");
+        } catch (firestoreError: any) {
+          console.error("❌ Erro ao criar documento no Firestore:", firestoreError);
+          console.error("Código do erro:", firestoreError.code);
+          console.error("Mensagem:", firestoreError.message);
+          throw firestoreError;
+        }
         
         // Incrementar contador de vagas preenchidas da turma
         if (solicitacao.tipo === "aluno" && solicitacao.turma) {
@@ -244,7 +261,12 @@ export default function AdminDashboard() {
           }
         }
       } catch (error: any) {
+        console.error("❌ Erro durante a criação:", error);
+        console.error("Código do erro:", error.code);
+        console.error("Mensagem do erro:", error.message);
+        
         if (error.code === "auth/email-already-in-use") {
+          console.log("⚠️ Email já existe, tentando atualizar usuário existente...");
           userAlreadyExists = true;
           
           const { getDocs, query, collection, where } = await import("firebase/firestore");
