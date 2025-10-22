@@ -761,10 +761,31 @@ export default function AdminDashboard() {
   const removeStudentFromTurmaMutation = useMutation({
     mutationFn: async ({ userId }: { userId: string }) => {
       const userRef = doc(db, "usuarios", userId);
+      const userDoc = await getDoc(userRef);
+      
+      if (!userDoc.exists()) {
+        throw new Error("Usuário não encontrado");
+      }
+      
+      const userData = userDoc.data();
+      const turmaAtual = userData.turma;
+      
+      if (userData.tipo === "aluno" && turmaAtual) {
+        const turmaRef = doc(db, "turmas", turmaAtual);
+        const turmaDoc = await getDoc(turmaRef);
+        if (turmaDoc.exists()) {
+          const turmaData = turmaDoc.data();
+          await updateDoc(turmaRef, {
+            vagasPreenchidas: Math.max(0, (turmaData.vagasPreenchidas || 0) - 1)
+          });
+        }
+      }
+      
       await updateDoc(userRef, { turma: "" });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/turmas"] });
       toast({
         title: "Aluno removido!",
         description: "O aluno foi removido da turma.",
