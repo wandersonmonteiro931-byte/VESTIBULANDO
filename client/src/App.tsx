@@ -29,8 +29,8 @@ function RootRedirect() {
       return <Redirect to="/aluno" />;
     case "professor":
       return <Redirect to="/professor" />;
-    case "admin":
-      return <Redirect to="/admin" />;
+    case "diretor":
+      return <Redirect to="/diretor" />;
     default:
       return <Redirect to="/login" />;
   }
@@ -60,8 +60,8 @@ function Router() {
         </ProtectedRoute>
       </Route>
       
-      <Route path="/admin">
-        <ProtectedRoute allowedTypes={["admin"]}>
+      <Route path="/diretor">
+        <ProtectedRoute allowedTypes={["diretor"]}>
           <AdminDashboard />
         </ProtectedRoute>
       </Route>

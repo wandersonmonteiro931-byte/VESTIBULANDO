@@ -5,7 +5,7 @@ import { Loader2 } from "lucide-react";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  allowedTypes?: ("aluno" | "professor" | "admin")[];
+  allowedTypes?: ("aluno" | "professor" | "diretor")[];
 }
 
 export function ProtectedRoute({ children, allowedTypes }: ProtectedRouteProps) {
@@ -23,8 +23,8 @@ export function ProtectedRoute({ children, allowedTypes }: ProtectedRouteProps) 
         case "professor":
           setLocation("/professor");
           break;
-        case "admin":
-          setLocation("/admin");
+        case "diretor":
+          setLocation("/diretor");
           break;
       }
     }

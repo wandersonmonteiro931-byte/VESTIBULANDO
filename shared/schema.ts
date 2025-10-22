@@ -1,18 +1,22 @@
 import { z } from "zod";
 
-// User schema - tipos: aluno, professor, admin
+// User schema - tipos: aluno, professor, diretor
 // status: pendente (aguardando aprovação), aprovado (pode logar), reprovado (não pode logar)
 export const userSchema = z.object({
   uid: z.string(),
   nome: z.string().min(1, "Nome é obrigatório"),
   email: z.string().email("Email inválido"),
-  tipo: z.enum(["aluno", "professor", "admin"]),
+  tipo: z.enum(["aluno", "professor", "diretor"]),
   turma: z.string().optional(),
   ativo: z.boolean().default(true),
   status: z.enum(["pendente", "aprovado", "reprovado"]).default("pendente"),
   matricula: z.string().optional(), // 4 dígitos - número da matrícula do aluno
   comentarioReprovacao: z.string().optional(),
   dataSolicitacao: z.string().optional(),
+  // Campos de presença online/offline
+  isOnline: z.boolean().optional().default(false),
+  lastSeen: z.string().optional(), // timestamp do último acesso
+  lastActivity: z.string().optional(), // timestamp da última atividade
   // Campos obrigatórios para alunos
   dataNascimento: z.string().optional(),
   cpf: z.string().optional(),

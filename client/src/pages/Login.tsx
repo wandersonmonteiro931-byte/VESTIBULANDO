@@ -132,7 +132,7 @@ export default function Login() {
   const { toast } = useToast();
   const { userData, refreshUserData } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<"login" | "register" | "forgotPassword" | "adminLogin">("login");
+  const [mode, setMode] = useState<"login" | "register" | "forgotPassword" | "diretorLogin">("login");
   const [showCodeDialog, setShowCodeDialog] = useState(false);
   const [requestCode, setRequestCode] = useState("");
   const [codeCopied, setCodeCopied] = useState(false);
@@ -197,8 +197,8 @@ export default function Login() {
         case "professor":
           setLocation("/professor");
           break;
-        case "admin":
-          setLocation("/admin");
+        case "diretor":
+          setLocation("/diretor");
           break;
       }
     }
@@ -353,8 +353,8 @@ export default function Login() {
         }, 100);
         
         return;
-      } else if (mode === "adminLogin") {
-        // Login de administrador usando email e senha diretamente
+      } else if (mode === "diretorLogin") {
+        // Login de diretor usando email e senha diretamente
         if (!formData.email || !formData.password) {
           toast({
             title: "Campos obrigatórios",
@@ -381,10 +381,10 @@ export default function Login() {
           return;
         }
         
-        if (currentUserData.tipo !== "admin") {
+        if (currentUserData.tipo !== "diretor") {
           toast({
             title: "Acesso negado",
-            description: "Esta área é restrita a administradores",
+            description: "Esta área é restrita à diretoria",
             variant: "destructive",
           });
           await auth.signOut();
@@ -396,7 +396,7 @@ export default function Login() {
         
         toast({
           title: "Login realizado com sucesso!",
-          description: "Bem-vindo, administrador!",
+          description: "Bem-vindo à Diretoria!",
         });
       } else {
         // Login usando CPF ou Matrícula
@@ -736,7 +736,7 @@ export default function Login() {
           <div className="space-y-2">
             <CardTitle className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">ENEM+</CardTitle>
             <CardDescription className="text-base">
-              {mode === "register" ? "Formulário de Solicitação de Matrícula" : mode === "forgotPassword" ? "Recuperar Senha" : mode === "adminLogin" ? "Login de Administrador" : "Seja Bem-Vindo! Faça Login com sua Matrícula ou CPF"}
+              {mode === "register" ? "Formulário de Solicitação de Matrícula" : mode === "forgotPassword" ? "Recuperar Senha" : mode === "diretorLogin" ? "Login da Diretoria" : "Seja Bem-Vindo! Faça Login com sua Matrícula ou CPF"}
             </CardDescription>
           </div>
         </CardHeader>
@@ -1168,42 +1168,42 @@ export default function Login() {
                     <button
                       type="button"
                       className="text-primary hover:underline text-sm flex items-center gap-1"
-                      onClick={() => setMode("adminLogin")}
-                      data-testid="button-admin-login"
+                      onClick={() => setMode("diretorLogin")}
+                      data-testid="button-diretor-login"
                     >
                       <Shield className="h-3 w-3" />
-                      Login Admin
+                      Login Diretoria
                     </button>
                   </div>
                 </>
               )}
 
-              {mode === "adminLogin" && (
+              {mode === "diretorLogin" && (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="admin-email">Email do Administrador</Label>
+                    <Label htmlFor="diretor-email">Email da Diretoria</Label>
                     <Input
-                      id="admin-email"
+                      id="diretor-email"
                       type="email"
-                      placeholder="admin@email.com"
+                      placeholder="diretor@email.com"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       required
-                      data-testid="input-admin-email"
+                      data-testid="input-diretor-email"
                     />
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="admin-password">Senha</Label>
+                    <Label htmlFor="diretor-password">Senha</Label>
                     <Input
-                      id="admin-password"
+                      id="diretor-password"
                       type="password"
                       placeholder="••••••••"
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                       required
                       minLength={6}
-                      data-testid="input-admin-password"
+                      data-testid="input-diretor-password"
                     />
                   </div>
                   
@@ -1245,10 +1245,10 @@ export default function Login() {
               <button
                 type="button"
                 className="text-primary hover:underline"
-                onClick={() => setMode(mode === "login" || mode === "adminLogin" ? "register" : "login")}
+                onClick={() => setMode(mode === "login" || mode === "diretorLogin" ? "register" : "login")}
                 data-testid="button-toggle-mode"
               >
-                {mode === "login" || mode === "adminLogin"
+                {mode === "login" || mode === "diretorLogin"
                   ? "NOVO ALUNO? REALIZE SUA MATRÍCULA"
                   : "Já tem uma conta? Faça login"}
               </button>
@@ -1286,7 +1286,7 @@ export default function Login() {
                   <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
                     <p className="text-sm font-medium">Status: Aguardando Análise</p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Seu cadastro está em análise. Aguarde o retorno do administrador.
+                      Seu cadastro está em análise. Aguarde o retorno da diretoria.
                     </p>
                   </div>
                 )}
