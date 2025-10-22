@@ -138,10 +138,14 @@ service cloud.firestore {
       // Anyone can create a solicitacao (unauthenticated registration)
       allow create: if true;
       
-      // Only admins can read, update, and delete solicitacoes
+      // Only admins can read and delete solicitacoes
       allow read: if isAdmin();
-      allow update: if isAdmin();
       allow delete: if isAdmin();
+      
+      // Admins can update any solicitacao
+      // Users can update their own solicitacao if it's "devolvido" or "reprovado"
+      allow update: if isAdmin() || 
+                       (resource.data.status in ['devolvido', 'reprovado']);
     }
     
     // Reprovacoes collection - for rejected user registrations
