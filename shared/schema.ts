@@ -18,7 +18,7 @@ export const userSchema = z.object({
   lastSeen: z.string().optional(), // timestamp do último acesso
   lastActivity: z.string().optional(), // timestamp da última atividade
   // Campos de foto
-  fotoUrl: z.string().optional(), // URL da foto 3x4 no Firebase Storage
+  fotoBase64: z.string().optional(), // Foto 3x4 em Base64
   fotoPublica: z.boolean().optional().default(false), // se true, foto visível para todos; se false, apenas para diretor
   // Campos obrigatórios para alunos
   dataNascimento: z.string().optional(),

@@ -93,7 +93,7 @@ export function DocumentationTab() {
 
   // Verificar se pode ver a foto
   const canViewPhoto = (user: User) => {
-    if (!user.fotoUrl) return false;
+    if (!user.fotoBase64) return false;
     if (user.fotoPublica) return true;
     return currentUser?.tipo === "diretor";
   };
@@ -296,7 +296,7 @@ export function DocumentationTab() {
                       <TableCell>
                         <Avatar className="h-10 w-10">
                           {canViewPhoto(user) && (
-                            <AvatarImage src={user.fotoUrl} alt={user.nome} />
+                            <AvatarImage src={user.fotoBase64} alt={user.nome} />
                           )}
                           <AvatarFallback>
                             {user.nome.substring(0, 2).toUpperCase()}
@@ -350,7 +350,7 @@ export function DocumentationTab() {
                 <DialogTitle className="flex items-center gap-3">
                   <Avatar className="h-12 w-12">
                     {canViewPhoto(selectedUser) && (
-                      <AvatarImage src={selectedUser.fotoUrl} alt={selectedUser.nome} />
+                      <AvatarImage src={selectedUser.fotoBase64} alt={selectedUser.nome} />
                     )}
                     <AvatarFallback>
                       {selectedUser.nome.substring(0, 2).toUpperCase()}
