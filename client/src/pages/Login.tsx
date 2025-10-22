@@ -13,7 +13,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { PhotoUpload } from "@/components/PhotoUpload";
-import { GraduationCap, Loader2, Copy, Check, Search, AlertCircle, Shield } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { GraduationCap, Loader2, Copy, Check, Search, AlertCircle, Shield, Users, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "@/lib/firebase";
@@ -214,13 +215,81 @@ export default function Login() {
     const carregarTurmas = async () => {
       try {
         const { collection, getDocs, query, where } = await import("firebase/firestore");
+        
+        // Buscar todas as turmas ativas
         const turmasQuery = query(collection(db, "turmas"), where("ativa", "==", true));
         const turmasSnapshot = await getDocs(turmasQuery);
-        const turmas = turmasSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data() as any
-        }));
-        setTurmasDisponiveis(turmas.filter((t: any) => (t.vagasDisponiveis || 0) > 0));
+        
+        // Buscar todos os alunos aprovados para contar por turma
+        const usuariosQuery = query(
+          collection(db, "usuarios"), 
+          where("tipo", "==", "aluno"),
+          where("status", "==", "aprovado")
+        );
+        const usuariosSnapshot = await getDocs(usuariosQuery);
+        
+        // Contar alunos por turma
+        const alunosPorTurma: { [key: string]: number } = {};
+        usuariosSnapshot.docs.forEach(doc => {
+          const userData = doc.data();
+          const turmaId = userData.turma;
+          if (turmaId) {
+            alunosPorTurma[turmaId] = (alunosPorTurma[turmaId] || 0) + 1;
+          }
+        });
+        
+        // Processar turmas com status
+        const turmasComStatus = turmasSnapshot.docs.map(doc => {
+          const turmaData = doc.data() as any;
+          const alunosMatriculados = alunosPorTurma[doc.id] || 0;
+          const vagasTotais = turmaData.vagasTotais || 0;
+          const vagasRestantes = Math.max(0, vagasTotais - alunosMatriculados);
+          
+          // Determinar status da turma
+          let status = "aberta";
+          let podeMatricular = true;
+          
+          // Verificar período de matrícula
+          const hoje = new Date();
+          if (turmaData.periodoMatriculaInicio && turmaData.periodoMatriculaFim) {
+            const inicio = new Date(turmaData.periodoMatriculaInicio);
+            const fim = new Date(turmaData.periodoMatriculaFim);
+            
+            if (hoje < inicio) {
+              status = "aguardando";
+              podeMatricular = false;
+            } else if (hoje > fim) {
+              status = "fechada";
+              podeMatricular = false;
+            }
+          }
+          
+          // Verificar vagas
+          if (vagasRestantes === 0 && podeMatricular) {
+            status = "completa";
+            podeMatricular = false;
+          } else if (vagasRestantes <= 3 && vagasRestantes > 0 && podeMatricular) {
+            status = "ultimas-vagas";
+          }
+          
+          return {
+            id: doc.id,
+            ...turmaData,
+            alunosMatriculados,
+            vagasRestantes,
+            status,
+            podeMatricular
+          };
+        });
+        
+        // Ordenar: turmas com vagas primeiro, depois fechadas
+        const turmasOrdenadas = turmasComStatus.sort((a, b) => {
+          if (a.podeMatricular && !b.podeMatricular) return -1;
+          if (!a.podeMatricular && b.podeMatricular) return 1;
+          return a.nome.localeCompare(b.nome);
+        });
+        
+        setTurmasDisponiveis(turmasOrdenadas);
       } catch (error) {
         console.error("Erro ao carregar turmas:", error);
       }
@@ -1049,13 +1118,62 @@ export default function Login() {
                           <SelectItem value="none" disabled>Nenhuma turma disponível</SelectItem>
                         ) : (
                           turmasDisponiveis.map((turma: any) => (
-                            <SelectItem key={turma.id} value={turma.id}>
-                              {turma.nome} - {turma.vagasDisponiveis} vagas
+                            <SelectItem 
+                              key={turma.id} 
+                              value={turma.id}
+                              disabled={!turma.podeMatricular}
+                            >
+                              <div className="flex items-center justify-between w-full gap-3">
+                                <div className="flex items-center gap-2">
+                                  <Users className="h-4 w-4 text-muted-foreground" />
+                                  <span className="font-medium">{turma.nome}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm text-muted-foreground">
+                                    {turma.alunosMatriculados}/{turma.vagasTotais || 0}
+                                  </span>
+                                  {turma.status === "aberta" && (
+                                    <Badge variant="default" className="bg-green-500 hover:bg-green-600 text-white gap-1">
+                                      <CheckCircle className="h-3 w-3" />
+                                      Aberta
+                                    </Badge>
+                                  )}
+                                  {turma.status === "ultimas-vagas" && (
+                                    <Badge variant="default" className="bg-orange-500 hover:bg-orange-600 text-white gap-1">
+                                      <Clock className="h-3 w-3" />
+                                      Últimas vagas
+                                    </Badge>
+                                  )}
+                                  {turma.status === "completa" && (
+                                    <Badge variant="destructive" className="gap-1">
+                                      <XCircle className="h-3 w-3" />
+                                      Completa
+                                    </Badge>
+                                  )}
+                                  {turma.status === "fechada" && (
+                                    <Badge variant="secondary" className="gap-1">
+                                      <XCircle className="h-3 w-3" />
+                                      Fechada
+                                    </Badge>
+                                  )}
+                                  {turma.status === "aguardando" && (
+                                    <Badge variant="secondary" className="gap-1">
+                                      <Clock className="h-3 w-3" />
+                                      Em breve
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
                             </SelectItem>
                           ))
                         )}
                       </SelectContent>
                     </Select>
+                    {turmasDisponiveis.length > 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        {turmasDisponiveis.filter((t: any) => t.podeMatricular).length} turma(s) com vagas disponíveis
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
