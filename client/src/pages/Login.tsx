@@ -923,13 +923,13 @@ export default function Login() {
                           <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="fundamental-incompleto">Ensino Fundamental - Incompleto</SelectItem>
+                          <SelectItem value="cursando-fundamental">Cursando Ensino Fundamental</SelectItem>
                           <SelectItem value="fundamental-completo">Ensino Fundamental - Completo</SelectItem>
-                          <SelectItem value="medio-incompleto">Ensino Médio - Incompleto</SelectItem>
+                          <SelectItem value="cursando-medio">Cursando Ensino Médio</SelectItem>
                           <SelectItem value="medio-completo">Ensino Médio - Completo</SelectItem>
-                          <SelectItem value="superior-incompleto">Ensino Superior - Incompleto</SelectItem>
+                          <SelectItem value="cursando-superior">Cursando Ensino Superior</SelectItem>
                           <SelectItem value="superior-completo">Ensino Superior - Completo</SelectItem>
-                          <SelectItem value="pos-incompleto">Pós-graduação - Incompleto</SelectItem>
+                          <SelectItem value="cursando-pos">Cursando Pós-graduação</SelectItem>
                           <SelectItem value="pos-completo">Pós-graduação - Completo</SelectItem>
                         </SelectContent>
                       </Select>
