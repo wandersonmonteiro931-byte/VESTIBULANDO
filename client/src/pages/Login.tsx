@@ -339,17 +339,6 @@ export default function Login() {
           setLoading(false);
           return;
         }
-
-        // Validar foto obrigatória
-        if (!photoFile) {
-          toast({
-            title: "Foto obrigatória",
-            description: "Por favor, selecione uma foto 3x4",
-            variant: "destructive",
-          });
-          setLoading(false);
-          return;
-        }
         
         // Validar CPF
         if (!validarCPF(formData.cpf)) {
@@ -1341,8 +1330,8 @@ export default function Login() {
                     }}
                     onPublicChange={setPhotoPublic}
                     initialPublic={false}
-                    required={true}
-                    label="Foto 3x4 (Obrigatória)"
+                    required={false}
+                    label="Foto 3x4"
                   />
 
                   <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
@@ -1556,12 +1545,9 @@ export default function Login() {
 
                 {statusResult.status === "aprovado" && (
                   <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
-                    <p className="text-sm font-medium text-green-600 dark:text-green-400">Status: Aprovado ✓</p>
+                    <p className="text-sm font-medium text-green-600 dark:text-green-400">Status: Matrícula Aprovada</p>
                     <p className="text-sm mt-2">
-                      <strong>Parabéns!</strong> Sua matrícula foi aprovada.
-                    </p>
-                    <p className="text-sm mt-2 p-2 bg-background rounded">
-                      Por favor, procure o professor responsável pela turma para conseguir sua primeira senha de acesso à plataforma.
+                      Seu cadastro está aprovado. Fale com o professor responsável por sua turma para receber sua senha inicial de acesso.
                     </p>
                   </div>
                 )}
