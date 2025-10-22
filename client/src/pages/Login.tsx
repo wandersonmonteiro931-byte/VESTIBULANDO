@@ -243,9 +243,11 @@ export default function Login() {
           
           // Verificar período de matrícula
           const hoje = new Date();
+          hoje.setHours(0, 0, 0, 0);
+          
           if (turmaData.periodoMatriculaInicio && turmaData.periodoMatriculaFim) {
-            const inicio = new Date(turmaData.periodoMatriculaInicio);
-            const fim = new Date(turmaData.periodoMatriculaFim);
+            const inicio = new Date(turmaData.periodoMatriculaInicio + 'T00:00:00');
+            const fim = new Date(turmaData.periodoMatriculaFim + 'T23:59:59');
             
             if (hoje < inicio) {
               status = "aguardando";
