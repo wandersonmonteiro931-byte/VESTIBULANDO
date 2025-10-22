@@ -824,11 +824,21 @@ export default function Login() {
       setStatusChecking(false);
     } catch (error: any) {
       console.error("Erro ao verificar status:", error);
-      toast({
-        title: "Erro ao verificar",
-        description: error.message || "Não foi possível verificar o status. Tente novamente.",
-        variant: "destructive",
-      });
+      
+      // Mensagem mais específica se for erro de permissões
+      if (error.code === "permission-denied") {
+        toast({
+          title: "Configuração necessária",
+          description: "É necessário ajustar as regras do Firestore. Veja o arquivo FIREBASE_RULES_SETUP.md para instruções.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Erro ao verificar",
+          description: error.message || "Não foi possível verificar o status. Tente novamente.",
+          variant: "destructive",
+        });
+      }
       setStatusChecking(false);
     }
   };
