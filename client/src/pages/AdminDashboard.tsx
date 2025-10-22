@@ -406,19 +406,21 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 w-full border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
-        <div className="container flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-2">
-            <GraduationCap className="h-6 w-6 text-primary" />
+      <header className="sticky top-0 z-50 w-full border-b bg-gradient-to-r from-card via-card to-card/95 backdrop-blur-xl shadow-sm">
+        <div className="container flex h-20 items-center justify-between px-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-gradient-to-br from-primary to-primary/80 rounded-xl shadow-md shadow-primary/20">
+              <GraduationCap className="h-6 w-6 text-primary-foreground" />
+            </div>
             <div>
-              <h1 className="text-lg font-semibold">ENEM+</h1>
-              <p className="text-xs text-muted-foreground">Painel do Administrador</p>
+              <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">ENEM+</h1>
+              <p className="text-xs text-muted-foreground font-medium">Painel do Administrador</p>
             </div>
           </div>
           
-          <div className="flex items-center gap-2">
-            <div className="text-right mr-4 hidden sm:block">
-              <p className="text-sm font-medium">{userData?.nome}</p>
+          <div className="flex items-center gap-3">
+            <div className="text-right mr-2 hidden sm:block">
+              <p className="text-sm font-semibold">{userData?.nome}</p>
               <p className="text-xs text-muted-foreground">Administrador</p>
             </div>
             <ThemeToggle />
@@ -429,45 +431,53 @@ export default function AdminDashboard() {
         </div>
       </header>
 
-      <main className="container px-4 py-8 max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h2 className="text-3xl font-semibold mb-2">Painel Administrativo</h2>
-          <p className="text-muted-foreground">Gerencie usuários, turmas e acompanhe estatísticas</p>
+      <main className="container px-6 py-10 max-w-7xl mx-auto">
+        <div className="mb-10">
+          <h2 className="text-4xl font-bold mb-3 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+            Painel Administrativo
+          </h2>
+          <p className="text-muted-foreground text-lg">Gerencie usuários, turmas e acompanhe estatísticas</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total de Usuários</CardTitle>
-              <Users className="h-4 w-4 text-primary" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+          <Card className="border-primary/20 bg-gradient-to-br from-card to-primary/5 hover-elevate">
+            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
+              <CardTitle className="text-sm font-semibold">Total de Usuários</CardTitle>
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <Users className="h-5 w-5 text-primary" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold" data-testid="stat-users">{stats.totalUsers}</div>
-              <p className="text-xs text-muted-foreground">
+              <div className="text-3xl font-bold text-primary" data-testid="stat-users">{stats.totalUsers}</div>
+              <p className="text-xs text-muted-foreground mt-1">
                 {stats.alunos} alunos, {stats.professores} professores
               </p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Turmas</CardTitle>
-              <BookOpen className="h-4 w-4 text-blue-600" />
+          <Card className="border-blue-200/50 dark:border-blue-900/50 bg-gradient-to-br from-card to-blue-50/30 dark:to-blue-950/10 hover-elevate">
+            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
+              <CardTitle className="text-sm font-semibold">Turmas</CardTitle>
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg">
+                <BookOpen className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold" data-testid="stat-turmas">{stats.turmas}</div>
-              <p className="text-xs text-muted-foreground">Turmas ativas</p>
+              <div className="text-3xl font-bold text-blue-600 dark:text-blue-400" data-testid="stat-turmas">{stats.turmas}</div>
+              <p className="text-xs text-muted-foreground mt-1">Turmas ativas</p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Atividades</CardTitle>
-              <FileText className="h-4 w-4 text-green-600" />
+          <Card className="border-green-200/50 dark:border-green-900/50 bg-gradient-to-br from-card to-green-50/30 dark:to-green-950/10 hover-elevate">
+            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
+              <CardTitle className="text-sm font-semibold">Atividades</CardTitle>
+              <div className="p-2 bg-green-100 dark:bg-green-900/40 rounded-lg">
+                <FileText className="h-5 w-5 text-green-600 dark:text-green-400" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold" data-testid="stat-atividades">{stats.tarefas}</div>
-              <p className="text-xs text-muted-foreground">{stats.entregas} entregas</p>
+              <div className="text-3xl font-bold text-green-600 dark:text-green-400" data-testid="stat-atividades">{stats.tarefas}</div>
+              <p className="text-xs text-muted-foreground mt-1">{stats.entregas} entregas</p>
             </CardContent>
           </Card>
         </div>
