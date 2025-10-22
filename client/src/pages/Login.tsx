@@ -149,6 +149,9 @@ export default function Login() {
   const [statusError, setStatusError] = useState<string>("");
   const [turmasDisponiveis, setTurmasDisponiveis] = useState<any[]>([]);
   const [buscandoCep, setBuscandoCep] = useState(false);
+  const [showConfirmationDialog, setShowConfirmationDialog] = useState(false);
+  const [confirmationData, setConfirmationData] = useState({ cpf: "", dataNascimento: "" });
+  const [pendingSolicitacao, setPendingSolicitacao] = useState<any>(null);
   
   const [formData, setFormData] = useState({
     loginId: "", // CPF ou Matrícula
@@ -886,7 +889,8 @@ export default function Login() {
           tipo: solicitacao.tipo,
           turma: solicitacao.turma,
           dataSolicitacao: solicitacao.dataSolicitacao,
-          comentarioReprovacao: solicitacao.comentarioReprovacao || null
+          comentarioReprovacao: solicitacao.comentarioReprovacao || null,
+          comentarioDevolucao: solicitacao.comentarioDevolucao || null
         });
         setStatusError("");
         setStatusChecking(false);
@@ -935,6 +939,64 @@ export default function Login() {
         ? prev.filter(d => d !== valor)
         : [...prev, valor]
     );
+  };
+
+  const handleConfirmIdentity = () => {
+    if (!pendingSolicitacao) return;
+    
+    const cpfFormatted = formatarCPF(confirmationData.cpf);
+    const cpfMatch = cpfFormatted === pendingSolicitacao.cpf;
+    const dateMatch = confirmationData.dataNascimento === pendingSolicitacao.dataNascimento;
+    
+    if (!cpfMatch || !dateMatch) {
+      toast({
+        title: "Dados incorretos",
+        description: "CPF ou data de nascimento não conferem com o cadastro.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setEditingSolicitacaoId(pendingSolicitacao.id);
+    setFormData({
+      loginId: "",
+      password: "",
+      nome: pendingSolicitacao.nome || "",
+      turma: pendingSolicitacao.turma || "",
+      dataNascimento: pendingSolicitacao.dataNascimento || "",
+      cpf: pendingSolicitacao.cpf || "",
+      escolaridade: pendingSolicitacao.escolaridade || "",
+      telefone: pendingSolicitacao.telefone || "",
+      cep: pendingSolicitacao.cep || "",
+      rua: pendingSolicitacao.rua || "",
+      bairro: pendingSolicitacao.bairro || "",
+      cidade: pendingSolicitacao.cidade || "",
+      estado: pendingSolicitacao.estado || "",
+      email: pendingSolicitacao.email || "",
+    });
+    
+    if (pendingSolicitacao.disponibilidade) {
+      setDisponibilidade(pendingSolicitacao.disponibilidade);
+    }
+    
+    if (pendingSolicitacao.fotoBase64) {
+      setPhotoBase64(pendingSolicitacao.fotoBase64);
+    }
+    
+    if (pendingSolicitacao.fotoPublica !== undefined) {
+      setPhotoPublic(pendingSolicitacao.fotoPublica);
+    }
+    
+    setShowConfirmationDialog(false);
+    setShowStatusDialog(false);
+    setConfirmationData({ cpf: "", dataNascimento: "" });
+    setPendingSolicitacao(null);
+    setMode("register");
+    
+    toast({
+      title: "Identidade confirmada",
+      description: "Você pode editar seu cadastro e reenviar.",
+    });
   };
 
   return (
@@ -1623,7 +1685,6 @@ export default function Login() {
             {statusResult && statusResult.status === "devolvido" ? (
               <Button
                 onClick={async () => {
-                  // Buscar solicitação completa para editar
                   const { collection, query, where, getDocs } = await import("firebase/firestore");
                   const solicitacaoSnapshot = await getDocs(
                     query(collection(db, "solicitacoes"), where("matricula", "==", statusMatricula))
@@ -1633,48 +1694,17 @@ export default function Login() {
                     const solicitacaoDoc = solicitacaoSnapshot.docs[0];
                     const solicitacaoData = solicitacaoDoc.data();
                     
-                    // Armazenar ID da solicitação para editar
-                    setEditingSolicitacaoId(solicitacaoDoc.id);
-                    
-                    // Carregar dados no formulário
-                    setFormData({
-                      loginId: "",
-                      password: "",
-                      nome: solicitacaoData.nome || "",
-                      turma: solicitacaoData.turma || "",
-                      dataNascimento: solicitacaoData.dataNascimento || "",
-                      cpf: solicitacaoData.cpf || "",
-                      escolaridade: solicitacaoData.escolaridade || "",
-                      telefone: solicitacaoData.telefone || "",
-                      cep: solicitacaoData.cep || "",
-                      rua: solicitacaoData.rua || "",
-                      bairro: solicitacaoData.bairro || "",
-                      cidade: solicitacaoData.cidade || "",
-                      estado: solicitacaoData.estado || "",
-                      email: solicitacaoData.email || "",
+                    setPendingSolicitacao({
+                      id: solicitacaoDoc.id,
+                      ...solicitacaoData
                     });
-                    
-                    if (solicitacaoData.disponibilidade) {
-                      setDisponibilidade(solicitacaoData.disponibilidade);
-                    }
-                    
-                    if (solicitacaoData.fotoBase64) {
-                      setPhotoBase64(solicitacaoData.fotoBase64);
-                    }
-                    
-                    if (solicitacaoData.fotoPublica !== undefined) {
-                      setPhotoPublic(solicitacaoData.fotoPublica);
-                    }
-                    
-                    // Fechar dialog e ir para modo de registro
-                    setShowStatusDialog(false);
-                    setMode("register");
+                    setShowConfirmationDialog(true);
                   }
                 }}
                 className="w-full"
                 data-testid="button-edit-returned"
               >
-                Editar Cadastro e Reenviar
+                Fazer Correção
               </Button>
             ) : (
               <Button
@@ -1802,6 +1832,66 @@ export default function Login() {
             >
               Entendi
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de Confirmação de Identidade */}
+      <Dialog open={showConfirmationDialog} onOpenChange={setShowConfirmationDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirme sua Identidade</DialogTitle>
+            <DialogDescription>
+              Para fazer correções no seu cadastro, confirme seu CPF e data de nascimento.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="confirm-cpf">CPF *</Label>
+              <Input
+                id="confirm-cpf"
+                type="text"
+                placeholder="000.000.000-00"
+                value={confirmationData.cpf}
+                onChange={(e) => setConfirmationData({ ...confirmationData, cpf: formatarCPF(e.target.value) })}
+                maxLength={14}
+                data-testid="input-confirm-cpf"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="confirm-nascimento">Data de Nascimento *</Label>
+              <Input
+                id="confirm-nascimento"
+                type="date"
+                value={confirmationData.dataNascimento}
+                onChange={(e) => setConfirmationData({ ...confirmationData, dataNascimento: e.target.value })}
+                data-testid="input-confirm-nascimento"
+              />
+            </div>
+            
+            <div className="flex gap-2">
+              <Button
+                onClick={() => {
+                  setShowConfirmationDialog(false);
+                  setConfirmationData({ cpf: "", dataNascimento: "" });
+                  setPendingSolicitacao(null);
+                }}
+                variant="outline"
+                className="flex-1"
+                data-testid="button-cancel-confirmation"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleConfirmIdentity}
+                className="flex-1"
+                disabled={!confirmationData.cpf || !confirmationData.dataNascimento}
+                data-testid="button-confirm-identity"
+              >
+                Confirmar
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

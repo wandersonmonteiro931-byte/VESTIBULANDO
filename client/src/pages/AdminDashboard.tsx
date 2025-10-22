@@ -108,6 +108,8 @@ export default function AdminDashboard() {
   const [selectedStudentsForBulkAction, setSelectedStudentsForBulkAction] = useState<string[]>([]);
   const [bulkTransferDialogOpen, setBulkTransferDialogOpen] = useState(false);
   const [bulkTransferTurma, setBulkTransferTurma] = useState("");
+  const [viewDetailsDialogOpen, setViewDetailsDialogOpen] = useState(false);
+  const [selectedSolicitacao, setSelectedSolicitacao] = useState<any>(null);
 
   const turmaForm = useForm<z.infer<typeof turmaFormSchema>>({
     resolver: zodResolver(turmaFormSchema),
@@ -724,7 +726,7 @@ export default function AdminDashboard() {
         }
         
         // Decrementar vagasPreenchidas das turmas de origem
-        for (const [turmaNomeOrigem, count] of turmasOrigemMap.entries()) {
+        for (const [turmaNomeOrigem, count] of Array.from(turmasOrigemMap.entries())) {
           const turmaOrigemQuery = await getDocs(query(collection(db, "turmas"), where("nome", "==", turmaNomeOrigem)));
           if (!turmaOrigemQuery.empty) {
             const turmaOrigemRef = doc(db, "turmas", turmaOrigemQuery.docs[0].id);
@@ -838,7 +840,7 @@ export default function AdminDashboard() {
         }
         
         // Decrementar vagasPreenchidas das turmas de origem
-        for (const [turmaNome, count] of turmasOrigemMap.entries()) {
+        for (const [turmaNome, count] of Array.from(turmasOrigemMap.entries())) {
           const turmaOrigemQuery = await getDocs(query(collection(db, "turmas"), where("nome", "==", turmaNome)));
           if (!turmaOrigemQuery.empty) {
             const turmaOrigemRef = doc(db, "turmas", turmaOrigemQuery.docs[0].id);
@@ -900,7 +902,7 @@ export default function AdminDashboard() {
         }
         
         // Decrementar vagasPreenchidas de cada turma
-        for (const [turmaNome, count] of turmasMap.entries()) {
+        for (const [turmaNome, count] of Array.from(turmasMap.entries())) {
           const turmaQuery = await getDocs(query(collection(db, "turmas"), where("nome", "==", turmaNome)));
           if (!turmaQuery.empty) {
             const turmaRef = doc(db, "turmas", turmaQuery.docs[0].id);
@@ -1168,7 +1170,19 @@ export default function AdminDashboard() {
                                 : "-"}
                             </TableCell>
                             <TableCell className="text-right">
-                              <div className="flex justify-end gap-1">
+                              <div className="flex justify-end gap-1 flex-wrap">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedSolicitacao(user);
+                                    setViewDetailsDialogOpen(true);
+                                  }}
+                                  data-testid="button-view-details"
+                                >
+                                  <Edit className="h-4 w-4 mr-1" />
+                                  Ver Detalhes
+                                </Button>
                                 <Button
                                   variant="default"
                                   size="sm"
@@ -1660,6 +1674,185 @@ export default function AdminDashboard() {
               data-testid="button-confirm-return"
             >
               {returnUserMutation.isPending ? "Devolvendo..." : "Devolver Cadastro"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={viewDetailsDialogOpen} onOpenChange={setViewDetailsDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="dialog-view-details">
+          <DialogHeader>
+            <DialogTitle>Detalhes do Cadastro</DialogTitle>
+            <DialogDescription>
+              Visualize todos os dados da solicitação de matrícula
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedSolicitacao && (
+            <div className="space-y-6">
+              {selectedSolicitacao.fotoBase64 && (
+                <div className="flex justify-center">
+                  <div className="space-y-2">
+                    <Label>Foto 3x4</Label>
+                    <div className="border rounded-lg p-2 bg-muted/30">
+                      <img 
+                        src={selectedSolicitacao.fotoBase64} 
+                        alt="Foto do aluno" 
+                        className="w-32 h-40 object-cover rounded"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Visibilidade: {selectedSolicitacao.fotoPublica ? "Pública" : "Apenas Diretor"}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Matrícula</Label>
+                  <div className="p-2 bg-muted rounded">
+                    <code className="font-mono">{selectedSolicitacao.matricula}</code>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <div className="p-2 bg-muted rounded">
+                    <Badge variant={
+                      selectedSolicitacao.status === "pendente" ? "secondary" :
+                      selectedSolicitacao.status === "aprovado" ? "default" :
+                      selectedSolicitacao.status === "devolvido" ? "outline" : "destructive"
+                    }>
+                      {selectedSolicitacao.status}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="space-y-2 col-span-2">
+                  <Label>Nome Completo</Label>
+                  <div className="p-2 bg-muted rounded">
+                    {selectedSolicitacao.nome}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <div className="p-2 bg-muted rounded">
+                    {selectedSolicitacao.email}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>CPF</Label>
+                  <div className="p-2 bg-muted rounded">
+                    {selectedSolicitacao.cpf}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Data de Nascimento</Label>
+                  <div className="p-2 bg-muted rounded">
+                    {selectedSolicitacao.dataNascimento 
+                      ? new Date(selectedSolicitacao.dataNascimento).toLocaleDateString('pt-BR')
+                      : "-"}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Escolaridade</Label>
+                  <div className="p-2 bg-muted rounded">
+                    {selectedSolicitacao.escolaridade || "-"}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Telefone (WhatsApp)</Label>
+                  <div className="p-2 bg-muted rounded">
+                    {selectedSolicitacao.telefone ? formatarTelefone(selectedSolicitacao.telefone) : "-"}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Turma</Label>
+                  <div className="p-2 bg-muted rounded">
+                    {selectedSolicitacao.turma || "-"}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <Label className="text-base font-semibold">Endereço</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>CEP</Label>
+                    <div className="p-2 bg-muted rounded">
+                      {selectedSolicitacao.cep ? formatarCEP(selectedSolicitacao.cep) : "-"}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Rua</Label>
+                    <div className="p-2 bg-muted rounded">
+                      {selectedSolicitacao.rua || "-"}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Bairro</Label>
+                    <div className="p-2 bg-muted rounded">
+                      {selectedSolicitacao.bairro || "-"}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Cidade</Label>
+                    <div className="p-2 bg-muted rounded">
+                      {selectedSolicitacao.cidade || "-"}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Estado</Label>
+                    <div className="p-2 bg-muted rounded">
+                      {selectedSolicitacao.estado || "-"}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {selectedSolicitacao.disponibilidade && selectedSolicitacao.disponibilidade.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-base font-semibold">Disponibilidade de Horário</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedSolicitacao.disponibilidade.map((horario: string) => (
+                      <Badge key={horario} variant="outline">{horario}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedSolicitacao.dataSolicitacao && (
+                <div className="space-y-2">
+                  <Label>Data da Solicitação</Label>
+                  <div className="p-2 bg-muted rounded">
+                    {new Date(selectedSolicitacao.dataSolicitacao).toLocaleString('pt-BR')}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setViewDetailsDialogOpen(false);
+                setSelectedSolicitacao(null);
+              }}
+              data-testid="button-close-details"
+            >
+              Fechar
             </Button>
           </DialogFooter>
         </DialogContent>
