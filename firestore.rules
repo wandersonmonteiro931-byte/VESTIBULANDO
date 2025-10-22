@@ -120,8 +120,8 @@ service cloud.firestore {
     
     // Turmas collection
     match /turmas/{turmaId} {
-      // Anyone authenticated can read turmas
-      allow read: if isAuthenticated() && isUserActive();
+      // Anyone can read turmas (needed for registration page)
+      allow read: if true;
       
       // Only admins can create turmas
       allow create: if isAdmin() && isUserActive();
