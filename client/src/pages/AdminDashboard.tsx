@@ -41,7 +41,7 @@ const alunoFormSchema = z.object({
   email: z.string().email("Email inválido"),
   senha: z.string().min(6, "A senha deve ter pelo menos 6 caracteres"),
   turma: z.string().optional(),
-  tipo: z.enum(["aluno", "professor", "admin"]).default("aluno"),
+  tipo: z.enum(["aluno", "professor", "diretor"]).default("aluno"),
 }).refine((data) => {
   if (data.tipo === "aluno" && !data.turma) {
     return false;
@@ -52,7 +52,7 @@ const alunoFormSchema = z.object({
   path: ["turma"],
 });
 
-const professorAdminFormSchema = z.object({
+const professorDiretorFormSchema = z.object({
   nome: z.string().min(1, "Nome completo é obrigatório"),
   dataNascimento: z.string().min(1, "Data de nascimento é obrigatória"),
   cpf: z.string().min(14, "CPF inválido"),
@@ -65,7 +65,7 @@ const professorAdminFormSchema = z.object({
   cidade: z.string().optional(),
   estado: z.string().optional(),
   escolaridade: z.string().min(1, "Escolaridade é obrigatória"),
-  tipo: z.enum(["professor", "admin"]),
+  tipo: z.enum(["professor", "diretor"]),
   turmas: z.array(z.string()).optional(),
 });
 
@@ -74,7 +74,7 @@ export default function AdminDashboard() {
   const { toast } = useToast();
   const [createTurmaDialogOpen, setCreateTurmaDialogOpen] = useState(false);
   const [createAlunoDialogOpen, setCreateAlunoDialogOpen] = useState(false);
-  const [createProfessorAdminDialogOpen, setCreateProfessorAdminDialogOpen] = useState(false);
+  const [createProfessorDiretorDialogOpen, setCreateProfessorDiretorDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [userToReject, setUserToReject] = useState<any | null>(null);
@@ -116,8 +116,8 @@ export default function AdminDashboard() {
     },
   });
 
-  const professorAdminForm = useForm<z.infer<typeof professorAdminFormSchema>>({
-    resolver: zodResolver(professorAdminFormSchema),
+  const professorDiretorForm = useForm<z.infer<typeof professorDiretorFormSchema>>({
+    resolver: zodResolver(professorDiretorFormSchema),
     defaultValues: {
       nome: "",
       dataNascimento: "",
@@ -288,7 +288,7 @@ export default function AdminDashboard() {
         await setDoc(doc(db, "reprovacoes", userId), {
           email: solicitacao.email,
           nome: solicitacao.nome,
-          comentario: comentario || "Sua solicitação foi reprovada pelo administrador.",
+          comentario: comentario || "Sua solicitação foi reprovada pela diretoria.",
           dataReprovacao: new Date().toISOString(),
           matricula: solicitacao.matricula,
         });
@@ -298,7 +298,7 @@ export default function AdminDashboard() {
         await setDoc(doc(db, "reprovacoes", solicitacao.email.replace(/[.@]/g, "_")), {
           email: solicitacao.email,
           nome: solicitacao.nome,
-          comentario: comentario || "Sua solicitação foi reprovada pelo administrador.",
+          comentario: comentario || "Sua solicitação foi reprovada pela diretoria.",
           dataReprovacao: new Date().toISOString(),
           matricula: solicitacao.matricula,
         });
@@ -422,8 +422,8 @@ export default function AdminDashboard() {
 
   const deleteUserMutation = useMutation({
     mutationFn: async (user: any) => {
-      if (user.tipo === "admin" && user.status === "aprovado") {
-        throw new Error("Não é permitido excluir administradores ativos");
+      if (user.tipo === "diretor" && user.status === "aprovado") {
+        throw new Error("Não é permitido excluir diretores ativos");
       }
       const docId = user.docId || user.uid || user.id;
       if (!docId) {
@@ -450,8 +450,8 @@ export default function AdminDashboard() {
     },
   });
 
-  const createProfessorAdminMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof professorAdminFormSchema>) => {
+  const createProfessorDiretorMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof professorDiretorFormSchema>) => {
       // Gerar matrícula sequencial usando transação atômica
       const counterRef = doc(db, "system", "matriculaCounter");
       const novaMatricula = await runTransaction(db, async (transaction) => {
@@ -504,8 +504,8 @@ export default function AdminDashboard() {
         title: "Conta criada com sucesso!",
         description: `Matrícula gerada: ${data.matricula}`,
       });
-      setCreateProfessorAdminDialogOpen(false);
-      professorAdminForm.reset();
+      setCreateProfessorDiretorDialogOpen(false);
+      professorDiretorForm.reset();
       setDisponibilidadeHorario([]);
       setTurmasSelecionadas([]);
     },
@@ -617,10 +617,10 @@ export default function AdminDashboard() {
         const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
         const data = await response.json();
         if (!data.erro) {
-          professorAdminForm.setValue('rua', data.logradouro || '');
-          professorAdminForm.setValue('bairro', data.bairro || '');
-          professorAdminForm.setValue('cidade', data.localidade || '');
-          professorAdminForm.setValue('estado', data.uf || '');
+          professorDiretorForm.setValue('rua', data.logradouro || '');
+          professorDiretorForm.setValue('bairro', data.bairro || '');
+          professorDiretorForm.setValue('cidade', data.localidade || '');
+          professorDiretorForm.setValue('estado', data.uf || '');
         }
       } catch (error) {
         console.error('Erro ao buscar CEP:', error);
@@ -664,14 +664,14 @@ export default function AdminDashboard() {
             </div>
             <div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">ENEM+</h1>
-              <p className="text-xs text-muted-foreground font-medium">Painel do Administrador</p>
+              <p className="text-xs text-muted-foreground font-medium">Painel da Diretoria</p>
             </div>
           </div>
           
           <div className="flex items-center gap-3">
             <div className="text-right mr-2 hidden sm:block">
               <p className="text-sm font-semibold">{userData?.nome}</p>
-              <p className="text-xs text-muted-foreground">Administrador</p>
+              <p className="text-xs text-muted-foreground">Diretoria</p>
             </div>
             <ThemeToggle />
             <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout">
@@ -684,15 +684,15 @@ export default function AdminDashboard() {
       <main className="container px-6 py-10 max-w-7xl mx-auto">
         <div className="mb-10">
           <h2 className="text-4xl font-bold mb-3 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-            Painel Administrativo
+            Painel da Diretoria
           </h2>
-          <p className="text-muted-foreground text-lg">Gerencie usuários, turmas e acompanhe estatísticas</p>
+          <p className="text-muted-foreground text-lg">Gerencie alunos, turmas e acompanhe estatísticas</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
           <Card className="border-primary/20 bg-gradient-to-br from-card to-primary/5 hover-elevate">
             <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
-              <CardTitle className="text-sm font-semibold">Total de Usuários</CardTitle>
+              <CardTitle className="text-sm font-semibold">Total de Alunos</CardTitle>
               <div className="p-2 bg-primary/10 rounded-lg">
                 <Users className="h-5 w-5 text-primary" />
               </div>
@@ -740,7 +740,7 @@ export default function AdminDashboard() {
                 <Badge variant="destructive" className="ml-2">{pendingUsers.length}</Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="usuarios" data-testid="tab-usuarios">Usuários</TabsTrigger>
+            <TabsTrigger value="usuarios" data-testid="tab-usuarios">Alunos</TabsTrigger>
             <TabsTrigger value="turmas" data-testid="tab-turmas">Turmas</TabsTrigger>
           </TabsList>
 
@@ -884,15 +884,15 @@ export default function AdminDashboard() {
 
           <TabsContent value="usuarios" className="space-y-4">
             <div className="flex justify-between items-center">
-              <h3 className="text-xl font-semibold">Gerenciar Usuários</h3>
+              <h3 className="text-xl font-semibold">Gerenciar Alunos</h3>
               <div className="flex gap-2">
                 <Button onClick={() => setCreateAlunoDialogOpen(true)} variant="outline" data-testid="button-create-user">
                   <Plus className="h-4 w-4 mr-2" />
                   Adicionar Aluno
                 </Button>
-                <Button onClick={() => setCreateProfessorAdminDialogOpen(true)} data-testid="button-create-professor-admin">
+                <Button onClick={() => setCreateProfessorDiretorDialogOpen(true)} data-testid="button-create-professor-admin">
                   <Plus className="h-4 w-4 mr-2" />
-                  Criar Professor/Admin
+                  Criar Professor/Diretor
                 </Button>
               </div>
             </div>
@@ -925,7 +925,7 @@ export default function AdminDashboard() {
                             <TableCell>{user.email}</TableCell>
                             <TableCell>
                               <Badge variant={
-                                user.tipo === "admin" ? "default" : 
+                                user.tipo === "diretor" ? "default" : 
                                 user.tipo === "professor" ? "secondary" : "outline"
                               }>
                                 {user.tipo}
@@ -971,7 +971,7 @@ export default function AdminDashboard() {
                                     <ArrowRightLeft className="h-4 w-4" />
                                   </Button>
                                 )}
-                                {user.tipo !== "admin" && (
+                                {user.tipo !== "diretor" && (
                                   <Button
                                     variant="ghost"
                                     size="sm"
@@ -994,8 +994,8 @@ export default function AdminDashboard() {
                 ) : (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <Users className="h-16 w-16 text-muted-foreground mb-4" />
-                    <p className="text-lg font-medium mb-2">Nenhum usuário cadastrado</p>
-                    <p className="text-sm text-muted-foreground">Novos usuários devem se cadastrar na tela de login e aguardar aprovação</p>
+                    <p className="text-lg font-medium mb-2">Nenhum aluno cadastrado</p>
+                    <p className="text-sm text-muted-foreground">Novos alunos devem se cadastrar na tela de login e aguardar aprovação</p>
                   </div>
                 )}
               </CardContent>
@@ -1465,7 +1465,7 @@ export default function AdminDashboard() {
                       <SelectContent>
                         <SelectItem value="aluno">Aluno</SelectItem>
                         <SelectItem value="professor">Professor</SelectItem>
-                        <SelectItem value="admin">Administrador</SelectItem>
+                        <SelectItem value="diretor">Diretor</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -1500,7 +1500,7 @@ export default function AdminDashboard() {
                   Cancelar
                 </Button>
                 <Button type="submit" disabled={createAlunoMutation.isPending} data-testid="button-save-user">
-                  {createAlunoMutation.isPending ? "Criando..." : "Criar Usuário"}
+                  {createAlunoMutation.isPending ? "Criando..." : "Criar Aluno"}
                 </Button>
               </DialogFooter>
             </form>
@@ -1508,19 +1508,19 @@ export default function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={createProfessorAdminDialogOpen} onOpenChange={setCreateProfessorAdminDialogOpen}>
+      <Dialog open={createProfessorDiretorDialogOpen} onOpenChange={setCreateProfessorDiretorDialogOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" data-testid="dialog-create-professor-admin">
           <DialogHeader>
-            <DialogTitle>Criar Professor/Administrador</DialogTitle>
+            <DialogTitle>Criar Professor/Diretor</DialogTitle>
             <DialogDescription>
-              Crie uma conta completa para professor ou administrador com acesso imediato
+              Crie uma conta completa para professor ou diretor com acesso imediato
             </DialogDescription>
           </DialogHeader>
 
-          <Form {...professorAdminForm}>
-            <form onSubmit={professorAdminForm.handleSubmit((data) => createProfessorAdminMutation.mutate(data))} className="space-y-4">
+          <Form {...professorDiretorForm}>
+            <form onSubmit={professorDiretorForm.handleSubmit((data) => createProfessorDiretorMutation.mutate(data))} className="space-y-4">
               <FormField
-                control={professorAdminForm.control}
+                control={professorDiretorForm.control}
                 name="tipo"
                 render={({ field }) => (
                   <FormItem>
@@ -1533,7 +1533,7 @@ export default function AdminDashboard() {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="professor">Professor</SelectItem>
-                        <SelectItem value="admin">Administrador</SelectItem>
+                        <SelectItem value="diretor">Diretor</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -1543,7 +1543,7 @@ export default function AdminDashboard() {
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={professorAdminForm.control}
+                  control={professorDiretorForm.control}
                   name="nome"
                   render={({ field }) => (
                     <FormItem>
@@ -1557,7 +1557,7 @@ export default function AdminDashboard() {
                 />
 
                 <FormField
-                  control={professorAdminForm.control}
+                  control={professorDiretorForm.control}
                   name="dataNascimento"
                   render={({ field }) => (
                     <FormItem>
@@ -1573,7 +1573,7 @@ export default function AdminDashboard() {
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={professorAdminForm.control}
+                  control={professorDiretorForm.control}
                   name="cpf"
                   render={({ field }) => (
                     <FormItem>
@@ -1596,7 +1596,7 @@ export default function AdminDashboard() {
                 />
 
                 <FormField
-                  control={professorAdminForm.control}
+                  control={professorDiretorForm.control}
                   name="telefone"
                   render={({ field }) => (
                     <FormItem>
@@ -1620,7 +1620,7 @@ export default function AdminDashboard() {
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={professorAdminForm.control}
+                  control={professorDiretorForm.control}
                   name="email"
                   render={({ field }) => (
                     <FormItem>
@@ -1634,7 +1634,7 @@ export default function AdminDashboard() {
                 />
 
                 <FormField
-                  control={professorAdminForm.control}
+                  control={professorDiretorForm.control}
                   name="senha"
                   render={({ field }) => (
                     <FormItem>
@@ -1649,7 +1649,7 @@ export default function AdminDashboard() {
               </div>
 
               <FormField
-                control={professorAdminForm.control}
+                control={professorDiretorForm.control}
                 name="escolaridade"
                 render={({ field }) => (
                   <FormItem>
@@ -1674,7 +1674,7 @@ export default function AdminDashboard() {
               />
 
               <FormField
-                control={professorAdminForm.control}
+                control={professorDiretorForm.control}
                 name="cep"
                 render={({ field }) => (
                   <FormItem>
@@ -1699,7 +1699,7 @@ export default function AdminDashboard() {
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={professorAdminForm.control}
+                  control={professorDiretorForm.control}
                   name="rua"
                   render={({ field }) => (
                     <FormItem>
@@ -1713,7 +1713,7 @@ export default function AdminDashboard() {
                 />
 
                 <FormField
-                  control={professorAdminForm.control}
+                  control={professorDiretorForm.control}
                   name="bairro"
                   render={({ field }) => (
                     <FormItem>
@@ -1729,7 +1729,7 @@ export default function AdminDashboard() {
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={professorAdminForm.control}
+                  control={professorDiretorForm.control}
                   name="cidade"
                   render={({ field }) => (
                     <FormItem>
@@ -1743,7 +1743,7 @@ export default function AdminDashboard() {
                 />
 
                 <FormField
-                  control={professorAdminForm.control}
+                  control={professorDiretorForm.control}
                   name="estado"
                   render={({ field }) => (
                     <FormItem>
@@ -1757,7 +1757,7 @@ export default function AdminDashboard() {
                 />
               </div>
 
-              {professorAdminForm.watch('tipo') === 'professor' && (
+              {professorDiretorForm.watch('tipo') === 'professor' && (
                 <div className="space-y-2">
                   <Label>Turmas (Professor pode ter várias)</Label>
                   <div className="border rounded-lg p-4 space-y-2">
@@ -1815,8 +1815,8 @@ export default function AdminDashboard() {
                   type="button"
                   variant="outline"
                   onClick={() => {
-                    setCreateProfessorAdminDialogOpen(false);
-                    professorAdminForm.reset();
+                    setCreateProfessorDiretorDialogOpen(false);
+                    professorDiretorForm.reset();
                     setDisponibilidadeHorario([]);
                     setTurmasSelecionadas([]);
                   }}
@@ -1824,8 +1824,8 @@ export default function AdminDashboard() {
                 >
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={createProfessorAdminMutation.isPending} data-testid="button-save-prof">
-                  {createProfessorAdminMutation.isPending ? "Criando..." : "Criar Conta"}
+                <Button type="submit" disabled={createProfessorDiretorMutation.isPending} data-testid="button-save-prof">
+                  {createProfessorDiretorMutation.isPending ? "Criando..." : "Criar Conta"}
                 </Button>
               </DialogFooter>
             </form>
