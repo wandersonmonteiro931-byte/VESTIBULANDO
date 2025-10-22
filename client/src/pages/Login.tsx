@@ -4,7 +4,7 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -14,8 +14,10 @@ import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { PhotoUpload } from "@/components/PhotoUpload";
 import { Badge } from "@/components/ui/badge";
-import { GraduationCap, Loader2, Copy, Check, Search, AlertCircle, Shield, Users, CheckCircle, XCircle, Clock } from "lucide-react";
+import { GraduationCap, Loader2, Copy, Check, Search, AlertCircle, Shield, Users, CheckCircle, XCircle, Clock, Calendar, FileText, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 // Gera uma matrícula sequencial única usando transação atômica
 async function generateUniqueMatricula(db: any): Promise<string> {
@@ -185,6 +187,11 @@ export default function Login() {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoBase64, setPhotoBase64] = useState<string | null>(null);
   const [photoPublic, setPhotoPublic] = useState(false);
+  
+  // Estados para suspensão disciplinar
+  const [showSuspensionOverlay, setShowSuspensionOverlay] = useState(false);
+  const [suspensionData, setSuspensionData] = useState<any>(null);
+  const [suspensionTimeRemaining, setSuspensionTimeRemaining] = useState<string>("");
 
   // Validar CPF em tempo real quando usuário digitar 11 números
   useEffect(() => {
@@ -337,6 +344,34 @@ export default function Login() {
       buscar();
     }
   }, [formData.cep, mode]);
+
+  // Atualizar contador de suspensão em tempo real
+  useEffect(() => {
+    if (!showSuspensionOverlay || !suspensionData) return;
+    
+    const updateCounter = () => {
+      const now = new Date();
+      const endDate = new Date(suspensionData.dataTerminoSuspensao);
+      const diff = endDate.getTime() - now.getTime();
+      
+      if (diff <= 0) {
+        setSuspensionTimeRemaining("Suspensão expirada");
+        return;
+      }
+      
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      
+      setSuspensionTimeRemaining(`${days}d ${hours}h ${minutes}m ${seconds}s`);
+    };
+    
+    updateCounter();
+    const intervalId = setInterval(updateCounter, 1000);
+    
+    return () => clearInterval(intervalId);
+  }, [showSuspensionOverlay, suspensionData]);
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -723,7 +758,7 @@ export default function Login() {
         // Verificar suspensões ativas
         if (currentUserData.tipo === "aluno") {
           try {
-            const { collection, getDocs, query, where, updateDoc } = await import("firebase/firestore");
+            const { collection, getDocs, query, where } = await import("firebase/firestore");
             const suspensionsQuery = query(
               collection(db, "disciplinaryActions"),
               where("alunoId", "==", userCredential.user.uid),
@@ -735,18 +770,18 @@ export default function Login() {
             if (!suspensionsSnapshot.empty) {
               const activeSuspension = suspensionsSnapshot.docs[0].data();
               const dataTermino = new Date(activeSuspension.dataTerminoSuspensao);
+              const dataAplicacao = new Date(activeSuspension.dataAplicacao);
               const agora = new Date();
               
               if (agora < dataTermino) {
-                // Suspensão ainda ativa
-                const diasRestantes = Math.ceil((dataTermino.getTime() - agora.getTime()) / (1000 * 60 * 60 * 24));
-                const horasRestantes = Math.ceil((dataTermino.getTime() - agora.getTime()) / (1000 * 60 * 60));
+                // Suspensão ainda ativa - mostrar overlay
+                const duracaoDias = Math.ceil((dataTermino.getTime() - dataAplicacao.getTime()) / (1000 * 60 * 60 * 24));
                 
-                toast({
-                  title: "Conta Suspensa",
-                  description: `Sua conta está em suspensão disciplinar por mais ${diasRestantes > 1 ? `${diasRestantes} dias` : `${horasRestantes} horas`}. ${activeSuspension.comentario ? `Motivo: ${activeSuspension.comentario}` : ''}`,
-                  variant: "destructive",
+                setSuspensionData({
+                  ...activeSuspension,
+                  duracaoDias,
                 });
+                setShowSuspensionOverlay(true);
                 await auth.signOut();
                 setLoading(false);
                 return;
@@ -1905,6 +1940,113 @@ export default function Login() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Overlay de Suspensão Disciplinar */}
+      {showSuspensionOverlay && suspensionData && (
+        <div 
+          className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex items-center justify-center p-4"
+          data-testid="overlay-suspension"
+        >
+          <Card className="w-full max-w-2xl border-destructive">
+            <CardHeader className="space-y-4 text-center pb-6">
+              <div className="mx-auto w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center">
+                <Shield className="h-10 w-10 text-destructive" />
+              </div>
+              <CardTitle className="text-4xl font-bold text-destructive">
+                SUSPENSÃO DISCIPLINAR
+              </CardTitle>
+              <CardDescription className="text-base">
+                Por favor, aguarde o término da suspensão para retomar suas atividades normalmente.
+                <br />
+                Em caso de dúvidas, entre em contato com o Diretor responsável.
+              </CardDescription>
+            </CardHeader>
+            
+            <CardContent className="space-y-6">
+              {/* Contador de tempo restante */}
+              <div className="p-6 bg-muted rounded-lg text-center">
+                <p className="text-sm text-muted-foreground mb-2">Tempo restante de suspensão</p>
+                <p className="text-3xl font-bold text-destructive font-mono" data-testid="text-suspension-countdown">
+                  {suspensionTimeRemaining}
+                </p>
+              </div>
+              
+              {/* Informações da suspensão */}
+              <div className="space-y-4">
+                <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-lg">
+                  <Clock className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">Duração da suspensão</p>
+                    <p className="text-sm text-muted-foreground" data-testid="text-suspension-duration">
+                      {suspensionData.duracaoDias} {suspensionData.duracaoDias === 1 ? 'dia' : 'dias'}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-lg">
+                  <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">Reativação automática</p>
+                    <p className="text-sm text-muted-foreground" data-testid="text-suspension-end">
+                      {format(new Date(suspensionData.dataTerminoSuspensao), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-lg">
+                  <Users className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">Aplicado por</p>
+                    <p className="text-sm text-muted-foreground" data-testid="text-suspension-applied-by">
+                      {suspensionData.aplicadoPorNome || 'Diretor'}
+                    </p>
+                  </div>
+                </div>
+                
+                {suspensionData.comentario && (
+                  <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-lg">
+                    <FileText className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Motivo</p>
+                      <p className="text-sm text-muted-foreground" data-testid="text-suspension-reason">
+                        {suspensionData.comentario}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Aviso */}
+              <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 text-destructive mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-destructive">Atenção</p>
+                    <p className="text-sm text-destructive/90 mt-1">
+                      Esta suspensão disciplinar será registrada em seu histórico junto à equipe Vestibulando.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+            
+            <CardFooter>
+              <Button
+                onClick={() => {
+                  setShowSuspensionOverlay(false);
+                  setSuspensionData(null);
+                  setSuspensionTimeRemaining("");
+                }}
+                variant="outline"
+                className="w-full"
+                data-testid="button-close-suspension"
+              >
+                Fechar
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+      )}
 
       {/* Dialog de Confirmação de Identidade */}
       <Dialog open={showConfirmationDialog} onOpenChange={setShowConfirmationDialog}>

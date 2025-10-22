@@ -46,7 +46,7 @@ export default function StudentDashboard() {
     queryKey: ["/api/turmas/all"],
   });
 
-  const nomeTurma = turmas?.find((t: any) => t.nome === userData?.turma)?.nome || userData?.turma;
+  const nomeTurma = turmas?.find((t: any) => t.id === userData?.turma)?.nome || userData?.turma;
 
   const { data: tarefas, isLoading: loadingTarefas } = useRealtimeQuery<Tarefa>({
     collectionName: "tarefas",
