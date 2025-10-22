@@ -179,6 +179,39 @@ service cloud.firestore {
       allow delete: if isAdmin() || true;
     }
     
+    // Disciplinary Actions collection - advertências e suspensões
+    match /disciplinaryActions/{actionId} {
+      // Alunos podem ler suas próprias ações disciplinares
+      // Diretores podem ler todas as ações disciplinares
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        (isAluno() && resource.data.alunoId == request.auth.uid)
+      );
+      
+      // Apenas diretores podem criar ações disciplinares
+      allow create: if isAdmin() && isUserActive() &&
+                       request.resource.data.aplicadoPor == request.auth.uid;
+      
+      // Apenas diretores podem atualizar ações disciplinares (para remover)
+      allow update: if isAdmin() && isUserActive();
+      
+      // Apenas diretores podem deletar ações disciplinares
+      allow delete: if isAdmin() && isUserActive();
+    }
+    
+    // Login History collection - histórico de login/logout
+    match /loginHistory/{historyId} {
+      // Apenas diretores podem ler o histórico
+      allow read: if isAdmin();
+      
+      // Qualquer usuário autenticado pode criar seu próprio registro
+      allow create: if isAuthenticated() &&
+                       request.resource.data.userId == request.auth.uid;
+      
+      // Ninguém pode atualizar ou deletar registros de histórico
+      allow update, delete: if false;
+    }
+    
     // System collection - for counters and system-wide settings
     match /system/{documentId} {
       // Matricula counter can be read by anyone (needed for transactions)
