@@ -549,6 +549,7 @@ export default function Login() {
       } else {
         // Login usando CPF ou Matrícula
         const loginIdentifier = formData.loginId.replace(/\D/g, '');
+        console.log("🔑 Tentando login com identificador:", loginIdentifier);
         
         // Buscar usuário pelo CPF ou Matrícula
         const { collection, getDocs, query, where } = await import("firebase/firestore");
@@ -556,10 +557,14 @@ export default function Login() {
         
         // Tentar buscar por CPF primeiro (11 dígitos)
         if (loginIdentifier.length === 11) {
+          console.log("🔍 Buscando por CPF...");
           userSnapshot = await getDocs(query(collection(db, "usuarios"), where("cpf", "==", formatarCPF(loginIdentifier))));
+          console.log("✅ Busca por CPF concluída, encontrados:", userSnapshot.docs.length);
         } else if (loginIdentifier.length === 4) {
           // Buscar por matrícula (4 dígitos)
+          console.log("🔍 Buscando por matrícula...");
           userSnapshot = await getDocs(query(collection(db, "usuarios"), where("matricula", "==", loginIdentifier)));
+          console.log("✅ Busca por matrícula concluída, encontrados:", userSnapshot.docs.length);
         } else {
           toast({
             title: "Credenciais inválidas",
