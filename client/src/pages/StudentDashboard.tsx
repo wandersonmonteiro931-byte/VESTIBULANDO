@@ -41,6 +41,13 @@ export default function StudentDashboard() {
     return () => window.removeEventListener('file-upload-error', handleFileError);
   }, [toast]);
 
+  const { data: turmas } = useRealtimeQuery({
+    collectionName: "turmas",
+    queryKey: ["/api/turmas/all"],
+  });
+
+  const nomeTurma = turmas?.find((t: any) => t.nome === userData?.turma)?.nome || userData?.turma;
+
   const { data: tarefas, isLoading: loadingTarefas } = useRealtimeQuery<Tarefa>({
     collectionName: "tarefas",
     queryKey: ["/api/tarefas", userData?.turma],
@@ -147,7 +154,7 @@ export default function StudentDashboard() {
           <div className="flex items-center gap-3">
             <div className="text-right mr-2 hidden sm:block">
               <p className="text-sm font-semibold">{userData?.nome}</p>
-              <p className="text-xs text-muted-foreground">Turma {userData?.turma}</p>
+              <p className="text-xs text-muted-foreground">Turma {nomeTurma}</p>
             </div>
             <ThemeToggle />
             <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout">

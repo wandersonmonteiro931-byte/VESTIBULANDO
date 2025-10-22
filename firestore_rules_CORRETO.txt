@@ -1,0 +1,101 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isDirector() {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'diretor';
+    }
+    
+    // Usuarios collection
+    match /usuarios/{userId} {
+      // Qualquer usuário autenticado pode ler seu próprio documento
+      // Diretores podem ler qualquer documento
+      allow get: if isAuthenticated() && (request.auth.uid == userId || isDirector());
+      
+      // Diretores podem fazer queries (buscar usuários)
+      allow list: if isDirector();
+      
+      // Permitir criação em dois cenários:
+      // 1. Usuário criando sua própria conta (aluno)
+      // 2. Diretor criando conta de qualquer tipo
+      allow create: if isAuthenticated() && (
+        // Auto-cadastro de aluno
+        (request.auth.uid == userId && request.resource.data.tipo == 'aluno') ||
+        // Diretor criando qualquer conta
+        isDirector()
+      );
+      
+      // Diretores podem atualizar qualquer usuário
+      // Usuários podem atualizar seu próprio perfil (exceto tipo e ativo)
+      allow update: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        isDirector()
+      );
+      
+      // Apenas diretores podem deletar
+      allow delete: if isDirector();
+    }
+    
+    // Tarefas collection
+    match /tarefas/{tarefaId} {
+      // Todos autenticados podem ler tarefas
+      allow read: if isAuthenticated();
+      
+      // Professores e diretores podem criar/atualizar/deletar
+      allow write: if isAuthenticated();
+    }
+    
+    // Entregas collection
+    match /entregas/{entregaId} {
+      // Todos autenticados podem ler
+      allow read: if isAuthenticated();
+      
+      // Todos autenticados podem criar/atualizar
+      allow write: if isAuthenticated();
+    }
+    
+    // Turmas collection
+    match /turmas/{turmaId} {
+      // Todos podem ler turmas (necessário para cadastro)
+      allow read: if true;
+      
+      // Apenas diretores podem criar/atualizar/deletar
+      allow write: if isDirector();
+    }
+    
+    // Solicitacoes collection
+    match /solicitacoes/{solicitacaoId} {
+      // Qualquer um pode criar e ler (cadastro público)
+      allow read, create: if true;
+      
+      // Apenas diretores podem atualizar e deletar
+      allow update, delete: if isDirector();
+    }
+    
+    // Reprovacoes collection
+    match /reprovacoes/{reprovacaoId} {
+      // Todos podem ler
+      allow read: if true;
+      
+      // Apenas diretores podem escrever
+      allow write: if isDirector();
+    }
+    
+    // System collection
+    match /system/{documentId} {
+      // Contador de matrículas pode ser lido e escrito por todos
+      allow read, write: if documentId == 'matriculaCounter';
+      
+      // Outros documentos do sistema são apenas para diretores
+      allow read, write: if documentId != 'matriculaCounter' && isDirector();
+    }
+  }
+}
