@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { collection, addDoc, updateDoc, doc, where, setDoc, deleteDoc, getDoc, runTransaction } from "firebase/firestore";
+import { collection, addDoc, updateDoc, doc, where, setDoc, deleteDoc, getDoc, getDocs, query, runTransaction } from "firebase/firestore";
 import { db, auth as firebaseAuth } from "@/lib/firebase";
 import { createUserWithEmailAndPassword, deleteUser, fetchSignInMethodsForEmail } from "firebase/auth";
 import { useAuth } from "@/contexts/AuthContext";
@@ -624,7 +624,23 @@ export default function AdminDashboard() {
   });
 
   const addStudentsToTurmaMutation = useMutation({
-    mutationFn: async ({ studentIds, turmaNome }: { studentIds: string[]; turmaNome: string }) => {
+    mutationFn: async ({ studentIds, turmaNome, turmaId }: { studentIds: string[]; turmaNome: string; turmaId: string }) => {
+      const turmaRef = doc(db, "turmas", turmaId);
+      const turmaDoc = await getDoc(turmaRef);
+      
+      if (!turmaDoc.exists()) {
+        throw new Error("Turma não encontrada");
+      }
+      
+      const turmaData = turmaDoc.data();
+      const vagasTotais = turmaData.vagasTotais || 0;
+      const alunosAtuais = users?.filter(u => u.turma === turmaNome && u.tipo === "aluno").length || 0;
+      const vagasDisponiveis = vagasTotais - alunosAtuais;
+      
+      if (studentIds.length > vagasDisponiveis) {
+        throw new Error(`Não há vagas suficientes. Disponíveis: ${vagasDisponiveis}, Selecionados: ${studentIds.length}`);
+      }
+      
       const updatePromises = studentIds.map(uid => 
         updateDoc(doc(db, "usuarios", uid), { turma: turmaNome })
       );
@@ -673,6 +689,21 @@ export default function AdminDashboard() {
 
   const bulkTransferStudentsMutation = useMutation({
     mutationFn: async ({ studentIds, novaTurma }: { studentIds: string[]; novaTurma: string }) => {
+      const turmaDoc = await getDocs(query(collection(db, "turmas"), where("nome", "==", novaTurma)));
+      
+      if (turmaDoc.empty) {
+        throw new Error("Turma de destino não encontrada");
+      }
+      
+      const turmaData = turmaDoc.docs[0].data();
+      const vagasTotais = turmaData.vagasTotais || 0;
+      const alunosAtuais = users?.filter(u => u.turma === novaTurma && u.tipo === "aluno").length || 0;
+      const vagasDisponiveis = vagasTotais - alunosAtuais;
+      
+      if (studentIds.length > vagasDisponiveis) {
+        throw new Error(`Não há vagas suficientes na turma ${novaTurma}. Disponíveis: ${vagasDisponiveis}, Selecionados: ${studentIds.length}`);
+      }
+      
       const updatePromises = studentIds.map(uid => 
         updateDoc(doc(db, "usuarios", uid), { turma: novaTurma })
       );
@@ -2372,16 +2403,16 @@ export default function AdminDashboard() {
       </Dialog>
 
       <Dialog open={addStudentsDialogOpen} onOpenChange={setAddStudentsDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" data-testid="dialog-add-students">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="dialog-add-students">
           <DialogHeader>
             <DialogTitle>Adicionar Alunos à Turma: {selectedTurmaForStudents?.nome}</DialogTitle>
             <DialogDescription>
-              Selecione os alunos que deseja adicionar a esta turma
+              Selecione os alunos que deseja adicionar ou transferir para esta turma
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
-            {users && users.filter(u => u.tipo === "aluno" && (!u.turma || u.turma === "")).length > 0 ? (
+            {users && users.filter(u => u.tipo === "aluno" && u.status === "aprovado").length > 0 ? (
               <div className="border rounded-lg overflow-hidden">
                 <Table>
                   <TableHeader>
@@ -2389,13 +2420,13 @@ export default function AdminDashboard() {
                       <TableHead className="w-12">
                         <Checkbox
                           checked={
-                            users.filter(u => u.tipo === "aluno" && (!u.turma || u.turma === "")).length > 0 &&
-                            users.filter(u => u.tipo === "aluno" && (!u.turma || u.turma === "")).every(s => selectedStudentsToAdd.includes(s.uid))
+                            users.filter(u => u.tipo === "aluno" && u.status === "aprovado" && u.turma !== selectedTurmaForStudents?.nome).length > 0 &&
+                            users.filter(u => u.tipo === "aluno" && u.status === "aprovado" && u.turma !== selectedTurmaForStudents?.nome).every(s => selectedStudentsToAdd.includes(s.uid))
                           }
                           onCheckedChange={(checked) => {
                             if (checked) {
                               setSelectedStudentsToAdd(
-                                users.filter(u => u.tipo === "aluno" && (!u.turma || u.turma === "")).map(s => s.uid)
+                                users.filter(u => u.tipo === "aluno" && u.status === "aprovado" && u.turma !== selectedTurmaForStudents?.nome).map(s => s.uid)
                               );
                             } else {
                               setSelectedStudentsToAdd([]);
@@ -2407,33 +2438,52 @@ export default function AdminDashboard() {
                       <TableHead>Nome</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Matrícula</TableHead>
+                      <TableHead>Turma Atual</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {users
-                      .filter(u => u.tipo === "aluno" && (!u.turma || u.turma === ""))
-                      .map((student) => (
-                        <TableRow key={student.uid}>
-                          <TableCell>
-                            <Checkbox
-                              checked={selectedStudentsToAdd.includes(student.uid)}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  setSelectedStudentsToAdd([...selectedStudentsToAdd, student.uid]);
-                                } else {
-                                  setSelectedStudentsToAdd(selectedStudentsToAdd.filter(id => id !== student.uid));
-                                }
-                              }}
-                              data-testid={`checkbox-add-student-${student.uid}`}
-                            />
-                          </TableCell>
-                          <TableCell className="font-medium">{student.nome}</TableCell>
-                          <TableCell>{student.email}</TableCell>
-                          <TableCell>
-                            <code className="text-xs">{student.matricula || "-"}</code>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      .filter(u => u.tipo === "aluno" && u.status === "aprovado")
+                      .sort((a, b) => a.nome.localeCompare(b.nome))
+                      .map((student) => {
+                        const isInCurrentTurma = student.turma === selectedTurmaForStudents?.nome;
+                        return (
+                          <TableRow key={student.uid} className={isInCurrentTurma ? "opacity-50" : ""}>
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedStudentsToAdd.includes(student.uid)}
+                                disabled={isInCurrentTurma}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedStudentsToAdd([...selectedStudentsToAdd, student.uid]);
+                                  } else {
+                                    setSelectedStudentsToAdd(selectedStudentsToAdd.filter(id => id !== student.uid));
+                                  }
+                                }}
+                                data-testid={`checkbox-add-student-${student.uid}`}
+                              />
+                            </TableCell>
+                            <TableCell className="font-medium">{student.nome}</TableCell>
+                            <TableCell>{student.email}</TableCell>
+                            <TableCell>
+                              <code className="text-xs">{student.matricula || "-"}</code>
+                            </TableCell>
+                            <TableCell>
+                              {isInCurrentTurma ? (
+                                <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate">
+                                  Esta turma
+                                </Badge>
+                              ) : student.turma ? (
+                                <Badge variant="outline" className="no-default-hover-elevate no-default-active-elevate">
+                                  {student.turma}
+                                </Badge>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">Sem turma</span>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                   </TableBody>
                 </Table>
               </div>
@@ -2442,7 +2492,7 @@ export default function AdminDashboard() {
                 <Users className="h-16 w-16 text-muted-foreground mb-4" />
                 <p className="text-lg font-medium mb-2">Nenhum aluno disponível</p>
                 <p className="text-sm text-muted-foreground">
-                  Todos os alunos já estão matriculados em turmas
+                  Não há alunos aprovados no sistema
                 </p>
               </div>
             )}
@@ -2473,7 +2523,8 @@ export default function AdminDashboard() {
                 if (selectedTurmaForStudents && selectedStudentsToAdd.length > 0) {
                   addStudentsToTurmaMutation.mutate({
                     studentIds: selectedStudentsToAdd,
-                    turmaNome: selectedTurmaForStudents.nome
+                    turmaNome: selectedTurmaForStudents.nome,
+                    turmaId: selectedTurmaForStudents.id
                   });
                 }
               }}
