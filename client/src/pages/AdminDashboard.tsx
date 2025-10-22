@@ -1159,6 +1159,12 @@ export default function AdminDashboard() {
   });
 
   // Funções auxiliares
+  const getTurmaNome = (turmaId: string | undefined) => {
+    if (!turmaId) return "-";
+    const turma = turmas?.find(t => t.id === turmaId);
+    return turma ? turma.nome : turmaId;
+  };
+
   const formatarCPF = (cpf: string) => {
     const apenasNumeros = cpf.replace(/\D/g, '');
     return apenasNumeros.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
@@ -1387,7 +1393,7 @@ export default function AdminDashboard() {
                             <TableCell>
                               <Badge variant="outline">{user.tipo}</Badge>
                             </TableCell>
-                            <TableCell>{user.turma || "-"}</TableCell>
+                            <TableCell>{getTurmaNome(user.turma)}</TableCell>
                             <TableCell className="text-sm text-muted-foreground">
                               {user.dataSolicitacao 
                                 ? new Date(user.dataSolicitacao).toLocaleDateString('pt-BR')
@@ -1550,7 +1556,7 @@ export default function AdminDashboard() {
                                 {user.tipo}
                               </Badge>
                             </TableCell>
-                            <TableCell>{user.turma || "-"}</TableCell>
+                            <TableCell>{getTurmaNome(user.turma)}</TableCell>
                             <TableCell>
                               {user.ativo ? (
                                 <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
@@ -3344,13 +3350,13 @@ export default function AdminDashboard() {
                       <TableHead className="w-12">
                         <Checkbox
                           checked={
-                            users.filter(u => u.tipo === "aluno" && u.status === "aprovado" && u.turma !== selectedTurmaForStudents?.nome).length > 0 &&
-                            users.filter(u => u.tipo === "aluno" && u.status === "aprovado" && u.turma !== selectedTurmaForStudents?.nome).every(s => selectedStudentsToAdd.includes(s.uid))
+                            users.filter(u => u.tipo === "aluno" && u.status === "aprovado" && u.turma !== selectedTurmaForStudents?.id).length > 0 &&
+                            users.filter(u => u.tipo === "aluno" && u.status === "aprovado" && u.turma !== selectedTurmaForStudents?.id).every(s => selectedStudentsToAdd.includes(s.uid))
                           }
                           onCheckedChange={(checked) => {
                             if (checked) {
                               setSelectedStudentsToAdd(
-                                users.filter(u => u.tipo === "aluno" && u.status === "aprovado" && u.turma !== selectedTurmaForStudents?.nome).map(s => s.uid)
+                                users.filter(u => u.tipo === "aluno" && u.status === "aprovado" && u.turma !== selectedTurmaForStudents?.id).map(s => s.uid)
                               );
                             } else {
                               setSelectedStudentsToAdd([]);
@@ -3370,7 +3376,7 @@ export default function AdminDashboard() {
                       .filter(u => u.tipo === "aluno" && u.status === "aprovado")
                       .sort((a, b) => a.nome.localeCompare(b.nome))
                       .map((student) => {
-                        const isInCurrentTurma = student.turma === selectedTurmaForStudents?.nome;
+                        const isInCurrentTurma = student.turma === selectedTurmaForStudents?.id;
                         return (
                           <TableRow key={student.uid} className={isInCurrentTurma ? "opacity-50" : ""}>
                             <TableCell>
@@ -3399,7 +3405,7 @@ export default function AdminDashboard() {
                                 </Badge>
                               ) : student.turma ? (
                                 <Badge variant="outline" className="no-default-hover-elevate no-default-active-elevate">
-                                  {student.turma}
+                                  {getTurmaNome(student.turma)}
                                 </Badge>
                               ) : (
                                 <span className="text-xs text-muted-foreground">Sem turma</span>

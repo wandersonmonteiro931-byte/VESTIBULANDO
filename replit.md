@@ -19,6 +19,8 @@ Plataforma educacional completa para preparação do ENEM com gestão de tarefas
 - ✅ Added automatic query invalidation for /api/turmas in all student-affecting mutations
 - ✅ Ensured all mutations (add, transfer, remove students) properly update vagasPreenchidas atomically
 - ✅ Vacancy counts now update automatically and correctly for all operations
+- ✅ Added getTurmaNome helper function to display turma names instead of IDs in the UI
+- ✅ Applied turma name display to all tables (pending approvals, student management, add students dialog)
 
 **Enrollment Management System:**
 - ✅ Added "Edit" button for directors to edit pending solicitations directly
