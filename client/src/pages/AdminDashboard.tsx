@@ -95,6 +95,14 @@ export default function AdminDashboard() {
   const [turmasSelecionadas, setTurmasSelecionadas] = useState<string[]>([]);
   const [viewTurmaStudentsDialogOpen, setViewTurmaStudentsDialogOpen] = useState(false);
   const [selectedTurmaForStudents, setSelectedTurmaForStudents] = useState<Turma | null>(null);
+  const [addStudentsDialogOpen, setAddStudentsDialogOpen] = useState(false);
+  const [selectedStudentsToAdd, setSelectedStudentsToAdd] = useState<string[]>([]);
+  const [editVagasDialogOpen, setEditVagasDialogOpen] = useState(false);
+  const [selectedTurmaForVagas, setSelectedTurmaForVagas] = useState<Turma | null>(null);
+  const [novasVagas, setNovasVagas] = useState(0);
+  const [selectedStudentsForBulkAction, setSelectedStudentsForBulkAction] = useState<string[]>([]);
+  const [bulkTransferDialogOpen, setBulkTransferDialogOpen] = useState(false);
+  const [bulkTransferTurma, setBulkTransferTurma] = useState("");
 
   const turmaForm = useForm<z.infer<typeof turmaFormSchema>>({
     resolver: zodResolver(turmaFormSchema),
@@ -615,6 +623,104 @@ export default function AdminDashboard() {
     },
   });
 
+  const addStudentsToTurmaMutation = useMutation({
+    mutationFn: async ({ studentIds, turmaNome }: { studentIds: string[]; turmaNome: string }) => {
+      const updatePromises = studentIds.map(uid => 
+        updateDoc(doc(db, "usuarios", uid), { turma: turmaNome })
+      );
+      await Promise.all(updatePromises);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
+      toast({
+        title: "Alunos adicionados!",
+        description: "Os alunos foram adicionados à turma com sucesso.",
+      });
+      setAddStudentsDialogOpen(false);
+      setSelectedStudentsToAdd([]);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao adicionar alunos",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateVagasTurmaMutation = useMutation({
+    mutationFn: async ({ turmaId, vagasTotais }: { turmaId: string; vagasTotais: number }) => {
+      const turmaRef = doc(db, "turmas", turmaId);
+      await updateDoc(turmaRef, { vagasTotais });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/turmas"] });
+      toast({
+        title: "Vagas atualizadas!",
+        description: "A quantidade de vagas foi atualizada.",
+      });
+      setEditVagasDialogOpen(false);
+      setSelectedTurmaForVagas(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao atualizar vagas",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const bulkTransferStudentsMutation = useMutation({
+    mutationFn: async ({ studentIds, novaTurma }: { studentIds: string[]; novaTurma: string }) => {
+      const updatePromises = studentIds.map(uid => 
+        updateDoc(doc(db, "usuarios", uid), { turma: novaTurma })
+      );
+      await Promise.all(updatePromises);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
+      toast({
+        title: "Alunos transferidos!",
+        description: "Os alunos foram transferidos para a nova turma.",
+      });
+      setBulkTransferDialogOpen(false);
+      setSelectedStudentsForBulkAction([]);
+      setBulkTransferTurma("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao transferir alunos",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const bulkRemoveStudentsMutation = useMutation({
+    mutationFn: async ({ studentIds }: { studentIds: string[] }) => {
+      const updatePromises = studentIds.map(uid => 
+        updateDoc(doc(db, "usuarios", uid), { turma: "" })
+      );
+      await Promise.all(updatePromises);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
+      toast({
+        title: "Alunos removidos!",
+        description: "Os alunos foram removidos da turma.",
+      });
+      setSelectedStudentsForBulkAction([]);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao remover alunos",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Funções auxiliares
   const formatarCPF = (cpf: string) => {
     const apenasNumeros = cpf.replace(/\D/g, '');
@@ -1111,34 +1217,50 @@ export default function AdminDashboard() {
                           </div>
                         )}
 
-                        <div className="flex gap-2 flex-wrap">
+                        <div className="flex flex-col gap-2">
                           <Button
                             variant="outline"
                             size="sm"
-                            className="flex-1"
                             onClick={() => {
                               setSelectedTurmaForStudents(turma);
                               setViewTurmaStudentsDialogOpen(true);
+                              setSelectedStudentsForBulkAction([]);
                             }}
                             data-testid={`button-view-students-${turma.id}`}
                           >
                             <Users className="h-4 w-4 mr-1" />
                             Ver Alunos
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1"
-                            onClick={() => {
-                              setSelectedTurmaForWhatsApp(turma);
-                              setWhatsAppLink(turma.linkWhatsApp || "");
-                              setEditWhatsAppDialogOpen(true);
-                            }}
-                            data-testid={`button-whatsapp-${turma.id}`}
-                          >
-                            <MessageCircle className="h-4 w-4 mr-1" />
-                            {turma.linkWhatsApp ? "Editar" : "Adicionar"} WhatsApp
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex-1"
+                              onClick={() => {
+                                setSelectedTurmaForWhatsApp(turma);
+                                setWhatsAppLink(turma.linkWhatsApp || "");
+                                setEditWhatsAppDialogOpen(true);
+                              }}
+                              data-testid={`button-whatsapp-${turma.id}`}
+                            >
+                              <MessageCircle className="h-4 w-4 mr-1" />
+                              {turma.linkWhatsApp ? "Editar" : "Add"} WhatsApp
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex-1"
+                              onClick={() => {
+                                setSelectedTurmaForVagas(turma);
+                                setNovasVagas(turma.vagasTotais || 30);
+                                setEditVagasDialogOpen(true);
+                              }}
+                              data-testid={`button-edit-vagas-${turma.id}`}
+                            >
+                              <Edit className="h-4 w-4 mr-1" />
+                              Vagas
+                            </Button>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
@@ -2055,7 +2177,7 @@ export default function AdminDashboard() {
       </Dialog>
 
       <Dialog open={viewTurmaStudentsDialogOpen} onOpenChange={setViewTurmaStudentsDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="dialog-view-students">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto" data-testid="dialog-view-students">
           <DialogHeader>
             <DialogTitle>Alunos da Turma: {selectedTurmaForStudents?.nome}</DialogTitle>
             <DialogDescription>
@@ -2065,7 +2187,7 @@ export default function AdminDashboard() {
           
           {selectedTurmaForStudents && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+              <div className="flex items-center justify-between gap-4 p-4 bg-muted rounded-lg flex-wrap">
                 <div>
                   <p className="text-sm text-muted-foreground">Total de alunos</p>
                   <p className="text-2xl font-bold">
@@ -2078,13 +2200,76 @@ export default function AdminDashboard() {
                     {(selectedTurmaForStudents.vagasTotais || 0) - (users?.filter(u => u.turma === selectedTurmaForStudents.nome && u.tipo === "aluno").length || 0)}
                   </p>
                 </div>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => {
+                    setAddStudentsDialogOpen(true);
+                  }}
+                  data-testid="button-add-students"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Adicionar Alunos
+                </Button>
               </div>
+
+              {selectedStudentsForBulkAction.length > 0 && (
+                <div className="flex items-center justify-between p-3 bg-primary/10 border border-primary/20 rounded-lg">
+                  <span className="text-sm font-medium">
+                    {selectedStudentsForBulkAction.length} aluno(s) selecionado(s)
+                  </span>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setBulkTransferDialogOpen(true);
+                      }}
+                      data-testid="button-bulk-transfer"
+                    >
+                      <ArrowRightLeft className="h-4 w-4 mr-1" />
+                      Transferir
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => {
+                        if (confirm(`Tem certeza que deseja remover ${selectedStudentsForBulkAction.length} aluno(s) da turma?`)) {
+                          bulkRemoveStudentsMutation.mutate({ studentIds: selectedStudentsForBulkAction });
+                        }
+                      }}
+                      data-testid="button-bulk-remove"
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Remover
+                    </Button>
+                  </div>
+                </div>
+              )}
 
               {users && users.filter(u => u.turma === selectedTurmaForStudents.nome && u.tipo === "aluno").length > 0 ? (
                 <div className="border rounded-lg overflow-hidden">
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-12">
+                          <Checkbox
+                            checked={
+                              users.filter(u => u.turma === selectedTurmaForStudents.nome && u.tipo === "aluno").length > 0 &&
+                              users.filter(u => u.turma === selectedTurmaForStudents.nome && u.tipo === "aluno").every(s => selectedStudentsForBulkAction.includes(s.uid))
+                            }
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedStudentsForBulkAction(
+                                  users.filter(u => u.turma === selectedTurmaForStudents.nome && u.tipo === "aluno").map(s => s.uid)
+                                );
+                              } else {
+                                setSelectedStudentsForBulkAction([]);
+                              }
+                            }}
+                            data-testid="checkbox-select-all-students"
+                          />
+                        </TableHead>
                         <TableHead>Nome</TableHead>
                         <TableHead>Email</TableHead>
                         <TableHead>Matrícula</TableHead>
@@ -2097,6 +2282,19 @@ export default function AdminDashboard() {
                         .filter(u => u.turma === selectedTurmaForStudents.nome && u.tipo === "aluno")
                         .map((student) => (
                           <TableRow key={student.uid}>
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedStudentsForBulkAction.includes(student.uid)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedStudentsForBulkAction([...selectedStudentsForBulkAction, student.uid]);
+                                  } else {
+                                    setSelectedStudentsForBulkAction(selectedStudentsForBulkAction.filter(id => id !== student.uid));
+                                  }
+                                }}
+                                data-testid={`checkbox-student-${student.uid}`}
+                              />
+                            </TableCell>
                             <TableCell className="font-medium">{student.nome}</TableCell>
                             <TableCell>{student.email}</TableCell>
                             <TableCell>
@@ -2168,6 +2366,240 @@ export default function AdminDashboard() {
               data-testid="button-close-students-dialog"
             >
               Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={addStudentsDialogOpen} onOpenChange={setAddStudentsDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" data-testid="dialog-add-students">
+          <DialogHeader>
+            <DialogTitle>Adicionar Alunos à Turma: {selectedTurmaForStudents?.nome}</DialogTitle>
+            <DialogDescription>
+              Selecione os alunos que deseja adicionar a esta turma
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {users && users.filter(u => u.tipo === "aluno" && (!u.turma || u.turma === "")).length > 0 ? (
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={
+                            users.filter(u => u.tipo === "aluno" && (!u.turma || u.turma === "")).length > 0 &&
+                            users.filter(u => u.tipo === "aluno" && (!u.turma || u.turma === "")).every(s => selectedStudentsToAdd.includes(s.uid))
+                          }
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedStudentsToAdd(
+                                users.filter(u => u.tipo === "aluno" && (!u.turma || u.turma === "")).map(s => s.uid)
+                              );
+                            } else {
+                              setSelectedStudentsToAdd([]);
+                            }
+                          }}
+                          data-testid="checkbox-select-all-available"
+                        />
+                      </TableHead>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Matrícula</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {users
+                      .filter(u => u.tipo === "aluno" && (!u.turma || u.turma === ""))
+                      .map((student) => (
+                        <TableRow key={student.uid}>
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedStudentsToAdd.includes(student.uid)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedStudentsToAdd([...selectedStudentsToAdd, student.uid]);
+                                } else {
+                                  setSelectedStudentsToAdd(selectedStudentsToAdd.filter(id => id !== student.uid));
+                                }
+                              }}
+                              data-testid={`checkbox-add-student-${student.uid}`}
+                            />
+                          </TableCell>
+                          <TableCell className="font-medium">{student.nome}</TableCell>
+                          <TableCell>{student.email}</TableCell>
+                          <TableCell>
+                            <code className="text-xs">{student.matricula || "-"}</code>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center border rounded-lg">
+                <Users className="h-16 w-16 text-muted-foreground mb-4" />
+                <p className="text-lg font-medium mb-2">Nenhum aluno disponível</p>
+                <p className="text-sm text-muted-foreground">
+                  Todos os alunos já estão matriculados em turmas
+                </p>
+              </div>
+            )}
+            
+            {selectedStudentsToAdd.length > 0 && (
+              <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg">
+                <span className="text-sm font-medium">
+                  {selectedStudentsToAdd.length} aluno(s) selecionado(s)
+                </span>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setAddStudentsDialogOpen(false);
+                setSelectedStudentsToAdd([]);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (selectedTurmaForStudents && selectedStudentsToAdd.length > 0) {
+                  addStudentsToTurmaMutation.mutate({
+                    studentIds: selectedStudentsToAdd,
+                    turmaNome: selectedTurmaForStudents.nome
+                  });
+                }
+              }}
+              disabled={addStudentsToTurmaMutation.isPending || selectedStudentsToAdd.length === 0}
+              data-testid="button-confirm-add-students"
+            >
+              {addStudentsToTurmaMutation.isPending ? "Adicionando..." : `Adicionar ${selectedStudentsToAdd.length} aluno(s)`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editVagasDialogOpen} onOpenChange={setEditVagasDialogOpen}>
+        <DialogContent data-testid="dialog-edit-vagas">
+          <DialogHeader>
+            <DialogTitle>Editar Quantidade de Vagas</DialogTitle>
+            <DialogDescription>
+              Turma: {selectedTurmaForVagas?.nome}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="vagas-totais">Quantidade de Vagas</Label>
+              <Input
+                id="vagas-totais"
+                type="number"
+                min="1"
+                value={novasVagas}
+                onChange={(e) => setNovasVagas(parseInt(e.target.value) || 0)}
+                data-testid="input-vagas-totais"
+              />
+              <p className="text-xs text-muted-foreground">
+                Alunos atualmente matriculados: {users?.filter(u => u.turma === selectedTurmaForVagas?.nome && u.tipo === "aluno").length || 0}
+              </p>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setEditVagasDialogOpen(false);
+                setSelectedTurmaForVagas(null);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (selectedTurmaForVagas && novasVagas > 0) {
+                  updateVagasTurmaMutation.mutate({
+                    turmaId: selectedTurmaForVagas.id,
+                    vagasTotais: novasVagas
+                  });
+                }
+              }}
+              disabled={updateVagasTurmaMutation.isPending || novasVagas < 1}
+              data-testid="button-save-vagas"
+            >
+              {updateVagasTurmaMutation.isPending ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={bulkTransferDialogOpen} onOpenChange={setBulkTransferDialogOpen}>
+        <DialogContent data-testid="dialog-bulk-transfer">
+          <DialogHeader>
+            <DialogTitle>Transferir Alunos em Lote</DialogTitle>
+            <DialogDescription>
+              Transferir {selectedStudentsForBulkAction.length} aluno(s) para outra turma
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="bulk-transfer-turma">Nova Turma</Label>
+              <Select value={bulkTransferTurma} onValueChange={setBulkTransferTurma}>
+                <SelectTrigger id="bulk-transfer-turma" data-testid="select-bulk-transfer-turma">
+                  <SelectValue placeholder="Selecione a turma" />
+                </SelectTrigger>
+                <SelectContent>
+                  {turmas && turmas.length > 0 ? (
+                    turmas
+                      .filter(t => t.nome !== selectedTurmaForStudents?.nome)
+                      .map((turma) => (
+                        <SelectItem key={turma.id} value={turma.nome}>
+                          {turma.nome} - {turma.ano} ({(turma.vagasTotais || 0) - (users?.filter(u => u.turma === turma.nome).length || 0)} vagas disponíveis)
+                        </SelectItem>
+                      ))
+                  ) : (
+                    <SelectItem value="none" disabled>Nenhuma turma disponível</SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setBulkTransferDialogOpen(false);
+                setBulkTransferTurma("");
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (selectedStudentsForBulkAction.length > 0 && bulkTransferTurma) {
+                  bulkTransferStudentsMutation.mutate({
+                    studentIds: selectedStudentsForBulkAction,
+                    novaTurma: bulkTransferTurma
+                  });
+                }
+              }}
+              disabled={bulkTransferStudentsMutation.isPending || !bulkTransferTurma}
+              data-testid="button-confirm-bulk-transfer"
+            >
+              {bulkTransferStudentsMutation.isPending ? "Transferindo..." : "Transferir"}
             </Button>
           </DialogFooter>
         </DialogContent>
