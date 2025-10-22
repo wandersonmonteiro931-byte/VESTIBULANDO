@@ -818,6 +818,58 @@ export default function AdminDashboard() {
     },
   });
 
+  const syncTurmasVagasMutation = useMutation({
+    mutationFn: async () => {
+      // Buscar todas as turmas
+      const turmasSnapshot = await getDocs(collection(db, "turmas"));
+      
+      // Buscar todos os usuários
+      const usuariosSnapshot = await getDocs(collection(db, "usuarios"));
+      
+      // Contar alunos por turma (usando ID da turma)
+      const alunosPorTurma = new Map<string, number>();
+      
+      usuariosSnapshot.forEach((userDoc) => {
+        const userData = userDoc.data();
+        if (userData.tipo === "aluno" && userData.turma) {
+          alunosPorTurma.set(userData.turma, (alunosPorTurma.get(userData.turma) || 0) + 1);
+        }
+      });
+      
+      // Atualizar cada turma com o valor correto
+      const updates: Promise<void>[] = [];
+      
+      turmasSnapshot.forEach((turmaDoc) => {
+        const turmaId = turmaDoc.id;
+        const count = alunosPorTurma.get(turmaId) || 0;
+        
+        updates.push(
+          updateDoc(doc(db, "turmas", turmaId), {
+            vagasPreenchidas: count
+          })
+        );
+      });
+      
+      await Promise.all(updates);
+      
+      return { totalTurmas: turmasSnapshot.size, alunosPorTurma };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/turmas"] });
+      toast({
+        title: "Sincronização concluída!",
+        description: `${data.totalTurmas} turma(s) sincronizada(s) com sucesso.`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao sincronizar",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const toggleTurmaStatusMutation = useMutation({
     mutationFn: async ({ turmaId, ativa }: { turmaId: string; ativa: boolean }) => {
       const turmaRef = doc(db, "turmas", turmaId);
@@ -864,7 +916,7 @@ export default function AdminDashboard() {
   });
 
   const addStudentsToTurmaMutation = useMutation({
-    mutationFn: async ({ studentIds, turmaNome, turmaId }: { studentIds: string[]; turmaNome: string; turmaId: string }) => {
+    mutationFn: async ({ studentIds, turmaId }: { studentIds: string[]; turmaId: string }) => {
       await runTransaction(db, async (transaction) => {
         const turmaRef = doc(db, "turmas", turmaId);
         const turmaDoc = await transaction.get(turmaRef);
@@ -885,11 +937,11 @@ export default function AdminDashboard() {
             const userData = userDoc.data();
             const turmaAtual = userData.turma;
             
-            // Só adicionar se não estiver na turma de destino
-            if (turmaAtual !== turmaNome) {
+            // Só adicionar se não estiver na turma de destino (comparando IDs)
+            if (turmaAtual !== turmaId) {
               studentsToMove.push(uid);
               
-              // Rastrear turma de origem para decrementar
+              // Rastrear turma de origem para decrementar (usando ID)
               if (turmaAtual) {
                 turmasOrigemMap.set(turmaAtual, (turmasOrigemMap.get(turmaAtual) || 0) + 1);
               }
@@ -910,18 +962,15 @@ export default function AdminDashboard() {
           throw new Error(`Não há vagas suficientes. Disponíveis: ${vagasDisponiveis}, Necessárias: ${studentsToMove.length}`);
         }
         
-        // Decrementar vagasPreenchidas das turmas de origem
-        for (const [turmaNomeOrigem, count] of Array.from(turmasOrigemMap.entries())) {
-          const turmaOrigemQuery = await getDocs(query(collection(db, "turmas"), where("nome", "==", turmaNomeOrigem)));
-          if (!turmaOrigemQuery.empty) {
-            const turmaOrigemRef = doc(db, "turmas", turmaOrigemQuery.docs[0].id);
-            const turmaOrigemDoc = await transaction.get(turmaOrigemRef);
-            if (turmaOrigemDoc.exists()) {
-              const vagasPreencidasOrigem = turmaOrigemDoc.data().vagasPreenchidas || 0;
-              transaction.update(turmaOrigemRef, {
-                vagasPreenchidas: Math.max(0, vagasPreencidasOrigem - count)
-              });
-            }
+        // Decrementar vagasPreenchidas das turmas de origem (usando ID)
+        for (const [turmaIdOrigem, count] of Array.from(turmasOrigemMap.entries())) {
+          const turmaOrigemRef = doc(db, "turmas", turmaIdOrigem);
+          const turmaOrigemDoc = await transaction.get(turmaOrigemRef);
+          if (turmaOrigemDoc.exists()) {
+            const vagasPreencidasOrigem = turmaOrigemDoc.data().vagasPreenchidas || 0;
+            transaction.update(turmaOrigemRef, {
+              vagasPreenchidas: Math.max(0, vagasPreencidasOrigem - count)
+            });
           }
         }
         
@@ -930,10 +979,10 @@ export default function AdminDashboard() {
           vagasPreenchidas: vagasPreenchidas + studentsToMove.length
         });
         
-        // Atualizar cada aluno que precisa ser movido
+        // Atualizar cada aluno que precisa ser movido (armazenar ID da turma)
         for (const uid of studentsToMove) {
           const userRef = doc(db, "usuarios", uid);
-          transaction.update(userRef, { turma: turmaNome });
+          transaction.update(userRef, { turma: turmaId });
         }
       });
     },
@@ -1593,10 +1642,21 @@ export default function AdminDashboard() {
           <TabsContent value="turmas" className="space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-xl font-semibold">Gerenciar Turmas</h3>
-              <Button onClick={() => setCreateTurmaDialogOpen(true)} data-testid="button-create-turma">
-                <Plus className="h-4 w-4 mr-2" />
-                Nova Turma
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={() => syncTurmasVagasMutation.mutate()} 
+                  variant="outline"
+                  disabled={syncTurmasVagasMutation.isPending}
+                  data-testid="button-sync-vagas"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${syncTurmasVagasMutation.isPending ? 'animate-spin' : ''}`} />
+                  Sincronizar Vagas
+                </Button>
+                <Button onClick={() => setCreateTurmaDialogOpen(true)} data-testid="button-create-turma">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nova Turma
+                </Button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -3397,7 +3457,6 @@ export default function AdminDashboard() {
                 if (selectedTurmaForStudents && selectedStudentsToAdd.length > 0) {
                   addStudentsToTurmaMutation.mutate({
                     studentIds: selectedStudentsToAdd,
-                    turmaNome: selectedTurmaForStudents.nome,
                     turmaId: selectedTurmaForStudents.id
                   });
                 }
