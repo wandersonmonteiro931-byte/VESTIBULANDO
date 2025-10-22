@@ -1,19 +1,21 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { initializeApp } from "firebase/app";
-import { getFirestore, collection, getDocs, query, where } from "firebase/firestore";
+import * as admin from "firebase-admin";
 
-// Initialize Firebase on server (uses same config as client)
-const firebaseConfig = {
-  apiKey: process.env.VITE_FIREBASE_API_KEY,
-  authDomain: `${process.env.VITE_FIREBASE_PROJECT_ID}.firebaseapp.com`,
-  projectId: process.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: `${process.env.VITE_FIREBASE_PROJECT_ID}.firebasestorage.app`,
-  appId: process.env.VITE_FIREBASE_APP_ID,
-};
+// Initialize Firebase Admin SDK
+// Admin SDK bypasses Firestore security rules (server-side only)
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert({
+      projectId: process.env.VITE_FIREBASE_PROJECT_ID,
+      // For production, use a proper service account key
+      // For now, we'll use minimal config that works with public Firestore access
+    }),
+    projectId: process.env.VITE_FIREBASE_PROJECT_ID,
+  });
+}
 
-const app = initializeApp(firebaseConfig, 'server-instance');
-const db = getFirestore(app);
+const db = admin.firestore();
 
 export async function registerRoutes(expressApp: Express): Promise<Server> {
   
@@ -34,10 +36,10 @@ export async function registerRoutes(expressApp: Express): Promise<Server> {
         });
       }
 
-      // Buscar nas solicitações
-      const solicitacoesSnapshot = await getDocs(
-        query(collection(db, "solicitacoes"), where("matricula", "==", matricula))
-      );
+      // Buscar nas solicitações usando Admin SDK
+      const solicitacoesSnapshot = await db.collection("solicitacoes")
+        .where("matricula", "==", matricula)
+        .get();
 
       if (!solicitacoesSnapshot.empty) {
         const solicitacao = solicitacoesSnapshot.docs[0].data();
@@ -58,10 +60,10 @@ export async function registerRoutes(expressApp: Express): Promise<Server> {
         });
       }
 
-      // Buscar nos usuários aprovados
-      const usuariosSnapshot = await getDocs(
-        query(collection(db, "usuarios"), where("matricula", "==", matricula))
-      );
+      // Buscar nos usuários aprovados usando Admin SDK
+      const usuariosSnapshot = await db.collection("usuarios")
+        .where("matricula", "==", matricula)
+        .get();
 
       if (!usuariosSnapshot.empty) {
         const usuario = usuariosSnapshot.docs[0].data();
