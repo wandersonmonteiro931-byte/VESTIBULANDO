@@ -774,16 +774,43 @@ export default function Login() {
     setStatusResult(null);
 
     try {
-      // Usar endpoint Express seguro ao invés de consultar Firestore diretamente
-      const response = await fetch(`/api/verificar-status/${statusMatricula}`);
-      const data = await response.json();
+      const { collection, query, where, getDocs } = await import("firebase/firestore");
+      
+      // Buscar nas solicitações
+      const solicitacoesRef = collection(db, "solicitacoes");
+      const solicitacoesQuery = query(solicitacoesRef, where("matricula", "==", statusMatricula));
+      const solicitacoesSnapshot = await getDocs(solicitacoesQuery);
 
-      if (!response.ok) {
-        throw new Error(data.error || "Erro ao verificar status");
+      if (!solicitacoesSnapshot.empty) {
+        const solicitacao = solicitacoesSnapshot.docs[0].data();
+        setStatusResult({
+          matricula: solicitacao.matricula,
+          nome: solicitacao.nome,
+          status: solicitacao.status,
+          tipo: solicitacao.tipo,
+          turma: solicitacao.turma,
+          dataSolicitacao: solicitacao.dataSolicitacao,
+          comentarioReprovacao: solicitacao.comentarioReprovacao || null
+        });
+        setStatusChecking(false);
+        return;
       }
 
-      if (data.found) {
-        setStatusResult(data.data);
+      // Buscar nos usuários aprovados
+      const usuariosRef = collection(db, "usuarios");
+      const usuariosQuery = query(usuariosRef, where("matricula", "==", statusMatricula));
+      const usuariosSnapshot = await getDocs(usuariosQuery);
+
+      if (!usuariosSnapshot.empty) {
+        const usuario = usuariosSnapshot.docs[0].data();
+        setStatusResult({
+          matricula: usuario.matricula,
+          nome: usuario.nome,
+          status: usuario.status,
+          tipo: usuario.tipo,
+          turma: usuario.turma,
+          ativo: usuario.ativo
+        });
         setStatusChecking(false);
         return;
       }
@@ -791,7 +818,7 @@ export default function Login() {
       // Não encontrou
       toast({
         title: "Matrícula não encontrada",
-        description: data.message || "Não foi encontrada nenhuma solicitação com esta matrícula.",
+        description: "Não foi encontrada nenhuma solicitação com esta matrícula.",
         variant: "destructive",
       });
       setStatusChecking(false);
