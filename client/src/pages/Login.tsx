@@ -635,7 +635,7 @@ export default function Login() {
           <div>
             <CardTitle className="text-3xl font-bold">ENEM+</CardTitle>
             <CardDescription className="mt-2">
-              {mode === "register" ? "FORMULÁRIO DE SOLICITAÇÃO DE MATRÍCULA" : mode === "forgotPassword" ? "Recuperar Senha" : "SEJA BEM VINDO! FAÇA LOGIN COM SUA MATRÍCULA."}
+              {mode === "register" ? "FORMULÁRIO DE SOLICITAÇÃO DE MATRÍCULA" : mode === "forgotPassword" ? "Recuperar Senha" : "SEJA BEM VINDO! FAÇA LOGIN COM SUA MATRÍCULA OU CPF"}
             </CardDescription>
           </div>
         </CardHeader>
