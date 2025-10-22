@@ -140,6 +140,8 @@ export default function Login() {
   const [codeCopied, setCodeCopied] = useState(false);
   const [showRejectionDialog, setShowRejectionDialog] = useState(false);
   const [rejectionComment, setRejectionComment] = useState("");
+  const [userToReject, setUserToReject] = useState<any>(null);
+  const [editingSolicitacaoId, setEditingSolicitacaoId] = useState<string | null>(null);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [statusMatricula, setStatusMatricula] = useState("");
   const [statusChecking, setStatusChecking] = useState(false);
@@ -360,46 +362,89 @@ export default function Login() {
           return;
         }
         
-        const matricula = await generateUniqueMatricula(db);
-        const dataSolicitacao = new Date().toISOString();
-        
-        const { collection, addDoc, getDocs, query, where, deleteDoc } = await import("firebase/firestore");
+        const { collection, addDoc, updateDoc, getDocs, query, where, deleteDoc } = await import("firebase/firestore");
         
         try {
-          const reprovacaoSnapshot = await getDocs(query(collection(db, "reprovacoes"), where("email", "==", formData.email)));
+          let matricula: string;
           
-          if (!reprovacaoSnapshot.empty) {
-            for (const docRef of reprovacaoSnapshot.docs) {
-              await deleteDoc(doc(db, "reprovacoes", docRef.id));
+          // Se estiver editando uma solicitação reprovada, atualizar ao invés de criar nova
+          if (editingSolicitacaoId) {
+            // Buscar matrícula existente
+            const solicitacaoRef = doc(db, "solicitacoes", editingSolicitacaoId);
+            const solicitacaoDoc = await getDoc(solicitacaoRef);
+            
+            if (solicitacaoDoc.exists()) {
+              matricula = solicitacaoDoc.data().matricula;
+              
+              // Atualizar solicitação existente com status "pendente" novamente
+              await updateDoc(solicitacaoRef, {
+                nome: formData.nome,
+                email: formData.email,
+                turma: formData.turma,
+                status: "pendente",
+                dataSolicitacao: new Date().toISOString(),
+                dataNascimento: formData.dataNascimento,
+                cpf: formData.cpf,
+                escolaridade: formData.escolaridade,
+                telefone: formData.telefone,
+                cep: formData.cep,
+                rua: formData.rua,
+                bairro: formData.bairro,
+                cidade: formData.cidade,
+                estado: formData.estado,
+                fotoBase64: photoBase64,
+                fotoPublica: photoPublic,
+                comentarioReprovacao: null, // Limpar comentário de reprovação
+                dataReprovacao: null,
+              });
+              
+              // Limpar estado de edição
+              setEditingSolicitacaoId(null);
+              setUserToReject(null);
+            } else {
+              throw new Error("Solicitação não encontrada");
             }
+          } else {
+            // Criar nova solicitação
+            matricula = await generateUniqueMatricula(db);
+            const dataSolicitacao = new Date().toISOString();
+            
+            // Limpar reprovações antigas (se existir)
+            const reprovacaoSnapshot = await getDocs(query(collection(db, "reprovacoes"), where("email", "==", formData.email)));
+            
+            if (!reprovacaoSnapshot.empty) {
+              for (const docRef of reprovacaoSnapshot.docs) {
+                await deleteDoc(doc(db, "reprovacoes", docRef.id));
+              }
+            }
+            
+            await addDoc(collection(db, "solicitacoes"), {
+              nome: formData.nome,
+              email: formData.email,
+              tipo: "aluno",
+              turma: formData.turma,
+              status: "pendente",
+              matricula: matricula,
+              dataSolicitacao: dataSolicitacao,
+              dataNascimento: formData.dataNascimento,
+              cpf: formData.cpf,
+              escolaridade: formData.escolaridade,
+              telefone: formData.telefone,
+              cep: formData.cep,
+              rua: formData.rua,
+              bairro: formData.bairro,
+              cidade: formData.cidade,
+              estado: formData.estado,
+              disponibilidade: disponibilidade,
+              fotoBase64: photoBase64,
+              fotoPublica: photoPublic,
+            });
           }
-          
-          await addDoc(collection(db, "solicitacoes"), {
-            nome: formData.nome,
-            email: formData.email,
-            tipo: "aluno",
-            turma: formData.turma,
-            status: "pendente",
-            matricula: matricula,
-            dataSolicitacao: dataSolicitacao,
-            dataNascimento: formData.dataNascimento,
-            cpf: formData.cpf,
-            escolaridade: formData.escolaridade,
-            telefone: formData.telefone,
-            cep: formData.cep,
-            rua: formData.rua,
-            bairro: formData.bairro,
-            cidade: formData.cidade,
-            estado: formData.estado,
-            disponibilidade: disponibilidade,
-            fotoBase64: photoBase64,
-            fotoPublica: photoPublic,
-          });
         } catch (firestoreError: any) {
           console.error("Erro ao salvar solicitação:", firestoreError);
           
           toast({
-            title: "Erro ao criar solicitação",
+            title: editingSolicitacaoId ? "Erro ao atualizar solicitação" : "Erro ao criar solicitação",
             description: "Não foi possível enviar sua solicitação. Tente novamente.",
             variant: "destructive",
           });
@@ -515,19 +560,38 @@ export default function Login() {
         }
         
         if (userSnapshot.empty) {
-          // Verificar se há reprovação
+          // Verificar se há solicitação (pendente ou reprovada)
           try {
-            const reprovacaoSnapshot = await getDocs(query(collection(db, "reprovacoes"), where("cpf", "==", formatarCPF(loginIdentifier))));
+            let solicitacaoSnapshot;
             
-            if (!reprovacaoSnapshot.empty) {
-              const reprovacaoData = reprovacaoSnapshot.docs[0].data();
-              setRejectionComment(reprovacaoData.comentario || "Sua solicitação foi reprovada pelo administrador.");
-              setShowRejectionDialog(true);
-              setLoading(false);
-              return;
+            if (loginIdentifier.length === 11) {
+              solicitacaoSnapshot = await getDocs(query(collection(db, "solicitacoes"), where("cpf", "==", formatarCPF(loginIdentifier))));
+            } else if (loginIdentifier.length === 4) {
+              solicitacaoSnapshot = await getDocs(query(collection(db, "solicitacoes"), where("matricula", "==", loginIdentifier)));
+            }
+            
+            if (solicitacaoSnapshot && !solicitacaoSnapshot.empty) {
+              const solicitacaoDoc = solicitacaoSnapshot.docs[0];
+              const solicitacaoData = solicitacaoDoc.data();
+              
+              if (solicitacaoData.status === "reprovado") {
+                setRejectionComment(solicitacaoData.comentarioReprovacao || "Sua solicitação foi reprovada pelo administrador.");
+                setUserToReject({ ...solicitacaoData, docId: solicitacaoDoc.id });
+                setShowRejectionDialog(true);
+                setLoading(false);
+                return;
+              } else if (solicitacaoData.status === "pendente") {
+                toast({
+                  title: "Solicitação pendente",
+                  description: "Sua solicitação ainda está aguardando análise do administrador.",
+                  variant: "default",
+                });
+                setLoading(false);
+                return;
+              }
             }
           } catch (checkError) {
-            console.error("Erro ao verificar reprovação:", checkError);
+            console.error("Erro ao verificar solicitação:", checkError);
           }
           
           toast({
@@ -1542,17 +1606,52 @@ export default function Login() {
               </p>
             </div>
             <p className="text-sm text-muted-foreground">
-              Você pode se cadastrar novamente com as informações corretas.
+              Você pode editar seu cadastro e enviar novamente para análise.
             </p>
             <Button
               onClick={() => {
+                if (userToReject) {
+                  // Armazenar ID da solicitação para editar ao invés de criar nova
+                  setEditingSolicitacaoId(userToReject.docId || null);
+                  
+                  // Carregar dados da solicitação reprovada no formulário
+                  setFormData({
+                    loginId: "",
+                    password: "",
+                    nome: userToReject.nome || "",
+                    turma: userToReject.turma || "",
+                    dataNascimento: userToReject.dataNascimento || "",
+                    cpf: userToReject.cpf || "",
+                    escolaridade: userToReject.escolaridade || "",
+                    telefone: userToReject.telefone || "",
+                    cep: userToReject.cep || "",
+                    rua: userToReject.rua || "",
+                    bairro: userToReject.bairro || "",
+                    cidade: userToReject.cidade || "",
+                    estado: userToReject.estado || "",
+                    email: userToReject.email || "",
+                  });
+                  
+                  if (userToReject.tipo === "professor" && userToReject.disponibilidade) {
+                    setDisponibilidade(userToReject.disponibilidade);
+                  }
+                  
+                  if (userToReject.photoURL) {
+                    setPhotoBase64(userToReject.photoURL);
+                  }
+                  
+                  if (userToReject.photoPublic !== undefined) {
+                    setPhotoPublic(userToReject.photoPublic);
+                  }
+                }
+                
                 setShowRejectionDialog(false);
                 setMode("register");
               }}
               className="w-full"
               data-testid="button-recadastrar"
             >
-              Fazer Novo Cadastro
+              Editar Cadastro e Reenviar
             </Button>
           </div>
         </DialogContent>
