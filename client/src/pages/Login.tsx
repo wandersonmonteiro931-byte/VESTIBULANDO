@@ -945,8 +945,10 @@ export default function Login() {
   const handleConfirmIdentity = () => {
     if (!pendingSolicitacao) return;
     
-    const cpfFormatted = formatarCPF(confirmationData.cpf);
-    const cpfMatch = cpfFormatted === pendingSolicitacao.cpf;
+    const cpfDigitado = confirmationData.cpf.replace(/\D/g, '');
+    const cpfCadastrado = (pendingSolicitacao.cpf || '').replace(/\D/g, '');
+    const cpfMatch = cpfDigitado === cpfCadastrado;
+    
     const dateMatch = confirmationData.dataNascimento === pendingSolicitacao.dataNascimento;
     
     if (!cpfMatch || !dateMatch) {
