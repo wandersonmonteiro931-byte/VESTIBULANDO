@@ -55,6 +55,36 @@ function formatarCPF(valor: string): string {
   return `${limitado.slice(0, 3)}.${limitado.slice(3, 6)}.${limitado.slice(6, 9)}-${limitado.slice(9)}`;
 }
 
+// Função para validar CPF (algoritmo oficial)
+function validarCPF(cpf: string): boolean {
+  const apenasNumeros = cpf.replace(/\D/g, '');
+  
+  if (apenasNumeros.length !== 11) return false;
+  
+  // Verifica se todos os dígitos são iguais (CPF inválido)
+  if (/^(\d)\1{10}$/.test(apenasNumeros)) return false;
+  
+  // Validação do primeiro dígito verificador
+  let soma = 0;
+  for (let i = 0; i < 9; i++) {
+    soma += parseInt(apenasNumeros.charAt(i)) * (10 - i);
+  }
+  let resto = (soma * 10) % 11;
+  if (resto === 10 || resto === 11) resto = 0;
+  if (resto !== parseInt(apenasNumeros.charAt(9))) return false;
+  
+  // Validação do segundo dígito verificador
+  soma = 0;
+  for (let i = 0; i < 10; i++) {
+    soma += parseInt(apenasNumeros.charAt(i)) * (11 - i);
+  }
+  resto = (soma * 10) % 11;
+  if (resto === 10 || resto === 11) resto = 0;
+  if (resto !== parseInt(apenasNumeros.charAt(10))) return false;
+  
+  return true;
+}
+
 // Função para formatar Telefone (WhatsApp)
 function formatarTelefone(valor: string): string {
   const apenasNumeros = valor.replace(/\D/g, '');
@@ -220,6 +250,17 @@ export default function Login() {
           toast({
             title: "Campos obrigatórios",
             description: "Por favor, preencha todos os campos obrigatórios, incluindo endereço completo",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+        
+        // Validar CPF
+        if (!validarCPF(formData.cpf)) {
+          toast({
+            title: "CPF inválido",
+            description: "O CPF informado não é válido. Por favor, verifique e tente novamente.",
             variant: "destructive",
           });
           setLoading(false);
