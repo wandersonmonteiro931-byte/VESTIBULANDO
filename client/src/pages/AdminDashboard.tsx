@@ -194,38 +194,9 @@ export default function AdminDashboard() {
   
   const loadingPendingUsers = loadingSolicitacoes;
 
-  // Verificar e fechar automaticamente turmas vencidas
-  useEffect(() => {
-    const verificarTurmasVencidas = async () => {
-      if (!turmas || turmas.length === 0) return;
-
-      const hoje = new Date();
-      hoje.setHours(0, 0, 0, 0);
-
-      for (const turma of turmas) {
-        if (turma.periodoMatriculaFim && turma.ativa) {
-          const dataFim = new Date(turma.periodoMatriculaFim + 'T23:59:59');
-          
-          // Se a turma passou da data fim, fechar automaticamente
-          if (hoje > dataFim) {
-            try {
-              const turmaRef = doc(db, "turmas", turma.id);
-              await updateDoc(turmaRef, { ativa: false });
-              console.log(`Turma ${turma.nome} fechada automaticamente (período expirado)`);
-            } catch (error) {
-              console.error("Erro ao fechar turma automaticamente:", error);
-            }
-          }
-        }
-      }
-    };
-
-    // Verificar ao carregar e a cada 5 minutos
-    verificarTurmasVencidas();
-    const interval = setInterval(verificarTurmasVencidas, 5 * 60 * 1000);
-
-    return () => clearInterval(interval);
-  }, [turmas]);
+  // Nota: O fechamento automático foi removido para dar controle total ao diretor.
+  // Turmas fora do período são sinalizadas visualmente com cor laranja,
+  // mas o diretor pode abrir/fechar manualmente a qualquer momento.
 
   const approveUserMutation = useMutation({
     mutationFn: async ({ solicitacaoId, senha }: { solicitacaoId: string; senha: string }) => {
