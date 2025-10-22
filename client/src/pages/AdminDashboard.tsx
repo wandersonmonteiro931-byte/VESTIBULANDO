@@ -585,11 +585,24 @@ export default function AdminDashboard() {
       if (!docId) {
         throw new Error("ID do documento não encontrado");
       }
+      
+      if (user.tipo === "aluno" && user.turma) {
+        const turmaRef = doc(db, "turmas", user.turma);
+        const turmaDoc = await getDoc(turmaRef);
+        if (turmaDoc.exists()) {
+          const turmaData = turmaDoc.data();
+          await updateDoc(turmaRef, {
+            vagasPreenchidas: Math.max(0, (turmaData.vagasPreenchidas || 0) - 1)
+          });
+        }
+      }
+      
       await deleteDoc(doc(db, "usuarios", docId));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
       queryClient.invalidateQueries({ queryKey: ["/api/usuarios/all"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/turmas"] });
       setDeleteDialogOpen(false);
       setUserToDelete(null);
       toast({
