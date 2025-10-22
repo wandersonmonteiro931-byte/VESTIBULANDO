@@ -141,10 +141,15 @@ export const disciplinaryActionSchema = z.object({
   alunoMatricula: z.string(),
   alunoTurma: z.string(),
   tipo: z.enum(["advertencia", "suspensao"]),
-  motivo: z.string().optional(),
+  comentario: z.string().optional(), // Comentário do diretor sobre a ação disciplinar
   aplicadoPor: z.string(), // ID do diretor que aplicou
   aplicadoPorNome: z.string(), // Nome do diretor
   dataAplicacao: z.string(), // ISO datetime
+  dataTerminoSuspensao: z.string().optional(), // Data de término da suspensão (calculado como dataAplicacao + 2 dias)
+  ativo: z.boolean().default(true), // false se foi removido pelo diretor
+  dataRemocao: z.string().optional(), // Data em que foi removida
+  removidoPor: z.string().optional(), // ID do diretor que removeu
+  removidoPorNome: z.string().optional(), // Nome do diretor que removeu
 });
 
 export const insertDisciplinaryActionSchema = disciplinaryActionSchema.omit({ id: true });
