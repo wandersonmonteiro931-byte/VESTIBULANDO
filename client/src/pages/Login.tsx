@@ -577,6 +577,14 @@ export default function Login() {
                 setShowRejectionDialog(true);
                 setLoading(false);
                 return;
+              } else if (solicitacaoData.status === "standby") {
+                toast({
+                  title: "Em fila de espera",
+                  description: solicitacaoData.comentarioStandby || "Você está em fila de espera. A diretoria entrará em contato em breve.",
+                  variant: "default",
+                });
+                setLoading(false);
+                return;
               } else if (solicitacaoData.status === "devolvido") {
                 // Cadastro devolvido - permitir edição
                 setEditingSolicitacaoId(solicitacaoDoc.id);
@@ -1680,6 +1688,18 @@ export default function Login() {
                   </div>
                 )}
 
+                {statusResult.status === "standby" && (
+                  <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                    <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Status: Fila de Espera (Stand By)</p>
+                    <p className="text-sm mt-2">
+                      {statusResult.comentarioStandby || "Você está em fila de espera. A diretoria entrará em contato em breve."}
+                    </p>
+                    <p className="text-sm mt-3 p-2 bg-background rounded">
+                      Aguarde o contato da diretoria para mais informações.
+                    </p>
+                  </div>
+                )}
+
                 {statusResult.status === "reprovado" && (
                   <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
                     <p className="text-sm font-medium text-destructive">Status: Reprovado</p>
@@ -1749,52 +1769,17 @@ export default function Login() {
               </p>
             </div>
             <p className="text-sm text-muted-foreground">
-              Você pode editar seu cadastro e enviar novamente para análise.
+              Sua solicitação foi reprovada e não pode mais ser editada. Entre em contato com a diretoria para mais informações.
             </p>
             <Button
               onClick={() => {
-                if (userToReject) {
-                  // Armazenar ID da solicitação para editar ao invés de criar nova
-                  setEditingSolicitacaoId(userToReject.docId || null);
-                  
-                  // Carregar dados da solicitação reprovada no formulário
-                  setFormData({
-                    loginId: "",
-                    password: "",
-                    nome: userToReject.nome || "",
-                    turma: userToReject.turma || "",
-                    dataNascimento: userToReject.dataNascimento || "",
-                    cpf: userToReject.cpf || "",
-                    escolaridade: userToReject.escolaridade || "",
-                    telefone: userToReject.telefone || "",
-                    cep: userToReject.cep || "",
-                    rua: userToReject.rua || "",
-                    bairro: userToReject.bairro || "",
-                    cidade: userToReject.cidade || "",
-                    estado: userToReject.estado || "",
-                    email: userToReject.email || "",
-                  });
-                  
-                  if (userToReject.disponibilidade) {
-                    setDisponibilidade(userToReject.disponibilidade);
-                  }
-                  
-                  if (userToReject.photoURL) {
-                    setPhotoBase64(userToReject.photoURL);
-                  }
-                  
-                  if (userToReject.photoPublic !== undefined) {
-                    setPhotoPublic(userToReject.photoPublic);
-                  }
-                }
-                
                 setShowRejectionDialog(false);
-                setMode("register");
+                setUserToReject(null);
               }}
               className="w-full"
-              data-testid="button-recadastrar"
+              data-testid="button-close-rejection"
             >
-              Editar Cadastro e Reenviar
+              Fechar
             </Button>
           </div>
         </DialogContent>

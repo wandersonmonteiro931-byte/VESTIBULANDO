@@ -20,7 +20,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { PresenceIndicator } from "@/components/PresenceIndicator";
 import { MonitoringTab } from "@/components/MonitoringTab";
 import { DocumentationTab } from "@/components/DocumentationTab";
-import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, MessageCircle, ArrowRightLeft } from "lucide-react";
+import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, MessageCircle, ArrowRightLeft, Clock } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
@@ -110,6 +110,11 @@ export default function AdminDashboard() {
   const [bulkTransferTurma, setBulkTransferTurma] = useState("");
   const [viewDetailsDialogOpen, setViewDetailsDialogOpen] = useState(false);
   const [selectedSolicitacao, setSelectedSolicitacao] = useState<any>(null);
+  const [editSolicitacaoDialogOpen, setEditSolicitacaoDialogOpen] = useState(false);
+  const [solicitacaoToEdit, setSolicitacaoToEdit] = useState<any>(null);
+  const [standbyDialogOpen, setStandbyDialogOpen] = useState(false);
+  const [userToStandby, setUserToStandby] = useState<any>(null);
+  const [standbyComment, setStandbyComment] = useState("");
 
   const turmaForm = useForm<z.infer<typeof turmaFormSchema>>({
     resolver: zodResolver(turmaFormSchema),
@@ -385,6 +390,63 @@ export default function AdminDashboard() {
     onError: (error: any) => {
       toast({
         title: "Erro ao devolver cadastro",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const standbyUserMutation = useMutation({
+    mutationFn: async ({ solicitacaoId, comentario }: { solicitacaoId: string; comentario?: string }) => {
+      const solicitacaoDoc = await getDoc(doc(db, "solicitacoes", solicitacaoId));
+      const solicitacao = solicitacaoDoc.data();
+      
+      if (!solicitacao) {
+        throw new Error("Solicitação não encontrada");
+      }
+      
+      // Atualizar solicitação para status "standby" (fila de espera)
+      await updateDoc(doc(db, "solicitacoes", solicitacaoId), {
+        status: "standby",
+        comentarioStandby: comentario || "Você foi colocado em fila de espera. Aguarde contato da diretoria.",
+        dataStandby: new Date().toISOString(),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/solicitacoes"] });
+      setStandbyDialogOpen(false);
+      setUserToStandby(null);
+      setStandbyComment("");
+      toast({
+        title: "Aluno em Stand By",
+        description: "O aluno foi colocado em fila de espera e será notificado.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao colocar em stand by",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateSolicitacaoMutation = useMutation({
+    mutationFn: async ({ solicitacaoId, data }: { solicitacaoId: string; data: any }) => {
+      await updateDoc(doc(db, "solicitacoes", solicitacaoId), data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/solicitacoes"] });
+      setEditSolicitacaoDialogOpen(false);
+      setSolicitacaoToEdit(null);
+      toast({
+        title: "Solicitação atualizada",
+        description: "As informações da solicitação foram atualizadas com sucesso.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao atualizar solicitação",
         description: error.message,
         variant: "destructive",
       });
@@ -1184,6 +1246,17 @@ export default function AdminDashboard() {
                                   Ver Detalhes
                                 </Button>
                                 <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSolicitacaoToEdit(user);
+                                    setEditSolicitacaoDialogOpen(true);
+                                  }}
+                                  data-testid="button-edit"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
                                   variant="default"
                                   size="sm"
                                   onClick={() => {
@@ -1208,6 +1281,19 @@ export default function AdminDashboard() {
                                 >
                                   <RefreshCw className="h-4 w-4 mr-1" />
                                   Devolver
+                                </Button>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => {
+                                    setUserToStandby(user);
+                                    setStandbyDialogOpen(true);
+                                  }}
+                                  disabled={approveUserMutation.isPending || rejectUserMutation.isPending || returnUserMutation.isPending}
+                                  data-testid="button-standby"
+                                >
+                                  <Clock className="h-4 w-4 mr-1" />
+                                  Stand By
                                 </Button>
                                 <Button
                                   variant="destructive"
@@ -3057,6 +3143,204 @@ export default function AdminDashboard() {
               data-testid="button-save-vagas"
             >
               {updateVagasTurmaMutation.isPending ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={standbyDialogOpen} onOpenChange={setStandbyDialogOpen}>
+        <DialogContent data-testid="dialog-standby-user">
+          <DialogHeader>
+            <DialogTitle>Colocar em Fila de Espera</DialogTitle>
+            <DialogDescription>
+              Você está colocando <strong>{userToStandby?.nome}</strong> em fila de espera (Stand By).
+              Adicione um comentário explicando a situação (opcional).
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {userToStandby && (
+              <div className="p-4 bg-muted rounded-lg space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Matrícula:</span>
+                  <code className="font-mono">{userToStandby.matricula}</code>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Email:</span>
+                  <span>{userToStandby.email}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Turma:</span>
+                  <span>{userToStandby.turma || "-"}</span>
+                </div>
+              </div>
+            )}
+            
+            <div className="space-y-2">
+              <Label htmlFor="standby-comment">Comentário (opcional)</Label>
+              <Textarea
+                id="standby-comment"
+                placeholder="Ex: Aguardando abertura de vagas na turma..."
+                value={standbyComment}
+                onChange={(e) => setStandbyComment(e.target.value)}
+                rows={4}
+                data-testid="textarea-standby-comment"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setStandbyDialogOpen(false);
+                setUserToStandby(null);
+                setStandbyComment("");
+              }}
+              data-testid="button-cancel-standby"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                if (userToStandby) {
+                  standbyUserMutation.mutate({ 
+                    solicitacaoId: userToStandby.docId, 
+                    comentario: standbyComment 
+                  });
+                }
+              }}
+              disabled={standbyUserMutation.isPending}
+              data-testid="button-confirm-standby"
+            >
+              {standbyUserMutation.isPending ? "Processando..." : "Colocar em Stand By"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editSolicitacaoDialogOpen} onOpenChange={setEditSolicitacaoDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="dialog-edit-solicitacao">
+          <DialogHeader>
+            <DialogTitle>Editar Solicitação</DialogTitle>
+            <DialogDescription>
+              Edite as informações da solicitação de <strong>{solicitacaoToEdit?.nome}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          
+          {solicitacaoToEdit && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-nome">Nome Completo</Label>
+                  <Input
+                    id="edit-nome"
+                    value={solicitacaoToEdit.nome || ""}
+                    onChange={(e) => setSolicitacaoToEdit({ ...solicitacaoToEdit, nome: e.target.value })}
+                    data-testid="input-edit-nome"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-email">Email</Label>
+                  <Input
+                    id="edit-email"
+                    type="email"
+                    value={solicitacaoToEdit.email || ""}
+                    onChange={(e) => setSolicitacaoToEdit({ ...solicitacaoToEdit, email: e.target.value })}
+                    data-testid="input-edit-email"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-cpf">CPF</Label>
+                  <Input
+                    id="edit-cpf"
+                    value={solicitacaoToEdit.cpf || ""}
+                    onChange={(e) => setSolicitacaoToEdit({ ...solicitacaoToEdit, cpf: e.target.value })}
+                    data-testid="input-edit-cpf"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-data-nascimento">Data de Nascimento</Label>
+                  <Input
+                    id="edit-data-nascimento"
+                    type="date"
+                    value={solicitacaoToEdit.dataNascimento || ""}
+                    onChange={(e) => setSolicitacaoToEdit({ ...solicitacaoToEdit, dataNascimento: e.target.value })}
+                    data-testid="input-edit-data-nascimento"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-telefone">Telefone</Label>
+                  <Input
+                    id="edit-telefone"
+                    value={solicitacaoToEdit.telefone || ""}
+                    onChange={(e) => setSolicitacaoToEdit({ ...solicitacaoToEdit, telefone: e.target.value })}
+                    data-testid="input-edit-telefone"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-turma">Turma</Label>
+                  <Select
+                    value={solicitacaoToEdit.turma || ""}
+                    onValueChange={(value) => setSolicitacaoToEdit({ ...solicitacaoToEdit, turma: value })}
+                  >
+                    <SelectTrigger id="edit-turma" data-testid="select-edit-turma">
+                      <SelectValue placeholder="Selecione a turma" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {turmas?.map((turma) => (
+                        <SelectItem key={turma.id} value={turma.nome}>
+                          {turma.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setEditSolicitacaoDialogOpen(false);
+                setSolicitacaoToEdit(null);
+              }}
+              data-testid="button-cancel-edit"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (solicitacaoToEdit) {
+                  updateSolicitacaoMutation.mutate({ 
+                    solicitacaoId: solicitacaoToEdit.docId, 
+                    data: {
+                      nome: solicitacaoToEdit.nome,
+                      email: solicitacaoToEdit.email,
+                      cpf: solicitacaoToEdit.cpf,
+                      dataNascimento: solicitacaoToEdit.dataNascimento,
+                      telefone: solicitacaoToEdit.telefone,
+                      turma: solicitacaoToEdit.turma,
+                    }
+                  });
+                }
+              }}
+              disabled={updateSolicitacaoMutation.isPending}
+              data-testid="button-confirm-edit"
+            >
+              {updateSolicitacaoMutation.isPending ? "Salvando..." : "Salvar Alterações"}
             </Button>
           </DialogFooter>
         </DialogContent>
