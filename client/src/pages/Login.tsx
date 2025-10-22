@@ -364,8 +364,9 @@ export default function Login() {
         
         const { collection, addDoc, updateDoc, getDocs, query, where, deleteDoc } = await import("firebase/firestore");
         
+        let matricula: string;
+        
         try {
-          let matricula: string;
           
           // Se estiver editando uma solicitação reprovada, atualizar ao invés de criar nova
           if (editingSolicitacaoId) {
@@ -392,6 +393,7 @@ export default function Login() {
                 bairro: formData.bairro,
                 cidade: formData.cidade,
                 estado: formData.estado,
+                disponibilidade: disponibilidade,
                 fotoBase64: photoBase64,
                 fotoPublica: photoPublic,
                 comentarioReprovacao: null, // Limpar comentário de reprovação
@@ -1632,7 +1634,7 @@ export default function Login() {
                     email: userToReject.email || "",
                   });
                   
-                  if (userToReject.tipo === "professor" && userToReject.disponibilidade) {
+                  if (userToReject.disponibilidade) {
                     setDisponibilidade(userToReject.disponibilidade);
                   }
                   
