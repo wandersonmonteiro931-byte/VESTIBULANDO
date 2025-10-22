@@ -39,6 +39,7 @@ try {
   }
 
   console.log("✅ Inicializando Firebase...");
+  console.log("📌 Project ID:", firebaseConfig.projectId);
   app = initializeApp(firebaseConfig);
   auth = getAuth(app);
   db = getFirestore(app);

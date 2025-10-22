@@ -216,34 +216,20 @@ export default function Login() {
       try {
         const { collection, getDocs, query, where } = await import("firebase/firestore");
         
+        console.log("🔍 Tentando carregar turmas...");
+        
         // Buscar todas as turmas ativas
         const turmasQuery = query(collection(db, "turmas"), where("ativa", "==", true));
+        console.log("📋 Query criada, executando getDocs...");
         const turmasSnapshot = await getDocs(turmasQuery);
+        console.log("✅ getDocs concluído, número de documentos:", turmasSnapshot.docs.length);
         
-        // Buscar todos os alunos aprovados para contar por turma
-        const usuariosQuery = query(
-          collection(db, "usuarios"), 
-          where("tipo", "==", "aluno"),
-          where("status", "==", "aprovado")
-        );
-        const usuariosSnapshot = await getDocs(usuariosQuery);
-        
-        // Contar alunos por turma
-        const alunosPorTurma: { [key: string]: number } = {};
-        usuariosSnapshot.docs.forEach(doc => {
-          const userData = doc.data();
-          const turmaId = userData.turma;
-          if (turmaId) {
-            alunosPorTurma[turmaId] = (alunosPorTurma[turmaId] || 0) + 1;
-          }
-        });
-        
-        // Processar turmas com status
+        // Processar turmas com status (usando vagasPreenchidas das próprias turmas)
         const turmasComStatus = turmasSnapshot.docs.map(doc => {
           const turmaData = doc.data() as any;
-          const alunosMatriculados = alunosPorTurma[doc.id] || 0;
           const vagasTotais = turmaData.vagasTotais || 0;
-          const vagasRestantes = Math.max(0, vagasTotais - alunosMatriculados);
+          const vagasPreenchidas = turmaData.vagasPreenchidas || 0;
+          const vagasRestantes = Math.max(0, vagasTotais - vagasPreenchidas);
           
           // Determinar status da turma
           let status = "aberta";
@@ -275,7 +261,7 @@ export default function Login() {
           return {
             id: doc.id,
             ...turmaData,
-            alunosMatriculados,
+            alunosMatriculados: vagasPreenchidas,
             vagasRestantes,
             status,
             podeMatricular
@@ -290,8 +276,16 @@ export default function Login() {
         });
         
         setTurmasDisponiveis(turmasOrdenadas);
-      } catch (error) {
-        console.error("Erro ao carregar turmas:", error);
+      } catch (error: any) {
+        console.error("❌ Erro ao carregar turmas:", error);
+        console.error("❌ Código do erro:", error?.code);
+        console.error("❌ Mensagem:", error?.message);
+        
+        // Se for erro de permissão, tentar uma query mais simples para diagnosticar
+        if (error?.code === "permission-denied") {
+          console.log("⚠️ ERRO DE PERMISSÃO! As regras do Firestore ainda não foram atualizadas.");
+          console.log("⚠️ Verifique se você publicou as regras no projeto correto do Firebase.");
+        }
       }
     };
     

@@ -221,6 +221,18 @@ export default function AdminDashboard() {
           estado: solicitacao.estado,
           disponibilidade: solicitacao.disponibilidade || [],
         });
+        
+        // Incrementar contador de vagas preenchidas da turma
+        if (solicitacao.tipo === "aluno" && solicitacao.turma) {
+          const turmaRef = doc(db, "turmas", solicitacao.turma);
+          const turmaDoc = await getDoc(turmaRef);
+          if (turmaDoc.exists()) {
+            const turmaData = turmaDoc.data();
+            await updateDoc(turmaRef, {
+              vagasPreenchidas: (turmaData.vagasPreenchidas || 0) + 1
+            });
+          }
+        }
       } catch (error: any) {
         if (error.code === "auth/email-already-in-use") {
           userAlreadyExists = true;
@@ -252,6 +264,18 @@ export default function AdminDashboard() {
               estado: solicitacao.estado,
               disponibilidade: solicitacao.disponibilidade || [],
             });
+            
+            // Incrementar contador de vagas preenchidas da turma
+            if (solicitacao.tipo === "aluno" && solicitacao.turma) {
+              const turmaRef = doc(db, "turmas", solicitacao.turma);
+              const turmaDoc = await getDoc(turmaRef);
+              if (turmaDoc.exists()) {
+                const turmaData = turmaDoc.data();
+                await updateDoc(turmaRef, {
+                  vagasPreenchidas: (turmaData.vagasPreenchidas || 0) + 1
+                });
+              }
+            }
           } else {
             throw new Error("Conta existe no Authentication mas não no Firestore. Por favor, remova a solicitação duplicada.");
           }
