@@ -720,22 +720,23 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-4">
-      <div className="absolute top-4 right-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-accent/10 p-4 relative overflow-hidden">
+      <div className="absolute inset-0 bg-grid-pattern opacity-[0.02]"></div>
+      <div className="absolute top-4 right-4 z-10">
         <ThemeToggle />
       </div>
       
-      <Card className="w-full max-w-2xl shadow-lg">
-        <CardHeader className="space-y-4 text-center">
+      <Card className="w-full max-w-2xl shadow-xl border-primary/10 relative z-10 backdrop-blur-sm bg-card/95">
+        <CardHeader className="space-y-6 text-center pb-8">
           <div className="flex justify-center">
-            <div className="p-3 bg-primary/10 rounded-full">
-              <GraduationCap className="h-12 w-12 text-primary" />
+            <div className="p-4 bg-gradient-to-br from-primary to-primary/80 rounded-2xl shadow-lg shadow-primary/20">
+              <GraduationCap className="h-14 w-14 text-primary-foreground" />
             </div>
           </div>
-          <div>
-            <CardTitle className="text-3xl font-bold">ENEM+</CardTitle>
-            <CardDescription className="mt-2">
-              {mode === "register" ? "FORMULÁRIO DE SOLICITAÇÃO DE MATRÍCULA" : mode === "forgotPassword" ? "Recuperar Senha" : mode === "adminLogin" ? "LOGIN DE ADMINISTRADOR" : "SEJA BEM VINDO! FAÇA LOGIN COM SUA MATRÍCULA OU CPF"}
+          <div className="space-y-2">
+            <CardTitle className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">ENEM+</CardTitle>
+            <CardDescription className="text-base">
+              {mode === "register" ? "Formulário de Solicitação de Matrícula" : mode === "forgotPassword" ? "Recuperar Senha" : mode === "adminLogin" ? "Login de Administrador" : "Seja Bem-Vindo! Faça Login com sua Matrícula ou CPF"}
             </CardDescription>
           </div>
         </CardHeader>
