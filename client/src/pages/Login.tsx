@@ -387,6 +387,8 @@ export default function Login() {
                 fotoPublica: photoPublic,
                 comentarioReprovacao: null, // Limpar comentário de reprovação
                 dataReprovacao: null,
+                comentarioDevolucao: null, // Limpar comentário de devolução
+                dataDevolucao: null,
               });
               
               // Limpar estado de edição
@@ -569,6 +571,47 @@ export default function Login() {
                 setRejectionComment(solicitacaoData.comentarioReprovacao || "Sua solicitação foi reprovada pelo administrador.");
                 setUserToReject({ ...solicitacaoData, docId: solicitacaoDoc.id });
                 setShowRejectionDialog(true);
+                setLoading(false);
+                return;
+              } else if (solicitacaoData.status === "devolvido") {
+                // Cadastro devolvido - permitir edição
+                setEditingSolicitacaoId(solicitacaoDoc.id);
+                setFormData({
+                  loginId: "",
+                  password: "",
+                  nome: solicitacaoData.nome || "",
+                  turma: solicitacaoData.turma || "",
+                  dataNascimento: solicitacaoData.dataNascimento || "",
+                  cpf: solicitacaoData.cpf || "",
+                  escolaridade: solicitacaoData.escolaridade || "",
+                  telefone: solicitacaoData.telefone || "",
+                  cep: solicitacaoData.cep || "",
+                  rua: solicitacaoData.rua || "",
+                  bairro: solicitacaoData.bairro || "",
+                  cidade: solicitacaoData.cidade || "",
+                  estado: solicitacaoData.estado || "",
+                  email: solicitacaoData.email || "",
+                });
+                
+                if (solicitacaoData.disponibilidade) {
+                  setDisponibilidade(solicitacaoData.disponibilidade);
+                }
+                
+                if (solicitacaoData.fotoBase64) {
+                  setPhotoBase64(solicitacaoData.fotoBase64);
+                }
+                
+                if (solicitacaoData.fotoPublica !== undefined) {
+                  setPhotoPublic(solicitacaoData.fotoPublica);
+                }
+                
+                toast({
+                  title: "Cadastro devolvido",
+                  description: solicitacaoData.comentarioDevolucao || "Seu cadastro precisa de correções. Por favor, revise as informações abaixo.",
+                  variant: "default",
+                });
+                
+                setMode("register");
                 setLoading(false);
                 return;
               } else if (solicitacaoData.status === "pendente") {
@@ -1552,6 +1595,19 @@ export default function Login() {
                   </div>
                 )}
 
+                {statusResult.status === "devolvido" && (
+                  <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                    <p className="text-sm font-medium text-yellow-600 dark:text-yellow-400">Status: Cadastro Devolvido</p>
+                    <p className="text-sm mt-2">
+                      <strong>Motivo:</strong><br />
+                      {statusResult.comentarioDevolucao || "Não informado"}
+                    </p>
+                    <p className="text-sm mt-3 p-2 bg-background rounded">
+                      Seu cadastro foi devolvido para correções. Clique no botão abaixo para editar e reenviar.
+                    </p>
+                  </div>
+                )}
+
                 {statusResult.status === "reprovado" && (
                   <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
                     <p className="text-sm font-medium text-destructive">Status: Reprovado</p>
@@ -1564,15 +1620,73 @@ export default function Login() {
               </div>
             )}
 
-            <Button
-              onClick={handleVerificarStatus}
-              className="w-full"
-              disabled={statusChecking || !statusMatricula}
-              data-testid="button-confirmar-status"
-            >
-              {statusChecking && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Verificar Status
-            </Button>
+            {statusResult && statusResult.status === "devolvido" ? (
+              <Button
+                onClick={async () => {
+                  // Buscar solicitação completa para editar
+                  const { collection, query, where, getDocs } = await import("firebase/firestore");
+                  const solicitacaoSnapshot = await getDocs(
+                    query(collection(db, "solicitacoes"), where("matricula", "==", statusMatricula))
+                  );
+                  
+                  if (!solicitacaoSnapshot.empty) {
+                    const solicitacaoDoc = solicitacaoSnapshot.docs[0];
+                    const solicitacaoData = solicitacaoDoc.data();
+                    
+                    // Armazenar ID da solicitação para editar
+                    setEditingSolicitacaoId(solicitacaoDoc.id);
+                    
+                    // Carregar dados no formulário
+                    setFormData({
+                      loginId: "",
+                      password: "",
+                      nome: solicitacaoData.nome || "",
+                      turma: solicitacaoData.turma || "",
+                      dataNascimento: solicitacaoData.dataNascimento || "",
+                      cpf: solicitacaoData.cpf || "",
+                      escolaridade: solicitacaoData.escolaridade || "",
+                      telefone: solicitacaoData.telefone || "",
+                      cep: solicitacaoData.cep || "",
+                      rua: solicitacaoData.rua || "",
+                      bairro: solicitacaoData.bairro || "",
+                      cidade: solicitacaoData.cidade || "",
+                      estado: solicitacaoData.estado || "",
+                      email: solicitacaoData.email || "",
+                    });
+                    
+                    if (solicitacaoData.disponibilidade) {
+                      setDisponibilidade(solicitacaoData.disponibilidade);
+                    }
+                    
+                    if (solicitacaoData.fotoBase64) {
+                      setPhotoBase64(solicitacaoData.fotoBase64);
+                    }
+                    
+                    if (solicitacaoData.fotoPublica !== undefined) {
+                      setPhotoPublic(solicitacaoData.fotoPublica);
+                    }
+                    
+                    // Fechar dialog e ir para modo de registro
+                    setShowStatusDialog(false);
+                    setMode("register");
+                  }
+                }}
+                className="w-full"
+                data-testid="button-edit-returned"
+              >
+                Editar Cadastro e Reenviar
+              </Button>
+            ) : (
+              <Button
+                onClick={handleVerificarStatus}
+                className="w-full"
+                disabled={statusChecking || !statusMatricula}
+                data-testid="button-confirmar-status"
+              >
+                {statusChecking && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Verificar Status
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>

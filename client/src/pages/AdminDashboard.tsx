@@ -82,6 +82,9 @@ export default function AdminDashboard() {
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [userToReject, setUserToReject] = useState<any | null>(null);
   const [rejectComment, setRejectComment] = useState("");
+  const [returnDialogOpen, setReturnDialogOpen] = useState(false);
+  const [userToReturn, setUserToReturn] = useState<any | null>(null);
+  const [returnComment, setReturnComment] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<any | null>(null);
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
@@ -345,6 +348,41 @@ export default function AdminDashboard() {
     onError: (error: any) => {
       toast({
         title: "Erro ao rejeitar solicitação",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const returnUserMutation = useMutation({
+    mutationFn: async ({ solicitacaoId, comentario }: { solicitacaoId: string; comentario?: string }) => {
+      const solicitacaoDoc = await getDoc(doc(db, "solicitacoes", solicitacaoId));
+      const solicitacao = solicitacaoDoc.data();
+      
+      if (!solicitacao) {
+        throw new Error("Solicitação não encontrada");
+      }
+      
+      // Atualizar solicitação para status "devolvido" (permitir edição)
+      await updateDoc(doc(db, "solicitacoes", solicitacaoId), {
+        status: "devolvido",
+        comentarioDevolucao: comentario || "Seu cadastro precisa de correções. Por favor, revise as informações e envie novamente.",
+        dataDevolucao: new Date().toISOString(),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/solicitacoes"] });
+      setReturnDialogOpen(false);
+      setUserToReturn(null);
+      setReturnComment("");
+      toast({
+        title: "Cadastro devolvido",
+        description: "O aluno foi notificado e poderá fazer as correções necessárias.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao devolver cadastro",
         description: error.message,
         variant: "destructive",
       });
@@ -1138,11 +1176,24 @@ export default function AdminDashboard() {
                                     setSolicitacaoToApprove(user);
                                     setApproveDialogOpen(true);
                                   }}
-                                  disabled={approveUserMutation.isPending || rejectUserMutation.isPending}
+                                  disabled={approveUserMutation.isPending || rejectUserMutation.isPending || returnUserMutation.isPending}
                                   data-testid="button-approve"
                                 >
                                   <CheckCircle className="h-4 w-4 mr-1" />
                                   Aprovar
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setUserToReturn(user);
+                                    setReturnDialogOpen(true);
+                                  }}
+                                  disabled={approveUserMutation.isPending || rejectUserMutation.isPending || returnUserMutation.isPending}
+                                  data-testid="button-return"
+                                >
+                                  <RefreshCw className="h-4 w-4 mr-1" />
+                                  Devolver
                                 </Button>
                                 <Button
                                   variant="destructive"
@@ -1151,7 +1202,7 @@ export default function AdminDashboard() {
                                     setUserToReject(user);
                                     setRejectDialogOpen(true);
                                   }}
-                                  disabled={approveUserMutation.isPending || rejectUserMutation.isPending}
+                                  disabled={approveUserMutation.isPending || rejectUserMutation.isPending || returnUserMutation.isPending}
                                   data-testid="button-reject"
                                 >
                                   <XCircle className="h-4 w-4 mr-1" />
@@ -1536,6 +1587,79 @@ export default function AdminDashboard() {
               data-testid="button-confirm-reject"
             >
               {rejectUserMutation.isPending ? "Reprovando..." : "Reprovar Cadastro"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={returnDialogOpen} onOpenChange={setReturnDialogOpen}>
+        <DialogContent data-testid="dialog-return-user">
+          <DialogHeader>
+            <DialogTitle>Devolver Cadastro</DialogTitle>
+            <DialogDescription>
+              Você está devolvendo o cadastro de <strong>{userToReturn?.nome}</strong> para correções.
+              Adicione um comentário explicando o que precisa ser alterado.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {userToReturn && (
+              <div className="p-4 bg-muted rounded-lg space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Matrícula:</span>
+                  <code className="font-mono">{userToReturn.matricula}</code>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Email:</span>
+                  <span>{userToReturn.email}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Turma:</span>
+                  <span>{userToReturn.turma || "-"}</span>
+                </div>
+              </div>
+            )}
+            
+            <div className="space-y-2">
+              <Label htmlFor="return-comment">O que deve ser corrigido? *</Label>
+              <Textarea
+                id="return-comment"
+                placeholder="Ex: Por favor, verifique o CPF informado e corrija a data de nascimento..."
+                value={returnComment}
+                onChange={(e) => setReturnComment(e.target.value)}
+                rows={4}
+                data-testid="textarea-return-comment"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setReturnDialogOpen(false);
+                setUserToReturn(null);
+                setReturnComment("");
+              }}
+              data-testid="button-cancel-return"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (userToReturn) {
+                  returnUserMutation.mutate({ 
+                    solicitacaoId: userToReturn.docId, 
+                    comentario: returnComment 
+                  });
+                }
+              }}
+              disabled={returnUserMutation.isPending || !returnComment.trim()}
+              data-testid="button-confirm-return"
+            >
+              {returnUserMutation.isPending ? "Devolvendo..." : "Devolver Cadastro"}
             </Button>
           </DialogFooter>
         </DialogContent>
