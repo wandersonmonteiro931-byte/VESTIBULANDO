@@ -810,18 +810,27 @@ export default function AdminDashboard() {
         throw new Error("Este aluno já possui 3 advertências ativas. Não é possível adicionar mais advertências.");
       }
       
-      await addDoc(collection(db, "disciplinaryActions"), {
+      const actionData: any = {
         alunoId: student.uid,
         alunoNome: student.nome,
-        alunoMatricula: student.matricula || "",
-        alunoTurma: student.turma || "",
+        alunoMatricula: student.matricula ?? "",
+        alunoTurma: student.turma ?? "",
         tipo: "advertencia",
-        comentario: comentario || "",
+        comentario: comentario ?? "",
         aplicadoPor: userData.uid,
         aplicadoPorNome: userData.nome,
         dataAplicacao: new Date().toISOString(),
         ativo: true,
+      };
+      
+      // Remove campos undefined do objeto antes de enviar ao Firebase
+      Object.keys(actionData).forEach(key => {
+        if (actionData[key] === undefined) {
+          delete actionData[key];
+        }
       });
+      
+      await addDoc(collection(db, "disciplinaryActions"), actionData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/disciplinaryActions"] });
@@ -851,19 +860,28 @@ export default function AdminDashboard() {
       dataTermino.setDate(dataTermino.getDate() + 2);
       
       // Criar registro da suspensão
-      await addDoc(collection(db, "disciplinaryActions"), {
+      const actionData: any = {
         alunoId: student.uid,
         alunoNome: student.nome,
-        alunoMatricula: student.matricula || "",
-        alunoTurma: student.turma || "",
+        alunoMatricula: student.matricula ?? "",
+        alunoTurma: student.turma ?? "",
         tipo: "suspensao",
-        comentario: comentario || "",
+        comentario: comentario ?? "",
         aplicadoPor: userData.uid,
         aplicadoPorNome: userData.nome,
         dataAplicacao: new Date().toISOString(),
         dataTerminoSuspensao: dataTermino.toISOString(),
         ativo: true,
+      };
+      
+      // Remove campos undefined do objeto antes de enviar ao Firebase
+      Object.keys(actionData).forEach(key => {
+        if (actionData[key] === undefined) {
+          delete actionData[key];
+        }
       });
+      
+      await addDoc(collection(db, "disciplinaryActions"), actionData);
       
       // Desativar a conta do aluno
       await updateDoc(doc(db, "usuarios", student.uid), {
