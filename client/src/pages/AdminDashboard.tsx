@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { collection, addDoc, updateDoc, doc, where, setDoc, deleteDoc, getDoc, getDocs, query, runTransaction } from "firebase/firestore";
 import { db, auth as firebaseAuth } from "@/lib/firebase";
@@ -115,6 +115,8 @@ export default function AdminDashboard() {
   const [standbyDialogOpen, setStandbyDialogOpen] = useState(false);
   const [userToStandby, setUserToStandby] = useState<any>(null);
   const [standbyComment, setStandbyComment] = useState("");
+  const [editTurmaDialogOpen, setEditTurmaDialogOpen] = useState(false);
+  const [turmaToEdit, setTurmaToEdit] = useState<Turma | null>(null);
 
   const turmaForm = useForm<z.infer<typeof turmaFormSchema>>({
     resolver: zodResolver(turmaFormSchema),
@@ -191,6 +193,39 @@ export default function AdminDashboard() {
   }));
   
   const loadingPendingUsers = loadingSolicitacoes;
+
+  // Verificar e fechar automaticamente turmas vencidas
+  useEffect(() => {
+    const verificarTurmasVencidas = async () => {
+      if (!turmas || turmas.length === 0) return;
+
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+
+      for (const turma of turmas) {
+        if (turma.periodoMatriculaFim && turma.ativa) {
+          const dataFim = new Date(turma.periodoMatriculaFim + 'T23:59:59');
+          
+          // Se a turma passou da data fim, fechar automaticamente
+          if (hoje > dataFim) {
+            try {
+              const turmaRef = doc(db, "turmas", turma.id);
+              await updateDoc(turmaRef, { ativa: false });
+              console.log(`Turma ${turma.nome} fechada automaticamente (período expirado)`);
+            } catch (error) {
+              console.error("Erro ao fechar turma automaticamente:", error);
+            }
+          }
+        }
+      }
+    };
+
+    // Verificar ao carregar e a cada 5 minutos
+    verificarTurmasVencidas();
+    const interval = setInterval(verificarTurmasVencidas, 5 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [turmas]);
 
   const approveUserMutation = useMutation({
     mutationFn: async ({ solicitacaoId, senha }: { solicitacaoId: string; senha: string }) => {
@@ -756,6 +791,30 @@ export default function AdminDashboard() {
     onError: (error: any) => {
       toast({
         title: "Erro ao atualizar status",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const editTurmaMutation = useMutation({
+    mutationFn: async ({ turmaId, data }: { turmaId: string; data: z.infer<typeof turmaFormSchema> }) => {
+      const turmaRef = doc(db, "turmas", turmaId);
+      await updateDoc(turmaRef, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/turmas"] });
+      toast({
+        title: "Turma atualizada!",
+        description: "As informações da turma foram atualizadas com sucesso.",
+      });
+      setEditTurmaDialogOpen(false);
+      setTurmaToEdit(null);
+      turmaForm.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao atualizar turma",
         description: error.message,
         variant: "destructive",
       });
@@ -1566,19 +1625,43 @@ export default function AdminDashboard() {
                         )}
 
                         <div className="flex flex-col gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedTurmaForStudents(turma);
-                              setViewTurmaStudentsDialogOpen(true);
-                              setSelectedStudentsForBulkAction([]);
-                            }}
-                            data-testid={`button-view-students-${turma.id}`}
-                          >
-                            <Users className="h-4 w-4 mr-1" />
-                            Ver Alunos
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex-1"
+                              onClick={() => {
+                                setSelectedTurmaForStudents(turma);
+                                setViewTurmaStudentsDialogOpen(true);
+                                setSelectedStudentsForBulkAction([]);
+                              }}
+                              data-testid={`button-view-students-${turma.id}`}
+                            >
+                              <Users className="h-4 w-4 mr-1" />
+                              Ver Alunos
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex-1"
+                              onClick={() => {
+                                setTurmaToEdit(turma);
+                                turmaForm.reset({
+                                  nome: turma.nome,
+                                  ano: turma.ano,
+                                  vagasTotais: turma.vagasTotais || 30,
+                                  periodoMatriculaInicio: turma.periodoMatriculaInicio || "",
+                                  periodoMatriculaFim: turma.periodoMatriculaFim || "",
+                                  linkWhatsApp: turma.linkWhatsApp || "",
+                                });
+                                setEditTurmaDialogOpen(true);
+                              }}
+                              data-testid={`button-edit-turma-${turma.id}`}
+                            >
+                              <Edit className="h-4 w-4 mr-1" />
+                              Editar
+                            </Button>
+                          </div>
                           <div className="flex gap-2">
                             <Button
                               variant="outline"
@@ -2166,6 +2249,137 @@ export default function AdminDashboard() {
                 </Button>
                 <Button type="submit" disabled={createTurmaMutation.isPending} data-testid="button-save">
                   Criar Turma
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editTurmaDialogOpen} onOpenChange={setEditTurmaDialogOpen}>
+        <DialogContent data-testid="dialog-edit-turma">
+          <DialogHeader>
+            <DialogTitle>Editar Turma</DialogTitle>
+            <DialogDescription>
+              Altere as informações da turma. O diretor pode editar datas e reabrir turmas a qualquer momento.
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...turmaForm}>
+            <form onSubmit={turmaForm.handleSubmit((data) => {
+              if (turmaToEdit) {
+                editTurmaMutation.mutate({ turmaId: turmaToEdit.id, data });
+              }
+            })} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={turmaForm.control}
+                  name="nome"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome da Turma *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: 3A, 2B" {...field} data-testid="input-edit-nome-turma" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={turmaForm.control}
+                  name="ano"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ano *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="2025" {...field} data-testid="input-edit-ano" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={turmaForm.control}
+                name="vagasTotais"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Número de Vagas *</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        placeholder="30" 
+                        {...field}
+                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                        data-testid="input-edit-vagas-totais" 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={turmaForm.control}
+                  name="periodoMatriculaInicio"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Início das Matrículas</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} data-testid="input-edit-matricula-inicio" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={turmaForm.control}
+                  name="periodoMatriculaFim"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Fim das Matrículas</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} data-testid="input-edit-matricula-fim" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={turmaForm.control}
+                name="linkWhatsApp"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Link do Grupo WhatsApp</FormLabel>
+                    <FormControl>
+                      <Input placeholder="https://chat.whatsapp.com/..." {...field} data-testid="input-edit-link-whatsapp" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setEditTurmaDialogOpen(false);
+                    setTurmaToEdit(null);
+                    turmaForm.reset();
+                  }}
+                  data-testid="button-cancel-edit"
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={editTurmaMutation.isPending} data-testid="button-save-edit">
+                  {editTurmaMutation.isPending ? "Salvando..." : "Salvar Alterações"}
                 </Button>
               </DialogFooter>
             </form>
