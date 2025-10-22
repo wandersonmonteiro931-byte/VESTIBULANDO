@@ -1569,8 +1569,22 @@ export default function AdminDashboard() {
                   const alunosTurma = users?.filter(u => u.turma === turma.nome).length || 0;
                   const vagasDisponiveis = (turma.vagasTotais || 0) - alunosTurma;
                   
+                  // Verificar se a turma está aberta fora do período
+                  const hoje = new Date();
+                  hoje.setHours(0, 0, 0, 0);
+                  let foraDoPeríodo = false;
+                  
+                  if (turma.ativa && turma.periodoMatriculaFim) {
+                    const dataFim = new Date(turma.periodoMatriculaFim + 'T23:59:59');
+                    foraDoPeríodo = hoje > dataFim;
+                  }
+                  
                   return (
-                    <Card key={turma.id} className="hover-elevate" data-testid={`card-turma-${turma.id}`}>
+                    <Card 
+                      key={turma.id} 
+                      className={`hover-elevate ${foraDoPeríodo ? 'border-2 border-orange-500 dark:border-orange-400 bg-orange-50 dark:bg-orange-950/20' : ''}`}
+                      data-testid={`card-turma-${turma.id}`}
+                    >
                       <CardHeader>
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
@@ -1597,7 +1611,12 @@ export default function AdminDashboard() {
                       </CardHeader>
                       <CardContent className="space-y-3">
                         <div className="flex items-center gap-2 flex-wrap">
-                          {turma.ativa ? (
+                          {foraDoPeríodo ? (
+                            <Badge variant="outline" className="bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400 border-orange-300 dark:border-orange-600">
+                              <Clock className="h-3 w-3 mr-1" />
+                              Aberta (Fora do Período)
+                            </Badge>
+                          ) : turma.ativa ? (
                             <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
                               <CheckCircle className="h-3 w-3 mr-1" />
                               Aberta
