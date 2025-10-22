@@ -230,12 +230,14 @@ export default function Login() {
         const turmasSnapshot = await getDocs(turmasQuery);
         console.log("✅ getDocs concluído, número de documentos:", turmasSnapshot.docs.length);
         
-        // Processar turmas com status (usando vagasPreenchidas das próprias turmas)
+        // Processar turmas com status (usando vagasPreenchidas do documento)
         const turmasComStatus = turmasSnapshot.docs.map(doc => {
           const turmaData = doc.data() as any;
           const vagasTotais = turmaData.vagasTotais || 0;
           const vagasPreenchidas = turmaData.vagasPreenchidas || 0;
           const vagasRestantes = Math.max(0, vagasTotais - vagasPreenchidas);
+          
+          console.log(`📌 Turma ${turmaData.nome}: ${vagasPreenchidas}/${vagasTotais} vagas preenchidas, ${vagasRestantes} restantes`);
           
           // Determinar status da turma
           let status = "aberta";
@@ -304,10 +306,10 @@ export default function Login() {
     if (mode === "register") {
       carregarTurmas();
       
-      // Atualizar turmas a cada 10 segundos para refletir mudanças em tempo real
+      // Atualizar turmas a cada 1 segundo para refletir mudanças em tempo real
       const intervalId = setInterval(() => {
         carregarTurmas();
-      }, 10000);
+      }, 1000);
       
       return () => clearInterval(intervalId);
     }
