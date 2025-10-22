@@ -152,6 +152,7 @@ export default function Login() {
   const [showConfirmationDialog, setShowConfirmationDialog] = useState(false);
   const [confirmationData, setConfirmationData] = useState({ cpf: "", dataNascimento: "" });
   const [pendingSolicitacao, setPendingSolicitacao] = useState<any>(null);
+  const [confirmationError, setConfirmationError] = useState("");
   
   const [formData, setFormData] = useState({
     loginId: "", // CPF ou Matrícula
@@ -949,11 +950,7 @@ export default function Login() {
     const dateMatch = confirmationData.dataNascimento === pendingSolicitacao.dataNascimento;
     
     if (!cpfMatch || !dateMatch) {
-      toast({
-        title: "Dados incorretos",
-        description: "CPF ou data de nascimento não conferem com o cadastro.",
-        variant: "destructive",
-      });
+      setConfirmationError("CPF ou data de nascimento não conferem com o cadastro.");
       return;
     }
     
@@ -1698,6 +1695,7 @@ export default function Login() {
                       id: solicitacaoDoc.id,
                       ...solicitacaoData
                     });
+                    setConfirmationError("");
                     setShowConfirmationDialog(true);
                   }
                 }}
@@ -1853,7 +1851,10 @@ export default function Login() {
                 type="text"
                 placeholder="000.000.000-00"
                 value={confirmationData.cpf}
-                onChange={(e) => setConfirmationData({ ...confirmationData, cpf: formatarCPF(e.target.value) })}
+                onChange={(e) => {
+                  setConfirmationData({ ...confirmationData, cpf: formatarCPF(e.target.value) });
+                  setConfirmationError("");
+                }}
                 maxLength={14}
                 data-testid="input-confirm-cpf"
               />
@@ -1865,10 +1866,20 @@ export default function Login() {
                 id="confirm-nascimento"
                 type="date"
                 value={confirmationData.dataNascimento}
-                onChange={(e) => setConfirmationData({ ...confirmationData, dataNascimento: e.target.value })}
+                onChange={(e) => {
+                  setConfirmationData({ ...confirmationData, dataNascimento: e.target.value });
+                  setConfirmationError("");
+                }}
                 data-testid="input-confirm-nascimento"
               />
             </div>
+            
+            {confirmationError && (
+              <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg" data-testid="error-confirmation">
+                <p className="text-sm font-medium text-destructive">Dados incorretos</p>
+                <p className="text-sm text-destructive/90 mt-1">{confirmationError}</p>
+              </div>
+            )}
             
             <div className="flex gap-2">
               <Button
@@ -1876,6 +1887,7 @@ export default function Login() {
                   setShowConfirmationDialog(false);
                   setConfirmationData({ cpf: "", dataNascimento: "" });
                   setPendingSolicitacao(null);
+                  setConfirmationError("");
                 }}
                 variant="outline"
                 className="flex-1"
