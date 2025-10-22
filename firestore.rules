@@ -34,12 +34,18 @@ service cloud.firestore {
     
     // Usuarios collection
     match /usuarios/{userId} {
-      // Anyone authenticated can read their own user doc, admins can read all
-      allow read: if isAuthenticated() && (
+      // Anyone authenticated can read their own user doc
+      // Admins can read all individual documents AND perform queries (list operation)
+      allow get: if isAuthenticated() && (
         request.auth.uid == userId || 
         (exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) && 
          get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'diretor')
       );
+      
+      // Allow list/query operation for admins only
+      allow list: if isAuthenticated() && 
+                     exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) && 
+                     get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'diretor';
       
       // Allow creating user doc in two scenarios:
       // 1. Self-registration: User creating their own 'aluno' account
