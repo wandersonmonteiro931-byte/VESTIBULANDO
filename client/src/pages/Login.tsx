@@ -923,14 +923,19 @@ export default function Login() {
                           <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="cursando-fundamental">Cursando Ensino Fundamental</SelectItem>
+                          <SelectItem value="sem-estudo">Sem estudo - Analfabeto</SelectItem>
+                          <SelectItem value="fundamental-cursando">Ensino Fundamental - Cursando</SelectItem>
                           <SelectItem value="fundamental-completo">Ensino Fundamental - Completo</SelectItem>
-                          <SelectItem value="cursando-medio">Cursando Ensino Médio</SelectItem>
+                          <SelectItem value="fundamental-incompleto">Ensino Fundamental - Incompleto</SelectItem>
+                          <SelectItem value="medio-cursando">Ensino Médio - Cursando</SelectItem>
                           <SelectItem value="medio-completo">Ensino Médio - Completo</SelectItem>
-                          <SelectItem value="cursando-superior">Cursando Ensino Superior</SelectItem>
+                          <SelectItem value="medio-incompleto">Ensino Médio - Incompleto</SelectItem>
+                          <SelectItem value="superior-cursando">Ensino Superior - Cursando</SelectItem>
                           <SelectItem value="superior-completo">Ensino Superior - Completo</SelectItem>
-                          <SelectItem value="cursando-pos">Cursando Pós-graduação</SelectItem>
-                          <SelectItem value="pos-completo">Pós-graduação - Completo</SelectItem>
+                          <SelectItem value="superior-incompleto">Ensino Superior - Incompleto</SelectItem>
+                          <SelectItem value="pos-cursando">Pós-Graduação - Cursando</SelectItem>
+                          <SelectItem value="pos-completo">Pós-Graduação - Completo</SelectItem>
+                          <SelectItem value="pos-incompleto">Pós-Graduação - Incompleto</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
