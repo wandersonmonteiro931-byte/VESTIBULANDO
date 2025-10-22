@@ -1028,17 +1028,10 @@ export default function AdminDashboard() {
   });
 
   const bulkTransferStudentsMutation = useMutation({
-    mutationFn: async ({ studentIds, novaTurma }: { studentIds: string[]; novaTurma: string }) => {
+    mutationFn: async ({ studentIds, novaTurmaId }: { studentIds: string[]; novaTurmaId: string }) => {
       await runTransaction(db, async (transaction) => {
-        // Buscar turma de destino
-        const turmaQuerySnapshot = await getDocs(query(collection(db, "turmas"), where("nome", "==", novaTurma)));
-        
-        if (turmaQuerySnapshot.empty) {
-          throw new Error("Turma de destino não encontrada");
-        }
-        
-        const turmaDestinoDocs = turmaQuerySnapshot.docs[0];
-        const turmaDestinoRef = doc(db, "turmas", turmaDestinoDocs.id);
+        // Buscar turma de destino usando ID
+        const turmaDestinoRef = doc(db, "turmas", novaTurmaId);
         const turmaDestinoDoc = await transaction.get(turmaDestinoRef);
         
         if (!turmaDestinoDoc.exists()) {
@@ -1051,10 +1044,10 @@ export default function AdminDashboard() {
         const vagasDisponiveis = vagasTotais - vagasPreenchidas;
         
         if (studentIds.length > vagasDisponiveis) {
-          throw new Error(`Não há vagas suficientes na turma ${novaTurma}. Disponíveis: ${vagasDisponiveis}, Selecionados: ${studentIds.length}`);
+          throw new Error(`Não há vagas suficientes. Disponíveis: ${vagasDisponiveis}, Selecionados: ${studentIds.length}`);
         }
         
-        // Buscar turmas de origem e decrementar vagasPreenchidas
+        // Buscar turmas de origem e decrementar vagasPreenchidas (usando IDs)
         const turmasOrigemMap = new Map<string, number>();
         
         for (const uid of studentIds) {
@@ -1063,28 +1056,25 @@ export default function AdminDashboard() {
           
           if (userDoc.exists()) {
             const userData = userDoc.data();
-            const turmaOrigem = userData.turma;
+            const turmaOrigemId = userData.turma;
             
-            if (turmaOrigem && turmaOrigem !== novaTurma) {
-              turmasOrigemMap.set(turmaOrigem, (turmasOrigemMap.get(turmaOrigem) || 0) + 1);
+            if (turmaOrigemId && turmaOrigemId !== novaTurmaId) {
+              turmasOrigemMap.set(turmaOrigemId, (turmasOrigemMap.get(turmaOrigemId) || 0) + 1);
             }
             
-            transaction.update(userRef, { turma: novaTurma });
+            transaction.update(userRef, { turma: novaTurmaId });
           }
         }
         
-        // Decrementar vagasPreenchidas das turmas de origem
-        for (const [turmaNome, count] of Array.from(turmasOrigemMap.entries())) {
-          const turmaOrigemQuery = await getDocs(query(collection(db, "turmas"), where("nome", "==", turmaNome)));
-          if (!turmaOrigemQuery.empty) {
-            const turmaOrigemRef = doc(db, "turmas", turmaOrigemQuery.docs[0].id);
-            const turmaOrigemDoc = await transaction.get(turmaOrigemRef);
-            if (turmaOrigemDoc.exists()) {
-              const vagasPreencidasOrigem = turmaOrigemDoc.data().vagasPreenchidas || 0;
-              transaction.update(turmaOrigemRef, {
-                vagasPreenchidas: Math.max(0, vagasPreencidasOrigem - count)
-              });
-            }
+        // Decrementar vagasPreenchidas das turmas de origem (usando IDs diretamente)
+        for (const [turmaOrigemId, count] of Array.from(turmasOrigemMap.entries())) {
+          const turmaOrigemRef = doc(db, "turmas", turmaOrigemId);
+          const turmaOrigemDoc = await transaction.get(turmaOrigemRef);
+          if (turmaOrigemDoc.exists()) {
+            const vagasPreencidasOrigem = turmaOrigemDoc.data().vagasPreenchidas || 0;
+            transaction.update(turmaOrigemRef, {
+              vagasPreenchidas: Math.max(0, vagasPreencidasOrigem - count)
+            });
           }
         }
         
@@ -1116,7 +1106,7 @@ export default function AdminDashboard() {
   const bulkRemoveStudentsMutation = useMutation({
     mutationFn: async ({ studentIds }: { studentIds: string[] }) => {
       await runTransaction(db, async (transaction) => {
-        // Contar quantos alunos serão removidos de cada turma
+        // Contar quantos alunos serão removidos de cada turma (usando IDs)
         const turmasMap = new Map<string, number>();
         
         for (const uid of studentIds) {
@@ -1125,28 +1115,25 @@ export default function AdminDashboard() {
           
           if (userDoc.exists()) {
             const userData = userDoc.data();
-            const turmaAtual = userData.turma;
+            const turmaAtualId = userData.turma;
             
-            if (turmaAtual) {
-              turmasMap.set(turmaAtual, (turmasMap.get(turmaAtual) || 0) + 1);
+            if (turmaAtualId) {
+              turmasMap.set(turmaAtualId, (turmasMap.get(turmaAtualId) || 0) + 1);
             }
             
             transaction.update(userRef, { turma: "" });
           }
         }
         
-        // Decrementar vagasPreenchidas de cada turma
-        for (const [turmaNome, count] of Array.from(turmasMap.entries())) {
-          const turmaQuery = await getDocs(query(collection(db, "turmas"), where("nome", "==", turmaNome)));
-          if (!turmaQuery.empty) {
-            const turmaRef = doc(db, "turmas", turmaQuery.docs[0].id);
-            const turmaDoc = await transaction.get(turmaRef);
-            if (turmaDoc.exists()) {
-              const vagasPreenchidas = turmaDoc.data().vagasPreenchidas || 0;
-              transaction.update(turmaRef, {
-                vagasPreenchidas: Math.max(0, vagasPreenchidas - count)
-              });
-            }
+        // Decrementar vagasPreenchidas de cada turma (usando IDs diretamente)
+        for (const [turmaId, count] of Array.from(turmasMap.entries())) {
+          const turmaRef = doc(db, "turmas", turmaId);
+          const turmaDoc = await transaction.get(turmaRef);
+          if (turmaDoc.exists()) {
+            const vagasPreenchidas = turmaDoc.data().vagasPreenchidas || 0;
+            transaction.update(turmaRef, {
+              vagasPreenchidas: Math.max(0, vagasPreenchidas - count)
+            });
           }
         }
       });
@@ -3097,9 +3084,9 @@ export default function AdminDashboard() {
                 <SelectContent>
                   {turmas && turmas.length > 0 ? (
                     turmas
-                      .filter(t => t.nome !== userToTransfer?.turma)
+                      .filter(t => t.id !== userToTransfer?.turma)
                       .map((turma) => (
-                        <SelectItem key={turma.id} value={turma.nome}>
+                        <SelectItem key={turma.id} value={turma.id}>
                           {turma.nome} - {turma.ano}
                         </SelectItem>
                       ))
@@ -3156,13 +3143,13 @@ export default function AdminDashboard() {
                 <div>
                   <p className="text-sm text-muted-foreground">Total de alunos</p>
                   <p className="text-2xl font-bold">
-                    {users?.filter(u => u.turma === selectedTurmaForStudents.nome && u.tipo === "aluno").length || 0} / {selectedTurmaForStudents.vagasTotais}
+                    {users?.filter(u => u.turma === selectedTurmaForStudents.id && u.tipo === "aluno").length || 0} / {selectedTurmaForStudents.vagasTotais}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Vagas disponíveis</p>
                   <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                    {(selectedTurmaForStudents.vagasTotais || 0) - (users?.filter(u => u.turma === selectedTurmaForStudents.nome && u.tipo === "aluno").length || 0)}
+                    {(selectedTurmaForStudents.vagasTotais || 0) - (users?.filter(u => u.turma === selectedTurmaForStudents.id && u.tipo === "aluno").length || 0)}
                   </p>
                 </div>
                 <Button
@@ -3212,7 +3199,7 @@ export default function AdminDashboard() {
                 </div>
               )}
 
-              {users && users.filter(u => u.turma === selectedTurmaForStudents.nome && u.tipo === "aluno").length > 0 ? (
+              {users && users.filter(u => u.turma === selectedTurmaForStudents.id && u.tipo === "aluno").length > 0 ? (
                 <div className="border rounded-lg overflow-hidden">
                   <Table>
                     <TableHeader>
@@ -3220,13 +3207,13 @@ export default function AdminDashboard() {
                         <TableHead className="w-12">
                           <Checkbox
                             checked={
-                              users.filter(u => u.turma === selectedTurmaForStudents.nome && u.tipo === "aluno").length > 0 &&
-                              users.filter(u => u.turma === selectedTurmaForStudents.nome && u.tipo === "aluno").every(s => selectedStudentsForBulkAction.includes(s.uid))
+                              users.filter(u => u.turma === selectedTurmaForStudents.id && u.tipo === "aluno").length > 0 &&
+                              users.filter(u => u.turma === selectedTurmaForStudents.id && u.tipo === "aluno").every(s => selectedStudentsForBulkAction.includes(s.uid))
                             }
                             onCheckedChange={(checked) => {
                               if (checked) {
                                 setSelectedStudentsForBulkAction(
-                                  users.filter(u => u.turma === selectedTurmaForStudents.nome && u.tipo === "aluno").map(s => s.uid)
+                                  users.filter(u => u.turma === selectedTurmaForStudents.id && u.tipo === "aluno").map(s => s.uid)
                                 );
                               } else {
                                 setSelectedStudentsForBulkAction([]);
@@ -3244,7 +3231,7 @@ export default function AdminDashboard() {
                     </TableHeader>
                     <TableBody>
                       {users
-                        .filter(u => u.turma === selectedTurmaForStudents.nome && u.tipo === "aluno")
+                        .filter(u => u.turma === selectedTurmaForStudents.id && u.tipo === "aluno")
                         .map((student) => (
                           <TableRow key={student.uid}>
                             <TableCell>
@@ -3491,7 +3478,7 @@ export default function AdminDashboard() {
                 data-testid="input-vagas-totais"
               />
               <p className="text-xs text-muted-foreground">
-                Alunos atualmente matriculados: {users?.filter(u => u.turma === selectedTurmaForVagas?.nome && u.tipo === "aluno").length || 0}
+                Alunos atualmente matriculados: {users?.filter(u => u.turma === selectedTurmaForVagas?.id && u.tipo === "aluno").length || 0}
               </p>
             </div>
           </div>
@@ -3743,10 +3730,10 @@ export default function AdminDashboard() {
                 <SelectContent>
                   {turmas && turmas.length > 0 ? (
                     turmas
-                      .filter(t => t.nome !== selectedTurmaForStudents?.nome)
+                      .filter(t => t.id !== selectedTurmaForStudents?.id)
                       .map((turma) => (
-                        <SelectItem key={turma.id} value={turma.nome}>
-                          {turma.nome} - {turma.ano} ({(turma.vagasTotais || 0) - (users?.filter(u => u.turma === turma.nome).length || 0)} vagas disponíveis)
+                        <SelectItem key={turma.id} value={turma.id}>
+                          {turma.nome} - {turma.ano} ({(turma.vagasTotais || 0) - (users?.filter(u => u.turma === turma.id).length || 0)} vagas disponíveis)
                         </SelectItem>
                       ))
                   ) : (
@@ -3774,7 +3761,7 @@ export default function AdminDashboard() {
                 if (selectedStudentsForBulkAction.length > 0 && bulkTransferTurma) {
                   bulkTransferStudentsMutation.mutate({
                     studentIds: selectedStudentsForBulkAction,
-                    novaTurma: bulkTransferTurma
+                    novaTurmaId: bulkTransferTurma
                   });
                 }
               }}
