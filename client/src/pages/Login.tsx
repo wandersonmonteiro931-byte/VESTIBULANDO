@@ -224,8 +224,8 @@ export default function Login() {
         
         console.log("🔍 Tentando carregar turmas...");
         
-        // Buscar todas as turmas ativas
-        const turmasQuery = query(collection(db, "turmas"), where("ativa", "==", true));
+        // Buscar todas as turmas (ativas e inativas)
+        const turmasQuery = collection(db, "turmas");
         console.log("📋 Query criada, executando getDocs...");
         const turmasSnapshot = await getDocs(turmasQuery);
         console.log("✅ getDocs concluído, número de documentos:", turmasSnapshot.docs.length);
@@ -241,29 +241,35 @@ export default function Login() {
           let status = "aberta";
           let podeMatricular = true;
           
-          // Verificar período de matrícula
-          const hoje = new Date();
-          hoje.setHours(0, 0, 0, 0);
-          
-          if (turmaData.periodoMatriculaInicio && turmaData.periodoMatriculaFim) {
-            const inicio = new Date(turmaData.periodoMatriculaInicio + 'T00:00:00');
-            const fim = new Date(turmaData.periodoMatriculaFim + 'T23:59:59');
-            
-            if (hoje < inicio) {
-              status = "aguardando";
-              podeMatricular = false;
-            } else if (hoje > fim) {
-              status = "fechada";
-              podeMatricular = false;
-            }
-          }
-          
-          // Verificar vagas
-          if (vagasRestantes === 0 && podeMatricular) {
-            status = "completa";
+          // Verificar se a turma está ativa
+          if (!turmaData.ativa) {
+            status = "fechada";
             podeMatricular = false;
-          } else if (vagasRestantes <= 3 && vagasRestantes > 0 && podeMatricular) {
-            status = "ultimas-vagas";
+          } else {
+            // Verificar vagas primeiro (tem prioridade)
+            if (vagasRestantes === 0) {
+              status = "esgotada";
+              podeMatricular = false;
+            } else if (vagasRestantes <= 5 && vagasRestantes > 0) {
+              status = "vagas-esgotando";
+            }
+            
+            // Verificar período de matrícula (só afeta se status ainda for "aberta")
+            const hoje = new Date();
+            hoje.setHours(0, 0, 0, 0);
+            
+            if (turmaData.periodoMatriculaInicio && turmaData.periodoMatriculaFim) {
+              const inicio = new Date(turmaData.periodoMatriculaInicio + 'T00:00:00');
+              const fim = new Date(turmaData.periodoMatriculaFim + 'T23:59:59');
+              
+              if (hoje < inicio && status === "aberta") {
+                status = "aguardando";
+                podeMatricular = false;
+              } else if (hoje > fim && status === "aberta") {
+                status = "aberta-fora-periodo";
+                podeMatricular = true;
+              }
+            }
           }
           
           return {
@@ -276,10 +282,8 @@ export default function Login() {
           };
         });
         
-        // Ordenar: turmas com vagas primeiro, depois fechadas
+        // Ordenar alfabeticamente por nome
         const turmasOrdenadas = turmasComStatus.sort((a, b) => {
-          if (a.podeMatricular && !b.podeMatricular) return -1;
-          if (!a.podeMatricular && b.podeMatricular) return 1;
           return a.nome.localeCompare(b.nome);
         });
         
@@ -299,6 +303,13 @@ export default function Login() {
     
     if (mode === "register") {
       carregarTurmas();
+      
+      // Atualizar turmas a cada 10 segundos para refletir mudanças em tempo real
+      const intervalId = setInterval(() => {
+        carregarTurmas();
+      }, 10000);
+      
+      return () => clearInterval(intervalId);
     }
   }, [mode]);
 
@@ -1304,28 +1315,34 @@ export default function Login() {
                                       Aberta
                                     </Badge>
                                   )}
-                                  {turma.status === "ultimas-vagas" && (
+                                  {turma.status === "aberta-fora-periodo" && (
+                                    <Badge variant="default" className="bg-green-500 hover:bg-green-600 text-white gap-1">
+                                      <CheckCircle className="h-3 w-3" />
+                                      Aberta
+                                    </Badge>
+                                  )}
+                                  {turma.status === "vagas-esgotando" && (
                                     <Badge variant="default" className="bg-orange-500 hover:bg-orange-600 text-white gap-1">
                                       <Clock className="h-3 w-3" />
-                                      Últimas vagas
+                                      Vagas esgotando
                                     </Badge>
                                   )}
-                                  {turma.status === "completa" && (
+                                  {turma.status === "esgotada" && (
                                     <Badge variant="destructive" className="gap-1">
                                       <XCircle className="h-3 w-3" />
-                                      Completa
-                                    </Badge>
-                                  )}
-                                  {turma.status === "fechada" && (
-                                    <Badge variant="secondary" className="gap-1">
-                                      <XCircle className="h-3 w-3" />
-                                      Fechada
+                                      Vagas esgotadas
                                     </Badge>
                                   )}
                                   {turma.status === "aguardando" && (
                                     <Badge variant="secondary" className="gap-1">
                                       <Clock className="h-3 w-3" />
                                       Em breve
+                                    </Badge>
+                                  )}
+                                  {turma.status === "fechada" && (
+                                    <Badge variant="secondary" className="gap-1">
+                                      <XCircle className="h-3 w-3" />
+                                      Fechada
                                     </Badge>
                                   )}
                                 </div>
@@ -1340,6 +1357,12 @@ export default function Login() {
                         {turmasDisponiveis.filter((t: any) => t.podeMatricular).length} turma(s) com vagas disponíveis
                       </p>
                     )}
+                    <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md">
+                      <p className="text-sm text-amber-900 dark:text-amber-200">
+                        <strong>Atenção:</strong> Selecione apenas a turma em que você já está inserido através do grupo de WhatsApp. 
+                        Caso escolha uma turma diferente e não faça parte do grupo correspondente, sua matrícula poderá ser reprovada após a análise do diretor.
+                      </p>
+                    </div>
                   </div>
 
                   <div className="space-y-2">

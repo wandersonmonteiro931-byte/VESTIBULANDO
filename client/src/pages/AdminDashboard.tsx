@@ -1583,9 +1583,9 @@ export default function AdminDashboard() {
                       <CardContent className="space-y-3">
                         <div className="flex items-center gap-2 flex-wrap">
                           {foraDoPeríodo ? (
-                            <Badge variant="outline" className="bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400 border-orange-300 dark:border-orange-600">
-                              <Clock className="h-3 w-3 mr-1" />
-                              Aberta (Fora do Período)
+                            <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Aberta
                             </Badge>
                           ) : turma.ativa ? (
                             <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
@@ -1597,13 +1597,17 @@ export default function AdminDashboard() {
                               Fechada
                             </Badge>
                           )}
-                          {vagasDisponiveis > 0 ? (
-                            <Badge variant="outline" className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
-                              {vagasDisponiveis} vagas disponíveis
+                          {vagasDisponiveis === 0 ? (
+                            <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                              Vagas esgotadas
+                            </Badge>
+                          ) : vagasDisponiveis <= 5 ? (
+                            <Badge variant="outline" className="bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400">
+                              Vagas esgotando
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
-                              Sem vagas
+                            <Badge variant="outline" className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+                              {vagasDisponiveis} vagas disponíveis
                             </Badge>
                           )}
                         </div>
