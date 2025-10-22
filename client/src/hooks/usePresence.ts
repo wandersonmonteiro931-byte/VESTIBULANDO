@@ -26,8 +26,11 @@ export function usePresence(currentUser: FirebaseUser | null) {
       }
 
       await updateDoc(userRef, updateData);
-    } catch (error) {
-      console.error('Erro ao atualizar presença:', error);
+    } catch (error: any) {
+      // Ignorar erro de permissão - usuários sem permissão de escrita não terão presença atualizada
+      if (error?.code !== 'permission-denied') {
+        console.error('Erro ao atualizar presença:', error);
+      }
     }
   };
 
@@ -87,7 +90,12 @@ export function usePresence(currentUser: FirebaseUser | null) {
         lastActivity: new Date().toISOString(),
       };
       
-      updateDoc(userRef, offlineData).catch(console.error);
+      updateDoc(userRef, offlineData).catch((error: any) => {
+        // Ignorar erro de permissão
+        if (error?.code !== 'permission-denied') {
+          console.error(error);
+        }
+      });
     };
 
     const handleVisibilityChange = () => {
