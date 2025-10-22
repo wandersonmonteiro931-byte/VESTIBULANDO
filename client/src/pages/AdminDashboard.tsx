@@ -795,6 +795,8 @@ export default function AdminDashboard() {
   const applyWarningMutation = useMutation({
     mutationFn: async ({ student, comentario }: { student: User; comentario?: string }) => {
       if (!userData) throw new Error("Usuário não autenticado");
+      if (!userData.uid || !userData.nome) throw new Error("Dados do usuário incompletos");
+      if (!student.uid || !student.nome) throw new Error("Dados do aluno incompletos");
       
       // Verificar quantas advertências ativas o aluno já tem
       const actionsQuery = query(
@@ -810,25 +812,18 @@ export default function AdminDashboard() {
         throw new Error("Este aluno já possui 3 advertências ativas. Não é possível adicionar mais advertências.");
       }
       
-      const actionData: any = {
-        alunoId: student.uid,
-        alunoNome: student.nome,
-        alunoMatricula: student.matricula ?? "",
-        alunoTurma: student.turma ?? "",
+      const actionData = {
+        alunoId: String(student.uid),
+        alunoNome: String(student.nome),
+        alunoMatricula: String(student.matricula || ""),
+        alunoTurma: String(student.turma || ""),
         tipo: "advertencia",
-        comentario: comentario ?? "",
-        aplicadoPor: userData.uid,
-        aplicadoPorNome: userData.nome,
+        comentario: String(comentario || ""),
+        aplicadoPor: String(userData.uid),
+        aplicadoPorNome: String(userData.nome),
         dataAplicacao: new Date().toISOString(),
         ativo: true,
       };
-      
-      // Remove campos undefined do objeto antes de enviar ao Firebase
-      Object.keys(actionData).forEach(key => {
-        if (actionData[key] === undefined) {
-          delete actionData[key];
-        }
-      });
       
       await addDoc(collection(db, "disciplinaryActions"), actionData);
     },
@@ -854,32 +849,27 @@ export default function AdminDashboard() {
   const applySuspensionMutation = useMutation({
     mutationFn: async ({ student, comentario }: { student: User; comentario?: string }) => {
       if (!userData) throw new Error("Usuário não autenticado");
+      if (!userData.uid || !userData.nome) throw new Error("Dados do usuário incompletos");
+      if (!student.uid || !student.nome) throw new Error("Dados do aluno incompletos");
       
       // Calcular data de término da suspensão (2 dias a partir de agora)
       const dataTermino = new Date();
       dataTermino.setDate(dataTermino.getDate() + 2);
       
       // Criar registro da suspensão
-      const actionData: any = {
-        alunoId: student.uid,
-        alunoNome: student.nome,
-        alunoMatricula: student.matricula ?? "",
-        alunoTurma: student.turma ?? "",
+      const actionData = {
+        alunoId: String(student.uid),
+        alunoNome: String(student.nome),
+        alunoMatricula: String(student.matricula || ""),
+        alunoTurma: String(student.turma || ""),
         tipo: "suspensao",
-        comentario: comentario ?? "",
-        aplicadoPor: userData.uid,
-        aplicadoPorNome: userData.nome,
+        comentario: String(comentario || ""),
+        aplicadoPor: String(userData.uid),
+        aplicadoPorNome: String(userData.nome),
         dataAplicacao: new Date().toISOString(),
         dataTerminoSuspensao: dataTermino.toISOString(),
         ativo: true,
       };
-      
-      // Remove campos undefined do objeto antes de enviar ao Firebase
-      Object.keys(actionData).forEach(key => {
-        if (actionData[key] === undefined) {
-          delete actionData[key];
-        }
-      });
       
       await addDoc(collection(db, "disciplinaryActions"), actionData);
       
