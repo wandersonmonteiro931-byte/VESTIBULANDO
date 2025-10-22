@@ -10,7 +10,18 @@ Plataforma educacional completa para preparação do ENEM com gestão de tarefas
 
 ## Recent Changes (October 2025)
 
-**Admin Panel Enhancements & Class Management (Latest):**
+**Enrollment Management System (Latest):**
+- ✅ Added "Edit" button for directors to edit pending solicitations directly
+- ✅ Created comprehensive edit solicitation dialog with all student data fields
+- ✅ Implemented "Stand By" (waitlist) status with dedicated mutation and dialog
+- ✅ Updated Login.tsx to block editing of rejected (reprovado) solicitations
+- ✅ Enhanced status verification to display rejection and standby comments
+- ✅ Added visual distinction between editable "devolvido" and non-editable "reprovado" states
+- ✅ Implemented updateSolicitacaoMutation with cache invalidation and toasts
+- ✅ Added standbyUserMutation for moving applicants to waitlist queue
+- ✅ Enhanced status verification dialog with standby status display
+
+**Admin Panel Enhancements & Class Management:**
 - ✅ Implemented violet/purple color scheme across all dashboards (Login, Student, Teacher, Admin)
 - ✅ Admin can create teacher/admin accounts directly with password setting
 - ✅ Teachers can be assigned to multiple classes
