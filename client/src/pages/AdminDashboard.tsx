@@ -988,6 +988,7 @@ export default function AdminDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/turmas"] });
       toast({
         title: "Alunos adicionados!",
         description: "Os alunos foram adicionados à turma com sucesso.",
@@ -1086,6 +1087,7 @@ export default function AdminDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/turmas"] });
       toast({
         title: "Alunos transferidos!",
         description: "Os alunos foram transferidos para a nova turma.",
@@ -1140,6 +1142,7 @@ export default function AdminDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/turmas"] });
       toast({
         title: "Alunos removidos!",
         description: "Os alunos foram removidos da turma.",
