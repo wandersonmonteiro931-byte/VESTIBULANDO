@@ -796,17 +796,6 @@ export default function AdminDashboard() {
     mutationFn: async ({ student, comentario }: { student: User; comentario?: string }) => {
       if (!userData) throw new Error("Usuário não autenticado");
       
-      // Corrigir o campo ativo do usuário atual se necessário (de string para boolean)
-      const currentUserDoc = await getDoc(doc(db, "usuarios", userData.uid));
-      if (currentUserDoc.exists()) {
-        const currentUserData = currentUserDoc.data();
-        if (currentUserData.ativo === "true" || currentUserData.ativo === "false") {
-          await updateDoc(doc(db, "usuarios", userData.uid), {
-            ativo: currentUserData.ativo === "true"
-          });
-        }
-      }
-      
       // Verificar quantas advertências ativas o aluno já tem
       const actionsQuery = query(
         collection(db, "disciplinaryActions"),
@@ -865,17 +854,6 @@ export default function AdminDashboard() {
   const applySuspensionMutation = useMutation({
     mutationFn: async ({ student, comentario }: { student: User; comentario?: string }) => {
       if (!userData) throw new Error("Usuário não autenticado");
-      
-      // Corrigir o campo ativo do usuário atual se necessário (de string para boolean)
-      const currentUserDoc = await getDoc(doc(db, "usuarios", userData.uid));
-      if (currentUserDoc.exists()) {
-        const currentUserData = currentUserDoc.data();
-        if (currentUserData.ativo === "true" || currentUserData.ativo === "false") {
-          await updateDoc(doc(db, "usuarios", userData.uid), {
-            ativo: currentUserData.ativo === "true"
-          });
-        }
-      }
       
       // Calcular data de término da suspensão (2 dias a partir de agora)
       const dataTermino = new Date();
