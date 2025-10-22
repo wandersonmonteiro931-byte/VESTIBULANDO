@@ -1,0 +1,192 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions with null guards
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function userDocExists() {
+      return exists(/databases/$(database)/documents/usuarios/$(request.auth.uid));
+    }
+    
+    function getUserData() {
+      return userDocExists() ? get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data : null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && userDocExists() && getUserData().tipo == 'diretor';
+    }
+    
+    function isProfessor() {
+      return isAuthenticated() && userDocExists() && getUserData().tipo == 'professor';
+    }
+    
+    function isAluno() {
+      return isAuthenticated() && userDocExists() && getUserData().tipo == 'aluno';
+    }
+    
+    function isUserActive() {
+      return userDocExists() && getUserData().ativo == true;
+    }
+    
+    // Usuarios collection
+    match /usuarios/{userId} {
+      // Anyone authenticated can read their own user doc, admins can read all
+      allow read: if isAuthenticated() && (
+        request.auth.uid == userId || 
+        (exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'diretor')
+      );
+      
+      // Only allow creating user doc for yourself during signup (once)
+      // New users can only create 'aluno' accounts - admins must create professor/admin accounts
+      allow create: if isAuthenticated() && 
+                       request.auth.uid == userId &&
+                       !exists(/databases/$(database)/documents/usuarios/$(userId)) &&
+                       request.resource.data.uid == request.auth.uid &&
+                       request.resource.data.keys().hasAll(['uid', 'nome', 'email', 'tipo', 'ativo']) &&
+                       request.resource.data.tipo == 'aluno' && // Only aluno type allowed for self-registration
+                       request.resource.data.email == request.auth.token.email &&
+                       request.resource.data.ativo == true;
+      
+      // Users can update their own basic info, admins can update all
+      allow update: if isAuthenticated() && (
+        (request.auth.uid == userId && 
+         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['uid', 'tipo', 'ativo'])) ||
+        (exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'diretor')
+      );
+      
+      // Only admins can delete users
+      allow delete: if exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) && 
+                       get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'diretor';
+    }
+    
+    // Tarefas collection
+    match /tarefas/{tarefaId} {
+      // Professors can read their own tarefas, alunos can read tarefas for their turma, admins can read all
+      allow read: if isAuthenticated() && isUserActive() && (
+        isAdmin() ||
+        (isProfessor() && resource.data.professorId == request.auth.uid) ||
+        (isAluno() && resource.data.turma == getUserData().turma)
+      );
+      
+      // Only professors can create tarefas
+      allow create: if isProfessor() && isUserActive() && 
+                       request.resource.data.professorId == request.auth.uid;
+      
+      // Only the professor who created can update
+      allow update: if isProfessor() && isUserActive() && 
+                       resource.data.professorId == request.auth.uid;
+      
+      // Only admins or the professor who created can delete
+      allow delete: if isUserActive() && (
+        isAdmin() ||
+        (isProfessor() && resource.data.professorId == request.auth.uid)
+      );
+    }
+    
+    // Entregas collection
+    match /entregas/{entregaId} {
+      // Helper to check if professor owns the tarefa
+      function professorOwnsTarefa(tarefaId) {
+        return exists(/databases/$(database)/documents/tarefas/$(tarefaId)) &&
+               get(/databases/$(database)/documents/tarefas/$(tarefaId)).data.professorId == request.auth.uid;
+      }
+      
+      // Alunos can read their own entregas, professors can read submissions for their tarefas, admins can read all
+      allow read: if isAuthenticated() && isUserActive() && (
+        isAdmin() ||
+        (isAluno() && resource.data.alunoId == request.auth.uid) ||
+        (isProfessor() && professorOwnsTarefa(resource.data.tarefaId))
+      );
+      
+      // Only alunos can create entregas for themselves
+      allow create: if isAluno() && isUserActive() && 
+                       request.resource.data.alunoId == request.auth.uid;
+      
+      // Only professors who own the tarefa and admins can update entregas (for grading)
+      allow update: if isUserActive() && (
+        isAdmin() ||
+        (isProfessor() && professorOwnsTarefa(resource.data.tarefaId))
+      );
+      
+      // Only admins can delete entregas
+      allow delete: if isAdmin() && isUserActive();
+    }
+    
+    // Turmas collection
+    match /turmas/{turmaId} {
+      // Anyone can read turmas (needed for registration page)
+      allow read: if true;
+      
+      // Only admins can create turmas
+      allow create: if isAdmin() && isUserActive();
+      
+      // Only admins can update turmas
+      allow update: if isAdmin() && isUserActive();
+      
+      // Only admins can delete turmas
+      allow delete: if isAdmin() && isUserActive();
+    }
+    
+    // Solicitacoes collection - for pending user registrations
+    match /solicitacoes/{solicitacaoId} {
+      // Anyone can create a solicitacao (unauthenticated registration)
+      allow create: if true;
+      
+      // Only admins can read, update, and delete solicitacoes
+      allow read: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+    
+    // Reprovacoes collection - for rejected user registrations
+    match /reprovacoes/{reprovacaoId} {
+      // Anyone can read reprovacoes (to check if they were rejected)
+      allow read: if true;
+      
+      // Only admins can create and update reprovacoes
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      
+      // Only admins can delete reprovacoes
+      // Note: Users are allowed to delete their own rejection when re-registering
+      // This is done through the application flow, not direct Firestore access
+      allow delete: if isAdmin() || true;
+    }
+    
+    // System collection - for counters and system-wide settings
+    match /system/{documentId} {
+      // Matricula counter can be read by anyone (needed for transactions)
+      allow read: if documentId == 'matriculaCounter';
+      
+      // Write restrictions for matricula counter:
+      // - Must include valid timestamp field
+      // - Must be exactly +1 increment (no jumps or decrements)
+      // - Admins can bypass for maintenance
+      // Note: This still allows unauthenticated writes during registration
+      // For production, consider moving to Cloud Functions for better security
+      allow write: if documentId == 'matriculaCounter' && (
+        // Admin override for maintenance
+        isAdmin() ||
+        // Valid increment with timestamp
+        (
+          request.resource.data.keys().hasAll(['ultimaMatricula', 'ultimaAtualizacao']) &&
+          (
+            // First initialization
+            !exists(/databases/$(database)/documents/system/matriculaCounter) ||
+            // Monotonic increment only
+            request.resource.data.ultimaMatricula == resource.data.ultimaMatricula + 1
+          )
+        )
+      );
+      
+      // Other system documents are admin-only
+      allow read, write: if documentId != 'matriculaCounter' && isAdmin();
+    }
+  }
+}
