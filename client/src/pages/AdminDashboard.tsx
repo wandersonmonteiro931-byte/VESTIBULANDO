@@ -316,32 +316,21 @@ export default function AdminDashboard() {
         throw new Error("Solicitação não encontrada");
       }
       
+      // Se já existe usuário aprovado, deletá-lo
       const { getDocs, query, collection: firestoreCollection, where } = await import("firebase/firestore");
       const usersSnapshot = await getDocs(query(firestoreCollection(db, "usuarios"), where("email", "==", solicitacao.email)));
       
       if (!usersSnapshot.empty) {
         const userId = usersSnapshot.docs[0].id;
-        
-        await setDoc(doc(db, "reprovacoes", userId), {
-          email: solicitacao.email,
-          nome: solicitacao.nome,
-          comentario: comentario || "Sua solicitação foi reprovada pela diretoria.",
-          dataReprovacao: new Date().toISOString(),
-          matricula: solicitacao.matricula,
-        });
-        
         await deleteDoc(doc(db, "usuarios", userId));
-      } else {
-        await setDoc(doc(db, "reprovacoes", solicitacao.email.replace(/[.@]/g, "_")), {
-          email: solicitacao.email,
-          nome: solicitacao.nome,
-          comentario: comentario || "Sua solicitação foi reprovada pela diretoria.",
-          dataReprovacao: new Date().toISOString(),
-          matricula: solicitacao.matricula,
-        });
       }
       
-      await deleteDoc(doc(db, "solicitacoes", solicitacaoId));
+      // Atualizar solicitação para status "reprovado" (NÃO deletar)
+      await updateDoc(doc(db, "solicitacoes", solicitacaoId), {
+        status: "reprovado",
+        comentarioReprovacao: comentario || "Sua solicitação foi reprovada pela diretoria.",
+        dataReprovacao: new Date().toISOString(),
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/solicitacoes"] });
