@@ -949,9 +949,18 @@ export default function Login() {
     const cpfCadastrado = (pendingSolicitacao.cpf || '').replace(/\D/g, '');
     const cpfMatch = cpfDigitado === cpfCadastrado;
     
+    console.log("🔍 Debug de confirmação:");
+    console.log("CPF digitado (sem formatação):", cpfDigitado);
+    console.log("CPF cadastrado (sem formatação):", cpfCadastrado);
+    console.log("CPF confere?", cpfMatch);
+    console.log("Data digitada:", confirmationData.dataNascimento);
+    console.log("Data cadastrada:", pendingSolicitacao.dataNascimento);
+    
     const dateMatch = confirmationData.dataNascimento === pendingSolicitacao.dataNascimento;
+    console.log("Data confere?", dateMatch);
     
     if (!cpfMatch || !dateMatch) {
+      console.error("❌ Falha na verificação:", { cpfMatch, dateMatch });
       setConfirmationError("CPF ou data de nascimento não conferem com o cadastro.");
       return;
     }
