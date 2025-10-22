@@ -132,7 +132,7 @@ export default function Login() {
   const { toast } = useToast();
   const { userData, refreshUserData } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<"login" | "register" | "forgotPassword">("login");
+  const [mode, setMode] = useState<"login" | "register" | "forgotPassword" | "adminLogin">("login");
   const [showCodeDialog, setShowCodeDialog] = useState(false);
   const [requestCode, setRequestCode] = useState("");
   const [codeCopied, setCodeCopied] = useState(false);
@@ -339,6 +339,51 @@ export default function Login() {
         }, 100);
         
         return;
+      } else if (mode === "adminLogin") {
+        // Login de administrador usando email e senha diretamente
+        if (!formData.email || !formData.password) {
+          toast({
+            title: "Campos obrigatórios",
+            description: "Por favor, informe email e senha",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+        
+        const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
+        
+        const userDoc = await getDoc(doc(db, "usuarios", userCredential.user.uid));
+        const currentUserData = userDoc.data();
+        
+        if (!currentUserData) {
+          toast({
+            title: "Erro",
+            description: "Dados do usuário não encontrados",
+            variant: "destructive",
+          });
+          await auth.signOut();
+          setLoading(false);
+          return;
+        }
+        
+        if (currentUserData.tipo !== "admin") {
+          toast({
+            title: "Acesso negado",
+            description: "Esta área é restrita a administradores",
+            variant: "destructive",
+          });
+          await auth.signOut();
+          setLoading(false);
+          return;
+        }
+        
+        await refreshUserData();
+        
+        toast({
+          title: "Login realizado com sucesso!",
+          description: "Bem-vindo, administrador!",
+        });
       } else {
         // Login usando CPF ou Matrícula
         const loginIdentifier = formData.loginId.replace(/\D/g, '');
@@ -676,7 +721,7 @@ export default function Login() {
           <div>
             <CardTitle className="text-3xl font-bold">ENEM+</CardTitle>
             <CardDescription className="mt-2">
-              {mode === "register" ? "FORMULÁRIO DE SOLICITAÇÃO DE MATRÍCULA" : mode === "forgotPassword" ? "Recuperar Senha" : "SEJA BEM VINDO! FAÇA LOGIN COM SUA MATRÍCULA OU CPF"}
+              {mode === "register" ? "FORMULÁRIO DE SOLICITAÇÃO DE MATRÍCULA" : mode === "forgotPassword" ? "Recuperar Senha" : mode === "adminLogin" ? "LOGIN DE ADMINISTRADOR" : "SEJA BEM VINDO! FAÇA LOGIN COM SUA MATRÍCULA OU CPF"}
             </CardDescription>
           </div>
         </CardHeader>
@@ -1075,7 +1120,7 @@ export default function Login() {
                     />
                   </div>
                   
-                  <div className="text-center">
+                  <div className="flex justify-between items-center">
                     <button
                       type="button"
                       className="text-primary hover:underline text-sm"
@@ -1083,6 +1128,57 @@ export default function Login() {
                       data-testid="button-forgot-password"
                     >
                       Esqueci a senha
+                    </button>
+                    <button
+                      type="button"
+                      className="text-primary hover:underline text-sm flex items-center gap-1"
+                      onClick={() => setMode("adminLogin")}
+                      data-testid="button-admin-login"
+                    >
+                      <Shield className="h-3 w-3" />
+                      Login Admin
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {mode === "adminLogin" && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="admin-email">Email do Administrador</Label>
+                    <Input
+                      id="admin-email"
+                      type="email"
+                      placeholder="admin@email.com"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      required
+                      data-testid="input-admin-email"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="admin-password">Senha</Label>
+                    <Input
+                      id="admin-password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      required
+                      minLength={6}
+                      data-testid="input-admin-password"
+                    />
+                  </div>
+                  
+                  <div className="text-center">
+                    <button
+                      type="button"
+                      className="text-primary hover:underline text-sm"
+                      onClick={() => setMode("login")}
+                      data-testid="button-back-to-login"
+                    >
+                      Voltar ao login normal
                     </button>
                   </div>
                 </>
@@ -1113,10 +1209,10 @@ export default function Login() {
               <button
                 type="button"
                 className="text-primary hover:underline"
-                onClick={() => setMode(mode === "login" ? "register" : "login")}
+                onClick={() => setMode(mode === "login" || mode === "adminLogin" ? "register" : "login")}
                 data-testid="button-toggle-mode"
               >
-                {mode === "login"
+                {mode === "login" || mode === "adminLogin"
                   ? "NOVO ALUNO? REALIZE SUA MATRÍCULA"
                   : "Já tem uma conta? Faça login"}
               </button>
