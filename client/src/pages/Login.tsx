@@ -15,36 +15,33 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { GraduationCap, Loader2, Copy, Check, Search, AlertCircle, Shield } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
-// Gera uma matrícula única de 4 dígitos verificando duplicatas
+// Gera uma matrícula sequencial única usando transação atômica
 async function generateUniqueMatricula(db: any): Promise<string> {
-  const { collection, getDocs, query, where } = await import("firebase/firestore");
+  const { doc, runTransaction, getDoc } = await import("firebase/firestore");
   
-  let tentativas = 0;
-  const maxTentativas = 20;
-  
-  while (tentativas < maxTentativas) {
-    const matricula = Math.floor(1000 + Math.random() * 9000).toString();
+  // Usar transação para garantir atomicidade
+  const matricula = await runTransaction(db, async (transaction) => {
+    const contadorRef = doc(db, "system", "matriculaCounter");
+    const contadorDoc = await transaction.get(contadorRef);
     
-    // Verificar se já existe nas solicitações
-    const solicitacoesSnapshot = await getDocs(
-      query(collection(db, "solicitacoes"), where("matricula", "==", matricula))
-    );
+    let proximaMatricula = 100; // Valor inicial: 0100
     
-    // Verificar se já existe nos usuários
-    const usuariosSnapshot = await getDocs(
-      query(collection(db, "usuarios"), where("matricula", "==", matricula))
-    );
-    
-    if (solicitacoesSnapshot.empty && usuariosSnapshot.empty) {
-      return matricula;
+    if (contadorDoc.exists()) {
+      const data = contadorDoc.data();
+      proximaMatricula = (data.ultimaMatricula || 99) + 1;
     }
     
-    tentativas++;
-  }
+    // Atualizar o contador atomicamente
+    transaction.set(contadorRef, { 
+      ultimaMatricula: proximaMatricula,
+      ultimaAtualizacao: new Date().toISOString()
+    });
+    
+    // Garantir que a matrícula tenha 4 dígitos
+    return proximaMatricula.toString().padStart(4, '0');
+  });
   
-  // Se não encontrar uma matrícula única após várias tentativas, gera com timestamp
-  const timestamp = Date.now().toString().slice(-4);
-  return timestamp;
+  return matricula;
 }
 
 // Função para formatar CPF

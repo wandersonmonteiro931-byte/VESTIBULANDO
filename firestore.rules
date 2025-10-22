@@ -158,5 +158,35 @@ service cloud.firestore {
       // This is done through the application flow, not direct Firestore access
       allow delete: if isAdmin() || true;
     }
+    
+    // System collection - for counters and system-wide settings
+    match /system/{documentId} {
+      // Matricula counter can be read by anyone (needed for transactions)
+      allow read: if documentId == 'matriculaCounter';
+      
+      // Write restrictions for matricula counter:
+      // - Must include valid timestamp field
+      // - Must be exactly +1 increment (no jumps or decrements)
+      // - Admins can bypass for maintenance
+      // Note: This still allows unauthenticated writes during registration
+      // For production, consider moving to Cloud Functions for better security
+      allow write: if documentId == 'matriculaCounter' && (
+        // Admin override for maintenance
+        isAdmin() ||
+        // Valid increment with timestamp
+        (
+          request.resource.data.keys().hasAll(['ultimaMatricula', 'ultimaAtualizacao']) &&
+          (
+            // First initialization
+            !exists(/databases/$(database)/documents/system/matriculaCounter) ||
+            // Monotonic increment only
+            request.resource.data.ultimaMatricula == resource.data.ultimaMatricula + 1
+          )
+        )
+      );
+      
+      // Other system documents are admin-only
+      allow read, write: if documentId != 'matriculaCounter' && isAdmin();
+    }
   }
 }
