@@ -717,42 +717,44 @@ export default function Login() {
         
         // Verificar suspensões ativas
         if (currentUserData.tipo === "aluno") {
-          const { collection, getDocs, query, where, updateDoc } = await import("firebase/firestore");
-          const suspensionsQuery = query(
-            collection(db, "disciplinaryActions"),
-            where("alunoId", "==", userCredential.user.uid),
-            where("tipo", "==", "suspensao"),
-            where("ativo", "==", true)
-          );
-          const suspensionsSnapshot = await getDocs(suspensionsQuery);
-          
-          if (!suspensionsSnapshot.empty) {
-            const activeSuspension = suspensionsSnapshot.docs[0].data();
-            const dataTermino = new Date(activeSuspension.dataTerminoSuspensao);
-            const agora = new Date();
+          try {
+            const { collection, getDocs, query, where, updateDoc } = await import("firebase/firestore");
+            const suspensionsQuery = query(
+              collection(db, "disciplinaryActions"),
+              where("alunoId", "==", userCredential.user.uid),
+              where("tipo", "==", "suspensao"),
+              where("ativo", "==", true)
+            );
+            const suspensionsSnapshot = await getDocs(suspensionsQuery);
             
-            if (agora < dataTermino) {
-              // Suspensão ainda ativa
-              const diasRestantes = Math.ceil((dataTermino.getTime() - agora.getTime()) / (1000 * 60 * 60 * 24));
-              const horasRestantes = Math.ceil((dataTermino.getTime() - agora.getTime()) / (1000 * 60 * 60));
+            if (!suspensionsSnapshot.empty) {
+              const activeSuspension = suspensionsSnapshot.docs[0].data();
+              const dataTermino = new Date(activeSuspension.dataTerminoSuspensao);
+              const agora = new Date();
               
-              toast({
-                title: "Conta Suspensa",
-                description: `Sua conta está em suspensão disciplinar por mais ${diasRestantes > 1 ? `${diasRestantes} dias` : `${horasRestantes} horas`}. ${activeSuspension.comentario ? `Motivo: ${activeSuspension.comentario}` : ''}`,
-                variant: "destructive",
-              });
-              await auth.signOut();
-              setLoading(false);
-              return;
-            } else {
-              // Suspensão expirou, reativar conta
-              await updateDoc(doc(db, "usuarios", userCredential.user.uid), {
-                ativo: true,
-              });
-              // Marcar suspensão como inativa
-              await updateDoc(doc(db, "disciplinaryActions", suspensionsSnapshot.docs[0].id), {
-                ativo: false,
-              });
+              if (agora < dataTermino) {
+                // Suspensão ainda ativa
+                const diasRestantes = Math.ceil((dataTermino.getTime() - agora.getTime()) / (1000 * 60 * 60 * 24));
+                const horasRestantes = Math.ceil((dataTermino.getTime() - agora.getTime()) / (1000 * 60 * 60));
+                
+                toast({
+                  title: "Conta Suspensa",
+                  description: `Sua conta está em suspensão disciplinar por mais ${diasRestantes > 1 ? `${diasRestantes} dias` : `${horasRestantes} horas`}. ${activeSuspension.comentario ? `Motivo: ${activeSuspension.comentario}` : ''}`,
+                  variant: "destructive",
+                });
+                await auth.signOut();
+                setLoading(false);
+                return;
+              } else {
+                // Suspensão expirou, mas não tentar atualizar (requer permissão de admin)
+                // O diretor precisará remover a suspensão manualmente
+                console.log("⚠️ Suspensão expirada, mas login permitido");
+              }
+            }
+          } catch (suspensionError: any) {
+            // Ignorar erro de permissão ao verificar suspensões
+            if (suspensionError?.code !== 'permission-denied') {
+              console.error('Erro ao verificar suspensões:', suspensionError);
             }
           }
         }
