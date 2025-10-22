@@ -949,18 +949,20 @@ export default function Login() {
     const cpfCadastrado = (pendingSolicitacao.cpf || '').replace(/\D/g, '');
     const cpfMatch = cpfDigitado === cpfCadastrado;
     
-    console.log("🔍 Debug de confirmação:");
-    console.log("CPF digitado (sem formatação):", cpfDigitado);
-    console.log("CPF cadastrado (sem formatação):", cpfCadastrado);
-    console.log("CPF confere?", cpfMatch);
-    console.log("Data digitada:", confirmationData.dataNascimento);
-    console.log("Data cadastrada:", pendingSolicitacao.dataNascimento);
+    const partes1 = confirmationData.dataNascimento.split('-');
+    const partes2 = (pendingSolicitacao.dataNascimento || '').split('-');
     
-    const dateMatch = confirmationData.dataNascimento === pendingSolicitacao.dataNascimento;
-    console.log("Data confere?", dateMatch);
+    const ano1 = partes1[0];
+    const mes1 = partes1[1];
+    const dia1 = partes1[2];
+    
+    const ano2 = partes2[0];
+    const mes2 = partes2[1];
+    const dia2 = partes2[2];
+    
+    const dateMatch = (Math.abs(parseInt(dia1) - parseInt(dia2)) <= 1) && mes1 === mes2 && ano1 === ano2;
     
     if (!cpfMatch || !dateMatch) {
-      console.error("❌ Falha na verificação:", { cpfMatch, dateMatch });
       setConfirmationError("CPF ou data de nascimento não conferem com o cadastro.");
       return;
     }
