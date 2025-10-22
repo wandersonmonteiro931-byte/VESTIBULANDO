@@ -17,7 +17,7 @@ service cloud.firestore {
     }
     
     function isAdmin() {
-      return isAuthenticated() && userDocExists() && getUserData().tipo == 'admin';
+      return isAuthenticated() && userDocExists() && getUserData().tipo == 'diretor';
     }
     
     function isProfessor() {
@@ -38,7 +38,7 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (
         request.auth.uid == userId || 
         (exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) && 
-         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'admin')
+         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'diretor')
       );
       
       // Only allow creating user doc for yourself during signup (once)
@@ -57,12 +57,12 @@ service cloud.firestore {
         (request.auth.uid == userId && 
          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['uid', 'tipo', 'ativo'])) ||
         (exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) && 
-         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'admin')
+         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'diretor')
       );
       
       // Only admins can delete users
       allow delete: if exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) && 
-                       get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'admin';
+                       get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'diretor';
     }
     
     // Tarefas collection

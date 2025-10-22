@@ -23,7 +23,7 @@ async function createAdmin() {
     cpf: "709.731.041-39",
     matricula: "9318",
     nome: "Administrador",
-    tipo: "admin",
+    tipo: "diretor",
     ativo: true,
     status: "aprovado"
   };

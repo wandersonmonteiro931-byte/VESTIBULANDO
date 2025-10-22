@@ -17,7 +17,7 @@ service firebase.storage {
     }
     
     function isAdmin() {
-      return isAuthenticated() && userDocExists() && getUserData().tipo == 'admin';
+      return isAuthenticated() && userDocExists() && getUserData().tipo == 'diretor';
     }
     
     function isProfessor() {
