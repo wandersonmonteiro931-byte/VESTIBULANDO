@@ -3135,6 +3135,13 @@ export default function AdminDashboard() {
                                       <span className="font-medium">{maintenance.finalizadoPorNome}</span>
                                     </div>
                                   )}
+                                  
+                                  {maintenance.duracaoFormatada && (
+                                    <div>
+                                      <span className="text-muted-foreground">Duração:</span>{" "}
+                                      <span className="font-medium font-mono">{maintenance.duracaoFormatada}</span>
+                                    </div>
+                                  )}
 
                                   {hasJustification && (
                                     <>
@@ -6554,7 +6561,7 @@ export default function AdminDashboard() {
       </Dialog>
 
       <Dialog open={auditHistoryDialogOpen} onOpenChange={setAuditHistoryDialogOpen}>
-        <DialogContent className="max-w-6xl max-h-[85vh] overflow-y-auto" data-testid="dialog-audit-history">
+        <DialogContent className="max-w-6xl max-h-[85vh] flex flex-col" data-testid="dialog-audit-history">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
               <Archive className="h-5 w-5" />
@@ -6565,7 +6572,29 @@ export default function AdminDashboard() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-2">
+          <div className="flex gap-2 pb-4 border-b">
+            <Button
+              type="button"
+              variant="default"
+              onClick={downloadAuditHistory}
+              disabled={!maintenanceData || maintenanceData.filter(m => m.arquivada).length === 0}
+              data-testid="button-download-audit-history"
+              className="flex-1"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Baixar Histórico Completo (PDF)
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setAuditHistoryDialogOpen(false)}
+              data-testid="button-close-audit-history"
+            >
+              Fechar
+            </Button>
+          </div>
+
+          <div className="space-y-2 overflow-y-auto flex-1">
             {maintenanceData && maintenanceData.filter(m => m.arquivada).length > 0 ? (
               <>
                 <div className="p-2 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-md">
@@ -6666,6 +6695,13 @@ export default function AdminDashboard() {
                                 <span className="font-medium">{maintenance.finalizadoPorNome}</span>
                               </div>
                             )}
+                            
+                            {maintenance.duracaoFormatada && (
+                              <div>
+                                <span className="text-muted-foreground">Duração:</span>{" "}
+                                <span className="font-medium font-mono">{maintenance.duracaoFormatada}</span>
+                              </div>
+                            )}
                           </div>
 
                           {maintenance.justificativa && isExpanded && (
@@ -6712,27 +6748,6 @@ export default function AdminDashboard() {
               </div>
             )}
           </div>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="default"
-              onClick={downloadAuditHistory}
-              disabled={!maintenanceData || maintenanceData.filter(m => m.arquivada).length === 0}
-              data-testid="button-download-audit-history"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Baixar Histórico Completo (PDF)
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setAuditHistoryDialogOpen(false)}
-              data-testid="button-close-audit-history"
-            >
-              Fechar
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
