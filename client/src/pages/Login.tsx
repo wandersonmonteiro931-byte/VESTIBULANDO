@@ -345,6 +345,18 @@ export default function Login() {
     }
   }, [formData.cep, mode]);
 
+  // Log quando overlay de suspensão é ativado
+  useEffect(() => {
+    console.log("🔔 Estado do overlay mudou:", {
+      showSuspensionOverlay,
+      hasSuspensionData: !!suspensionData
+    });
+    
+    if (showSuspensionOverlay && suspensionData) {
+      console.log("🚨 OVERLAY DE SUSPENSÃO ATIVADO - DEVE APARECER NA TELA AGORA!");
+    }
+  }, [showSuspensionOverlay, suspensionData]);
+
   // Atualizar contador de suspensão em tempo real
   useEffect(() => {
     if (!showSuspensionOverlay || !suspensionData) return;
@@ -780,16 +792,13 @@ export default function Login() {
               console.log("⏰ Suspensão ativa?", agora < dataTermino);
               
               if (agora < dataTermino) {
-                // Suspensão ainda ativa - mostrar overlay
+                // Suspensão ainda ativa - mostrar overlay IMEDIATAMENTE
                 const duracaoDias = Math.ceil((dataTermino.getTime() - dataAplicacao.getTime()) / (1000 * 60 * 60 * 24));
                 
                 console.log("🚫 Bloqueando login - Suspensão ativa");
                 console.log("📋 Dados da suspensão:", activeSuspension);
                 
-                // NÃO fazer signOut aqui - isso impede o overlay de aparecer
-                // O overlay será mostrado e o usuário fechará manualmente
-                
-                setLoading(false);
+                // Configurar dados da suspensão ANTES de fazer logout
                 setSuspensionData({
                   ...activeSuspension,
                   duracaoDias,
@@ -802,14 +811,11 @@ export default function Login() {
                 console.log("🎨 showSuspensionOverlay:", true);
                 console.log("📊 suspensionData definido");
                 
-                // Fazer logout imediatamente para evitar que o AuthContext permita o login
-                try {
-                  await auth.signOut();
-                  console.log("🔓 Logout realizado após detectar suspensão");
-                } catch (logoutError) {
-                  console.error("Erro ao fazer logout:", logoutError);
-                }
+                // IMPORTANTE: NÃO fazer logout aqui!
+                // Fazer logout SOMENTE quando o usuário fechar o overlay
+                // Isso garante que o overlay seja exibido corretamente
                 
+                setLoading(false);
                 return;
               } else {
                 // Suspensão expirou, mas não tentar atualizar (requer permissão de admin)
