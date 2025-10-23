@@ -169,6 +169,8 @@ export const maintenanceSchema = z.object({
   dataFim: z.string().optional(), // Data/hora programada de término (opcional se indeterminada)
   dataAtivacao: z.string(), // Data/hora em que foi ativada
   dataFinalizacao: z.string().optional(), // Data/hora em que foi finalizada
+  duracaoSegundos: z.number().optional(), // Duração total da manutenção em segundos
+  duracaoFormatada: z.string().optional(), // Duração formatada (HH:MM:SS)
   iniciadoPor: z.string(), // ID do diretor que iniciou
   iniciadoPorNome: z.string(), // Nome do diretor que iniciou
   finalizadoPor: z.string().optional(), // ID do diretor que finalizou
