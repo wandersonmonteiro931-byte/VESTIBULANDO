@@ -230,8 +230,8 @@ export default function StudentDashboard() {
         assinaturaImg.onload = resolve;
         assinaturaImg.onerror = resolve;
       });
-      const imgWidth = assinaturaImg.width * 0.264583;
-      const imgHeight = assinaturaImg.height * 0.264583;
+      const imgWidth = assinaturaImg.width * 0.18;
+      const imgHeight = assinaturaImg.height * 0.18;
       doc.addImage(assinaturaImg, "PNG", (pageWidth - imgWidth) / 2, yPos, imgWidth, imgHeight);
     } catch (error) {
       console.error("Erro ao carregar assinatura:", error);
