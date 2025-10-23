@@ -10,10 +10,12 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Search, FileText, Download, User as UserIcon, GraduationCap, BookOpen, Calendar, Phone, MapPin, Clock } from "lucide-react";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 import { useAuth } from "@/contexts/AuthContext";
-import type { User, LoginHistory, Tarefa, Entrega } from "@shared/schema";
+import type { User, LoginHistory, Tarefa, Entrega, DisciplinaryAction } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import logoUrl from "@assets/Blue and White Online School Logo (1)_1761189954480.png";
+import carimboUrl from "@assets/image_1761189945452.png";
 
 export function DocumentationTab() {
   const { userData: currentUser } = useAuth();
@@ -39,6 +41,11 @@ export function DocumentationTab() {
   const { data: entregas } = useRealtimeQuery<Entrega>({
     collectionName: "entregas",
     queryKey: ["/api/entregas/all"],
+  });
+
+  const { data: disciplinaryActions } = useRealtimeQuery<DisciplinaryAction>({
+    collectionName: "disciplinaryActions",
+    queryKey: ["/api/disciplinaryActions/all"],
   });
 
   // Função para converter para horário de Brasília
@@ -91,6 +98,11 @@ export function DocumentationTab() {
     return entregas.filter(e => e.alunoId === selectedUser.uid);
   }, [selectedUser, entregas]);
 
+  const userDisciplinary = useMemo(() => {
+    if (!selectedUser || !disciplinaryActions) return [];
+    return disciplinaryActions.filter(d => d.alunoId === selectedUser.uid && d.ativo);
+  }, [selectedUser, disciplinaryActions]);
+
   // Verificar se pode ver a foto
   const canViewPhoto = (user: User) => {
     if (!user.fotoBase64) return false;
@@ -99,133 +111,285 @@ export function DocumentationTab() {
   };
 
   // Gerar PDF
-  const generatePDF = () => {
+  const generatePDF = async () => {
     if (!selectedUser) return;
 
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 14;
-    let yPos = 20;
+    let yPos = 15;
 
-    // Título
-    doc.setFontSize(18);
+    // Adicionar logo da escola no topo
+    try {
+      const logoImg = new Image();
+      logoImg.src = logoUrl;
+      await new Promise((resolve) => {
+        logoImg.onload = resolve;
+        logoImg.onerror = resolve;
+      });
+      doc.addImage(logoImg, "PNG", pageWidth / 2 - 30, yPos, 60, 20);
+      yPos += 25;
+    } catch (error) {
+      console.error("Erro ao carregar logo:", error);
+      yPos += 5;
+    }
+
+    // Título do documento
+    doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
-    doc.text("DOCUMENTAÇÃO DO USUÁRIO", pageWidth / 2, yPos, { align: "center" });
-    yPos += 15;
+    doc.text("DOCUMENTAÇÃO DO ALUNO", pageWidth / 2, yPos, { align: "center" });
+    yPos += 10;
 
-    // Dados Pessoais
-    doc.setFontSize(14);
+    // Adicionar foto 3x4 do aluno (canto superior direito)
+    if (selectedUser.fotoBase64 && canViewPhoto(selectedUser)) {
+      try {
+        // Detectar formato da imagem (PNG ou JPEG)
+        let imageFormat = "JPEG";
+        if (selectedUser.fotoBase64.startsWith("data:image/png")) {
+          imageFormat = "PNG";
+        } else if (selectedUser.fotoBase64.startsWith("data:image/jpeg") || selectedUser.fotoBase64.startsWith("data:image/jpg")) {
+          imageFormat = "JPEG";
+        }
+        doc.addImage(selectedUser.fotoBase64, imageFormat, pageWidth - margin - 30, yPos, 25, 33);
+      } catch (error) {
+        console.error("Erro ao adicionar foto:", error);
+      }
+    }
+
+    // SEÇÃO 1: DADOS PESSOAIS
+    doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
     doc.text("DADOS PESSOAIS", margin, yPos);
-    yPos += 8;
+    yPos += 7;
 
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
+    
     const dadosPessoais = [
-      ["Nome", selectedUser.nome],
-      ["Email", selectedUser.email],
-      ["Tipo", selectedUser.tipo === "aluno" ? "Aluno" : "Professor"],
-      ["Matrícula", selectedUser.matricula || "N/A"],
-      ["CPF", selectedUser.cpf || "N/A"],
-      ["Data de Nascimento", selectedUser.dataNascimento || "N/A"],
-      ["Telefone", selectedUser.telefone || "N/A"],
-      ["Escolaridade", selectedUser.escolaridade || "N/A"],
+      ["Nome Completo", selectedUser.nome || ""],
+      ["CPF", selectedUser.cpf || ""],
+      ["Data de Nascimento", selectedUser.dataNascimento || ""],
+      ["Email", selectedUser.email || ""],
+      ["Telefone (WhatsApp)", selectedUser.telefone || ""],
+      ["Escolaridade", selectedUser.escolaridade || ""],
     ];
-
-    if (selectedUser.tipo === "aluno") {
-      dadosPessoais.push(["Turma", selectedUser.turma || "N/A"]);
-    }
 
     autoTable(doc, {
       startY: yPos,
-      head: [["Campo", "Valor"]],
       body: dadosPessoais,
       theme: "grid",
-      headStyles: { fillColor: [66, 66, 66] },
+      styles: { fontSize: 9, cellPadding: 2 },
+      columnStyles: {
+        0: { fontStyle: "bold", cellWidth: 50 },
+        1: { cellWidth: 110 },
+      },
       margin: { left: margin, right: margin },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 10;
+    yPos = (doc as any).lastAutoTable.finalY + 8;
 
-    // Endereço
-    doc.setFontSize(14);
+    // SEÇÃO 2: ENDEREÇO
+    doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
     doc.text("ENDEREÇO", margin, yPos);
-    yPos += 8;
+    yPos += 7;
 
     const dadosEndereco = [
-      ["CEP", selectedUser.cep || "N/A"],
-      ["Rua", selectedUser.rua || "N/A"],
-      ["Bairro", selectedUser.bairro || "N/A"],
-      ["Cidade", selectedUser.cidade || "N/A"],
-      ["Estado", selectedUser.estado || "N/A"],
+      ["CEP", selectedUser.cep || ""],
+      ["Rua", selectedUser.rua || ""],
+      ["Bairro", selectedUser.bairro || ""],
+      ["Cidade", selectedUser.cidade || ""],
+      ["Estado", selectedUser.estado || ""],
     ];
 
     autoTable(doc, {
       startY: yPos,
-      head: [["Campo", "Valor"]],
       body: dadosEndereco,
       theme: "grid",
-      headStyles: { fillColor: [66, 66, 66] },
+      styles: { fontSize: 9, cellPadding: 2 },
+      columnStyles: {
+        0: { fontStyle: "bold", cellWidth: 50 },
+        1: { cellWidth: 110 },
+      },
       margin: { left: margin, right: margin },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 10;
+    yPos = (doc as any).lastAutoTable.finalY + 8;
 
-    // Histórico de Login/Logout
-    if (userHistory.length > 0) {
-      doc.addPage();
-      yPos = 20;
-      
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text("HISTÓRICO DE ACESSO", margin, yPos);
-      yPos += 8;
+    // SEÇÃO 3: INFORMAÇÕES ACADÊMICAS
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("INFORMAÇÕES ACADÊMICAS", margin, yPos);
+    yPos += 7;
 
-      const historyData = userHistory.slice(0, 50).map(h => [
-        h.action === "login" ? "Login" : "Logout",
-        formatBrasiliaTime(h.timestamp),
-      ]);
+    const dataMatricula = selectedUser.dataSolicitacao 
+      ? new Date(selectedUser.dataSolicitacao).toLocaleDateString('pt-BR')
+      : "";
 
-      autoTable(doc, {
-        startY: yPos,
-        head: [["Ação", "Data/Hora (Brasília)"]],
-        body: historyData,
-        theme: "grid",
-        headStyles: { fillColor: [66, 66, 66] },
-        margin: { left: margin, right: margin },
+    const diasEstudo = selectedUser.disponibilidade && selectedUser.disponibilidade.length > 0
+      ? selectedUser.disponibilidade.join(", ")
+      : "";
+
+    const dadosAcademicos = [
+      ["Número de Matrícula", selectedUser.matricula || ""],
+      ["Data de Início da Matrícula", dataMatricula],
+      ["Turma", selectedUser.turma || ""],
+      ["Dias de Estudo", diasEstudo],
+    ];
+
+    autoTable(doc, {
+      startY: yPos,
+      body: dadosAcademicos,
+      theme: "grid",
+      styles: { fontSize: 9, cellPadding: 2 },
+      columnStyles: {
+        0: { fontStyle: "bold", cellWidth: 50 },
+        1: { cellWidth: 110 },
+      },
+      margin: { left: margin, right: margin },
+    });
+
+    yPos = (doc as any).lastAutoTable.finalY + 8;
+
+    // SEÇÃO 4: HISTÓRICO DE PRESENÇA
+    doc.addPage();
+    yPos = 20;
+    
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("HISTÓRICO DE PRESENÇA", margin, yPos);
+    yPos += 7;
+
+    const totalLogins = userHistory.filter(h => h.action === "login").length;
+    const historicoPresenca = userHistory.length > 0
+      ? userHistory.slice(0, 30).map(h => [
+          h.action === "login" ? "Presente" : "Saída",
+          formatBrasiliaTime(h.timestamp),
+        ])
+      : [["", ""]];
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [["Status", "Data/Hora"]],
+      body: historicoPresenca,
+      theme: "grid",
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [41, 98, 255], fontSize: 9 },
+      margin: { left: margin, right: margin },
+    });
+
+    yPos = (doc as any).lastAutoTable.finalY + 5;
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text(`Total de Presenças: ${totalLogins}`, margin, yPos);
+
+    // SEÇÃO 5: BOLETIM (NOTAS)
+    doc.addPage();
+    yPos = 20;
+    
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("BOLETIM - NOTAS E AVALIAÇÕES", margin, yPos);
+    yPos += 7;
+
+    const boletimData = userEntregas.length > 0
+      ? userEntregas.map(e => [
+          e.tarefaTitulo,
+          formatBrasiliaTime(e.dataEnvio).split(" ")[0],
+          e.nota !== undefined ? e.nota.toFixed(1) : "",
+          e.status,
+        ])
+      : [["", "", "", ""]];
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [["Tarefa/Avaliação", "Data", "Nota", "Status"]],
+      body: boletimData,
+      theme: "grid",
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [41, 98, 255], fontSize: 9 },
+      columnStyles: {
+        0: { cellWidth: 80 },
+        1: { cellWidth: 30 },
+        2: { cellWidth: 20 },
+        3: { cellWidth: 30 },
+      },
+      margin: { left: margin, right: margin },
+    });
+
+    yPos = (doc as any).lastAutoTable.finalY + 5;
+
+    // Calcular média
+    const notasValidas = userEntregas.filter(e => e.nota !== undefined).map(e => e.nota as number);
+    const media = notasValidas.length > 0
+      ? (notasValidas.reduce((a, b) => a + b, 0) / notasValidas.length).toFixed(2)
+      : "";
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text(`Média Geral: ${media}`, margin, yPos);
+
+    // SEÇÃO 6: ADVERTÊNCIAS E SUSPENSÕES
+    doc.addPage();
+    yPos = 20;
+    
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("ADVERTÊNCIAS E SUSPENSÕES", margin, yPos);
+    yPos += 7;
+
+    const disciplinaryData = userDisciplinary.length > 0
+      ? userDisciplinary.map(d => [
+          d.tipo === "advertencia" ? "Advertência" : "Suspensão",
+          formatBrasiliaTime(d.dataAplicacao).split(" ")[0],
+          d.comentario || "",
+          d.aplicadoPorNome || "",
+        ])
+      : [["", "", "", ""]];
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [["Tipo", "Data", "Motivo", "Aplicado Por"]],
+      body: disciplinaryData,
+      theme: "grid",
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [220, 53, 69], fontSize: 9 },
+      columnStyles: {
+        0: { cellWidth: 30 },
+        1: { cellWidth: 30 },
+        2: { cellWidth: 80 },
+        3: { cellWidth: 40 },
+      },
+      margin: { left: margin, right: margin },
+    });
+
+    // ASSINATURA E CARIMBO DO DIRETOR (no final)
+    doc.addPage();
+    yPos = pageHeight - 80;
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text("_".repeat(60), pageWidth / 2, yPos, { align: "center" });
+    yPos += 5;
+    doc.text("Diretor Responsável", pageWidth / 2, yPos, { align: "center" });
+    yPos += 10;
+
+    // Adicionar carimbo/assinatura
+    try {
+      const carimboImg = new Image();
+      carimboImg.src = carimboUrl;
+      await new Promise((resolve) => {
+        carimboImg.onload = resolve;
+        carimboImg.onerror = resolve;
       });
-    }
-
-    // Tarefas Entregues (se for aluno)
-    if (selectedUser.tipo === "aluno" && userEntregas.length > 0) {
-      doc.addPage();
-      yPos = 20;
-      
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text("TAREFAS ENTREGUES", margin, yPos);
-      yPos += 8;
-
-      const entregasData = userEntregas.map(e => [
-        e.tarefaTitulo,
-        formatBrasiliaTime(e.dataEnvio),
-        e.nota !== undefined ? e.nota.toString() : "Pendente",
-        e.status,
-      ]);
-
-      autoTable(doc, {
-        startY: yPos,
-        head: [["Tarefa", "Data de Entrega", "Nota", "Status"]],
-        body: entregasData,
-        theme: "grid",
-        headStyles: { fillColor: [66, 66, 66] },
-        margin: { left: margin, right: margin },
-      });
+      doc.addImage(carimboImg, "PNG", pageWidth / 2 - 40, yPos, 80, 30);
+    } catch (error) {
+      console.error("Erro ao carregar carimbo:", error);
     }
 
     // Salvar PDF
-    const fileName = `documentacao_${selectedUser.nome.replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`;
+    const fileName = `Documentacao_Aluno_${selectedUser.nome.replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`;
     doc.save(fileName);
   };
 
