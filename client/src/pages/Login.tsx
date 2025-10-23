@@ -717,6 +717,7 @@ export default function Login() {
         
         const userData = userSnapshot.docs[0].data();
         const userEmail = userData.email;
+        const userId = userSnapshot.docs[0].id;
         
         if (!userEmail) {
           toast({
@@ -728,53 +729,14 @@ export default function Login() {
           return;
         }
         
-        // Tentar fazer login com email e senha
-        const userCredential = await signInWithEmailAndPassword(auth, userEmail, formData.password);
-        
-        const userDoc = await getDoc(doc(db, "usuarios", userCredential.user.uid));
-        const currentUserData = userDoc.data();
-        
-        if (!currentUserData) {
-          toast({
-            title: "Erro",
-            description: "Dados do usuário não encontrados",
-            variant: "destructive",
-          });
-          await auth.signOut();
-          setLoading(false);
-          return;
-        }
-        
-        if (currentUserData.status === "reprovado") {
-          toast({
-            title: "Acesso negado",
-            description: "Sua conta foi reprovada pelo administrador. Entre em contato para mais informações.",
-            variant: "destructive",
-          });
-          await auth.signOut();
-          setLoading(false);
-          return;
-        }
-        
-        if (currentUserData.status === "pendente") {
-          toast({
-            title: "Conta pendente",
-            description: "Sua conta ainda está aguardando aprovação do administrador.",
-            variant: "destructive",
-          });
-          await auth.signOut();
-          setLoading(false);
-          return;
-        }
-        
-        // Verificar suspensões ativas
-        if (currentUserData.tipo === "aluno") {
+        // VERIFICAR SUSPENSÃO ANTES DE AUTENTICAR
+        if (userData.tipo === "aluno") {
           try {
-            console.log("🔍 Verificando suspensões para aluno:", userCredential.user.uid);
+            console.log("🔍 Verificando suspensões para aluno:", userId);
             const { collection, getDocs, query, where } = await import("firebase/firestore");
             const suspensionsQuery = query(
               collection(db, "disciplinaryActions"),
-              where("alunoId", "==", userCredential.user.uid),
+              where("alunoId", "==", userId),
               where("tipo", "==", "suspensao"),
               where("ativo", "==", true)
             );
@@ -792,15 +754,13 @@ export default function Login() {
               console.log("⏰ Suspensão ativa?", agora < dataTermino);
               
               if (agora < dataTermino) {
-                // Suspensão ainda ativa - MOSTRAR OVERLAY E BLOQUEAR
+                // Suspensão ativa - BLOQUEAR LOGIN E MOSTRAR OVERLAY
                 const duracaoDias = Math.ceil((dataTermino.getTime() - dataAplicacao.getTime()) / (1000 * 60 * 60 * 24));
                 
-                console.log("🚫 Bloqueando login - Suspensão ativa");
+                console.log("🚫 BLOQUEANDO LOGIN - Suspensão ativa");
                 console.log("📋 Dados da suspensão:", activeSuspension);
                 
-                // IMPORTANTE: Configurar estados ANTES de fazer qualquer coisa
-                // O useEffect de redirecionamento já verifica showSuspensionOverlay
-                // e NÃO redireciona quando está ativo
+                // Configurar overlay com dados da suspensão
                 setSuspensionData({
                   ...activeSuspension,
                   duracaoDias,
@@ -810,31 +770,48 @@ export default function Login() {
                 setShowSuspensionOverlay(true);
                 setLoading(false);
                 
-                console.log("✅ Estados definidos - overlay deve aparecer agora");
-                console.log("🎨 showSuspensionOverlay:", true);
-                console.log("📊 suspensionData definido");
+                console.log("✅ Overlay configurado - NÃO AUTENTICAR");
                 
-                // IMPORTANTE: Retornar aqui para não continuar o login
+                // RETORNAR AQUI - NÃO AUTENTICAR NO FIREBASE
                 return;
               } else {
-                // Suspensão expirou, mas não tentar atualizar (requer permissão de admin)
-                // O diretor precisará remover a suspensão manualmente
-                console.log("⚠️ Suspensão expirada, mas login permitido");
+                console.log("⚠️ Suspensão expirada - permitir login");
               }
             } else {
-              console.log("✅ Nenhuma suspensão ativa encontrada");
+              console.log("✅ Nenhuma suspensão ativa");
             }
           } catch (suspensionError: any) {
             console.error('❌ Erro ao verificar suspensões:', suspensionError);
-            console.error('❌ Código do erro:', suspensionError?.code);
-            console.error('❌ Mensagem:', suspensionError?.message);
-            
-            // Se houver erro de permissão, logar para debug mas continuar
-            // Em produção, considere bloquear o login em caso de erros
             if (suspensionError?.code === 'permission-denied') {
-              console.warn('⚠️ AVISO: Erro de permissão ao verificar suspensões - possível problema de segurança');
+              console.warn('⚠️ AVISO: Erro de permissão ao verificar suspensões');
             }
           }
+        }
+        
+        // Autenticar no Firebase APENAS se não estiver suspenso
+        const userCredential = await signInWithEmailAndPassword(auth, userEmail, formData.password);
+        
+        // Verificar status da conta
+        if (userData.status === "reprovado") {
+          toast({
+            title: "Acesso negado",
+            description: "Sua conta foi reprovada pelo administrador.",
+            variant: "destructive",
+          });
+          await auth.signOut();
+          setLoading(false);
+          return;
+        }
+        
+        if (userData.status === "pendente") {
+          toast({
+            title: "Conta pendente",
+            description: "Sua conta ainda está aguardando aprovação.",
+            variant: "destructive",
+          });
+          await auth.signOut();
+          setLoading(false);
+          return;
         }
         
         await refreshUserData();
@@ -2072,18 +2049,22 @@ export default function Login() {
             <CardFooter>
               <Button
                 onClick={async () => {
+                  console.log("🔘 Fechando overlay de suspensão");
+                  
+                  // Fazer logout se estiver autenticado
+                  if (auth.currentUser) {
+                    try {
+                      await auth.signOut();
+                      console.log("🔓 Logout realizado");
+                    } catch (error) {
+                      console.error("Erro ao fazer logout:", error);
+                    }
+                  }
+                  
                   // Limpar estados do overlay
                   setShowSuspensionOverlay(false);
                   setSuspensionData(null);
                   setSuspensionTimeRemaining("");
-                  
-                  // Fazer logout do Firebase
-                  try {
-                    await auth.signOut();
-                    console.log("🔓 Logout realizado ao fechar overlay");
-                  } catch (error) {
-                    console.error("Erro ao fazer logout:", error);
-                  }
                 }}
                 variant="outline"
                 className="w-full"
