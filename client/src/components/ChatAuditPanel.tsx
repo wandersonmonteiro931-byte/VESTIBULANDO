@@ -37,7 +37,7 @@ export default function ChatAuditPanel() {
     setLoading(true);
     try {
       // Carregar todas as mensagens (últimas 1000)
-      const messagesRef = collection(db, "chatMessages");
+      const messagesRef = collection(db, "chat_messages");
       const messagesQuery = query(messagesRef, orderBy("timestamp", "desc"), limit(1000));
       const messagesSnapshot = await getDocs(messagesQuery);
       const msgs = messagesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChatMessage));
@@ -48,21 +48,21 @@ export default function ChatAuditPanel() {
       setDeletedMessages(deleted);
 
       // Carregar penalidades
-      const penaltiesRef = collection(db, "chatPenalties");
+      const penaltiesRef = collection(db, "chat_penalties");
       const penaltiesQuery = query(penaltiesRef, orderBy("dataInfracao", "desc"));
       const penaltiesSnapshot = await getDocs(penaltiesQuery);
       const pens = penaltiesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChatPenalty));
       setPenalties(pens);
 
       // Carregar conversas
-      const conversationsRef = collection(db, "chatConversations");
+      const conversationsRef = collection(db, "chat_conversations");
       const conversationsQuery = query(conversationsRef, orderBy("dataUltimaAtualizacao", "desc"));
       const conversationsSnapshot = await getDocs(conversationsQuery);
       const convs = conversationsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChatConversation));
       setConversations(convs);
 
       // Carregar logs
-      const logsRef = collection(db, "chatLogs");
+      const logsRef = collection(db, "chat_logs");
       const logsQuery = query(logsRef, orderBy("timestamp", "desc"), limit(500));
       const logsSnapshot = await getDocs(logsQuery);
       const chatLogs = logsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChatLog));
@@ -83,7 +83,7 @@ export default function ChatAuditPanel() {
     if (!selectedPenalty) return;
 
     try {
-      const penaltyRef = doc(db, "chatPenalties", selectedPenalty.id);
+      const penaltyRef = doc(db, "chat_penalties", selectedPenalty.id);
       await updateDoc(penaltyRef, {
         revisadoPorDiretor: true,
         decisaoDiretor: reviewDecision,

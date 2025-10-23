@@ -16,7 +16,7 @@ export default function ChatButton() {
   useEffect(() => {
     if (!userData?.uid) return;
 
-    const conversationsRef = collection(db, "chatConversations");
+    const conversationsRef = collection(db, "chat_conversations");
     const q = query(
       conversationsRef,
       where("participante1Id", "==", userData.uid)

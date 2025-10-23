@@ -28,7 +28,7 @@ export async function logChatAction(params: LogParams): Promise<void> {
       nivelSeveridade: params.nivelSeveridade || "info",
     };
 
-    await addDoc(collection(db, "chatLogs"), logData);
+    await addDoc(collection(db, "chat_logs"), logData);
   } catch (error) {
     console.error("Erro ao registrar log do chat:", error);
   }

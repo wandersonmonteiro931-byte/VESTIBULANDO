@@ -85,7 +85,7 @@ export async function checkMessageForViolations(
 }
 
 async function getUserInfractions(userId: string): Promise<any[]> {
-  const penaltiesRef = collection(db, "chatPenalties");
+  const penaltiesRef = collection(db, "chat_penalties");
   const q = query(
     penaltiesRef,
     where("usuarioId", "==", userId),
@@ -145,7 +145,7 @@ export async function applyPenalty(
     revisadoPorDiretor: false,
   };
 
-  await addDoc(collection(db, "chatPenalties"), penaltyData);
+  await addDoc(collection(db, "chat_penalties"), penaltyData);
 
   // Se for suspensão, desativar o usuário
   if (penaltyType === "suspensao_conta") {

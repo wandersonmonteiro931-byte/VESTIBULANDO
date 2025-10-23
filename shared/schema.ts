@@ -343,3 +343,19 @@ export const insertChatPenaltySchema = chatPenaltySchema.omit({ id: true });
 
 export type ChatPenalty = z.infer<typeof chatPenaltySchema>;
 export type InsertChatPenalty = z.infer<typeof insertChatPenaltySchema>;
+
+// User Block schema - bloqueios manuais entre usuários
+export const userBlockSchema = z.object({
+  id: z.string(),
+  bloqueadorId: z.string(), // ID de quem bloqueou
+  bloqueadorNome: z.string(), // Nome de quem bloqueou
+  bloqueadoId: z.string(), // ID de quem foi bloqueado
+  bloqueadoNome: z.string(), // Nome de quem foi bloqueado
+  dataBloqueio: z.string(), // Data/hora do bloqueio
+  ativo: z.boolean().default(true), // Se o bloqueio está ativo
+});
+
+export const insertUserBlockSchema = userBlockSchema.omit({ id: true });
+
+export type UserBlock = z.infer<typeof userBlockSchema>;
+export type InsertUserBlock = z.infer<typeof insertUserBlockSchema>;

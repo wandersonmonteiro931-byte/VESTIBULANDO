@@ -1,15 +1,16 @@
 import { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Send, Paperclip, X, File, Image as ImageIcon, Video, Music, FileText, Trash2, AlertTriangle, WifiOff, Wifi } from "lucide-react";
+import { ArrowLeft, Send, Paperclip, X, File, Image as ImageIcon, Video, Music, FileText, Trash2, AlertTriangle, WifiOff, Wifi, User as UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { collection, query, where, onSnapshot, addDoc, doc, updateDoc, serverTimestamp, orderBy, getDocs } from "firebase/firestore";
+import { collection, query, where, onSnapshot, addDoc, doc, updateDoc, serverTimestamp, orderBy, getDocs, deleteDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
+import { getNowBrasiliaISO } from "@/lib/brasiliaTime";
 import type { ChatMessage, ChatConversation, User } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -17,9 +18,19 @@ import { checkMessageForViolations, applyPenalty } from "@/lib/chatModeration";
 import { ChatLogger } from "@/lib/chatLogger";
 import { validateFile, getFileTypeCategory } from "@/lib/fileValidation";
 import { useNetworkStatus, retryWithBackoff } from "@/hooks/useNetworkStatus";
+import { useChatThread } from "@/hooks/useChatThread";
+import { PresenceIndicator } from "@/components/PresenceIndicator";
+import UserProfileDialog from "@/components/UserProfileDialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface ChatMessageAreaProps {
-  conversation: ChatConversation;
+  conversation?: ChatConversation;
+  selectedUser?: User;
   onBack: () => void;
 }
 
@@ -31,69 +42,105 @@ O envio de conteúdos ofensivos, inapropriados ou fora do contexto educacional p
 
 Ao utilizar este chat, o usuário concorda com os termos de uso e a política de conduta da plataforma.`;
 
-export default function ChatMessageArea({ conversation, onBack }: ChatMessageAreaProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+export default function ChatMessageArea({ conversation, selectedUser, onBack }: ChatMessageAreaProps) {
   const [messageText, setMessageText] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [sending, setSending] = useState(false);
   const [blocked, setBlocked] = useState(false);
   const [blockReason, setBlockReason] = useState("");
+  const [showUserProfile, setShowUserProfile] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { userData } = useAuth();
   const { toast } = useToast();
   const { isOnline } = useNetworkStatus();
 
-  const otherParticipant = conversation.participante1Id === userData?.uid
+  const { messages, conversationId, resolvedConversation, createConversationAndSendMessage } = useChatThread({
+    conversation,
+    selectedUser,
+    currentUserId: userData?.uid,
+    currentUserName: userData?.nome,
+    currentUserType: userData?.tipo,
+  });
+
+  const otherParticipant = resolvedConversation
+    ? (resolvedConversation.participante1Id === userData?.uid
+        ? {
+            id: resolvedConversation.participante2Id,
+            nome: resolvedConversation.participante2Nome,
+            tipo: resolvedConversation.participante2Tipo,
+          }
+        : {
+            id: resolvedConversation.participante1Id,
+            nome: resolvedConversation.participante1Nome,
+            tipo: resolvedConversation.participante1Tipo,
+          })
+    : selectedUser
     ? {
-        id: conversation.participante2Id,
-        nome: conversation.participante2Nome,
-        tipo: conversation.participante2Tipo,
+        id: selectedUser.uid,
+        nome: selectedUser.tipo === "diretor" ? "Diretoria" : selectedUser.nome,
+        tipo: selectedUser.tipo,
       }
-    : {
-        id: conversation.participante1Id,
-        nome: conversation.participante1Nome,
-        tipo: conversation.participante1Tipo,
-      };
-
-  useEffect(() => {
-    if (!conversation.id) return;
-
-    const messagesRef = collection(db, "chatMessages");
-    const q = query(
-      messagesRef,
-      where("conversationId", "==", conversation.id),
-      orderBy("timestamp", "asc")
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const msgs: ChatMessage[] = [];
-      
-      snapshot.forEach((doc) => {
-        msgs.push({ id: doc.id, ...doc.data() } as ChatMessage);
-      });
-      setMessages(msgs);
-      
-      // Marcar mensagens como lidas
-      setTimeout(() => markMessagesAsRead(msgs), 500);
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, [conversation.id]);
+    : null;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    if (!conversationId || !resolvedConversation) return;
+    
+    const markMessagesAsRead = async () => {
+      const unreadMessages = messages.filter(
+        (msg) => msg.destinatarioId === userData?.uid && !msg.lida
+      );
+
+      for (const msg of unreadMessages) {
+        try {
+          const msgRef = doc(db, "chat_messages", msg.id);
+          await updateDoc(msgRef, {
+            lida: true,
+            dataLeitura: getNowBrasiliaISO(),
+          });
+          
+          if (userData) {
+            await ChatLogger.mensagemLida(
+              userData.uid,
+              userData.nome,
+              conversationId,
+              msg.id
+            );
+          }
+        } catch (error) {
+          console.error("Erro ao marcar mensagem como lida:", error);
+        }
+      }
+
+      if (unreadMessages.length > 0) {
+        try {
+          const conversationRef = doc(db, "chat_conversations", conversationId);
+          const isParticipant1 = resolvedConversation.participante1Id === userData?.uid;
+          await updateDoc(conversationRef, {
+            [isParticipant1 ? "mensagensNaoLidas1" : "mensagensNaoLidas2"]: 0,
+          });
+        } catch (error) {
+          console.error("Erro ao atualizar contador de não lidas:", error);
+        }
+      }
+    };
+
+    if (messages.length > 0) {
+      setTimeout(markMessagesAsRead, 500);
+    }
+  }, [messages, conversationId, resolvedConversation, userData]);
 
   // Verificar se usuário está bloqueado
   useEffect(() => {
     const checkBlockStatus = async () => {
       if (!userData?.uid) return;
 
-      const penaltiesRef = collection(db, "chatPenalties");
+      const penaltiesRef = collection(db, "chat_penalties");
       const q = query(
         penaltiesRef,
         where("usuarioId", "==", userData.uid),
@@ -130,45 +177,6 @@ export default function ChatMessageArea({ conversation, onBack }: ChatMessageAre
     return () => clearInterval(interval);
   }, [userData?.uid]);
 
-  const markMessagesAsRead = async (msgs: ChatMessage[]) => {
-    const unreadMessages = msgs.filter(
-      (msg) => msg.destinatarioId === userData?.uid && !msg.lida
-    );
-
-    for (const msg of unreadMessages) {
-      try {
-        const msgRef = doc(db, "chatMessages", msg.id);
-        await updateDoc(msgRef, {
-          lida: true,
-          dataLeitura: new Date().toISOString(),
-        });
-        
-        // Log de mensagem lida
-        if (userData) {
-          await ChatLogger.mensagemLida(
-            userData.uid,
-            userData.nome,
-            conversation.id,
-            msg.id
-          );
-        }
-      } catch (error) {
-        console.error("Erro ao marcar mensagem como lida:", error);
-      }
-    }
-
-    if (unreadMessages.length > 0) {
-      try {
-        const conversationRef = doc(db, "chatConversations", conversation.id);
-        const isParticipant1 = conversation.participante1Id === userData?.uid;
-        await updateDoc(conversationRef, {
-          [isParticipant1 ? "mensagensNaoLidas1" : "mensagensNaoLidas2"]: 0,
-        });
-      } catch (error) {
-        console.error("Erro ao atualizar contador de não lidas:", error);
-      }
-    }
-  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -182,7 +190,7 @@ export default function ChatMessageArea({ conversation, onBack }: ChatMessageAre
         ChatLogger.erroUpload(
           userData.uid,
           userData.nome,
-          conversation.id,
+          conversationId,
           file.name,
           validation.error || "Arquivo perigoso detectado"
         );
@@ -209,7 +217,7 @@ export default function ChatMessageArea({ conversation, onBack }: ChatMessageAre
   const uploadFile = async (file: File): Promise<string> => {
     const timestamp = Date.now();
     const fileName = `${timestamp}_${file.name}`;
-    const storageRef = ref(storage, `chat/${conversation.id}/${fileName}`);
+    const storageRef = ref(storage, `chat/${conversationId}/${fileName}`);
     
     try {
       // Usar retry com backoff exponencial
@@ -224,7 +232,7 @@ export default function ChatMessageArea({ conversation, onBack }: ChatMessageAre
         ChatLogger.erroUpload(
           userData.uid,
           userData.nome,
-          conversation.id,
+          conversationId,
           file.name,
           (error as Error).message
         );
@@ -254,10 +262,56 @@ export default function ChatMessageArea({ conversation, onBack }: ChatMessageAre
 
     if (!messageText.trim() && !selectedFile) return;
     if (!userData?.uid) return;
+    if (!otherParticipant) return;
 
     setSending(true);
 
     try {
+      const messageContent = messageText.trim() || "[arquivo]";
+      
+      if (!conversationId && selectedUser) {
+        const messageData: Partial<ChatMessage> = {
+          remetenteId: userData.uid,
+          remetenteNome: userData.nome,
+          remetenteTipo: userData.tipo,
+          destinatarioId: selectedUser.uid,
+          destinatarioNome: selectedUser.nome,
+          destinatarioTipo: selectedUser.tipo,
+          tipo: "texto",
+          conteudo: messageContent,
+          lida: false,
+          deletadaPorRemetente: false,
+          deletadaPorDestinatario: false,
+        };
+
+        const result = await createConversationAndSendMessage(messageData);
+        
+        await ChatLogger.mensagemEnviada(
+          userData.uid,
+          userData.nome,
+          result.conversationId,
+          result.messageId,
+          "texto"
+        );
+
+        setMessageText("");
+        setSelectedFile(null);
+        toast({
+          title: "Mensagem enviada",
+          description: "Conversa criada e mensagem enviada com sucesso.",
+        });
+        return;
+      }
+
+      if (!conversationId) {
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "Não foi possível determinar a conversa.",
+        });
+        return;
+      }
+
       let arquivoUrl: string | undefined;
       let arquivoNome: string | undefined;
       let arquivoTipo: string | undefined;
@@ -273,36 +327,34 @@ export default function ChatMessageArea({ conversation, onBack }: ChatMessageAre
         tipoMensagem = getFileTypeCategory(selectedFile.name) as ChatMessage["tipo"];
         setUploading(false);
 
-        // Log de arquivo enviado
         await ChatLogger.arquivoEnviado(
           userData.uid,
           userData.nome,
-          conversation.id,
+          conversationId,
           "pending",
           { nome: arquivoNome, tipo: arquivoTipo, tamanho: arquivoTamanho }
         );
       }
 
-      const messageContent = messageText.trim() || `[${tipoMensagem}]`;
+      const finalContent = messageText.trim() || `[${tipoMensagem}]`;
 
-      // Verificar se a mensagem viola as regras
-      const violation = await checkMessageForViolations(messageContent, userData.uid);
+      const violation = await checkMessageForViolations(finalContent, userData.uid);
       
       if (violation) {
         await ChatLogger.violacaoDetectada(
           userData.uid,
           userData.nome,
-          conversation.id,
-          messageContent,
+          conversationId,
+          finalContent,
           violation.reason || "Violação detectada"
         );
 
-        await applyPenalty(userData.uid, violation, messageContent, conversation.id, otherParticipant.id, otherParticipant.nome);
+        await applyPenalty(userData.uid, violation, finalContent, conversationId, otherParticipant.id, otherParticipant.nome);
         
         await ChatLogger.penalidadeAplicada(
           userData.uid,
           userData.nome,
-          conversation.id,
+          conversationId,
           violation.penaltyMessage || "Penalidade aplicada",
           violation.infractionNumber || 1
         );
@@ -320,7 +372,7 @@ export default function ChatMessageArea({ conversation, onBack }: ChatMessageAre
       }
 
       const messageData = {
-        conversationId: conversation.id,
+        conversationId: conversationId,
         remetenteId: userData.uid,
         remetenteNome: userData.nome,
         remetenteTipo: userData.tipo,
@@ -328,54 +380,55 @@ export default function ChatMessageArea({ conversation, onBack }: ChatMessageAre
         destinatarioNome: otherParticipant.nome,
         destinatarioTipo: otherParticipant.tipo,
         tipo: tipoMensagem,
-        conteudo: messageContent,
+        conteudo: finalContent,
         arquivoUrl,
         arquivoNome,
         arquivoTipo,
         arquivoTamanho,
-        timestamp: new Date().toISOString(),
+        timestamp: getNowBrasiliaISO(),
         lida: false,
         deletadaPorRemetente: false,
         deletadaPorDestinatario: false,
       };
 
-      // Usar retry com backoff
       const docRef = await retryWithBackoff(async () => {
-        return await addDoc(collection(db, "chatMessages"), messageData);
+        return await addDoc(collection(db, "chat_messages"), messageData);
       }, 3, 1000);
 
-      // Log de mensagem enviada
       await ChatLogger.mensagemEnviada(
         userData.uid,
         userData.nome,
-        conversation.id,
+        conversationId,
         docRef.id,
         tipoMensagem
       );
 
-      // Atualizar a conversa
-      const conversationRef = doc(db, "chatConversations", conversation.id);
-      const isParticipant1 = conversation.participante1Id === userData.uid;
-      await updateDoc(conversationRef, {
-        ultimaMensagem: messageContent.substring(0, 50),
-        ultimaMensagemTimestamp: new Date().toISOString(),
-        ultimaMensagemRemetenteId: userData.uid,
-        [isParticipant1 ? "mensagensNaoLidas2" : "mensagensNaoLidas1"]: 
-          (isParticipant1 ? conversation.mensagensNaoLidas2 : conversation.mensagensNaoLidas1) + 1,
-        dataUltimaAtualizacao: new Date().toISOString(),
-      });
+      if (resolvedConversation) {
+        const conversationRef = doc(db, "chat_conversations", conversationId);
+        const isParticipant1 = resolvedConversation.participante1Id === userData.uid;
+        await updateDoc(conversationRef, {
+          ultimaMensagem: finalContent.substring(0, 50),
+          ultimaMensagemTimestamp: getNowBrasiliaISO(),
+          ultimaMensagemRemetenteId: userData.uid,
+          [isParticipant1 ? "mensagensNaoLidas2" : "mensagensNaoLidas1"]: 
+            ((isParticipant1 ? resolvedConversation.mensagensNaoLidas2 : resolvedConversation.mensagensNaoLidas1) || 0) + 1,
+          dataUltimaAtualizacao: getNowBrasiliaISO(),
+        });
+      }
 
       setMessageText("");
       setSelectedFile(null);
     } catch (error) {
       console.error("Erro ao enviar mensagem:", error);
       
-      await ChatLogger.erroEnvio(
-        userData.uid,
-        userData.nome,
-        conversation.id,
-        (error as Error).message
-      );
+      if (conversationId) {
+        await ChatLogger.erroEnvio(
+          userData.uid,
+          userData.nome,
+          conversationId,
+          (error as Error).message
+        );
+      }
       
       toast({
         variant: "destructive",
@@ -392,7 +445,7 @@ export default function ChatMessageArea({ conversation, onBack }: ChatMessageAre
     if (!userData?.uid) return;
 
     try {
-      const messageRef = doc(db, "chatMessages", messageId);
+      const messageRef = doc(db, "chat_messages", messageId);
       const msg = messages.find(m => m.id === messageId);
       const now = new Date().toISOString();
       
@@ -405,7 +458,7 @@ export default function ChatMessageArea({ conversation, onBack }: ChatMessageAre
         await ChatLogger.mensagemDeletada(
           userData.uid,
           userData.nome,
-          conversation.id,
+          conversationId,
           messageId,
           "remetente"
         );
@@ -418,7 +471,7 @@ export default function ChatMessageArea({ conversation, onBack }: ChatMessageAre
         await ChatLogger.mensagemDeletada(
           userData.uid,
           userData.nome,
-          conversation.id,
+          conversationId,
           messageId,
           "destinatario"
         );
