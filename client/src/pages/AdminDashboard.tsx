@@ -167,6 +167,7 @@ export default function AdminDashboard() {
   const [justificativaText, setJustificativaText] = useState("");
   const [bloqueioDialogOpen, setBloqueioDialogOpen] = useState(false);
   const [manutencoesPendentes, setManutencoesPendentes] = useState<Maintenance[]>([]);
+  const [auditHistoryDialogOpen, setAuditHistoryDialogOpen] = useState(false);
 
   const turmaForm = useForm<z.infer<typeof turmaFormSchema>>({
     resolver: zodResolver(turmaFormSchema),
@@ -2989,107 +2990,49 @@ export default function AdminDashboard() {
               </Card>
             )}
 
-            {/* Histórico de Auditoria */}
-            {maintenanceData && maintenanceData.filter(m => m.arquivada).length > 0 && (
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>Histórico de Auditoria</CardTitle>
-                      <CardDescription>
-                        Registro permanente de todas as manutenções justificadas e arquivadas
-                      </CardDescription>
-                    </div>
+            {/* Acesso ao Histórico de Auditoria - SEMPRE ACESSÍVEL */}
+            <Card className="border-blue-200/50 dark:border-blue-900/50 bg-gradient-to-br from-card to-blue-50/30 dark:to-blue-950/10">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Archive className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      Histórico de Auditoria
+                    </CardTitle>
+                    <CardDescription>
+                      Área restrita com registro permanente de todas as manutenções arquivadas.
+                      <span className="font-semibold text-blue-600 dark:text-blue-400"> Sempre acessível durante manutenção.</span>
+                    </CardDescription>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {maintenanceData
-                      .filter(m => m.arquivada)
-                      .sort((a, b) => new Date(b.dataFinalizacao || b.dataAtivacao).getTime() - new Date(a.dataFinalizacao || a.dataAtivacao).getTime())
-                      .map((maintenance) => (
-                        <div
-                          key={maintenance.id}
-                          className="p-4 rounded-lg border border-border bg-muted/30"
-                        >
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1 space-y-2">
-                              <div className="flex items-center gap-2">
-                                <Badge variant="secondary">Arquivada</Badge>
-                                <span className="text-sm font-medium capitalize">
-                                  {maintenance.tipo}
-                                </span>
-                              </div>
-                              
-                              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                                <div>
-                                  <span className="text-muted-foreground">Início:</span>{" "}
-                                  <span className="font-medium">
-                                    {formatBrasiliaDateTime(maintenance.dataInicio)}
-                                  </span>
-                                </div>
-                                
-                                {maintenance.dataFim && (
-                                  <div>
-                                    <span className="text-muted-foreground">Fim Previsto:</span>{" "}
-                                    <span className="font-medium">
-                                      {formatBrasiliaDateTime(maintenance.dataFim)}
-                                    </span>
-                                  </div>
-                                )}
-                                
-                                <div>
-                                  <span className="text-muted-foreground">Iniciada por:</span>{" "}
-                                  <span className="font-medium">{maintenance.iniciadoPorNome}</span>
-                                </div>
-                                
-                                {maintenance.dataFinalizacao && (
-                                  <div>
-                                    <span className="text-muted-foreground">Finalizada em:</span>{" "}
-                                    <span className="font-medium">
-                                      {formatBrasiliaDateTime(maintenance.dataFinalizacao)}
-                                    </span>
-                                  </div>
-                                )}
-                                
-                                {maintenance.finalizadoPorNome && (
-                                  <div>
-                                    <span className="text-muted-foreground">Finalizada por:</span>{" "}
-                                    <span className="font-medium">{maintenance.finalizadoPorNome}</span>
-                                  </div>
-                                )}
-
-                                {maintenance.justificativa && (
-                                  <>
-                                    <div className="col-span-2">
-                                      <span className="text-muted-foreground">Justificativa:</span>{" "}
-                                      <p className="text-sm mt-1 p-2 bg-background rounded">{maintenance.justificativa}</p>
-                                    </div>
-                                    {maintenance.justificadaPorNome && (
-                                      <div>
-                                        <span className="text-muted-foreground">Justificada por:</span>{" "}
-                                        <span className="font-medium">{maintenance.justificadaPorNome}</span>
-                                      </div>
-                                    )}
-                                    {maintenance.dataJustificativa && (
-                                      <div>
-                                        <span className="text-muted-foreground">Data da justificativa:</span>{" "}
-                                        <span className="font-medium">
-                                          {formatBrasiliaDateTime(maintenance.dataJustificativa)}
-                                        </span>
-                                      </div>
-                                    )}
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                  <Badge variant="outline" className="text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400">
+                    {maintenanceData?.filter(m => m.arquivada).length || 0} Registros
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col items-center justify-center py-8 gap-4">
+                  <div className="p-4 bg-blue-100 dark:bg-blue-900/20 rounded-full">
+                    <Archive className="h-12 w-12 text-blue-600 dark:text-blue-400" />
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                  <div className="text-center space-y-2">
+                    <p className="text-base font-medium">Acesso Restrito ao Histórico</p>
+                    <p className="text-sm text-muted-foreground max-w-md">
+                      Clique no botão abaixo para acessar o histórico completo de auditoria com todas as manutenções arquivadas.
+                    </p>
+                  </div>
+                  <Button
+                    variant="default"
+                    size="lg"
+                    onClick={() => setAuditHistoryDialogOpen(true)}
+                    className="mt-2"
+                    data-testid="button-access-audit-history"
+                  >
+                    <Archive className="h-5 w-5 mr-2" />
+                    Acessar Histórico de Auditoria
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </main>
@@ -6314,6 +6257,136 @@ export default function AdminDashboard() {
               data-testid="button-save-justificativa"
             >
               {adicionarJustificativaMutation.isPending ? "Salvando..." : "Salvar Justificativa"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={auditHistoryDialogOpen} onOpenChange={setAuditHistoryDialogOpen}>
+        <DialogContent className="max-w-6xl max-h-[85vh] overflow-y-auto" data-testid="dialog-audit-history">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+              <Archive className="h-5 w-5" />
+              Histórico de Auditoria - Manutenções Arquivadas
+            </DialogTitle>
+            <DialogDescription>
+              Registro permanente e imutável de todas as manutenções do sistema que foram justificadas e arquivadas.
+              Este histórico está sempre acessível, mesmo durante manutenção do sistema.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {maintenanceData && maintenanceData.filter(m => m.arquivada).length > 0 ? (
+              <>
+                <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg">
+                  <p className="text-sm text-blue-900 dark:text-blue-100 font-medium">
+                    Total de {maintenanceData.filter(m => m.arquivada).length} manutenção(ões) arquivada(s)
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  {maintenanceData
+                    .filter(m => m.arquivada)
+                    .sort((a, b) => new Date(b.dataFinalizacao || b.dataAtivacao).getTime() - new Date(a.dataFinalizacao || a.dataAtivacao).getTime())
+                    .map((maintenance) => (
+                      <div
+                        key={maintenance.id}
+                        className="p-5 rounded-lg border-2 border-border bg-muted/30"
+                        data-testid={`audit-record-${maintenance.id}`}
+                      >
+                        <div className="flex items-start justify-between gap-4 mb-4">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="text-sm">Arquivada</Badge>
+                            <Badge variant="outline" className="text-sm capitalize">{maintenance.tipo}</Badge>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                          <div>
+                            <span className="text-muted-foreground font-medium">Início:</span>{" "}
+                            <span className="font-semibold">
+                              {formatBrasiliaDateTime(maintenance.dataInicio)}
+                            </span>
+                          </div>
+                          
+                          {maintenance.dataFim && (
+                            <div>
+                              <span className="text-muted-foreground font-medium">Fim Previsto:</span>{" "}
+                              <span className="font-semibold">
+                                {formatBrasiliaDateTime(maintenance.dataFim)}
+                              </span>
+                            </div>
+                          )}
+                          
+                          <div>
+                            <span className="text-muted-foreground font-medium">Iniciada por:</span>{" "}
+                            <span className="font-semibold">{maintenance.iniciadoPorNome}</span>
+                          </div>
+                          
+                          {maintenance.dataFinalizacao && (
+                            <div>
+                              <span className="text-muted-foreground font-medium">Finalizada em:</span>{" "}
+                              <span className="font-semibold">
+                                {formatBrasiliaDateTime(maintenance.dataFinalizacao)}
+                              </span>
+                            </div>
+                          )}
+                          
+                          {maintenance.finalizadoPorNome && (
+                            <div>
+                              <span className="text-muted-foreground font-medium">Finalizada por:</span>{" "}
+                              <span className="font-semibold">{maintenance.finalizadoPorNome}</span>
+                            </div>
+                          )}
+
+                          {maintenance.justificativa && (
+                            <>
+                              <div className="col-span-2 mt-2">
+                                <span className="text-muted-foreground font-medium block mb-2">Justificativa:</span>
+                                <div className="p-3 bg-background border border-border rounded-md">
+                                  <p className="text-sm whitespace-pre-wrap">{maintenance.justificativa}</p>
+                                </div>
+                              </div>
+                              {maintenance.justificadaPorNome && (
+                                <div>
+                                  <span className="text-muted-foreground font-medium">Justificada por:</span>{" "}
+                                  <span className="font-semibold">{maintenance.justificadaPorNome}</span>
+                                </div>
+                              )}
+                              {maintenance.dataJustificativa && (
+                                <div>
+                                  <span className="text-muted-foreground font-medium">Data da justificativa:</span>{" "}
+                                  <span className="font-semibold">
+                                    {formatBrasiliaDateTime(maintenance.dataJustificativa)}
+                                  </span>
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <Archive className="h-16 w-16 text-muted-foreground mb-4" />
+                <p className="text-lg font-medium mb-2">Nenhuma manutenção arquivada</p>
+                <p className="text-sm text-muted-foreground max-w-md">
+                  Quando manutenções forem finalizadas, justificadas e arquivadas, elas aparecerão neste histórico permanente de auditoria.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setAuditHistoryDialogOpen(false)}
+              data-testid="button-close-audit-history"
+            >
+              Fechar
             </Button>
           </DialogFooter>
         </DialogContent>
