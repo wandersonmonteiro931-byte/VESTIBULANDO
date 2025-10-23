@@ -3512,8 +3512,37 @@ export default function AdminDashboard() {
                       )}
                     </div>
                   </div>
+                  {(() => {
+                    const studentTurma = turmas?.find(t => t.id === selectedStudentDetails.turma);
+                    return studentTurma ? (
+                      <>
+                        {studentTurma.periodoMatriculaInicio && studentTurma.periodoMatriculaFim && (
+                          <div>
+                            <Label className="text-muted-foreground">Período de Matrícula da Turma</Label>
+                            <p className="font-medium">
+                              {new Date(studentTurma.periodoMatriculaInicio).toLocaleDateString('pt-BR')} até {new Date(studentTurma.periodoMatriculaFim).toLocaleDateString('pt-BR')}
+                            </p>
+                          </div>
+                        )}
+                        {studentTurma.linkWhatsApp && (
+                          <div>
+                            <Label className="text-muted-foreground">Grupo WhatsApp da Turma</Label>
+                            <a 
+                              href={studentTurma.linkWhatsApp} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="font-medium text-primary hover:underline flex items-center gap-1"
+                            >
+                              Acessar grupo
+                              <MessageCircle className="h-4 w-4" />
+                            </a>
+                          </div>
+                        )}
+                      </>
+                    ) : null;
+                  })()}
                   <div>
-                    <Label className="text-muted-foreground">Disponibilidade de Horários</Label>
+                    <Label className="text-muted-foreground">Disponibilidade de Horários do Aluno</Label>
                     <div className="flex flex-wrap gap-2 mt-2">
                       {selectedStudentDetails.disponibilidade && selectedStudentDetails.disponibilidade.length > 0 ? (
                         selectedStudentDetails.disponibilidade.map((horario, index) => (
