@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { BrasiliaClock } from "@/components/BrasiliaClock";
 import { StatusBadge } from "@/components/StatusBadge";
 import { FileUploadZone } from "@/components/FileUploadZone";
 import { AnnouncementsCarousel } from "@/components/AnnouncementsCarousel";
@@ -198,6 +199,7 @@ export default function TeacherDashboard() {
               <p className="text-sm font-semibold">{userData?.nome}</p>
               <p className="text-xs text-muted-foreground">Professor</p>
             </div>
+            <BrasiliaClock />
             <ThemeToggle />
             <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout">
               <LogOut className="h-5 w-5" />

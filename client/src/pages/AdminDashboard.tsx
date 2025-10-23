@@ -1699,9 +1699,7 @@ export default function AdminDashboard() {
               <p className="text-sm font-semibold">{userData?.nome}</p>
               <p className="text-xs text-muted-foreground">Diretoria</p>
             </div>
-            <div className="hidden md:block">
-              <BrasiliaClock />
-            </div>
+            <BrasiliaClock />
             <ThemeToggle />
             <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout">
               <LogOut className="h-5 w-5" />
