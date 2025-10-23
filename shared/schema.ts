@@ -172,6 +172,11 @@ export const maintenanceSchema = z.object({
   iniciadoPorNome: z.string(), // Nome do diretor que iniciou
   finalizadoPor: z.string().optional(), // ID do diretor que finalizou
   finalizadoPorNome: z.string().optional(), // Nome do diretor que finalizou
+  justificativa: z.string().optional(), // Justificativa das alterações realizadas (obrigatório após finalizar)
+  justificadaPor: z.string().optional(), // ID do diretor que adicionou a justificativa
+  justificadaPorNome: z.string().optional(), // Nome do diretor que adicionou a justificativa
+  dataJustificativa: z.string().optional(), // Data/hora em que a justificativa foi adicionada
+  arquivada: z.boolean().default(false), // se true, manutenção foi arquivada no histórico de auditoria
 });
 
 export const insertMaintenanceSchema = maintenanceSchema.omit({ id: true });
