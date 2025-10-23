@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import { X, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { collection, query, where, onSnapshot, addDoc, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -141,19 +139,58 @@ export default function ChatWindow({ onClose }: ChatWindowProps) {
   }, [userData?.uid]);
 
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
-    >
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+    <>
+      <div 
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          zIndex: 9998,
+        }}
+        onClick={onClose}
+      />
       
-      <div className="relative bg-card border rounded-lg shadow-lg w-full max-w-5xl h-[600px] max-h-[90vh] flex flex-col z-10">
-        <div className="flex items-center justify-between p-4 border-b bg-card">
-          <h2 className="text-lg font-semibold" data-testid="text-chat-title">
+      <div
+        style={{
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: '90vw',
+          maxWidth: '900px',
+          height: '80vh',
+          maxHeight: '700px',
+          backgroundColor: 'var(--card)',
+          borderRadius: '8px',
+          border: '1px solid var(--border)',
+          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)',
+          display: 'flex',
+          flexDirection: 'column',
+          zIndex: 9999,
+          overflow: 'hidden',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '16px',
+            borderBottom: '1px solid var(--border)',
+            backgroundColor: 'var(--card)',
+          }}
+        >
+          <h2 
+            style={{ 
+              fontSize: '18px', 
+              fontWeight: 600,
+              color: 'var(--foreground)',
+            }}
+            data-testid="text-chat-title"
+          >
             Mensagens
           </h2>
           <Button
@@ -166,9 +203,17 @@ export default function ChatWindow({ onClose }: ChatWindowProps) {
           </Button>
         </div>
 
-        <div className="flex flex-1 overflow-hidden">
-          <div className="w-80 border-r flex flex-col bg-card">
-            <div className="p-3 border-b">
+        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+          <div
+            style={{
+              width: '300px',
+              borderRight: '1px solid var(--border)',
+              display: 'flex',
+              flexDirection: 'column',
+              backgroundColor: 'var(--card)',
+            }}
+          >
+            <div style={{ padding: '12px', borderBottom: '1px solid var(--border)' }}>
               <Button
                 variant="outline"
                 className="w-full justify-start"
@@ -180,15 +225,15 @@ export default function ChatWindow({ onClose }: ChatWindowProps) {
               </Button>
             </div>
 
-            <div className="flex-1 overflow-y-auto">
+            <div style={{ flex: 1, overflow: 'auto' }}>
               {loading ? (
-                <div className="p-4 text-center text-muted-foreground">
+                <div style={{ padding: '16px', textAlign: 'center', color: 'var(--muted-foreground)' }}>
                   Carregando conversas...
                 </div>
               ) : conversations.length === 0 ? (
-                <div className="p-4 text-center text-muted-foreground">
-                  <p className="mb-2">Nenhuma conversa ainda</p>
-                  <p className="text-sm">Use a busca para iniciar uma conversa</p>
+                <div style={{ padding: '16px', textAlign: 'center', color: 'var(--muted-foreground)' }}>
+                  <p style={{ marginBottom: '8px' }}>Nenhuma conversa ainda</p>
+                  <p style={{ fontSize: '14px' }}>Use a busca para iniciar uma conversa</p>
                 </div>
               ) : (
                 <ChatConversationList
@@ -200,17 +245,23 @@ export default function ChatWindow({ onClose }: ChatWindowProps) {
             </div>
           </div>
 
-          <div className="flex-1 flex flex-col bg-background">
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'var(--background)' }}>
             {selectedConversation ? (
               <ChatMessageArea
                 conversation={selectedConversation}
                 onBack={() => setSelectedConversation(null)}
               />
             ) : (
-              <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                <div className="text-center">
+              <div style={{ 
+                flex: 1, 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                color: 'var(--muted-foreground)',
+              }}>
+                <div style={{ textAlign: 'center' }}>
                   <p>Selecione uma conversa</p>
-                  <p className="text-sm mt-1">ou inicie uma nova</p>
+                  <p style={{ fontSize: '14px', marginTop: '4px' }}>ou inicie uma nova</p>
                 </div>
               </div>
             )}
@@ -227,6 +278,6 @@ export default function ChatWindow({ onClose }: ChatWindowProps) {
           }}
         />
       )}
-    </div>
+    </>
   );
 }
