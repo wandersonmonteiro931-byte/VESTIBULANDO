@@ -20,6 +20,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { PresenceIndicator } from "@/components/PresenceIndicator";
 import { MonitoringTab } from "@/components/MonitoringTab";
 import { DocumentationTab } from "@/components/DocumentationTab";
+import { AnnouncementsTab } from "@/components/AnnouncementsTab";
 import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, MessageCircle, ArrowRightLeft, Clock, Search, Eye, AlertTriangle, Settings, Power, PowerOff } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { queryClient } from "@/lib/queryClient";
@@ -1710,6 +1711,7 @@ export default function AdminDashboard() {
             <TabsTrigger value="disciplinares" data-testid="tab-disciplinares">Advertências e Suspensões</TabsTrigger>
             <TabsTrigger value="monitoramento" data-testid="tab-monitoramento">Monitoramento</TabsTrigger>
             <TabsTrigger value="documentacao" data-testid="tab-documentacao">Documentação</TabsTrigger>
+            <TabsTrigger value="avisos" data-testid="tab-avisos">Avisos</TabsTrigger>
             <TabsTrigger value="manutencao" data-testid="tab-manutencao">Manutenção</TabsTrigger>
           </TabsList>
 
@@ -2437,6 +2439,10 @@ export default function AdminDashboard() {
 
           <TabsContent value="documentacao" className="space-y-4">
             <DocumentationTab />
+          </TabsContent>
+
+          <TabsContent value="avisos" className="space-y-4">
+            <AnnouncementsTab />
           </TabsContent>
 
           <TabsContent value="manutencao" className="space-y-4">
