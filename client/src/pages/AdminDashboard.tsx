@@ -2815,6 +2815,33 @@ export default function AdminDashboard() {
               <h3 className="text-xl font-semibold">Manutenção do Sistema</h3>
             </div>
 
+            <Card className="border-blue-200/50 dark:border-blue-900/50 bg-gradient-to-br from-card to-blue-50/30 dark:to-blue-950/10">
+              <CardHeader>
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg">
+                    <AlertTriangle className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div className="flex-1">
+                    <CardTitle className="text-blue-900 dark:text-blue-100">🔒 Atenção: Procedimento de Manutenção</CardTitle>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <p className="text-foreground">
+                  Antes de iniciar qualquer manutenção, certifique-se de bloquear corretamente todo o sistema.
+                  Isso evita perda de dados, falhas operacionais e impactos negativos aos usuários da plataforma.
+                </p>
+                <p className="flex items-start gap-2 text-orange-700 dark:text-orange-300 font-medium">
+                  <span>⚠️</span>
+                  <span>Sempre verifique o sistema antes de concluir a manutenção para garantir que todos os serviços estejam funcionando corretamente.</span>
+                </p>
+                <p className="flex items-start gap-2 text-foreground">
+                  <span>📝</span>
+                  <span>Após a conclusão, registre todos os detalhes da atividade no formulário de Histórico de Auditoria, garantindo rastreabilidade e conformidade dos procedimentos realizados.</span>
+                </p>
+              </CardContent>
+            </Card>
+
             {maintenanceData && maintenanceData.length > 0 && maintenanceData[0].ativa ? (
               <Card className="border-orange-200/50 dark:border-orange-900/50 bg-gradient-to-br from-card to-orange-50/30 dark:to-orange-950/10">
                 <CardHeader>
