@@ -207,7 +207,7 @@ export default function Login() {
   }, [formData.cpf, mode]);
 
   useEffect(() => {
-    if (userData && !showCodeDialog) {
+    if (userData && !showCodeDialog && !showSuspensionOverlay) {
       switch (userData.tipo) {
         case "aluno":
           setLocation("/aluno");
@@ -220,7 +220,7 @@ export default function Login() {
           break;
       }
     }
-  }, [userData, showCodeDialog, setLocation]);
+  }, [userData, showCodeDialog, showSuspensionOverlay, setLocation]);
 
   // Carregar turmas disponíveis
   useEffect(() => {
@@ -784,12 +784,16 @@ export default function Login() {
                 const duracaoDias = Math.ceil((dataTermino.getTime() - dataAplicacao.getTime()) / (1000 * 60 * 60 * 24));
                 
                 console.log("🚫 Bloqueando login - Suspensão ativa");
+                
+                // Fazer signOut ANTES de definir os estados para evitar race condition
+                await auth.signOut();
+                
+                // Agora definir os estados para mostrar o overlay
                 setSuspensionData({
                   ...activeSuspension,
                   duracaoDias,
                 });
                 setShowSuspensionOverlay(true);
-                await auth.signOut();
                 setLoading(false);
                 return;
               } else {
