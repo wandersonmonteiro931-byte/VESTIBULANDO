@@ -284,16 +284,31 @@ export const insertChatConversationSchema = chatConversationSchema.omit({ id: tr
 export type ChatConversation = z.infer<typeof chatConversationSchema>;
 export type InsertChatConversation = z.infer<typeof insertChatConversationSchema>;
 
-// Call Signal schema - sinalização WebRTC para chamadas de áudio/vídeo
-export interface CallSignal {
-  id: string;
-  callId: string; // ID único da chamada
-  callerId: string; // Quem está chamando
-  callerName: string;
-  receiverId: string; // Quem está recebendo
-  receiverName: string;
-  type: 'offer' | 'answer' | 'ice-candidate' | 'end' | 'reject';
-  data: any; // SDP ou ICE candidate data
-  timestamp: number;
-  read: boolean;
-}
+// Chat Penalty schema - penalidades automáticas do chat
+export const chatPenaltySchema = z.object({
+  id: z.string(),
+  usuarioId: z.string(),
+  usuarioNome: z.string(),
+  usuarioMatricula: z.string().optional(),
+  usuarioTipo: z.enum(["aluno", "professor", "diretor"]),
+  tipo: z.enum(["advertencia", "bloqueio_24h", "suspensao_conta"]),
+  mensagemInfratora: z.string(), // Conteúdo da mensagem que violou as regras
+  conversationId: z.string(), // ID da conversa onde ocorreu a infração
+  destinatarioId: z.string(), // Com quem estava conversando
+  destinatarioNome: z.string(),
+  dataInfracao: z.string(), // Data/hora da infração
+  numeroDaInfracao: z.number(), // 1, 2, ou 3
+  ativa: z.boolean().default(true), // Se a penalidade está ativa
+  dataExpiracao: z.string().optional(), // Data de expiração do bloqueio (para bloqueio_24h)
+  revisadoPorDiretor: z.boolean().default(false), // Se foi revisado pela diretoria
+  decisaoDiretor: z.enum(["mantida", "removida"]).optional(), // Decisão após revisão
+  comentarioDiretor: z.string().optional(), // Comentário da diretoria
+  diretorId: z.string().optional(), // ID do diretor que revisou
+  diretorNome: z.string().optional(),
+  dataRevisao: z.string().optional(),
+});
+
+export const insertChatPenaltySchema = chatPenaltySchema.omit({ id: true });
+
+export type ChatPenalty = z.infer<typeof chatPenaltySchema>;
+export type InsertChatPenalty = z.infer<typeof insertChatPenaltySchema>;
