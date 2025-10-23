@@ -1997,6 +1997,7 @@ export default function AdminDashboard() {
         `Iniciada por: ${maintenance.iniciadoPorNome}`,
         maintenance.dataFinalizacao ? `Finalizada em: ${formatBrasiliaDateTime(maintenance.dataFinalizacao)}` : null,
         maintenance.finalizadoPorNome ? `Finalizada por: ${maintenance.finalizadoPorNome}` : null,
+        maintenance.duracaoFormatada ? `Duração: ${maintenance.duracaoFormatada}` : null,
       ].filter(Boolean);
 
       infoLines.forEach((line) => {
