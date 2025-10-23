@@ -176,3 +176,22 @@ export const insertMaintenanceSchema = maintenanceSchema.omit({ id: true });
 
 export type Maintenance = z.infer<typeof maintenanceSchema>;
 export type InsertMaintenance = z.infer<typeof insertMaintenanceSchema>;
+
+// Announcement schema - avisos para alunos e professores
+export const announcementSchema = z.object({
+  id: z.string(),
+  tipo: z.enum(["texto", "imagem"]), // tipo de aviso: texto ou imagem
+  conteudo: z.string(), // texto do aviso ou URL da imagem em base64
+  publicoAlvo: z.enum(["alunos", "professores", "turmas"]), // para quem é o aviso
+  turmasSelecionadas: z.array(z.string()).optional(), // IDs das turmas específicas (se publicoAlvo === "turmas")
+  ativo: z.boolean().default(true), // se o aviso está ativo
+  criadoPor: z.string(), // ID do diretor que criou
+  criadoPorNome: z.string(), // Nome do diretor
+  dataCriacao: z.string(), // Data de criação
+  dataAtualizacao: z.string().optional(), // Data da última atualização
+});
+
+export const insertAnnouncementSchema = announcementSchema.omit({ id: true });
+
+export type Announcement = z.infer<typeof announcementSchema>;
+export type InsertAnnouncement = z.infer<typeof insertAnnouncementSchema>;
