@@ -181,17 +181,19 @@ export function AnnouncementsTab() {
       const numeroAviso = nextNumber.toString().padStart(4, '0');
 
       // Converter slides para objetos JavaScript simples (Firestore compatibility)
-      const slidesData = validSlides.map(slide => ({
-        tipo: slide.tipo,
-        conteudo: slide.conteudo,
-      }));
+      const slidesData = validSlides.map(slide => 
+        JSON.parse(JSON.stringify({
+          tipo: slide.tipo,
+          conteudo: slide.conteudo,
+        }))
+      );
 
       const announcementData: any = {
         numeroAviso,
         titulo: announcementTitle,
         slides: slidesData,
         publicoAlvo: announcementTarget,
-        turmasSelecionadas: announcementTarget === "turmas" ? selectedTurmas : [],
+        turmasSelecionadas: announcementTarget === "turmas" ? [...selectedTurmas] : [],
         tipoAviso,
         tipoDuracao,
         dataInicio,
@@ -270,16 +272,18 @@ export function AnnouncementsTab() {
       }
 
       // Converter slides para objetos JavaScript simples (Firestore compatibility)
-      const slidesData = validSlides.map(slide => ({
-        tipo: slide.tipo,
-        conteudo: slide.conteudo,
-      }));
+      const slidesData = validSlides.map(slide => 
+        JSON.parse(JSON.stringify({
+          tipo: slide.tipo,
+          conteudo: slide.conteudo,
+        }))
+      );
 
       const updateData: any = {
         titulo: announcementTitle,
         slides: slidesData,
         publicoAlvo: announcementTarget,
-        turmasSelecionadas: announcementTarget === "turmas" ? selectedTurmas : [],
+        turmasSelecionadas: announcementTarget === "turmas" ? [...selectedTurmas] : [],
         tipoAviso,
         tipoDuracao,
         dataInicio,
