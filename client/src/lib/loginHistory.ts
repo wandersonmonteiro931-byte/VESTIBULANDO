@@ -1,15 +1,11 @@
 import { collection, addDoc } from "firebase/firestore";
 import { db } from "./firebase";
 import type { InsertLoginHistory } from "@shared/schema";
+import { toBrasiliaTime as toBrasiliaTimeUtil } from "./brasiliaTime";
 
-// Função para converter timestamp para horário de Brasília (UTC-3)
+// Re-exportar a função do utilitário principal
 export function toBrasiliaTime(date: Date = new Date()): string {
-  // Converter para UTC-3 (horário de Brasília)
-  const brasiliaOffset = -3 * 60; // -3 horas em minutos
-  const utcTime = date.getTime() + (date.getTimezoneOffset() * 60000);
-  const brasiliaTime = new Date(utcTime + (brasiliaOffset * 60000));
-  
-  return brasiliaTime.toISOString();
+  return toBrasiliaTimeUtil(date);
 }
 
 // Registrar login do usuário

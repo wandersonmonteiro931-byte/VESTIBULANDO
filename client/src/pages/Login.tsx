@@ -18,6 +18,7 @@ import { GraduationCap, Loader2, Copy, Check, Search, AlertCircle, Shield, Users
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { formatBrasiliaDateTime } from "@/lib/brasiliaTime";
 
 // Gera uma matrícula sequencial única usando transação atômica
 async function generateUniqueMatricula(db: any): Promise<string> {
@@ -2135,10 +2136,10 @@ export default function Login() {
             <CardContent className="space-y-3">
               {/* Mensagem principal */}
               <div className="text-sm text-center space-y-2">
-                <p>Informamos que o sistema passará por uma manutenção temporária para melhorias e atualizações.</p>
+                <p>Informamos que o sistema está temporariamente indisponível devido a uma manutenção programada para melhorias e atualizações.</p>
                 
                 <p className="text-muted-foreground text-xs">
-                  Durante este período, o acesso a aulas, tarefas, mensagens e demais funcionalidades estará indisponível.
+                  Durante este período, o acesso a aulas, tarefas, mensagens e demais funcionalidades estarão suspensos.
                 </p>
               </div>
               
@@ -2149,7 +2150,7 @@ export default function Login() {
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold">Início:</p>
                     <p className="text-xs text-muted-foreground" data-testid="text-maintenance-start">
-                      {format(new Date(maintenanceData.dataInicio), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                      {formatBrasiliaDateTime(maintenanceData.dataInicio)}
                     </p>
                   </div>
                 </div>
@@ -2160,7 +2161,7 @@ export default function Login() {
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold">Previsão de retorno:</p>
                       <p className="text-xs text-muted-foreground" data-testid="text-maintenance-end">
-                        {format(new Date(maintenanceData.dataFim), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                        {formatBrasiliaDateTime(maintenanceData.dataFim)}
                       </p>
                     </div>
                   </div>
@@ -2177,10 +2178,10 @@ export default function Login() {
                 )}
               </div>
               
-              {/* Mensagem de compreensão */}
+              {/* Mensagem sobre a atualização */}
               <div className="p-2 bg-orange-500/10 border border-orange-500/20 rounded-lg">
                 <p className="text-xs text-orange-600 text-center">
-                  Pedimos a compreensão de todos. Essa atualização é essencial para garantir mais estabilidade, segurança e desempenho na plataforma.
+                  Essa atualização é essencial para garantir mais estabilidade, segurança e desempenho na plataforma.
                 </p>
               </div>
               

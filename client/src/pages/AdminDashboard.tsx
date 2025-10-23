@@ -29,6 +29,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
+import { brasiliaToUTC, utcToBrasilia, formatBrasiliaDateTime } from "@/lib/brasiliaTime";
 
 const turmaFormSchema = z.object({
   nome: z.string().min(1, "Nome da turma é obrigatório"),
@@ -5388,9 +5389,10 @@ export default function AdminDashboard() {
                   return;
                 }
 
-                const dataInicio = `${maintenanceStartDate}T${maintenanceStartTime}:00.000Z`;
+                // Converter horários de Brasília para UTC
+                const dataInicio = brasiliaToUTC(maintenanceStartDate, maintenanceStartTime);
                 const dataFim = maintenanceType === "determinada" 
-                  ? `${maintenanceEndDate}T${maintenanceEndTime}:00.000Z`
+                  ? brasiliaToUTC(maintenanceEndDate, maintenanceEndTime)
                   : undefined;
 
                 iniciarManutencaoMutation.mutate({
