@@ -1909,7 +1909,10 @@ export default function AdminDashboard() {
 
       doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
-      doc.text(`Manutenção ${index + 1} - ${maintenance.tipo.toUpperCase()}`, 14, yPosition);
+      const maintenanceTitle = maintenance.numeroManutencao 
+        ? `Manutenção #${maintenance.numeroManutencao} - ${maintenance.tipo.toUpperCase()}`
+        : `Manutenção ${index + 1} - ${maintenance.tipo.toUpperCase()}`;
+      doc.text(maintenanceTitle, 14, yPosition);
       yPosition += 7;
 
       doc.setFontSize(10);
