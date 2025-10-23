@@ -2128,14 +2128,14 @@ export default function Login() {
                 <Wrench className="h-6 w-6 text-orange-600" />
               </div>
               <CardTitle className="text-xl font-bold text-orange-600">
-                🛠 Manutenção Programada 🛠
+                Manutenção Programada
               </CardTitle>
             </CardHeader>
             
             <CardContent className="space-y-3">
               {/* Mensagem principal */}
               <div className="text-sm text-center space-y-2">
-                <p>Informamos que o sistema <span className="font-semibold">Vestibulando</span> passará por uma manutenção temporária para melhorias e atualizações.</p>
+                <p>Informamos que o sistema passará por uma manutenção temporária para melhorias e atualizações.</p>
                 
                 <p className="text-muted-foreground text-xs">
                   Durante este período, o acesso a aulas, tarefas, mensagens e demais funcionalidades estará indisponível.
@@ -2180,14 +2180,14 @@ export default function Login() {
               {/* Mensagem de compreensão */}
               <div className="p-2 bg-orange-500/10 border border-orange-500/20 rounded-lg">
                 <p className="text-xs text-orange-600 text-center">
-                  Pedimos a compreensão de todos — essa atualização é essencial para garantir mais estabilidade, segurança e desempenho na plataforma.
+                  Pedimos a compreensão de todos. Essa atualização é essencial para garantir mais estabilidade, segurança e desempenho na plataforma.
                 </p>
               </div>
               
               {/* Rodapé */}
               <div className="text-center pt-1">
                 <p className="text-xs font-medium">Agradecemos pela paciência e colaboração!</p>
-                <p className="text-xs text-muted-foreground mt-1">Diretoria - Preparatório Vestibulando</p>
+                <p className="text-xs text-muted-foreground mt-1">Diretoria - Vestibulando</p>
               </div>
             </CardContent>
             
