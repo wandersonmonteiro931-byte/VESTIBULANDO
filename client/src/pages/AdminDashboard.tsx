@@ -30,7 +30,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
-import { brasiliaToUTC, utcToBrasilia, formatBrasiliaDateTime } from "@/lib/brasiliaTime";
+import { brasiliaToUTC, utcToBrasilia, formatBrasiliaDateTime, getNowBrasilia } from "@/lib/brasiliaTime";
 
 const turmaFormSchema = z.object({
   nome: z.string().min(1, "Nome da turma é obrigatório"),
@@ -2512,14 +2512,17 @@ export default function AdminDashboard() {
                   <Button
                     onClick={() => {
                       setMaintenanceDialogOpen(true);
-                      const now = new Date();
-                      const nowStr = now.toISOString().slice(0, 16);
-                      setMaintenanceStartDate(nowStr.split('T')[0]);
-                      setMaintenanceStartTime(nowStr.split('T')[1]);
-                      const endDate = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-                      const endStr = endDate.toISOString().slice(0, 16);
-                      setMaintenanceEndDate(endStr.split('T')[0]);
-                      setMaintenanceEndTime(endStr.split('T')[1]);
+                      const nowBrasilia = getNowBrasilia();
+                      setMaintenanceStartDate(nowBrasilia.dateString);
+                      setMaintenanceStartTime(nowBrasilia.timeString);
+                      
+                      // Calcular 2 horas à frente para o horário de término
+                      const [hours, minutes] = nowBrasilia.timeString.split(':').map(Number);
+                      const endHours = hours + 2;
+                      const endTimeString = `${String(endHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+                      
+                      setMaintenanceEndDate(nowBrasilia.dateString);
+                      setMaintenanceEndTime(endTimeString);
                     }}
                     data-testid="button-start-maintenance"
                   >
