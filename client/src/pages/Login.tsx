@@ -2123,16 +2123,18 @@ export default function Login() {
           data-testid="overlay-maintenance"
         >
           <Card className="w-full max-w-md border-orange-500 max-h-[90vh] overflow-auto">
-            <CardHeader className="space-y-2 text-center pb-3">
+            <CardHeader className="space-y-3 text-center pb-3">
               <div className="mx-auto w-12 h-12 rounded-full bg-orange-500/10 flex items-center justify-center">
                 <Wrench className="h-6 w-6 text-orange-600" />
               </div>
-              <CardTitle className="text-2xl font-bold text-orange-600">
-                SISTEMA EM MANUTENÇÃO
-              </CardTitle>
-              <CardDescription className="text-sm">
-                Estamos realizando melhorias no sistema. Apenas diretores têm acesso durante este período.
-              </CardDescription>
+              <div className="space-y-2">
+                <CardTitle className="text-2xl font-bold text-orange-600">
+                  Sistema Temporariamente Indisponível
+                </CardTitle>
+                <CardDescription className="text-sm font-medium">
+                  Todos os usuários (exceto diretores) estão bloqueados durante este período de manutenção.
+                </CardDescription>
+              </div>
             </CardHeader>
             
             <CardContent className="space-y-3">
@@ -2141,7 +2143,7 @@ export default function Login() {
                 <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium">Início</p>
+                    <p className="text-xs font-medium">Início da Manutenção</p>
                     <p className="text-xs text-muted-foreground" data-testid="text-maintenance-start">
                       {format(new Date(maintenanceData.dataInicio), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                     </p>
@@ -2171,14 +2173,13 @@ export default function Login() {
                 )}
               </div>
               
-              {/* Aviso */}
+              {/* Aviso adicional */}
               <div className="p-2 bg-orange-500/10 border border-orange-500/20 rounded-lg">
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
-                  <div className="text-xs text-orange-600">
-                    <p className="font-semibold mb-1">Sistema Temporariamente Indisponível</p>
-                    <p>Todos os usuários (exceto diretores) estão bloqueados durante este período de manutenção. Por favor, tente novamente mais tarde.</p>
-                  </div>
+                  <p className="text-xs text-orange-600">
+                    Estamos realizando melhorias importantes no sistema. Por favor, aguarde o término da manutenção para acessar novamente.
+                  </p>
                 </div>
               </div>
             </CardContent>
