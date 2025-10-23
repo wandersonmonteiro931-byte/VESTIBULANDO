@@ -10,21 +10,22 @@
  * para armazenamento no banco de dados.
  * 
  * @param localDateString - String no formato "YYYY-MM-DD"
- * @param localTimeString - String no formato "HH:mm"
+ * @param localTimeString - String no formato "HH:mm" ou "HH:mm:ss"
  * @returns ISO string em UTC
  */
 export function brasiliaToUTC(localDateString: string, localTimeString: string): string {
   // Criar data assumindo que é horário de Brasília
   const [year, month, day] = localDateString.split('-').map(Number);
-  const [hours, minutes] = localTimeString.split(':').map(Number);
+  const timeParts = localTimeString.split(':').map(Number);
+  const hours = timeParts[0];
+  const minutes = timeParts[1];
+  const seconds = timeParts[2] || 0;
   
-  // Criar data em Brasília (sem timezone)
-  const brasiliaDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
+  // Brasília é UTC-3, então adicionar 3 horas para converter para UTC
+  // Usar Date.UTC para criar timestamp independente do timezone local
+  const utcTimestamp = Date.UTC(year, month - 1, day, hours, minutes, seconds) + (3 * 60 * 60 * 1000);
   
-  // Adicionar 3 horas para converter de Brasília (UTC-3) para UTC
-  const utcDate = new Date(brasiliaDate.getTime() + (3 * 60 * 60 * 1000));
-  
-  return utcDate.toISOString();
+  return new Date(utcTimestamp).toISOString();
 }
 
 /**
