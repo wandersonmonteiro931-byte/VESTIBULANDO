@@ -21,6 +21,7 @@ import { PresenceIndicator } from "@/components/PresenceIndicator";
 import { MonitoringTab } from "@/components/MonitoringTab";
 import { DocumentationTab } from "@/components/DocumentationTab";
 import { AnnouncementsTab } from "@/components/AnnouncementsTab";
+import { BrasiliaClock } from "@/components/BrasiliaClock";
 import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, MessageCircle, ArrowRightLeft, Clock, Search, Eye, AlertTriangle, Settings, Power, PowerOff } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { queryClient } from "@/lib/queryClient";
@@ -1697,6 +1698,9 @@ export default function AdminDashboard() {
             <div className="text-right mr-2 hidden sm:block">
               <p className="text-sm font-semibold">{userData?.nome}</p>
               <p className="text-xs text-muted-foreground">Diretoria</p>
+            </div>
+            <div className="hidden md:block">
+              <BrasiliaClock />
             </div>
             <ThemeToggle />
             <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout">

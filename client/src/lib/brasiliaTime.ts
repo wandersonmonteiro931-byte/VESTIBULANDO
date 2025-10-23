@@ -59,7 +59,36 @@ export function utcToBrasilia(isoString: string): { dateString: string; timeStri
  */
 export function getNowBrasilia(): { dateString: string; timeString: string } {
   const now = new Date();
-  return utcToBrasilia(now.toISOString());
+  
+  // Usar Intl para obter o horário de Brasília independente do timezone do usuário
+  const dateFormatter = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  
+  const timeFormatter = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  
+  const dateParts = dateFormatter.formatToParts(now);
+  const timeParts = timeFormatter.formatToParts(now);
+  
+  const day = dateParts.find(p => p.type === 'day')?.value || '01';
+  const month = dateParts.find(p => p.type === 'month')?.value || '01';
+  const year = dateParts.find(p => p.type === 'year')?.value || '2025';
+  
+  const hour = timeParts.find(p => p.type === 'hour')?.value || '00';
+  const minute = timeParts.find(p => p.type === 'minute')?.value || '00';
+  
+  return {
+    dateString: `${year}-${month}-${day}`,
+    timeString: `${hour}:${minute}`
+  };
 }
 
 /**
