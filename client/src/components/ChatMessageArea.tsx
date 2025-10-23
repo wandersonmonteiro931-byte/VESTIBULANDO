@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { collection, query, where, onSnapshot, addDoc, doc, updateDoc, serverTimestamp, orderBy, getDocs, deleteDoc } from "firebase/firestore";
+import { collection, query, where, onSnapshot, addDoc, doc, updateDoc, serverTimestamp, orderBy, getDocs, deleteDoc, getDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import { getNowBrasiliaISO } from "@/lib/brasiliaTime";
@@ -120,10 +120,14 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack }: 
       if (unreadMessages.length > 0) {
         try {
           const conversationRef = doc(db, "chat_conversations", conversationId);
-          const isParticipant1 = resolvedConversation.participante1Id === userData?.uid;
-          await updateDoc(conversationRef, {
-            [isParticipant1 ? "mensagensNaoLidas1" : "mensagensNaoLidas2"]: 0,
-          });
+          const conversationSnap = await getDoc(conversationRef);
+          
+          if (conversationSnap.exists()) {
+            const isParticipant1 = resolvedConversation.participante1Id === userData?.uid;
+            await updateDoc(conversationRef, {
+              [isParticipant1 ? "mensagensNaoLidas1" : "mensagensNaoLidas2"]: 0,
+            });
+          }
         } catch (error) {
           console.error("Erro ao atualizar contador de não lidas:", error);
         }
@@ -409,15 +413,19 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack }: 
 
       if (resolvedConversation) {
         const conversationRef = doc(db, "chat_conversations", conversationId);
-        const isParticipant1 = resolvedConversation.participante1Id === userData.uid;
-        await updateDoc(conversationRef, {
-          ultimaMensagem: finalContent.substring(0, 50),
-          ultimaMensagemTimestamp: getNowBrasiliaISO(),
-          ultimaMensagemRemetenteId: userData.uid,
-          [isParticipant1 ? "mensagensNaoLidas2" : "mensagensNaoLidas1"]: 
-            ((isParticipant1 ? resolvedConversation.mensagensNaoLidas2 : resolvedConversation.mensagensNaoLidas1) || 0) + 1,
-          dataUltimaAtualizacao: getNowBrasiliaISO(),
-        });
+        const conversationSnap = await getDoc(conversationRef);
+        
+        if (conversationSnap.exists()) {
+          const isParticipant1 = resolvedConversation.participante1Id === userData.uid;
+          await updateDoc(conversationRef, {
+            ultimaMensagem: finalContent.substring(0, 50),
+            ultimaMensagemTimestamp: getNowBrasiliaISO(),
+            ultimaMensagemRemetenteId: userData.uid,
+            [isParticipant1 ? "mensagensNaoLidas2" : "mensagensNaoLidas1"]: 
+              ((isParticipant1 ? resolvedConversation.mensagensNaoLidas2 : resolvedConversation.mensagensNaoLidas1) || 0) + 1,
+            dataUltimaAtualizacao: getNowBrasiliaISO(),
+          });
+        }
       }
 
       setMessageText("");

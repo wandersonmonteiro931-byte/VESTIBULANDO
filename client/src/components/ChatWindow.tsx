@@ -25,7 +25,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/AuthContext";
-import { collection, query, where, onSnapshot, addDoc, getDocs, deleteDoc, doc, updateDoc } from "firebase/firestore";
+import { collection, query, where, onSnapshot, addDoc, getDocs, deleteDoc, doc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { getNowBrasiliaISO } from "@/lib/brasiliaTime";
 import type { ChatConversation, User, UserBlock } from "@shared/schema";
@@ -231,13 +231,21 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
     setSelectedConversation(conversation);
     setSelectedUser(null);
 
-    const conversationRef = doc(db, "chat_conversations", conversation.id);
-    const isParticipant1 = conversation.participante1Id === userData?.uid;
-    const fieldToUpdate = isParticipant1 ? "mensagensNaoLidas1" : "mensagensNaoLidas2";
-    
-    await updateDoc(conversationRef, {
-      [fieldToUpdate]: 0,
-    });
+    try {
+      const conversationRef = doc(db, "chat_conversations", conversation.id);
+      const conversationSnap = await getDoc(conversationRef);
+      
+      if (conversationSnap.exists()) {
+        const isParticipant1 = conversation.participante1Id === userData?.uid;
+        const fieldToUpdate = isParticipant1 ? "mensagensNaoLidas1" : "mensagensNaoLidas2";
+        
+        await updateDoc(conversationRef, {
+          [fieldToUpdate]: 0,
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar contador de mensagens não lidas:", error);
+    }
   };
 
   const handleDeleteConversation = async () => {
