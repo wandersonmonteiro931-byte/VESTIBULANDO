@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { PhotoUpload } from "@/components/PhotoUpload";
 import { Badge } from "@/components/ui/badge";
-import { GraduationCap, Loader2, Copy, Check, Search, AlertCircle, Shield, Users, CheckCircle, XCircle, Clock, Calendar, FileText, AlertTriangle } from "lucide-react";
+import { GraduationCap, Loader2, Copy, Check, Search, AlertCircle, Shield, Users, CheckCircle, XCircle, Clock, Calendar, FileText, AlertTriangle, Wrench } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -2109,6 +2109,104 @@ export default function Login() {
                 data-testid="button-close-suspension"
               >
                 Fechar
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+      )}
+
+      {/* Overlay de Manutenção do Sistema */}
+      {showMaintenanceOverlay && maintenanceData && (
+        <div 
+          className="fixed inset-0 bg-background/95 backdrop-blur-sm flex items-center justify-center p-3"
+          style={{ zIndex: 999999 }}
+          data-testid="overlay-maintenance"
+        >
+          <Card className="w-full max-w-md border-orange-500 max-h-[90vh] overflow-auto">
+            <CardHeader className="space-y-2 text-center pb-3">
+              <div className="mx-auto w-12 h-12 rounded-full bg-orange-500/10 flex items-center justify-center">
+                <Wrench className="h-6 w-6 text-orange-600" />
+              </div>
+              <CardTitle className="text-2xl font-bold text-orange-600">
+                SISTEMA EM MANUTENÇÃO
+              </CardTitle>
+              <CardDescription className="text-sm">
+                Estamos realizando melhorias no sistema. Apenas diretores têm acesso durante este período.
+              </CardDescription>
+            </CardHeader>
+            
+            <CardContent className="space-y-3">
+              {/* Informações da manutenção */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium">Início</p>
+                    <p className="text-xs text-muted-foreground" data-testid="text-maintenance-start">
+                      {format(new Date(maintenanceData.dataInicio), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    </p>
+                  </div>
+                </div>
+                
+                {maintenanceData.dataFim ? (
+                  <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium">Previsão de Término</p>
+                      <p className="text-xs text-muted-foreground" data-testid="text-maintenance-end">
+                        {format(new Date(maintenanceData.dataFim), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium">Duração</p>
+                      <p className="text-xs text-muted-foreground" data-testid="text-maintenance-duration">
+                        Indeterminada
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Aviso */}
+              <div className="p-2 bg-orange-500/10 border border-orange-500/20 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                  <div className="text-xs text-orange-600">
+                    <p className="font-semibold mb-1">Sistema Temporariamente Indisponível</p>
+                    <p>Todos os usuários (exceto diretores) estão bloqueados durante este período de manutenção. Por favor, tente novamente mais tarde.</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+            
+            <CardFooter className="pt-3">
+              <Button
+                onClick={async () => {
+                  console.log("🔘 Fechando overlay de manutenção");
+                  
+                  // Fazer logout se estiver autenticado
+                  if (auth.currentUser) {
+                    try {
+                      await auth.signOut();
+                      console.log("🔓 Logout realizado");
+                    } catch (error) {
+                      console.error("Erro ao fazer logout:", error);
+                    }
+                  }
+                  
+                  // Limpar estados do overlay
+                  setShowMaintenanceOverlay(false);
+                  setMaintenanceData(null);
+                }}
+                variant="outline"
+                className="w-full"
+                data-testid="button-close-maintenance"
+              >
+                Voltar
               </Button>
             </CardFooter>
           </Card>
