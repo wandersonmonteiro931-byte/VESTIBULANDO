@@ -792,21 +792,15 @@ export default function Login() {
               console.log("⏰ Suspensão ativa?", agora < dataTermino);
               
               if (agora < dataTermino) {
-                // Suspensão ainda ativa - BLOQUEAR LOGIN IMEDIATAMENTE
+                // Suspensão ainda ativa - MOSTRAR OVERLAY E BLOQUEAR
                 const duracaoDias = Math.ceil((dataTermino.getTime() - dataAplicacao.getTime()) / (1000 * 60 * 60 * 24));
                 
                 console.log("🚫 Bloqueando login - Suspensão ativa");
                 console.log("📋 Dados da suspensão:", activeSuspension);
                 
-                // PASSO 1: Fazer logout PRIMEIRO para evitar que AuthContext redirecione
-                try {
-                  await auth.signOut();
-                  console.log("🔓 Logout realizado - usuário desautenticado");
-                } catch (logoutError) {
-                  console.error("Erro ao fazer logout:", logoutError);
-                }
-                
-                // PASSO 2: Configurar dados da suspensão DEPOIS do logout
+                // IMPORTANTE: Configurar estados ANTES de fazer qualquer coisa
+                // O useEffect de redirecionamento já verifica showSuspensionOverlay
+                // e NÃO redireciona quando está ativo
                 setSuspensionData({
                   ...activeSuspension,
                   duracaoDias,
@@ -814,12 +808,13 @@ export default function Login() {
                   dataAplicacao: activeSuspension.dataAplicacao,
                 });
                 setShowSuspensionOverlay(true);
+                setLoading(false);
                 
                 console.log("✅ Estados definidos - overlay deve aparecer agora");
                 console.log("🎨 showSuspensionOverlay:", true);
                 console.log("📊 suspensionData definido");
                 
-                setLoading(false);
+                // IMPORTANTE: Retornar aqui para não continuar o login
                 return;
               } else {
                 // Suspensão expirou, mas não tentar atualizar (requer permissão de admin)
@@ -2076,10 +2071,19 @@ export default function Login() {
             
             <CardFooter>
               <Button
-                onClick={() => {
+                onClick={async () => {
+                  // Limpar estados do overlay
                   setShowSuspensionOverlay(false);
                   setSuspensionData(null);
                   setSuspensionTimeRemaining("");
+                  
+                  // Fazer logout do Firebase
+                  try {
+                    await auth.signOut();
+                    console.log("🔓 Logout realizado ao fechar overlay");
+                  } catch (error) {
+                    console.error("Erro ao fazer logout:", error);
+                  }
                 }}
                 variant="outline"
                 className="w-full"
