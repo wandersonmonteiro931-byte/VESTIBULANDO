@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { StatusBadge } from "@/components/StatusBadge";
 import { FileUploadZone } from "@/components/FileUploadZone";
+import { AnnouncementsCarousel } from "@/components/AnnouncementsCarousel";
 import { LogOut, Plus, FileText, Users, Download, Edit, Calendar, Award } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
@@ -217,6 +218,10 @@ export default function TeacherDashboard() {
             <Plus className="h-5 w-5 mr-2" />
             Nova Tarefa
           </Button>
+        </div>
+
+        <div className="mb-10">
+          <AnnouncementsCarousel userType="professor" />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">

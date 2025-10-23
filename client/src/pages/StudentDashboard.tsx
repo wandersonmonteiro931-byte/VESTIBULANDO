@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { StatusBadge } from "@/components/StatusBadge";
 import { FileUploadZone } from "@/components/FileUploadZone";
+import { AnnouncementsCarousel } from "@/components/AnnouncementsCarousel";
 import { LogOut, FileText, Upload, Download, Calendar, Award, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
@@ -296,6 +297,10 @@ export default function StudentDashboard() {
             Bem-vindo, {userData?.nome?.split(' ')[0]}!
           </h2>
           <p className="text-muted-foreground text-lg">Acompanhe suas tarefas e progresso</p>
+        </div>
+
+        <div className="mb-10">
+          <AnnouncementsCarousel userType="aluno" userTurma={userData?.turma} />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
