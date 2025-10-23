@@ -18,6 +18,8 @@ export const userSchema = z.object({
   isOnline: z.boolean().optional().default(false),
   lastSeen: z.string().optional(), // timestamp do último acesso
   lastActivity: z.string().optional(), // timestamp da última atividade
+  statusPresenca: z.enum(["online", "ausente", "offline", "em_reuniao", "ocupado"]).optional().default("offline"),
+  mensagemStatus: z.string().optional(), // mensagem personalizada de status (ex: "Em reunião até 15h")
   // Campo para controlar primeiro acesso e troca de senha
   primeiroAcesso: z.boolean().optional().default(true), // true se ainda não alterou a senha inicial
   // Campos de foto

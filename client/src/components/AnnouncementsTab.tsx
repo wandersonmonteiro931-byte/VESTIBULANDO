@@ -181,28 +181,36 @@ export function AnnouncementsTab() {
       const numeroAviso = nextNumber.toString().padStart(4, '0');
 
       // Converter slides para objetos JavaScript simples (Firestore compatibility)
-      const slidesData = validSlides.map(slide => 
-        JSON.parse(JSON.stringify({
-          tipo: slide.tipo,
-          conteudo: slide.conteudo,
-        }))
-      );
+      const slidesData = validSlides.map(slide => {
+        const plainSlide = {
+          tipo: String(slide.tipo),
+          conteudo: String(slide.conteudo),
+        };
+        return plainSlide;
+      });
+
+      // Garantir que turmasSelecionadas seja um array de strings simples
+      const turmasList = announcementTarget === "turmas" 
+        ? selectedTurmas.map(t => String(t))
+        : [];
 
       const announcementData: any = {
-        numeroAviso,
-        titulo: announcementTitle,
+        numeroAviso: String(numeroAviso),
+        titulo: String(announcementTitle),
         slides: slidesData,
-        publicoAlvo: announcementTarget,
-        turmasSelecionadas: announcementTarget === "turmas" ? [...selectedTurmas] : [],
-        tipoAviso,
-        tipoDuracao,
-        dataInicio,
-        ativo: tipoAviso === "instantaneo",
-        criadoPor: userData.uid,
-        criadoPorNome: userData.nome,
-        dataCriacao: getNowBrasiliaISO(),
+        publicoAlvo: String(announcementTarget),
+        turmasSelecionadas: turmasList,
+        tipoAviso: String(tipoAviso),
+        tipoDuracao: String(tipoDuracao),
+        dataInicio: String(dataInicio),
+        ativo: Boolean(tipoAviso === "instantaneo"),
+        criadoPor: String(userData.uid),
+        criadoPorNome: String(userData.nome),
+        dataCriacao: String(getNowBrasiliaISO()),
         arquivado: false,
       };
+      
+      console.log("📤 Dados do aviso a serem salvos:", JSON.stringify(announcementData, null, 2));
 
       if (tipoAviso === "instantaneo") {
         announcementData.dataAtivacao = getNowBrasiliaISO();
@@ -272,22 +280,28 @@ export function AnnouncementsTab() {
       }
 
       // Converter slides para objetos JavaScript simples (Firestore compatibility)
-      const slidesData = validSlides.map(slide => 
-        JSON.parse(JSON.stringify({
-          tipo: slide.tipo,
-          conteudo: slide.conteudo,
-        }))
-      );
+      const slidesData = validSlides.map(slide => {
+        const plainSlide = {
+          tipo: String(slide.tipo),
+          conteudo: String(slide.conteudo),
+        };
+        return plainSlide;
+      });
+
+      // Garantir que turmasSelecionadas seja um array de strings simples
+      const turmasList = announcementTarget === "turmas" 
+        ? selectedTurmas.map(t => String(t))
+        : [];
 
       const updateData: any = {
-        titulo: announcementTitle,
+        titulo: String(announcementTitle),
         slides: slidesData,
-        publicoAlvo: announcementTarget,
-        turmasSelecionadas: announcementTarget === "turmas" ? [...selectedTurmas] : [],
-        tipoAviso,
-        tipoDuracao,
-        dataInicio,
-        dataAtualizacao: getNowBrasiliaISO(),
+        publicoAlvo: String(announcementTarget),
+        turmasSelecionadas: turmasList,
+        tipoAviso: String(tipoAviso),
+        tipoDuracao: String(tipoDuracao),
+        dataInicio: String(dataInicio),
+        dataAtualizacao: String(getNowBrasiliaISO()),
       };
 
       if (dataFim) {
