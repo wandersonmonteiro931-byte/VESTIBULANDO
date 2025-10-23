@@ -26,25 +26,25 @@ export default function ChatButton() {
       where("participante2Id", "==", userData.uid)
     );
 
+    let total1 = 0;
+    let total2 = 0;
+
     const unsubscribe1 = onSnapshot(q, (snapshot) => {
-      let total = 0;
+      total1 = 0;
       snapshot.forEach((doc) => {
         const data = doc.data();
-        total += data.mensagensNaoLidas1 || 0;
+        total1 += data.mensagensNaoLidas1 || 0;
       });
-      setUnreadCount(prev => {
-        const newCount = total;
-        return newCount;
-      });
+      setUnreadCount(total1 + total2);
     });
 
     const unsubscribe2 = onSnapshot(q2, (snapshot) => {
-      let total = 0;
+      total2 = 0;
       snapshot.forEach((doc) => {
         const data = doc.data();
-        total += data.mensagensNaoLidas2 || 0;
+        total2 += data.mensagensNaoLidas2 || 0;
       });
-      setUnreadCount(prev => prev + total);
+      setUnreadCount(total1 + total2);
     });
 
     return () => {
