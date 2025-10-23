@@ -22,7 +22,7 @@ import { MonitoringTab } from "@/components/MonitoringTab";
 import { DocumentationTab } from "@/components/DocumentationTab";
 import { AnnouncementsTab } from "@/components/AnnouncementsTab";
 import { BrasiliaClock } from "@/components/BrasiliaClock";
-import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, MessageCircle, ArrowRightLeft, Clock, Search, Eye, AlertTriangle, Settings, Power, PowerOff, Archive, Download } from "lucide-react";
+import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, MessageCircle, ArrowRightLeft, Clock, Search, Eye, AlertTriangle, Settings, Power, PowerOff, Archive, Download, ChevronDown, ChevronUp } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
@@ -170,6 +170,7 @@ export default function AdminDashboard() {
   const [bloqueioDialogOpen, setBloqueioDialogOpen] = useState(false);
   const [manutencoesPendentes, setManutencoesPendentes] = useState<Maintenance[]>([]);
   const [auditHistoryDialogOpen, setAuditHistoryDialogOpen] = useState(false);
+  const [expandedJustificativas, setExpandedJustificativas] = useState<Set<string>>(new Set());
 
   const turmaForm = useForm<z.infer<typeof turmaFormSchema>>({
     resolver: zodResolver(turmaFormSchema),
@@ -1843,6 +1844,18 @@ export default function AdminDashboard() {
     tarefas: tarefas?.length || 0,
     entregas: entregas?.length || 0,
     turmas: turmas?.length || 0,
+  };
+
+  const toggleJustificativa = (maintenanceId: string) => {
+    setExpandedJustificativas(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(maintenanceId)) {
+        newSet.delete(maintenanceId);
+      } else {
+        newSet.add(maintenanceId);
+      }
+      return newSet;
+    });
   };
 
   const downloadAuditHistory = () => {
@@ -6376,91 +6389,124 @@ export default function AdminDashboard() {
             {maintenanceData && maintenanceData.filter(m => m.arquivada).length > 0 ? (
               <>
                 <div className="p-2 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-md">
-                  <p className="text-xs text-blue-900 dark:text-blue-100 font-medium">
+                  <p className="text-sm text-blue-900 dark:text-blue-100 font-medium">
                     Total: {maintenanceData.filter(m => m.arquivada).length} manutenção(ões) arquivada(s)
                   </p>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   {maintenanceData
                     .filter(m => m.arquivada)
                     .sort((a, b) => new Date(b.dataFinalizacao || b.dataAtivacao).getTime() - new Date(a.dataFinalizacao || a.dataAtivacao).getTime())
-                    .map((maintenance) => (
-                      <div
-                        key={maintenance.id}
-                        className="p-3 rounded-md border border-border bg-muted/20"
-                        data-testid={`audit-record-${maintenance.id}`}
-                      >
-                        <div className="flex items-center gap-1.5 mb-2">
-                          <Badge variant="secondary" className="text-xs h-5">Arquivada</Badge>
-                          <Badge variant="outline" className="text-xs h-5 capitalize">{maintenance.tipo}</Badge>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
-                          <div>
-                            <span className="text-muted-foreground">Início:</span>{" "}
-                            <span className="font-medium">
-                              {formatBrasiliaDateTime(maintenance.dataInicio)}
-                            </span>
+                    .map((maintenance) => {
+                      const isExpanded = expandedJustificativas.has(maintenance.id || '');
+                      
+                      return (
+                        <div
+                          key={maintenance.id}
+                          className="p-3 rounded-md border border-border bg-muted/20"
+                          data-testid={`audit-record-${maintenance.id}`}
+                        >
+                          <div className="flex items-center justify-between mb-2.5">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="secondary">Arquivada</Badge>
+                              <Badge variant="outline" className="capitalize">{maintenance.tipo}</Badge>
+                            </div>
+                            
+                            {maintenance.justificativa && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => toggleJustificativa(maintenance.id || '')}
+                                className="h-7 text-xs"
+                                data-testid={`button-toggle-justificativa-${maintenance.id}`}
+                              >
+                                {isExpanded ? (
+                                  <>
+                                    <ChevronUp className="h-3.5 w-3.5 mr-1" />
+                                    Ocultar Justificativa
+                                  </>
+                                ) : (
+                                  <>
+                                    <ChevronDown className="h-3.5 w-3.5 mr-1" />
+                                    Ver Justificativa
+                                  </>
+                                )}
+                              </Button>
+                            )}
                           </div>
                           
-                          {maintenance.dataFim && (
+                          <div className="grid grid-cols-3 gap-x-4 gap-y-2 text-sm">
                             <div>
-                              <span className="text-muted-foreground">Fim Previsto:</span>{" "}
+                              <span className="text-muted-foreground">Início:</span>{" "}
                               <span className="font-medium">
-                                {formatBrasiliaDateTime(maintenance.dataFim)}
+                                {formatBrasiliaDateTime(maintenance.dataInicio)}
                               </span>
                             </div>
-                          )}
-                          
-                          <div>
-                            <span className="text-muted-foreground">Iniciada por:</span>{" "}
-                            <span className="font-medium">{maintenance.iniciadoPorNome}</span>
+                            
+                            {maintenance.dataFim && (
+                              <div>
+                                <span className="text-muted-foreground">Fim Previsto:</span>{" "}
+                                <span className="font-medium">
+                                  {formatBrasiliaDateTime(maintenance.dataFim)}
+                                </span>
+                              </div>
+                            )}
+                            
+                            <div>
+                              <span className="text-muted-foreground">Iniciada por:</span>{" "}
+                              <span className="font-medium">{maintenance.iniciadoPorNome}</span>
+                            </div>
+                            
+                            {maintenance.dataFinalizacao && (
+                              <div>
+                                <span className="text-muted-foreground">Finalizada em:</span>{" "}
+                                <span className="font-medium">
+                                  {formatBrasiliaDateTime(maintenance.dataFinalizacao)}
+                                </span>
+                              </div>
+                            )}
+                            
+                            {maintenance.finalizadoPorNome && (
+                              <div>
+                                <span className="text-muted-foreground">Finalizada por:</span>{" "}
+                                <span className="font-medium">{maintenance.finalizadoPorNome}</span>
+                              </div>
+                            )}
                           </div>
-                          
-                          {maintenance.dataFinalizacao && (
-                            <div>
-                              <span className="text-muted-foreground">Finalizada em:</span>{" "}
-                              <span className="font-medium">
-                                {formatBrasiliaDateTime(maintenance.dataFinalizacao)}
-                              </span>
-                            </div>
-                          )}
-                          
-                          {maintenance.finalizadoPorNome && (
-                            <div>
-                              <span className="text-muted-foreground">Finalizada por:</span>{" "}
-                              <span className="font-medium">{maintenance.finalizadoPorNome}</span>
-                            </div>
-                          )}
 
-                          {maintenance.justificativa && (
-                            <>
-                              <div className="col-span-2 mt-1">
-                                <span className="text-muted-foreground block mb-1">Justificativa:</span>
-                                <div className="p-2 bg-background border border-border rounded-sm">
-                                  <p className="text-xs whitespace-pre-wrap">{maintenance.justificativa}</p>
+                          {maintenance.justificativa && isExpanded && (
+                            <div className="mt-3 pt-3 border-t border-border">
+                              <div className="space-y-2">
+                                <div>
+                                  <span className="text-muted-foreground font-medium block mb-1.5">Justificativa:</span>
+                                  <div className="p-2.5 bg-background border border-border rounded-sm">
+                                    <p className="text-sm whitespace-pre-wrap">{maintenance.justificativa}</p>
+                                  </div>
+                                </div>
+                                
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+                                  {maintenance.justificadaPorNome && (
+                                    <div>
+                                      <span className="text-muted-foreground">Justificada por:</span>{" "}
+                                      <span className="font-medium">{maintenance.justificadaPorNome}</span>
+                                    </div>
+                                  )}
+                                  {maintenance.dataJustificativa && (
+                                    <div>
+                                      <span className="text-muted-foreground">Data:</span>{" "}
+                                      <span className="font-medium">
+                                        {formatBrasiliaDateTime(maintenance.dataJustificativa)}
+                                      </span>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
-                              {maintenance.justificadaPorNome && (
-                                <div>
-                                  <span className="text-muted-foreground">Justificada por:</span>{" "}
-                                  <span className="font-medium">{maintenance.justificadaPorNome}</span>
-                                </div>
-                              )}
-                              {maintenance.dataJustificativa && (
-                                <div>
-                                  <span className="text-muted-foreground">Data da justificativa:</span>{" "}
-                                  <span className="font-medium">
-                                    {formatBrasiliaDateTime(maintenance.dataJustificativa)}
-                                  </span>
-                                </div>
-                              )}
-                            </>
+                            </div>
                           )}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                 </div>
               </>
             ) : (
