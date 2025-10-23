@@ -121,3 +121,44 @@ export function formatBrasiliaDateTime(isoString: string): string {
     return "Data inválida";
   }
 }
+
+/**
+ * Obtém o timestamp atual em horário de Brasília e retorna como ISO string em UTC
+ * Esta função garante que o timestamp represente o momento atual em Brasília,
+ * convertido para UTC para armazenamento consistente no banco de dados.
+ * 
+ * @returns ISO string em UTC representando o momento atual em Brasília
+ */
+export function getNowBrasiliaISO(): string {
+  const now = new Date();
+  
+  // Usar Intl para obter o horário de Brasília independente do timezone do usuário
+  const dateFormatter = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  
+  const timeFormatter = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+  
+  const dateParts = dateFormatter.formatToParts(now);
+  const timeParts = timeFormatter.formatToParts(now);
+  
+  const day = dateParts.find(p => p.type === 'day')?.value || '01';
+  const month = dateParts.find(p => p.type === 'month')?.value || '01';
+  const year = dateParts.find(p => p.type === 'year')?.value || '2025';
+  
+  const hour = timeParts.find(p => p.type === 'hour')?.value || '00';
+  const minute = timeParts.find(p => p.type === 'minute')?.value || '00';
+  const second = timeParts.find(p => p.type === 'second')?.value || '00';
+  
+  // Converter horário de Brasília para UTC ISO string
+  return brasiliaToUTC(`${year}-${month}-${day}`, `${hour}:${minute}:${second}`);
+}
