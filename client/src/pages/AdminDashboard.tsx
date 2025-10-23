@@ -3166,7 +3166,10 @@ export default function AdminDashboard() {
                                   <Button
                                     variant="destructive"
                                     size="sm"
-                                    onClick={() => finalizarManutencaoMutation.mutate(maintenance.id)}
+                                    onClick={() => {
+                                      setMaintenanceToEnd(maintenance.id);
+                                      setConfirmEndMaintenanceDialogOpen(true);
+                                    }}
                                     disabled={finalizarManutencaoMutation.isPending}
                                     data-testid={`button-finalize-maintenance-${maintenance.id}`}
                                   >
