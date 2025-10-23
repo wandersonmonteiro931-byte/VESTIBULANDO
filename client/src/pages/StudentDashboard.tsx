@@ -312,7 +312,7 @@ export default function StudentDashboard() {
                 greeting = "Boa noite";
               }
               
-              return `${greeting}, @${userData?.nome?.split(' ')[0]}!`;
+              return `${greeting}, ${userData?.nome?.split(' ')[0]}!`;
             })()}
           </h2>
           <p className="text-muted-foreground text-lg">Acompanhe suas tarefas e progresso</p>

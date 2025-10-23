@@ -180,10 +180,16 @@ export function AnnouncementsTab() {
       const nextNumber = maxNumber + 1;
       const numeroAviso = nextNumber.toString().padStart(4, '0');
 
+      // Converter slides para objetos JavaScript simples (Firestore compatibility)
+      const slidesData = validSlides.map(slide => ({
+        tipo: slide.tipo,
+        conteudo: slide.conteudo,
+      }));
+
       const announcementData: any = {
         numeroAviso,
         titulo: announcementTitle,
-        slides: validSlides,
+        slides: slidesData,
         publicoAlvo: announcementTarget,
         turmasSelecionadas: announcementTarget === "turmas" ? selectedTurmas : [],
         tipoAviso,
@@ -263,9 +269,15 @@ export function AnnouncementsTab() {
         dataFim = undefined;
       }
 
+      // Converter slides para objetos JavaScript simples (Firestore compatibility)
+      const slidesData = validSlides.map(slide => ({
+        tipo: slide.tipo,
+        conteudo: slide.conteudo,
+      }));
+
       const updateData: any = {
         titulo: announcementTitle,
-        slides: validSlides,
+        slides: slidesData,
         publicoAlvo: announcementTarget,
         turmasSelecionadas: announcementTarget === "turmas" ? selectedTurmas : [],
         tipoAviso,
@@ -845,6 +857,9 @@ export function AnnouncementsTab() {
                           accept="image/*"
                           onChange={(e) => handleImageChange(e, index)}
                         />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Sugestão: Use imagens com proporção 16:9 (ex: 1280x720, 1920x1080) para melhor visualização
+                        </p>
                         {slide.conteudo && (
                           <div className="mt-2 flex justify-center">
                             <img
@@ -1082,6 +1097,9 @@ export function AnnouncementsTab() {
                           accept="image/*"
                           onChange={(e) => handleImageChange(e, index)}
                         />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Sugestão: Use imagens com proporção 16:9 (ex: 1280x720, 1920x1080) para melhor visualização
+                        </p>
                         {slide.conteudo && (
                           <div className="mt-2 flex justify-center">
                             <img

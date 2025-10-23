@@ -169,8 +169,8 @@ export function AnnouncementsCarousel({ userType, userTurma }: AnnouncementsCaro
     <Card data-testid="announcements-carousel">
       <CardContent className="p-0">
         <div className="relative">
-          {/* Container com aspect ratio 16:9 fixo (1280x720) */}
-          <div className="w-full aspect-video bg-muted/30 overflow-hidden">
+          {/* Container padrão para avisos */}
+          <div className="w-full h-80 bg-muted/30 overflow-hidden rounded-lg">
             {currentSlide.tipo === "texto" ? (
               <div className="w-full h-full flex items-center justify-center p-8">
                 <div className="max-w-5xl mx-auto text-center space-y-4">
