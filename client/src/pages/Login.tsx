@@ -18,7 +18,7 @@ import { GraduationCap, Loader2, Copy, Check, Search, AlertCircle, Shield, Users
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { formatBrasiliaDateTime, getNowBrasiliaISO } from "@/lib/brasiliaTime";
+import { formatBrasiliaDateTime, getNowBrasiliaISO, brasiliaToUTC } from "@/lib/brasiliaTime";
 
 // Gera uma matrícula sequencial única usando transação atômica
 async function generateUniqueMatricula(db: any): Promise<string> {
@@ -198,6 +198,13 @@ export default function Login() {
   // Estados para manutenção do sistema
   const [showMaintenanceOverlay, setShowMaintenanceOverlay] = useState(false);
   const [maintenanceData, setMaintenanceData] = useState<any>(null);
+  
+  // Estados para troca de senha obrigatória no primeiro acesso
+  const [showPasswordChangeDialog, setShowPasswordChangeDialog] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [passwordChangeLoading, setPasswordChangeLoading] = useState(false);
+  const [passwordChangeError, setPasswordChangeError] = useState("");
 
   // Validar CPF em tempo real quando usuário digitar 11 números
   useEffect(() => {
@@ -213,7 +220,15 @@ export default function Login() {
   }, [formData.cpf, mode]);
 
   useEffect(() => {
-    if (userData && !showCodeDialog && !showSuspensionOverlay && !showMaintenanceOverlay) {
+    if (userData && !showCodeDialog && !showSuspensionOverlay && !showMaintenanceOverlay && !showPasswordChangeDialog) {
+      // Verificar se é primeiro acesso (aluno ou professor)
+      if ((userData.tipo === "aluno" || userData.tipo === "professor") && userData.primeiroAcesso !== false) {
+        console.log("🔒 Primeiro acesso detectado - exigindo troca de senha");
+        setShowPasswordChangeDialog(true);
+        return;
+      }
+      
+      // Redirecionar para o dashboard apropriado
       switch (userData.tipo) {
         case "aluno":
           setLocation("/aluno");
@@ -226,7 +241,7 @@ export default function Login() {
           break;
       }
     }
-  }, [userData, showCodeDialog, showSuspensionOverlay, showMaintenanceOverlay, setLocation]);
+  }, [userData, showCodeDialog, showSuspensionOverlay, showMaintenanceOverlay, showPasswordChangeDialog, setLocation]);
 
   // Carregar turmas disponíveis
   useEffect(() => {
@@ -593,6 +608,67 @@ export default function Login() {
         }
         
         console.log("✅ Login de diretor bem-sucedido!");
+        
+        // DESATIVAR AUTOMATICAMENTE MANUTENÇÕES EXPIRADAS (somente diretores podem fazer isso)
+        try {
+          console.log("🔧 Verificando manutenções expiradas para desativar...");
+          const { collection, getDocs, query, where, updateDoc, doc: firestoreDoc } = await import("firebase/firestore");
+          
+          const maintenanceQuery = query(
+            collection(db, "systemMaintenance"),
+            where("ativa", "==", true)
+          );
+          const maintenanceSnapshot = await getDocs(maintenanceQuery);
+          
+          for (const maintenanceDoc of maintenanceSnapshot.docs) {
+            const maintenanceInfo = maintenanceDoc.data();
+            
+            if (maintenanceInfo.dataFim) {
+              const nowBrasilia = new Date();
+              const brasiliaFormatter = new Intl.DateTimeFormat('pt-BR', {
+                timeZone: 'America/Sao_Paulo',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+              });
+              
+              const parts = brasiliaFormatter.formatToParts(nowBrasilia);
+              const brasiliaYear = parts.find(p => p.type === 'year')?.value;
+              const brasiliaMonth = parts.find(p => p.type === 'month')?.value;
+              const brasiliaDay = parts.find(p => p.type === 'day')?.value;
+              const brasiliaHour = parts.find(p => p.type === 'hour')?.value;
+              const brasiliaMinute = parts.find(p => p.type === 'minute')?.value;
+              const brasiliaSecond = parts.find(p => p.type === 'second')?.value;
+              
+              const currentBrasiliaISO = brasiliaToUTC(
+                `${brasiliaYear}-${brasiliaMonth}-${brasiliaDay}`,
+                `${brasiliaHour}:${brasiliaMinute}:${brasiliaSecond}`
+              );
+              
+              const currentTime = new Date(currentBrasiliaISO);
+              const endTime = new Date(maintenanceInfo.dataFim);
+              
+              if (currentTime >= endTime) {
+                console.log("✅ Desativando manutenção expirada:", maintenanceDoc.id);
+                console.log("  - Finalizada por:", currentUserData.nome, "(UID:", userCredential.user.uid, ")");
+                
+                await updateDoc(firestoreDoc(db, "systemMaintenance", maintenanceDoc.id), {
+                  ativa: false,
+                  dataFinalizacao: getNowBrasiliaISO(),
+                  finalizadoPor: userCredential.user.uid,
+                  finalizadoPorNome: currentUserData.nome
+                });
+              }
+            }
+          }
+        } catch (cleanupError) {
+          console.error("Erro ao limpar manutenções expiradas:", cleanupError);
+        }
+        
         await refreshUserData();
         
         toast({
@@ -750,18 +826,69 @@ export default function Login() {
             if (!maintenanceSnapshot.empty) {
               const activeMaintenance = maintenanceSnapshot.docs[0].data();
               
-              console.log("🚫 BLOQUEANDO LOGIN - Sistema em manutenção");
-              console.log("📋 Dados da manutenção:", activeMaintenance);
-              
-              // Configurar overlay com dados da manutenção
-              setMaintenanceData(activeMaintenance);
-              setShowMaintenanceOverlay(true);
-              setLoading(false);
-              
-              console.log("✅ Overlay de manutenção configurado - NÃO AUTENTICAR");
-              
-              // RETORNAR AQUI - NÃO AUTENTICAR NO FIREBASE
-              return;
+              // VERIFICAR SE A MANUTENÇÃO JÁ EXPIROU (usando horário de Brasília)
+              if (activeMaintenance.dataFim) {
+                const nowBrasilia = new Date();
+                const brasiliaFormatter = new Intl.DateTimeFormat('pt-BR', {
+                  timeZone: 'America/Sao_Paulo',
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                  hour12: false
+                });
+                
+                const parts = brasiliaFormatter.formatToParts(nowBrasilia);
+                const brasiliaYear = parts.find(p => p.type === 'year')?.value;
+                const brasiliaMonth = parts.find(p => p.type === 'month')?.value;
+                const brasiliaDay = parts.find(p => p.type === 'day')?.value;
+                const brasiliaHour = parts.find(p => p.type === 'hour')?.value;
+                const brasiliaMinute = parts.find(p => p.type === 'minute')?.value;
+                const brasiliaSecond = parts.find(p => p.type === 'second')?.value;
+                
+                const currentBrasiliaISO = brasiliaToUTC(
+                  `${brasiliaYear}-${brasiliaMonth}-${brasiliaDay}`,
+                  `${brasiliaHour}:${brasiliaMinute}:${brasiliaSecond}`
+                );
+                
+                const currentTime = new Date(currentBrasiliaISO);
+                const endTime = new Date(activeMaintenance.dataFim);
+                
+                console.log("🕒 Verificando se manutenção expirou:");
+                console.log("  - Hora atual (Brasília):", currentBrasiliaISO);
+                console.log("  - Hora fim da manutenção:", activeMaintenance.dataFim);
+                console.log("  - Expirou?", currentTime >= endTime);
+                
+                if (currentTime >= endTime) {
+                  console.log("✅ Manutenção expirou - permitindo login");
+                  // Manutenção expirou - NÃO bloquear o login
+                  // A manutenção será desativada automaticamente quando um diretor fizer login
+                } else {
+                  // Manutenção ainda está ativa - BLOQUEAR LOGIN
+                  console.log("🚫 BLOQUEANDO LOGIN - Sistema em manutenção");
+                  console.log("📋 Dados da manutenção:", activeMaintenance);
+                  
+                  setMaintenanceData(activeMaintenance);
+                  setShowMaintenanceOverlay(true);
+                  setLoading(false);
+                  
+                  console.log("✅ Overlay de manutenção configurado - NÃO AUTENTICAR");
+                  return;
+                }
+              } else {
+                // Manutenção indeterminada - sempre bloquear
+                console.log("🚫 BLOQUEANDO LOGIN - Manutenção indeterminada");
+                console.log("📋 Dados da manutenção:", activeMaintenance);
+                
+                setMaintenanceData(activeMaintenance);
+                setShowMaintenanceOverlay(true);
+                setLoading(false);
+                
+                console.log("✅ Overlay de manutenção configurado - NÃO AUTENTICAR");
+                return;
+              }
             } else {
               console.log("✅ Nenhuma manutenção ativa");
             }
@@ -1172,6 +1299,73 @@ export default function Login() {
       title: "Identidade confirmada",
       description: "Você pode editar seu cadastro e reenviar.",
     });
+  };
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordChangeError("");
+    
+    // Validações
+    if (!newPassword || !confirmNewPassword) {
+      setPasswordChangeError("Por favor, preencha todos os campos.");
+      return;
+    }
+    
+    if (newPassword.length < 6) {
+      setPasswordChangeError("A senha deve ter no mínimo 6 caracteres.");
+      return;
+    }
+    
+    if (newPassword !== confirmNewPassword) {
+      setPasswordChangeError("As senhas não conferem. Por favor, digite novamente.");
+      return;
+    }
+    
+    setPasswordChangeLoading(true);
+    
+    try {
+      // Atualizar senha no Firebase Auth
+      const { updatePassword } = await import("firebase/auth");
+      if (auth.currentUser) {
+        await updatePassword(auth.currentUser, newPassword);
+        
+        // Atualizar no Firestore para marcar que não é mais primeiro acesso
+        const { updateDoc, doc: firestoreDoc } = await import("firebase/firestore");
+        await updateDoc(firestoreDoc(db, "usuarios", auth.currentUser.uid), {
+          primeiroAcesso: false
+        });
+        
+        // Atualizar userData local
+        await refreshUserData();
+        
+        toast({
+          title: "Senha alterada com sucesso!",
+          description: "Sua senha foi atualizada. Você será redirecionado para o sistema.",
+        });
+        
+        // Limpar estados e fechar diálogo
+        setNewPassword("");
+        setConfirmNewPassword("");
+        setPasswordChangeError("");
+        setShowPasswordChangeDialog(false);
+      } else {
+        setPasswordChangeError("Usuário não autenticado. Por favor, faça login novamente.");
+      }
+    } catch (error: any) {
+      console.error("Erro ao alterar senha:", error);
+      
+      let errorMessage = "Não foi possível alterar a senha. Tente novamente.";
+      
+      if (error.code === "auth/weak-password") {
+        errorMessage = "Senha muito fraca. Use no mínimo 6 caracteres.";
+      } else if (error.code === "auth/requires-recent-login") {
+        errorMessage = "Por questões de segurança, você precisa fazer login novamente para alterar a senha.";
+      }
+      
+      setPasswordChangeError(errorMessage);
+    } finally {
+      setPasswordChangeLoading(false);
+    }
   };
 
   return (
@@ -2221,6 +2415,87 @@ export default function Login() {
           </Card>
         </div>
       )}
+
+      {/* Dialog de Troca de Senha Obrigatória (Primeiro Acesso) */}
+      <Dialog open={showPasswordChangeDialog} onOpenChange={() => {
+        // Impedir fechamento do diálogo - senha deve ser alterada obrigatoriamente
+        toast({
+          title: "Atenção",
+          description: "Por segurança, você deve alterar sua senha no primeiro acesso.",
+          variant: "default",
+        });
+      }}>
+        <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-primary" />
+              Alterar Senha - Primeiro Acesso
+            </DialogTitle>
+            <DialogDescription>
+              Por questões de segurança, você deve alterar sua senha antes de acessar o sistema pela primeira vez.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handlePasswordChange} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-password">Nova Senha *</Label>
+              <Input
+                id="new-password"
+                type="password"
+                placeholder="Digite sua nova senha"
+                value={newPassword}
+                onChange={(e) => {
+                  setNewPassword(e.target.value);
+                  setPasswordChangeError("");
+                }}
+                required
+                minLength={6}
+                data-testid="input-new-password"
+              />
+              <p className="text-xs text-muted-foreground">Mínimo de 6 caracteres</p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password">Confirmar Nova Senha *</Label>
+              <Input
+                id="confirm-password"
+                type="password"
+                placeholder="Digite novamente sua nova senha"
+                value={confirmNewPassword}
+                onChange={(e) => {
+                  setConfirmNewPassword(e.target.value);
+                  setPasswordChangeError("");
+                }}
+                required
+                minLength={6}
+                data-testid="input-confirm-password"
+              />
+            </div>
+            
+            {passwordChangeError && (
+              <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg" data-testid="error-password-change">
+                <p className="text-sm font-medium text-destructive">Erro</p>
+                <p className="text-sm text-destructive/90 mt-1">{passwordChangeError}</p>
+              </div>
+            )}
+            
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={passwordChangeLoading || !newPassword || !confirmNewPassword}
+              data-testid="button-change-password"
+            >
+              {passwordChangeLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Alterando senha...
+                </>
+              ) : (
+                "Alterar Senha e Continuar"
+              )}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog de Confirmação de Identidade */}
       <Dialog open={showConfirmationDialog} onOpenChange={setShowConfirmationDialog}>
