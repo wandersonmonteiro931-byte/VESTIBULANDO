@@ -146,7 +146,7 @@ export default function ChatWindow({ onClose }: ChatWindowProps) {
     <>
       <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50" onClick={onClose} />
       
-      <Card className="fixed right-4 top-16 bottom-4 w-full max-w-4xl z-50 flex flex-col shadow-lg">
+      <Card className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[95vw] max-w-4xl h-[90vh] max-h-[600px] z-50 flex flex-col shadow-lg">
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold" data-testid="text-chat-title">
             Mensagens
