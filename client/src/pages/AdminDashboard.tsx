@@ -94,6 +94,54 @@ const editStudentFormSchema = z.object({
   disponibilidade: z.array(z.string()).min(1, "Selecione pelo menos uma disponibilidade"),
 });
 
+// Componente para mostrar tempo decorrido da manutenção
+function MaintenanceTimer({ startTime, onFinalize }: { startTime: string; onFinalize: () => void }) {
+  const [elapsed, setElapsed] = useState("");
+
+  useEffect(() => {
+    const calculateElapsed = () => {
+      const start = new Date(startTime);
+      const now = new Date();
+      const diff = now.getTime() - start.getTime();
+
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    };
+
+    setElapsed(calculateElapsed());
+    const interval = setInterval(() => {
+      setElapsed(calculateElapsed());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [startTime]);
+
+  return (
+    <div className="flex flex-col items-center gap-3 p-6 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20 border-2 border-orange-300 dark:border-orange-700 rounded-lg">
+      <div className="flex items-center gap-2 text-orange-700 dark:text-orange-300">
+        <Clock className="h-5 w-5" />
+        <span className="text-sm font-medium">Tempo em Manutenção</span>
+      </div>
+      <div className="text-4xl font-mono font-bold text-orange-600 dark:text-orange-400" data-testid="maintenance-timer">
+        {elapsed}
+      </div>
+      <Button
+        variant="destructive"
+        size="sm"
+        onClick={onFinalize}
+        className="mt-1"
+        data-testid="button-quick-end-maintenance"
+      >
+        <PowerOff className="h-4 w-4 mr-2" />
+        Finalizar Manutenção
+      </Button>
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
   const { userData, signOut, refreshUserData } = useAuth();
   const { toast } = useToast();
@@ -171,6 +219,8 @@ export default function AdminDashboard() {
   const [manutencoesPendentes, setManutencoesPendentes] = useState<Maintenance[]>([]);
   const [auditHistoryDialogOpen, setAuditHistoryDialogOpen] = useState(false);
   const [expandedJustificativas, setExpandedJustificativas] = useState<Set<string>>(new Set());
+  const [confirmEndMaintenanceDialogOpen, setConfirmEndMaintenanceDialogOpen] = useState(false);
+  const [maintenanceToEnd, setMaintenanceToEnd] = useState<string | null>(null);
 
   const turmaForm = useForm<z.infer<typeof turmaFormSchema>>({
     resolver: zodResolver(turmaFormSchema),
@@ -2074,7 +2124,7 @@ export default function AdminDashboard() {
             <TabsTrigger value="usuarios" data-testid="tab-usuarios">Alunos</TabsTrigger>
             <TabsTrigger value="turmas" data-testid="tab-turmas">Turmas</TabsTrigger>
             <TabsTrigger value="disciplinares" data-testid="tab-disciplinares">Advertências e Suspensões</TabsTrigger>
-            <TabsTrigger value="monitoramento" data-testid="tab-monitoramento">Monitoramento</TabsTrigger>
+            <TabsTrigger value="monitoramento" data-testid="tab-monitoramento">Frequência</TabsTrigger>
             <TabsTrigger value="documentacao" data-testid="tab-documentacao">Documentação</TabsTrigger>
             <TabsTrigger value="avisos" data-testid="tab-avisos">Avisos</TabsTrigger>
             <TabsTrigger value="manutencao" data-testid="tab-manutencao">Manutenção</TabsTrigger>
@@ -2817,14 +2867,7 @@ export default function AdminDashboard() {
 
             <Card className="border-blue-200/50 dark:border-blue-900/50 bg-gradient-to-br from-card to-blue-50/30 dark:to-blue-950/10">
               <CardHeader>
-                <div className="flex items-start gap-3">
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg">
-                    <AlertTriangle className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div className="flex-1">
-                    <CardTitle className="text-blue-900 dark:text-blue-100">🔒 Atenção: Procedimento de Manutenção</CardTitle>
-                  </div>
-                </div>
+                <CardTitle className="text-blue-900 dark:text-blue-100">🔒 Atenção: Procedimento de Manutenção</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 <p className="text-foreground">
@@ -2911,14 +2954,13 @@ export default function AdminDashboard() {
                     <Button
                       variant="destructive"
                       onClick={() => {
-                        // Finalizar manutenção
-                        finalizarManutencaoMutation.mutate(maintenanceData[0].id);
+                        setMaintenanceToEnd(maintenanceData[0].id);
+                        setConfirmEndMaintenanceDialogOpen(true);
                       }}
-                      disabled={finalizarManutencaoMutation.isPending}
                       data-testid="button-end-maintenance"
                     >
                       <PowerOff className="h-4 w-4 mr-2" />
-                      {finalizarManutencaoMutation.isPending ? "Finalizando..." : "Finalizar Manutenção"}
+                      Finalizar Manutenção
                     </Button>
                   </div>
                 </CardContent>
@@ -2932,37 +2974,50 @@ export default function AdminDashboard() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Button
-                    onClick={async () => {
-                      // VERIFICAÇÃO PRÉVIA: Bloquear abertura do diálogo se houver manutenções sem justificativa
-                      const finalizadasSemArquivar = maintenanceData?.filter(m => !m.ativa && !m.arquivada) || [];
-                      const semJustificativa = finalizadasSemArquivar.filter(m => !m.justificativa || m.justificativa.trim() === "");
-                      
-                      if (semJustificativa.length > 0) {
-                        setManutencoesPendentes(semJustificativa);
-                        setBloqueioDialogOpen(true);
-                        return;
-                      }
-                      
-                      // Se não há pendências, abrir o diálogo normalmente
-                      setMaintenanceDialogOpen(true);
-                      const nowBrasilia = getNowBrasilia();
-                      setMaintenanceStartDate(nowBrasilia.dateString);
-                      setMaintenanceStartTime(nowBrasilia.timeString);
-                      
-                      // Calcular 2 horas à frente para o horário de término
-                      const [hours, minutes] = nowBrasilia.timeString.split(':').map(Number);
-                      const endHours = hours + 2;
-                      const endTimeString = `${String(endHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-                      
-                      setMaintenanceEndDate(nowBrasilia.dateString);
-                      setMaintenanceEndTime(endTimeString);
-                    }}
-                    data-testid="button-start-maintenance"
-                  >
-                    <Power className="h-4 w-4 mr-2" />
-                    Iniciar Manutenção
-                  </Button>
+                  {maintenanceData && maintenanceData.some(m => m.ativa) ? (
+                    <MaintenanceTimer 
+                      startTime={maintenanceData.find(m => m.ativa)?.dataAtivacao || ""} 
+                      onFinalize={() => {
+                        const activeMaintenance = maintenanceData.find(m => m.ativa);
+                        if (activeMaintenance) {
+                          setMaintenanceToEnd(activeMaintenance.id);
+                          setConfirmEndMaintenanceDialogOpen(true);
+                        }
+                      }}
+                    />
+                  ) : (
+                    <Button
+                      onClick={async () => {
+                        // VERIFICAÇÃO PRÉVIA: Bloquear abertura do diálogo se houver manutenções sem justificativa
+                        const finalizadasSemArquivar = maintenanceData?.filter(m => !m.ativa && !m.arquivada) || [];
+                        const semJustificativa = finalizadasSemArquivar.filter(m => !m.justificativa || m.justificativa.trim() === "");
+                        
+                        if (semJustificativa.length > 0) {
+                          setManutencoesPendentes(semJustificativa);
+                          setBloqueioDialogOpen(true);
+                          return;
+                        }
+                        
+                        // Se não há pendências, abrir o diálogo normalmente
+                        setMaintenanceDialogOpen(true);
+                        const nowBrasilia = getNowBrasilia();
+                        setMaintenanceStartDate(nowBrasilia.dateString);
+                        setMaintenanceStartTime(nowBrasilia.timeString);
+                        
+                        // Calcular 2 horas à frente para o horário de término
+                        const [hours, minutes] = nowBrasilia.timeString.split(':').map(Number);
+                        const endHours = hours + 2;
+                        const endTimeString = `${String(endHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+                        
+                        setMaintenanceEndDate(nowBrasilia.dateString);
+                        setMaintenanceEndTime(endTimeString);
+                      }}
+                      data-testid="button-start-maintenance"
+                    >
+                      <Power className="h-4 w-4 mr-2" />
+                      Iniciar Manutenção
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             )}
@@ -6417,6 +6472,56 @@ export default function AdminDashboard() {
               data-testid="button-save-justificativa"
             >
               {adicionarJustificativaMutation.isPending ? "Salvando..." : "Salvar Justificativa"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmEndMaintenanceDialogOpen} onOpenChange={setConfirmEndMaintenanceDialogOpen}>
+        <DialogContent data-testid="dialog-confirm-end-maintenance">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
+              <AlertTriangle className="h-5 w-5" />
+              Confirmar Finalização de Manutenção
+            </DialogTitle>
+            <DialogDescription>
+              Você tem certeza que deseja finalizar a manutenção do sistema?
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="p-4 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900 rounded-lg">
+            <p className="text-sm text-orange-900 dark:text-orange-100">
+              ⚠️ Ao finalizar a manutenção, todos os usuários poderão acessar o sistema novamente.
+              Certifique-se de que todas as alterações necessárias foram concluídas e testadas.
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setConfirmEndMaintenanceDialogOpen(false);
+                setMaintenanceToEnd(null);
+              }}
+              data-testid="button-cancel-end-maintenance"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                if (maintenanceToEnd) {
+                  finalizarManutencaoMutation.mutate(maintenanceToEnd);
+                  setConfirmEndMaintenanceDialogOpen(false);
+                  setMaintenanceToEnd(null);
+                }
+              }}
+              disabled={finalizarManutencaoMutation.isPending}
+              data-testid="button-confirm-end-maintenance"
+            >
+              {finalizarManutencaoMutation.isPending ? "Finalizando..." : "Sim, Finalizar Manutenção"}
             </Button>
           </DialogFooter>
         </DialogContent>
