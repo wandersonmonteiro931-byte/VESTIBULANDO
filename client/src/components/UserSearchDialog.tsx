@@ -17,24 +17,33 @@ interface UserSearchDialogProps {
 
 export default function UserSearchDialog({ onClose, onSelectUser }: UserSearchDialogProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [turmas, setTurmas] = useState<Map<string, string>>(new Map());
+  const [loading, setLoading] = useState(true);
   const { userData } = useAuth();
 
+  // Carregar TODOS os usuários aprovados ao abrir
   useEffect(() => {
-    if (searchTerm.length < 2) {
-      setUsers([]);
-      return;
-    }
-
-    const searchUsers = async () => {
+    const loadAllUsers = async () => {
       setLoading(true);
       try {
-        const usersRef = collection(db, "users");
+        // Carregar turmas para mapear IDs para nomes
+        const turmasRef = collection(db, "turmas");
+        const turmasSnapshot = await getDocs(turmasRef);
+        const turmasMap = new Map<string, string>();
+        
+        turmasSnapshot.forEach((doc) => {
+          const turmaData = doc.data();
+          turmasMap.set(doc.id, turmaData.nome);
+        });
+        setTurmas(turmasMap);
+
+        // Carregar TODOS os usuários aprovados
+        const usersRef = collection(db, "usuarios");
         const q = query(
           usersRef,
-          where("status", "==", "aprovado"),
-          orderBy("nome")
+          where("status", "==", "aprovado")
         );
         
         const snapshot = await getDocs(q);
@@ -42,15 +51,17 @@ export default function UserSearchDialog({ onClose, onSelectUser }: UserSearchDi
         
         snapshot.forEach((doc) => {
           const user = { uid: doc.id, ...doc.data() } as User;
-          if (
-            user.uid !== userData?.uid &&
-            user.nome.toLowerCase().includes(searchTerm.toLowerCase())
-          ) {
+          // Filtrar apenas usuários ativos e excluir o próprio usuário
+          if (user.ativo && user.uid !== userData?.uid) {
             results.push(user);
           }
         });
         
-        setUsers(results);
+        // Ordenar alfabeticamente
+        results.sort((a, b) => a.nome.localeCompare(b.nome));
+        
+        setAllUsers(results);
+        setFilteredUsers(results);
       } catch (error) {
         console.error("Erro ao buscar usuários:", error);
       } finally {
@@ -58,9 +69,26 @@ export default function UserSearchDialog({ onClose, onSelectUser }: UserSearchDi
       }
     };
 
-    const timeoutId = setTimeout(searchUsers, 300);
-    return () => clearTimeout(timeoutId);
-  }, [searchTerm, userData?.uid]);
+    loadAllUsers();
+  }, [userData?.uid]);
+
+  // Filtrar usuários conforme digitação
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setFilteredUsers(allUsers);
+      return;
+    }
+
+    const term = searchTerm.toLowerCase();
+    const filtered = allUsers.filter((user) =>
+      user.nome.toLowerCase().includes(term) ||
+      user.email.toLowerCase().includes(term) ||
+      getTipoLabel(user.tipo).toLowerCase().includes(term) ||
+      (user.turma && turmas.get(user.turma)?.toLowerCase().includes(term))
+    );
+    
+    setFilteredUsers(filtered);
+  }, [searchTerm, allUsers, turmas]);
 
   const getInitials = (nome: string) => {
     const names = nome.split(" ");
@@ -73,17 +101,43 @@ export default function UserSearchDialog({ onClose, onSelectUser }: UserSearchDi
   const getTipoLabel = (tipo: string) => {
     switch (tipo) {
       case "aluno": return "Aluno";
-      case "professor": return "Professor";
-      case "diretor": return "Diretoria";
+      case "professor": return "Professor(a)";
+      case "diretor": return "Diretor(a)";
       default: return tipo;
     }
   };
 
+  const getUserDetails = (user: User) => {
+    if (user.tipo === "aluno" && user.turma) {
+      const nomeTurma = turmas.get(user.turma) || user.turma;
+      return `Turma ${nomeTurma}`;
+    }
+    if (user.tipo === "professor") {
+      return "Professor(a)";
+    }
+    if (user.tipo === "diretor") {
+      return "Diretoria";
+    }
+    return "";
+  };
+
+  const getBadgeVariant = (tipo: string) => {
+    switch (tipo) {
+      case "aluno": return "default";
+      case "professor": return "secondary";
+      case "diretor": return "destructive";
+      default: return "outline";
+    }
+  };
+
   return (
-    <>
-      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-[60]" onClick={onClose} />
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
+      <div 
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm" 
+        onClick={onClose}
+      />
       
-      <Card className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md z-[60] max-h-[80vh] flex flex-col">
+      <Card className="relative w-full max-w-md max-h-[80vh] flex flex-col z-10">
         <div className="flex items-center justify-between p-4 border-b">
           <h3 className="text-lg font-semibold">Buscar Contato</h3>
           <Button size="icon" variant="ghost" onClick={onClose} data-testid="button-close-search">
@@ -95,50 +149,59 @@ export default function UserSearchDialog({ onClose, onSelectUser }: UserSearchDi
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Digite o nome do usuário..."
+              placeholder="Digite para filtrar..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9"
               data-testid="input-search-user"
+              autoFocus
             />
           </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            {filteredUsers.length} {filteredUsers.length === 1 ? 'pessoa' : 'pessoas'} disponível(eis)
+          </p>
         </div>
 
         <div className="flex-1 overflow-y-auto">
           {loading ? (
-            <div className="p-4 text-center text-muted-foreground">
-              Buscando...
+            <div className="p-8 text-center text-muted-foreground">
+              <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-2"></div>
+              Carregando usuários...
             </div>
-          ) : searchTerm.length < 2 ? (
-            <div className="p-4 text-center text-muted-foreground">
-              Digite pelo menos 2 caracteres para buscar
-            </div>
-          ) : users.length === 0 ? (
-            <div className="p-4 text-center text-muted-foreground">
-              Nenhum usuário encontrado
+          ) : filteredUsers.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground">
+              <p className="mb-2">Nenhum usuário encontrado</p>
+              {searchTerm && (
+                <p className="text-sm">Tente buscar por outro termo</p>
+              )}
             </div>
           ) : (
             <div className="divide-y">
-              {users.map((user) => (
+              {filteredUsers.map((user) => (
                 <div
                   key={user.uid}
                   onClick={() => onSelectUser(user)}
-                  className="p-3 hover-elevate cursor-pointer"
+                  className="p-3 hover-elevate active-elevate-2 cursor-pointer transition-colors"
                   data-testid={`user-${user.uid}`}
                 >
                   <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback>{getInitials(user.nome)}</AvatarFallback>
+                    <Avatar className="h-10 w-10 shrink-0">
+                      <AvatarFallback className="text-xs">
+                        {getInitials(user.nome)}
+                      </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">{user.nome}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="secondary" className="text-xs">
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <Badge 
+                          variant={getBadgeVariant(user.tipo) as any} 
+                          className="text-xs"
+                        >
                           {getTipoLabel(user.tipo)}
                         </Badge>
-                        {user.turma && (
-                          <span className="text-xs text-muted-foreground">
-                            Turma: {user.turma}
+                        {getUserDetails(user) && (
+                          <span className="text-xs text-muted-foreground truncate">
+                            {getUserDetails(user)}
                           </span>
                         )}
                       </div>
@@ -150,6 +213,6 @@ export default function UserSearchDialog({ onClose, onSelectUser }: UserSearchDi
           )}
         </div>
       </Card>
-    </>
+    </div>
   );
 }
