@@ -117,9 +117,40 @@ export function AnnouncementsTab() {
 
       const reader = new FileReader();
       reader.onloadend = () => {
-        const newSlides = [...slides];
-        newSlides[slideIndex].conteudo = reader.result as string;
-        setSlides(newSlides);
+        const img = new Image();
+        img.onload = () => {
+          // Comprimir a imagem para reduzir o tamanho
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          // Redimensionar mantendo a proporção (máx 1200px de largura)
+          let width = img.width;
+          let height = img.height;
+          const maxWidth = 1200;
+          
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          // Converter para base64 com qualidade reduzida (70%)
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+          
+          const newSlides = [...slides];
+          newSlides[slideIndex].conteudo = compressedBase64;
+          setSlides(newSlides);
+          
+          toast({
+            title: "Imagem carregada!",
+            description: "A imagem foi comprimida para otimizar o armazenamento",
+          });
+        };
+        img.src = reader.result as string;
       };
       reader.readAsDataURL(file);
     }
@@ -159,6 +190,16 @@ export function AnnouncementsTab() {
       const validSlides = slides.filter(s => s.conteudo.trim() !== "");
       if (validSlides.length === 0) {
         throw new Error("Adicione pelo menos um slide com conteúdo");
+      }
+
+      // Processar slides (imagens já estão comprimidas em base64)
+      const processedSlides = [];
+      for (let i = 0; i < validSlides.length; i++) {
+        const slide = validSlides[i];
+        processedSlides.push({
+          tipo: slide.tipo,
+          conteudo: slide.conteudo,
+        });
       }
 
       if (announcementTarget === "turmas" && selectedTurmas.length === 0) {
@@ -201,37 +242,29 @@ export function AnnouncementsTab() {
       const nextNumber = maxNumber + 1;
       const numeroAviso = nextNumber.toString().padStart(4, '0');
 
-      // Converter slides para objetos JavaScript simples (Firestore compatibility)
-      const slidesData = validSlides.map(slide => {
-        const plainSlide = {
-          tipo: String(slide.tipo),
-          conteudo: String(slide.conteudo),
-        };
-        return plainSlide;
-      });
+      // Usar slides processados (com URLs do Storage ao invés de Base64)
+      const slidesData = processedSlides;
 
       // Garantir que turmasSelecionadas seja um array de strings simples
       const turmasList = announcementTarget === "turmas" 
-        ? selectedTurmas.map(t => String(t))
+        ? selectedTurmas
         : [];
 
       const announcementData: any = {
-        numeroAviso: String(numeroAviso),
-        titulo: String(announcementTitle),
+        numeroAviso: numeroAviso,
+        titulo: announcementTitle,
         slides: slidesData,
-        publicoAlvo: String(announcementTarget),
+        publicoAlvo: announcementTarget,
         turmasSelecionadas: turmasList,
-        tipoAviso: String(tipoAviso),
-        tipoDuracao: String(tipoDuracao),
-        dataInicio: String(dataInicio),
-        ativo: Boolean(tipoAviso === "instantaneo"),
-        criadoPor: String(userData.uid),
-        criadoPorNome: String(userData.nome),
-        dataCriacao: String(getNowBrasiliaISO()),
+        tipoAviso: tipoAviso,
+        tipoDuracao: tipoDuracao,
+        dataInicio: dataInicio,
+        ativo: tipoAviso === "instantaneo",
+        criadoPor: userData.uid,
+        criadoPorNome: userData.nome,
+        dataCriacao: getNowBrasiliaISO(),
         arquivado: false,
       };
-      
-      console.log("📤 Dados do aviso a serem salvos:", JSON.stringify(announcementData, null, 2));
 
       if (tipoAviso === "instantaneo") {
         announcementData.dataAtivacao = getNowBrasiliaISO();
@@ -277,6 +310,16 @@ export function AnnouncementsTab() {
         throw new Error("Adicione pelo menos um slide com conteúdo");
       }
 
+      // Processar slides (imagens já estão comprimidas em base64)
+      const processedSlides = [];
+      for (let i = 0; i < validSlides.length; i++) {
+        const slide = validSlides[i];
+        processedSlides.push({
+          tipo: slide.tipo,
+          conteudo: slide.conteudo,
+        });
+      }
+
       if (announcementTarget === "turmas" && selectedTurmas.length === 0) {
         throw new Error("Selecione pelo menos uma turma");
       }
@@ -300,40 +343,30 @@ export function AnnouncementsTab() {
         dataFim = undefined;
       }
 
-      // Converter slides para objetos JavaScript simples (Firestore compatibility)
-      const slidesData = validSlides.map(slide => {
-        const plainSlide = {
-          tipo: String(slide.tipo),
-          conteudo: String(slide.conteudo),
-        };
-        return plainSlide;
-      });
+      // Usar slides processados (com URLs do Storage ao invés de Base64)
+      const slidesData = processedSlides;
 
       // Garantir que turmasSelecionadas seja um array de strings simples
       const turmasList = announcementTarget === "turmas" 
-        ? selectedTurmas.map(t => String(t))
+        ? selectedTurmas
         : [];
 
       const updateData: any = {
-        titulo: String(announcementTitle),
+        titulo: announcementTitle,
         slides: slidesData,
-        publicoAlvo: String(announcementTarget),
+        publicoAlvo: announcementTarget,
         turmasSelecionadas: turmasList,
-        tipoAviso: String(tipoAviso),
-        tipoDuracao: String(tipoDuracao),
-        dataInicio: String(dataInicio),
-        dataAtualizacao: String(getNowBrasiliaISO()),
+        tipoAviso: tipoAviso,
+        tipoDuracao: tipoDuracao,
+        dataInicio: dataInicio,
+        dataAtualizacao: getNowBrasiliaISO(),
       };
 
       if (dataFim) {
-        updateData.dataFim = String(dataFim);
+        updateData.dataFim = dataFim;
       } else {
         updateData.dataFim = null;
       }
-
-      console.log("📝 Dados de atualização a serem salvos:", JSON.stringify(updateData, null, 2));
-      console.log("🔍 Slides originais:", slides);
-      console.log("🔍 Slides limpos:", slidesData);
 
       await updateDoc(doc(db, "announcements", selectedAnnouncement.id), updateData);
     },
@@ -566,12 +599,17 @@ export function AnnouncementsTab() {
   const openEditDialog = (announcement: Announcement) => {
     setSelectedAnnouncement(announcement);
     setAnnouncementTitle(announcement.titulo);
-    // Limpar completamente os slides de qualquer referência do Firestore
-    const cleanedSlides = cleanFirestoreData(announcement.slides).map((slide: any) => ({
-      tipo: slide.tipo as "texto" | "imagem",
-      conteudo: slide.conteudo,
-    }));
-    setSlides(cleanedSlides);
+    
+    // Criar novos slides completamente desacoplados do Firestore
+    const newSlides: AnnouncementSlide[] = [];
+    for (let i = 0; i < announcement.slides.length; i++) {
+      newSlides.push({
+        tipo: announcement.slides[i].tipo,
+        conteudo: announcement.slides[i].conteudo,
+      });
+    }
+    setSlides(newSlides);
+    
     setAnnouncementTarget(announcement.publicoAlvo);
     setSelectedTurmas(announcement.turmasSelecionadas || []);
     setTipoAviso(announcement.tipoAviso);
