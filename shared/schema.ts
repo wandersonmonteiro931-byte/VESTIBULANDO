@@ -187,21 +187,46 @@ export const insertMaintenanceSchema = maintenanceSchema.omit({ id: true, numero
 export type Maintenance = z.infer<typeof maintenanceSchema>;
 export type InsertMaintenance = z.infer<typeof insertMaintenanceSchema>;
 
+// Announcement Slide schema - cada slide de um aviso (texto ou imagem)
+export const announcementSlideSchema = z.object({
+  tipo: z.enum(["texto", "imagem"]), // tipo do slide: texto ou imagem
+  conteudo: z.string(), // texto do slide ou URL da imagem em base64
+});
+
+export type AnnouncementSlide = z.infer<typeof announcementSlideSchema>;
+
 // Announcement schema - avisos para alunos e professores
 export const announcementSchema = z.object({
   id: z.string(),
-  tipo: z.enum(["texto", "imagem"]), // tipo de aviso: texto ou imagem
-  conteudo: z.string(), // texto do aviso ou URL da imagem em base64
-  publicoAlvo: z.enum(["alunos", "professores", "turmas"]), // para quem é o aviso
+  numeroAviso: z.string(), // Número sequencial de identificação (ex: "0001", "0002")
+  titulo: z.string().min(1, "Título é obrigatório"), // Título do aviso (obrigatório)
+  slides: z.array(announcementSlideSchema).min(1, "Pelo menos um slide é obrigatório"), // Array de slides (texto/imagem)
+  publicoAlvo: z.enum(["todos", "alunos", "professores", "turmas"]), // para quem é o aviso
   turmasSelecionadas: z.array(z.string()).optional(), // IDs das turmas específicas (se publicoAlvo === "turmas")
-  ativo: z.boolean().default(true), // se o aviso está ativo
+  
+  // Sistema de agendamento
+  tipoAviso: z.enum(["instantaneo", "programado"]), // instantâneo = ativa imediatamente, programado = ativa na data/hora
+  tipoDuracao: z.enum(["determinada", "indeterminada"]), // determinada = com data fim, indeterminada = sem data fim
+  dataInicio: z.string(), // Data/hora programada de início
+  dataFim: z.string().optional(), // Data/hora programada de término (opcional se indeterminada)
+  dataAtivacao: z.string().optional(), // Data/hora em que foi ativado (para programados)
+  dataDesativacao: z.string().optional(), // Data/hora em que foi desativado
+  
+  ativo: z.boolean().default(false), // se o aviso está ativo no momento
   criadoPor: z.string(), // ID do diretor que criou
   criadoPorNome: z.string(), // Nome do diretor
   dataCriacao: z.string(), // Data de criação
   dataAtualizacao: z.string().optional(), // Data da última atualização
+  
+  // Auditoria (similar ao sistema de manutenção)
+  arquivado: z.boolean().default(false), // se true, aviso foi arquivado no histórico de auditoria
+  justificativa: z.string().optional(), // Justificativa do aviso (obrigatório após arquivar)
+  justificadoPor: z.string().optional(), // ID do diretor que adicionou a justificativa
+  justificadoPorNome: z.string().optional(), // Nome do diretor que adicionou a justificativa
+  dataJustificativa: z.string().optional(), // Data/hora em que a justificativa foi adicionada
 });
 
-export const insertAnnouncementSchema = announcementSchema.omit({ id: true });
+export const insertAnnouncementSchema = announcementSchema.omit({ id: true, numeroAviso: true });
 
 export type Announcement = z.infer<typeof announcementSchema>;
 export type InsertAnnouncement = z.infer<typeof insertAnnouncementSchema>;
