@@ -1551,6 +1551,57 @@ export default function AdminDashboard() {
     },
   });
 
+  const deletarManutencaoMutation = useMutation({
+    mutationFn: async (maintenanceId: string) => {
+      await deleteDoc(doc(db, "systemMaintenance", maintenanceId));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/maintenance"] });
+      toast({
+        title: "Manutenção deletada!",
+        description: "O registro de manutenção foi removido do sistema.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao deletar manutenção",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const limparTodasManutencoesMutation = useMutation({
+    mutationFn: async () => {
+      // Buscar todas as manutenções finalizadas (ativa === false)
+      const maintenanceQuery = query(collection(db, "systemMaintenance"), where("ativa", "==", false));
+      const maintenanceDocs = await getDocs(maintenanceQuery);
+      
+      // Deletar todas
+      const deletePromises = maintenanceDocs.docs.map(docSnap => 
+        deleteDoc(doc(db, "systemMaintenance", docSnap.id))
+      );
+      
+      await Promise.all(deletePromises);
+      
+      return maintenanceDocs.docs.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/maintenance"] });
+      toast({
+        title: "Manutenções limpas!",
+        description: `${count} registro(s) de manutenção finalizada(s) foram removido(s) do sistema.`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao limpar manutenções",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Funções auxiliares
   const getTurmaNome = (turmaId: string | undefined) => {
     if (!turmaId) return "-";
@@ -2474,14 +2525,14 @@ export default function AdminDashboard() {
                     <div>
                       <Label className="text-sm text-muted-foreground">Data/Hora de Início</Label>
                       <p className="font-medium">
-                        {new Date(maintenanceData[0].dataInicio).toLocaleString('pt-BR')}
+                        {formatBrasiliaDateTime(maintenanceData[0].dataInicio)}
                       </p>
                     </div>
                     {maintenanceData[0].dataFim && (
                       <div>
                         <Label className="text-sm text-muted-foreground">Previsão de Retorno</Label>
                         <p className="font-medium">
-                          {new Date(maintenanceData[0].dataFim).toLocaleString('pt-BR')}
+                          {formatBrasiliaDateTime(maintenanceData[0].dataFim)}
                         </p>
                       </div>
                     )}
@@ -2529,6 +2580,112 @@ export default function AdminDashboard() {
                     <Power className="h-4 w-4 mr-2" />
                     Iniciar Manutenção
                   </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Histórico de Manutenções */}
+            {maintenanceData && maintenanceData.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Histórico de Manutenções</CardTitle>
+                      <CardDescription>
+                        Visualize e gerencie todas as manutenções do sistema
+                      </CardDescription>
+                    </div>
+                    {maintenanceData.some(m => !m.ativa) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => limparTodasManutencoesMutation.mutate()}
+                        disabled={limparTodasManutencoesMutation.isPending}
+                        data-testid="button-clear-old-maintenances"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Limpar Finalizadas
+                      </Button>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {maintenanceData.map((maintenance) => (
+                      <div
+                        key={maintenance.id}
+                        className={`p-4 rounded-lg border ${
+                          maintenance.ativa 
+                            ? 'border-orange-200 dark:border-orange-900 bg-orange-50/30 dark:bg-orange-950/10' 
+                            : 'border-border bg-muted/30'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Badge variant={maintenance.ativa ? "destructive" : "secondary"}>
+                                {maintenance.ativa ? "ATIVA" : "Finalizada"}
+                              </Badge>
+                              <span className="text-sm font-medium capitalize">
+                                {maintenance.tipo}
+                              </span>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                              <div>
+                                <span className="text-muted-foreground">Início:</span>{" "}
+                                <span className="font-medium">
+                                  {formatBrasiliaDateTime(maintenance.dataInicio)}
+                                </span>
+                              </div>
+                              
+                              {maintenance.dataFim && (
+                                <div>
+                                  <span className="text-muted-foreground">Fim Previsto:</span>{" "}
+                                  <span className="font-medium">
+                                    {formatBrasiliaDateTime(maintenance.dataFim)}
+                                  </span>
+                                </div>
+                              )}
+                              
+                              <div>
+                                <span className="text-muted-foreground">Iniciada por:</span>{" "}
+                                <span className="font-medium">{maintenance.iniciadoPorNome}</span>
+                              </div>
+                              
+                              {maintenance.dataFinalizacao && (
+                                <div>
+                                  <span className="text-muted-foreground">Finalizada em:</span>{" "}
+                                  <span className="font-medium">
+                                    {formatBrasiliaDateTime(maintenance.dataFinalizacao)}
+                                  </span>
+                                </div>
+                              )}
+                              
+                              {maintenance.finalizadoPorNome && (
+                                <div>
+                                  <span className="text-muted-foreground">Finalizada por:</span>{" "}
+                                  <span className="font-medium">{maintenance.finalizadoPorNome}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {!maintenance.ativa && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => deletarManutencaoMutation.mutate(maintenance.id)}
+                              disabled={deletarManutencaoMutation.isPending}
+                              data-testid={`button-delete-maintenance-${maintenance.id}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             )}
