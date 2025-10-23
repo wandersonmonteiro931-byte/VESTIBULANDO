@@ -6417,17 +6417,30 @@ export default function AdminDashboard() {
                   {maintenanceData
                     .filter(m => m.arquivada)
                     .sort((a, b) => new Date(b.dataFinalizacao || b.dataAtivacao).getTime() - new Date(a.dataFinalizacao || a.dataAtivacao).getTime())
-                    .map((maintenance) => {
+                    .map((maintenance, index) => {
                       const isExpanded = expandedJustificativas.has(maintenance.id || '');
+                      
+                      const colors = [
+                        'bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900',
+                        'bg-purple-50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-900',
+                        'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900',
+                        'bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-900',
+                        'bg-pink-50 dark:bg-pink-950/20 border-pink-200 dark:border-pink-900',
+                        'bg-cyan-50 dark:bg-cyan-950/20 border-cyan-200 dark:border-cyan-900',
+                        'bg-indigo-50 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-900',
+                        'bg-teal-50 dark:bg-teal-950/20 border-teal-200 dark:border-teal-900',
+                      ];
+                      const colorClass = colors[index % colors.length];
                       
                       return (
                         <div
                           key={maintenance.id}
-                          className="p-3 rounded-md border border-border bg-muted/20"
+                          className={`p-3 rounded-md border ${colorClass}`}
                           data-testid={`audit-record-${maintenance.id}`}
                         >
                           <div className="flex items-center justify-between mb-2.5">
                             <div className="flex items-center gap-2">
+                              <Badge variant="secondary" className="font-mono font-bold">#{maintenance.numeroManutencao || 'N/A'}</Badge>
                               <Badge variant="secondary">Arquivada</Badge>
                               <Badge variant="outline" className="capitalize">{maintenance.tipo}</Badge>
                             </div>
