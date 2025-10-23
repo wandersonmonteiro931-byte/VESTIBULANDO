@@ -793,10 +793,22 @@ export default function Login() {
                 setSuspensionData({
                   ...activeSuspension,
                   duracaoDias,
+                  dataTerminoSuspensao: activeSuspension.dataTerminoSuspensao,
+                  dataAplicacao: activeSuspension.dataAplicacao,
                 });
                 setShowSuspensionOverlay(true);
                 
                 console.log("✅ Estados definidos - overlay deve aparecer agora");
+                console.log("🎨 showSuspensionOverlay:", true);
+                console.log("📊 suspensionData definido");
+                
+                // Fazer logout imediatamente para evitar que o AuthContext permita o login
+                try {
+                  await auth.signOut();
+                  console.log("🔓 Logout realizado após detectar suspensão");
+                } catch (logoutError) {
+                  console.error("Erro ao fazer logout:", logoutError);
+                }
                 
                 return;
               } else {
@@ -1965,7 +1977,7 @@ export default function Login() {
       {/* Overlay de Suspensão Disciplinar */}
       {showSuspensionOverlay && suspensionData && (
         <div 
-          className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-sm flex items-center justify-center p-4"
           data-testid="overlay-suspension"
         >
           <Card className="w-full max-w-2xl border-destructive">
