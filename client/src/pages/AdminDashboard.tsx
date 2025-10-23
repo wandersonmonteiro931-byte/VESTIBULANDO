@@ -3774,11 +3774,19 @@ export default function AdminDashboard() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="Ensino Fundamental">Ensino Fundamental</SelectItem>
-                                <SelectItem value="Ensino Médio Incompleto">Ensino Médio Incompleto</SelectItem>
-                                <SelectItem value="Ensino Médio Completo">Ensino Médio Completo</SelectItem>
-                                <SelectItem value="Ensino Superior Incompleto">Ensino Superior Incompleto</SelectItem>
-                                <SelectItem value="Ensino Superior Completo">Ensino Superior Completo</SelectItem>
+                                <SelectItem value="sem-estudo">Sem estudo - Analfabeto</SelectItem>
+                                <SelectItem value="fundamental-cursando">Ensino Fundamental - Cursando</SelectItem>
+                                <SelectItem value="fundamental-completo">Ensino Fundamental - Completo</SelectItem>
+                                <SelectItem value="fundamental-incompleto">Ensino Fundamental - Incompleto</SelectItem>
+                                <SelectItem value="medio-cursando">Ensino Médio - Cursando</SelectItem>
+                                <SelectItem value="medio-completo">Ensino Médio - Completo</SelectItem>
+                                <SelectItem value="medio-incompleto">Ensino Médio - Incompleto</SelectItem>
+                                <SelectItem value="superior-cursando">Ensino Superior - Cursando</SelectItem>
+                                <SelectItem value="superior-completo">Ensino Superior - Completo</SelectItem>
+                                <SelectItem value="superior-incompleto">Ensino Superior - Incompleto</SelectItem>
+                                <SelectItem value="pos-cursando">Pós-Graduação - Cursando</SelectItem>
+                                <SelectItem value="pos-completo">Pós-Graduação - Completo</SelectItem>
+                                <SelectItem value="pos-incompleto">Pós-Graduação - Incompleto</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
