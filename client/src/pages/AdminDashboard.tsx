@@ -22,7 +22,7 @@ import { MonitoringTab } from "@/components/MonitoringTab";
 import { DocumentationTab } from "@/components/DocumentationTab";
 import { AnnouncementsTab } from "@/components/AnnouncementsTab";
 import { BrasiliaClock } from "@/components/BrasiliaClock";
-import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, MessageCircle, ArrowRightLeft, Clock, Search, Eye, AlertTriangle, Settings, Power, PowerOff, Archive } from "lucide-react";
+import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, MessageCircle, ArrowRightLeft, Clock, Search, Eye, AlertTriangle, Settings, Power, PowerOff, Archive, Download } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
@@ -32,6 +32,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { brasiliaToUTC, utcToBrasilia, formatBrasiliaDateTime, getNowBrasilia, getNowBrasiliaISO } from "@/lib/brasiliaTime";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const turmaFormSchema = z.object({
   nome: z.string().min(1, "Nome da turma é obrigatório"),
@@ -1843,6 +1845,102 @@ export default function AdminDashboard() {
     turmas: turmas?.length || 0,
   };
 
+  const downloadAuditHistory = () => {
+    if (!maintenanceData || maintenanceData.filter(m => m.arquivada).length === 0) {
+      toast({
+        title: "Nenhum registro",
+        description: "Não há manutenções arquivadas para download.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const doc = new jsPDF();
+    const arquivadas = maintenanceData.filter(m => m.arquivada).sort((a, b) => 
+      new Date(b.dataFinalizacao || b.dataAtivacao).getTime() - new Date(a.dataFinalizacao || a.dataAtivacao).getTime()
+    );
+
+    doc.setFontSize(18);
+    doc.text("Histórico de Auditoria - Sistema ENEM+", 14, 20);
+    
+    doc.setFontSize(10);
+    doc.text(`Data de geração: ${formatBrasiliaDateTime(getNowBrasiliaISO())}`, 14, 28);
+    doc.text(`Total de registros: ${arquivadas.length}`, 14, 34);
+
+    let yPosition = 45;
+
+    arquivadas.forEach((maintenance, index) => {
+      if (yPosition > 250) {
+        doc.addPage();
+        yPosition = 20;
+      }
+
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text(`Manutenção ${index + 1} - ${maintenance.tipo.toUpperCase()}`, 14, yPosition);
+      yPosition += 7;
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+
+      const infoLines = [
+        `Início: ${formatBrasiliaDateTime(maintenance.dataInicio)}`,
+        maintenance.dataFim ? `Fim Previsto: ${formatBrasiliaDateTime(maintenance.dataFim)}` : null,
+        `Iniciada por: ${maintenance.iniciadoPorNome}`,
+        maintenance.dataFinalizacao ? `Finalizada em: ${formatBrasiliaDateTime(maintenance.dataFinalizacao)}` : null,
+        maintenance.finalizadoPorNome ? `Finalizada por: ${maintenance.finalizadoPorNome}` : null,
+      ].filter(Boolean);
+
+      infoLines.forEach((line) => {
+        if (line) {
+          doc.text(line, 14, yPosition);
+          yPosition += 5;
+        }
+      });
+
+      if (maintenance.justificativa) {
+        yPosition += 2;
+        doc.setFont("helvetica", "bold");
+        doc.text("Justificativa:", 14, yPosition);
+        yPosition += 5;
+        doc.setFont("helvetica", "normal");
+
+        const splitJustificativa = doc.splitTextToSize(maintenance.justificativa, 180);
+        splitJustificativa.forEach((line: string) => {
+          if (yPosition > 270) {
+            doc.addPage();
+            yPosition = 20;
+          }
+          doc.text(line, 14, yPosition);
+          yPosition += 5;
+        });
+
+        yPosition += 2;
+        if (maintenance.justificadaPorNome) {
+          doc.text(`Justificada por: ${maintenance.justificadaPorNome}`, 14, yPosition);
+          yPosition += 5;
+        }
+        if (maintenance.dataJustificativa) {
+          doc.text(`Data da justificativa: ${formatBrasiliaDateTime(maintenance.dataJustificativa)}`, 14, yPosition);
+          yPosition += 5;
+        }
+      }
+
+      yPosition += 8;
+      doc.setDrawColor(200, 200, 200);
+      doc.line(14, yPosition, 196, yPosition);
+      yPosition += 8;
+    });
+
+    const fileName = `historico_auditoria_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
+
+    toast({
+      title: "Download concluído!",
+      description: `Histórico de auditoria salvo como ${fileName}`,
+    });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 w-full border-b bg-gradient-to-r from-card via-card to-card/95 backdrop-blur-xl shadow-sm">
@@ -3001,7 +3099,7 @@ export default function AdminDashboard() {
                     </CardTitle>
                     <CardDescription>
                       Área restrita com registro permanente de todas as manutenções arquivadas.
-                      <span className="font-semibold text-blue-600 dark:text-blue-400"> Sempre acessível durante manutenção.</span>
+                      <span className="font-semibold text-blue-600 dark:text-blue-400"> Sempre acessível.</span>
                     </CardDescription>
                   </div>
                   <Badge variant="outline" className="text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400">
@@ -6271,7 +6369,6 @@ export default function AdminDashboard() {
             </DialogTitle>
             <DialogDescription>
               Registro permanente e imutável de todas as manutenções do sistema que foram justificadas e arquivadas.
-              Este histórico está sempre acessível, mesmo durante manutenção do sistema.
             </DialogDescription>
           </DialogHeader>
 
@@ -6380,6 +6477,16 @@ export default function AdminDashboard() {
           </div>
 
           <DialogFooter>
+            <Button
+              type="button"
+              variant="default"
+              onClick={downloadAuditHistory}
+              disabled={!maintenanceData || maintenanceData.filter(m => m.arquivada).length === 0}
+              data-testid="button-download-audit-history"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Baixar Histórico Completo (PDF)
+            </Button>
             <Button
               type="button"
               variant="outline"
