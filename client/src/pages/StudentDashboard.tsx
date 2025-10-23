@@ -16,6 +16,7 @@ import { BrasiliaClock } from "@/components/BrasiliaClock";
 import { StatusBadge } from "@/components/StatusBadge";
 import { FileUploadZone } from "@/components/FileUploadZone";
 import { AnnouncementsCarousel } from "@/components/AnnouncementsCarousel";
+import { ChatPanel } from "@/components/ChatPanel";
 import { LogOut, FileText, Upload, Download, Calendar, Award, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
@@ -369,6 +370,7 @@ export default function StudentDashboard() {
             <TabsTrigger value="pendentes" data-testid="tab-pendentes">Pendentes</TabsTrigger>
             <TabsTrigger value="entregues" data-testid="tab-entregues">Entregues</TabsTrigger>
             <TabsTrigger value="notas" data-testid="tab-notas">Notas</TabsTrigger>
+            <TabsTrigger value="chat" data-testid="tab-chat">Chat</TabsTrigger>
             <TabsTrigger value="advertencias" data-testid="tab-advertencias">
               <div className="flex items-center gap-2">
                 Advertências
@@ -593,6 +595,10 @@ export default function StudentDashboard() {
                 ))
               )}
             </div>
+          </TabsContent>
+
+          <TabsContent value="chat" className="space-y-4">
+            <ChatPanel />
           </TabsContent>
 
           <TabsContent value="advertencias">

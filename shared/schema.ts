@@ -232,3 +232,47 @@ export const insertAnnouncementSchema = announcementSchema.omit({ id: true, nume
 
 export type Announcement = z.infer<typeof announcementSchema>;
 export type InsertAnnouncement = z.infer<typeof insertAnnouncementSchema>;
+
+// Chat Message schema - mensagens individuais do chat
+export const chatMessageSchema = z.object({
+  id: z.string(),
+  conversationId: z.string(), // ID da conversa (combinação dos IDs dos participantes)
+  remetenteId: z.string(), // ID de quem enviou
+  remetenteNome: z.string(), // Nome de quem enviou
+  remetenteTipo: z.enum(["aluno", "professor", "diretor"]), // Tipo de quem enviou
+  destinatarioId: z.string(), // ID de quem recebe
+  destinatarioNome: z.string(), // Nome de quem recebe
+  destinatarioTipo: z.enum(["aluno", "professor", "diretor"]), // Tipo de quem recebe
+  conteudo: z.string().min(1, "Mensagem não pode ser vazia"), // Conteúdo da mensagem
+  timestamp: z.string(), // Data/hora de envio (ISO datetime)
+  lida: z.boolean().default(false), // Se a mensagem foi lida pelo destinatário
+  dataLeitura: z.string().optional(), // Data/hora em que foi lida
+});
+
+export const insertChatMessageSchema = chatMessageSchema.omit({ id: true });
+
+export type ChatMessage = z.infer<typeof chatMessageSchema>;
+export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
+
+// Chat Conversation schema - conversas entre usuários
+export const chatConversationSchema = z.object({
+  id: z.string(), // ID único da conversa
+  participante1Id: z.string(),
+  participante1Nome: z.string(),
+  participante1Tipo: z.enum(["aluno", "professor", "diretor"]),
+  participante2Id: z.string(),
+  participante2Nome: z.string(),
+  participante2Tipo: z.enum(["aluno", "professor", "diretor"]),
+  ultimaMensagem: z.string().optional(), // Conteúdo da última mensagem
+  ultimaMensagemTimestamp: z.string().optional(), // Timestamp da última mensagem
+  ultimaMensagemRemetenteId: z.string().optional(), // Quem enviou a última mensagem
+  mensagensNaoLidas1: z.number().default(0), // Mensagens não lidas pelo participante 1
+  mensagensNaoLidas2: z.number().default(0), // Mensagens não lidas pelo participante 2
+  dataCriacao: z.string(), // Data de criação da conversa
+  dataUltimaAtualizacao: z.string(), // Data da última atualização
+});
+
+export const insertChatConversationSchema = chatConversationSchema.omit({ id: true });
+
+export type ChatConversation = z.infer<typeof chatConversationSchema>;
+export type InsertChatConversation = z.infer<typeof insertChatConversationSchema>;

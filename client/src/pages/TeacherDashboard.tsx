@@ -19,6 +19,7 @@ import { BrasiliaClock } from "@/components/BrasiliaClock";
 import { StatusBadge } from "@/components/StatusBadge";
 import { FileUploadZone } from "@/components/FileUploadZone";
 import { AnnouncementsCarousel } from "@/components/AnnouncementsCarousel";
+import { ChatPanel } from "@/components/ChatPanel";
 import { LogOut, Plus, FileText, Users, Download, Edit, Calendar, Award } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
@@ -277,6 +278,7 @@ export default function TeacherDashboard() {
                 <Badge variant="destructive" className="ml-2">{pendingGradings}</Badge>
               )}
             </TabsTrigger>
+            <TabsTrigger value="chat" data-testid="tab-chat">Chat</TabsTrigger>
           </TabsList>
 
           <TabsContent value="tarefas" className="space-y-4">
@@ -359,6 +361,10 @@ export default function TeacherDashboard() {
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          <TabsContent value="chat" className="space-y-4">
+            <ChatPanel />
           </TabsContent>
 
           <TabsContent value="correcoes" className="space-y-4">
