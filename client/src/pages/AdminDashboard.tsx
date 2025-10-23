@@ -72,6 +72,23 @@ const professorDiretorFormSchema = z.object({
   turmas: z.array(z.string()).optional(),
 });
 
+const editStudentFormSchema = z.object({
+  nome: z.string().min(1, "Nome é obrigatório"),
+  email: z.string().email("Email inválido"),
+  matricula: z.string().optional(),
+  dataNascimento: z.string().min(1, "Data de nascimento é obrigatória"),
+  cpf: z.string().min(1, "CPF é obrigatório"),
+  telefone: z.string().min(1, "Telefone é obrigatório"),
+  escolaridade: z.string().min(1, "Escolaridade é obrigatória"),
+  cep: z.string().min(1, "CEP é obrigatório"),
+  rua: z.string().min(1, "Rua é obrigatória"),
+  bairro: z.string().min(1, "Bairro é obrigatório"),
+  cidade: z.string().min(1, "Cidade é obrigatória"),
+  estado: z.string().min(1, "Estado é obrigatório"),
+  turma: z.string().min(1, "Turma é obrigatória"),
+  disponibilidade: z.array(z.string()).min(1, "Selecione pelo menos uma disponibilidade"),
+});
+
 export default function AdminDashboard() {
   const { userData, signOut, refreshUserData } = useAuth();
   const { toast } = useToast();
@@ -120,6 +137,8 @@ export default function AdminDashboard() {
   const [studentSearchTerm, setStudentSearchTerm] = useState("");
   const [studentDetailsDialogOpen, setStudentDetailsDialogOpen] = useState(false);
   const [selectedStudentDetails, setSelectedStudentDetails] = useState<User | null>(null);
+  const [isEditingStudent, setIsEditingStudent] = useState(false);
+  const [editStudentDisponibilidade, setEditStudentDisponibilidade] = useState<string[]>([]);
   const [disciplinarySearchTerm, setDisciplinarySearchTerm] = useState("");
   const [warningDialogOpen, setWarningDialogOpen] = useState(false);
   const [suspensionDialogOpen, setSuspensionDialogOpen] = useState(false);
@@ -168,6 +187,26 @@ export default function AdminDashboard() {
       escolaridade: "",
       tipo: "professor",
       turmas: [],
+    },
+  });
+
+  const editStudentForm = useForm<z.infer<typeof editStudentFormSchema>>({
+    resolver: zodResolver(editStudentFormSchema),
+    defaultValues: {
+      nome: "",
+      email: "",
+      matricula: "",
+      dataNascimento: "",
+      cpf: "",
+      telefone: "",
+      escolaridade: "",
+      cep: "",
+      rua: "",
+      bairro: "",
+      cidade: "",
+      estado: "",
+      turma: "",
+      disponibilidade: [],
     },
   });
 
@@ -510,6 +549,33 @@ export default function AdminDashboard() {
     onError: (error: any) => {
       toast({
         title: "Erro ao atualizar status",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateStudentDataMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof editStudentFormSchema> & { userId: string }) => {
+      const { userId, ...updateData } = data;
+      const userRef = doc(db, "usuarios", userId);
+      await updateDoc(userRef, updateData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/usuarios/all"] });
+      toast({
+        title: "Dados atualizados!",
+        description: "Os dados do aluno foram atualizados com sucesso.",
+      });
+      setIsEditingStudent(false);
+      setStudentDetailsDialogOpen(false);
+      setSelectedStudentDetails(null);
+      editStudentForm.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao atualizar dados",
         description: error.message,
         variant: "destructive",
       });
@@ -1794,6 +1860,24 @@ export default function AdminDashboard() {
                                     size="sm"
                                     onClick={() => {
                                       setSelectedStudentDetails(user);
+                                      setIsEditingStudent(false);
+                                      editStudentForm.reset({
+                                        nome: user.nome || "",
+                                        email: user.email || "",
+                                        matricula: user.matricula || "",
+                                        dataNascimento: user.dataNascimento || "",
+                                        cpf: user.cpf || "",
+                                        telefone: user.telefone || "",
+                                        escolaridade: user.escolaridade || "",
+                                        cep: user.cep || "",
+                                        rua: user.rua || "",
+                                        bairro: user.bairro || "",
+                                        cidade: user.cidade || "",
+                                        estado: user.estado || "",
+                                        turma: user.turma || "",
+                                        disponibilidade: user.disponibilidade || [],
+                                      });
+                                      setEditStudentDisponibilidade(user.disponibilidade || []);
                                       setStudentDetailsDialogOpen(true);
                                     }}
                                     data-testid={`button-view-details-${user.uid}`}
@@ -3430,15 +3514,22 @@ export default function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={studentDetailsDialogOpen} onOpenChange={setStudentDetailsDialogOpen}>
+      <Dialog open={studentDetailsDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          setIsEditingStudent(false);
+          setSelectedStudentDetails(null);
+        }
+        setStudentDetailsDialogOpen(open);
+      }}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="dialog-student-details">
           <DialogHeader>
-            <DialogTitle>Detalhes do Aluno</DialogTitle>
+            <DialogTitle>{isEditingStudent ? "Editar Cadastro do Aluno" : "Detalhes do Aluno"}</DialogTitle>
             <DialogDescription>
-              Informações completas do aluno
+              {isEditingStudent ? "Edite as informações do aluno e salve as alterações" : "Informações completas do aluno"}
             </DialogDescription>
           </DialogHeader>
-          {selectedStudentDetails && (
+          
+          {selectedStudentDetails && !isEditingStudent && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Card>
@@ -3516,54 +3607,6 @@ export default function AdminDashboard() {
                     <p className="font-medium">{getTurmaNome(selectedStudentDetails.turma)}</p>
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">Status</Label>
-                    <div>
-                      {selectedStudentDetails.ativo ? (
-                        <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Ativo
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
-                          <XCircle className="h-3 w-3 mr-1" />
-                          Inativo
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  {(() => {
-                    const studentTurma = turmas?.find(t => t.id === selectedStudentDetails.turma);
-                    return studentTurma ? (
-                      <>
-                        {studentTurma.periodoMatriculaInicio && studentTurma.periodoMatriculaFim && (
-                          <div>
-                            <Label className="text-muted-foreground">Período de Matrícula da Turma</Label>
-                            <p className="font-medium">
-                              {new Date(studentTurma.periodoMatriculaInicio).toLocaleDateString('pt-BR')} até {new Date(studentTurma.periodoMatriculaFim).toLocaleDateString('pt-BR')}
-                            </p>
-                          </div>
-                        )}
-                        {studentTurma.linkWhatsApp && (
-                          <div>
-                            <Label className="text-muted-foreground">Grupo WhatsApp da Turma</Label>
-                            <a 
-                              href={studentTurma.linkWhatsApp} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="font-medium text-primary hover:underline flex items-center gap-1"
-                            >
-                              Acessar grupo
-                              <MessageCircle className="h-4 w-4" />
-                            </a>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Os horários de aulas são coordenados através do grupo WhatsApp
-                            </p>
-                          </div>
-                        )}
-                      </>
-                    ) : null;
-                  })()}
-                  <div>
                     <Label className="text-muted-foreground">Disponibilidade de Horários do Aluno</Label>
                     <div className="flex flex-wrap gap-2 mt-2">
                       {selectedStudentDetails.disponibilidade && selectedStudentDetails.disponibilidade.length > 0 ? (
@@ -3577,38 +3620,353 @@ export default function AdminDashboard() {
                   </div>
                 </CardContent>
               </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Presença e Atividade</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div>
-                    <Label className="text-muted-foreground">Status de Presença</Label>
-                    <div className="mt-2">
-                      <PresenceIndicator
-                        isOnline={selectedStudentDetails.isOnline}
-                        lastSeen={selectedStudentDetails.lastSeen}
-                        lastActivity={selectedStudentDetails.lastActivity}
-                        variant="badge"
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           )}
+
+          {selectedStudentDetails && isEditingStudent && (
+            <Form {...editStudentForm}>
+              <form onSubmit={editStudentForm.handleSubmit((data) => {
+                updateStudentDataMutation.mutate({
+                  ...data,
+                  userId: selectedStudentDetails.uid,
+                  disponibilidade: editStudentDisponibilidade,
+                });
+              })} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Dados Pessoais</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <FormField
+                        control={editStudentForm.control}
+                        name="nome"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Nome Completo</FormLabel>
+                            <FormControl>
+                              <Input {...field} data-testid="input-edit-nome" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={editStudentForm.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email</FormLabel>
+                            <FormControl>
+                              <Input {...field} type="email" data-testid="input-edit-email" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={editStudentForm.control}
+                        name="matricula"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Matrícula</FormLabel>
+                            <FormControl>
+                              <Input {...field} data-testid="input-edit-matricula" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={editStudentForm.control}
+                        name="cpf"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>CPF</FormLabel>
+                            <FormControl>
+                              <Input {...field} data-testid="input-edit-cpf" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={editStudentForm.control}
+                        name="dataNascimento"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Data de Nascimento</FormLabel>
+                            <FormControl>
+                              <Input {...field} type="date" data-testid="input-edit-dataNascimento" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={editStudentForm.control}
+                        name="telefone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Telefone (WhatsApp)</FormLabel>
+                            <FormControl>
+                              <Input {...field} data-testid="input-edit-telefone" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={editStudentForm.control}
+                        name="escolaridade"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Escolaridade</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-edit-escolaridade">
+                                  <SelectValue placeholder="Selecione a escolaridade" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="Ensino Fundamental">Ensino Fundamental</SelectItem>
+                                <SelectItem value="Ensino Médio Incompleto">Ensino Médio Incompleto</SelectItem>
+                                <SelectItem value="Ensino Médio Completo">Ensino Médio Completo</SelectItem>
+                                <SelectItem value="Ensino Superior Incompleto">Ensino Superior Incompleto</SelectItem>
+                                <SelectItem value="Ensino Superior Completo">Ensino Superior Completo</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Endereço</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <FormField
+                        control={editStudentForm.control}
+                        name="cep"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>CEP</FormLabel>
+                            <FormControl>
+                              <Input {...field} data-testid="input-edit-cep" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={editStudentForm.control}
+                        name="rua"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Rua</FormLabel>
+                            <FormControl>
+                              <Input {...field} data-testid="input-edit-rua" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={editStudentForm.control}
+                        name="bairro"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Bairro</FormLabel>
+                            <FormControl>
+                              <Input {...field} data-testid="input-edit-bairro" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={editStudentForm.control}
+                        name="cidade"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Cidade</FormLabel>
+                            <FormControl>
+                              <Input {...field} data-testid="input-edit-cidade" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={editStudentForm.control}
+                        name="estado"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Estado</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-edit-estado">
+                                  <SelectValue placeholder="Selecione o estado" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="AC">AC</SelectItem>
+                                <SelectItem value="AL">AL</SelectItem>
+                                <SelectItem value="AP">AP</SelectItem>
+                                <SelectItem value="AM">AM</SelectItem>
+                                <SelectItem value="BA">BA</SelectItem>
+                                <SelectItem value="CE">CE</SelectItem>
+                                <SelectItem value="DF">DF</SelectItem>
+                                <SelectItem value="ES">ES</SelectItem>
+                                <SelectItem value="GO">GO</SelectItem>
+                                <SelectItem value="MA">MA</SelectItem>
+                                <SelectItem value="MT">MT</SelectItem>
+                                <SelectItem value="MS">MS</SelectItem>
+                                <SelectItem value="MG">MG</SelectItem>
+                                <SelectItem value="PA">PA</SelectItem>
+                                <SelectItem value="PB">PB</SelectItem>
+                                <SelectItem value="PR">PR</SelectItem>
+                                <SelectItem value="PE">PE</SelectItem>
+                                <SelectItem value="PI">PI</SelectItem>
+                                <SelectItem value="RJ">RJ</SelectItem>
+                                <SelectItem value="RN">RN</SelectItem>
+                                <SelectItem value="RS">RS</SelectItem>
+                                <SelectItem value="RO">RO</SelectItem>
+                                <SelectItem value="RR">RR</SelectItem>
+                                <SelectItem value="SC">SC</SelectItem>
+                                <SelectItem value="SP">SP</SelectItem>
+                                <SelectItem value="SE">SE</SelectItem>
+                                <SelectItem value="TO">TO</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Informações Acadêmicas</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <FormField
+                      control={editStudentForm.control}
+                      name="turma"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Turma</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-edit-turma">
+                                <SelectValue placeholder="Selecione a turma" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {turmas?.filter(t => t.ativa).map((turma: any) => (
+                                <SelectItem key={turma.id} value={turma.id}>
+                                  {turma.nome} - {turma.ano}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <div className="space-y-2">
+                      <Label>Disponibilidade de Horários</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {["Segunda de manhã", "Segunda à tarde", "Segunda à noite", "Terça de manhã", "Terça à tarde", "Terça à noite", "Quarta de manhã", "Quarta à tarde", "Quarta à noite", "Quinta de manhã", "Quinta à tarde", "Quinta à noite", "Sexta de manhã", "Sexta à tarde", "Sexta à noite", "Sábado de manhã", "Sábado à tarde", "Domingo de manhã", "Domingo à tarde"].map((horario) => (
+                          <div key={horario} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`edit-horario-${horario}`}
+                              checked={editStudentDisponibilidade.includes(horario)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setEditStudentDisponibilidade([...editStudentDisponibilidade, horario]);
+                                } else {
+                                  setEditStudentDisponibilidade(editStudentDisponibilidade.filter((h) => h !== horario));
+                                }
+                              }}
+                              data-testid={`checkbox-edit-disponibilidade-${horario}`}
+                            />
+                            <label htmlFor={`edit-horario-${horario}`} className="text-sm">
+                              {horario}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </form>
+            </Form>
+          )}
+
           <DialogFooter>
-            <Button
-              type="button"
-              onClick={() => {
-                setStudentDetailsDialogOpen(false);
-                setSelectedStudentDetails(null);
-              }}
-              data-testid="button-close-details"
-            >
-              Fechar
-            </Button>
+            {!isEditingStudent ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setStudentDetailsDialogOpen(false);
+                    setSelectedStudentDetails(null);
+                  }}
+                  data-testid="button-close-details"
+                >
+                  Fechar
+                </Button>
+                <Button
+                  onClick={() => setIsEditingStudent(true)}
+                  data-testid="button-edit-student"
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Editar Cadastro
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditingStudent(false);
+                  }}
+                  data-testid="button-cancel-edit"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={editStudentForm.handleSubmit((data) => {
+                    updateStudentDataMutation.mutate({
+                      ...data,
+                      userId: selectedStudentDetails!.uid,
+                      disponibilidade: editStudentDisponibilidade,
+                    });
+                  })}
+                  disabled={updateStudentDataMutation.isPending}
+                  data-testid="button-save-student"
+                >
+                  {updateStudentDataMutation.isPending ? "Salvando..." : "Salvar Alterações"}
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
