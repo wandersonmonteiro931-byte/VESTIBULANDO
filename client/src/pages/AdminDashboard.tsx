@@ -24,6 +24,7 @@ import { AnnouncementsTab } from "@/components/AnnouncementsTab";
 import { BrasiliaClock } from "@/components/BrasiliaClock";
 import { ChatPanel } from "@/components/ChatPanel";
 import { ChatAuditTab } from "@/components/ChatAuditTab";
+import { ChatModal } from "@/components/ChatModal";
 import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, MessageCircle, ArrowRightLeft, Clock, Search, Eye, AlertTriangle, Settings, Power, PowerOff, Archive, Download, ChevronDown, ChevronUp } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { queryClient } from "@/lib/queryClient";
@@ -2080,6 +2081,7 @@ export default function AdminDashboard() {
               <p className="text-xs text-muted-foreground">Diretoria</p>
             </div>
             <BrasiliaClock />
+            <ChatModal />
             <ThemeToggle />
             <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout">
               <LogOut className="h-5 w-5" />

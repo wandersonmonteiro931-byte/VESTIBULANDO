@@ -20,6 +20,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { FileUploadZone } from "@/components/FileUploadZone";
 import { AnnouncementsCarousel } from "@/components/AnnouncementsCarousel";
 import { ChatPanel } from "@/components/ChatPanel";
+import { ChatModal } from "@/components/ChatModal";
 import { LogOut, Plus, FileText, Users, Download, Edit, Calendar, Award } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
@@ -202,6 +203,7 @@ export default function TeacherDashboard() {
               <p className="text-xs text-muted-foreground">Professor</p>
             </div>
             <BrasiliaClock />
+            <ChatModal />
             <ThemeToggle />
             <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout">
               <LogOut className="h-5 w-5" />
