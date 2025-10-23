@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,7 +14,7 @@ interface ChatWindowProps {
   onClose: () => void;
 }
 
-export default function ChatWindow({ onClose }: ChatWindowProps) {
+function ChatWindowContent({ onClose }: ChatWindowProps) {
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<ChatConversation | null>(null);
   const [showSearchDialog, setShowSearchDialog] = useState(false);
@@ -139,56 +140,43 @@ export default function ChatWindow({ onClose }: ChatWindowProps) {
   }, [userData?.uid]);
 
   return (
-    <>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999 }}>
       <div 
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          zIndex: 9998,
-        }}
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm" 
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
         onClick={onClose}
       />
       
-      <div
+      <div 
+        className="relative bg-card border rounded-lg shadow-2xl w-full max-w-5xl h-[80vh] flex flex-col"
         style={{
-          position: 'fixed',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: '90vw',
+          position: 'relative',
+          backgroundColor: 'hsl(var(--card))',
+          border: '1px solid hsl(var(--border))',
+          borderRadius: '8px',
+          width: '90%',
           maxWidth: '900px',
           height: '80vh',
           maxHeight: '700px',
-          backgroundColor: 'var(--card)',
-          borderRadius: '8px',
-          border: '1px solid var(--border)',
-          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)',
           display: 'flex',
           flexDirection: 'column',
-          zIndex: 9999,
-          overflow: 'hidden',
+          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5)',
         }}
       >
-        <div
+        <div 
+          className="flex items-center justify-between p-4 border-b"
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: '16px',
-            borderBottom: '1px solid var(--border)',
-            backgroundColor: 'var(--card)',
+            borderBottom: '1px solid hsl(var(--border))',
+            backgroundColor: 'hsl(var(--card))',
           }}
         >
           <h2 
-            style={{ 
-              fontSize: '18px', 
-              fontWeight: 600,
-              color: 'var(--foreground)',
-            }}
+            className="text-lg font-semibold"
+            style={{ fontSize: '18px', fontWeight: 600 }}
             data-testid="text-chat-title"
           >
             Mensagens
@@ -203,17 +191,18 @@ export default function ChatWindow({ onClose }: ChatWindowProps) {
           </Button>
         </div>
 
-        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        <div className="flex flex-1 overflow-hidden" style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
           <div
+            className="w-80 border-r flex flex-col"
             style={{
-              width: '300px',
-              borderRight: '1px solid var(--border)',
+              width: '320px',
+              borderRight: '1px solid hsl(var(--border))',
               display: 'flex',
               flexDirection: 'column',
-              backgroundColor: 'var(--card)',
+              backgroundColor: 'hsl(var(--card))',
             }}
           >
-            <div style={{ padding: '12px', borderBottom: '1px solid var(--border)' }}>
+            <div className="p-3 border-b" style={{ padding: '12px', borderBottom: '1px solid hsl(var(--border))' }}>
               <Button
                 variant="outline"
                 className="w-full justify-start"
@@ -225,15 +214,15 @@ export default function ChatWindow({ onClose }: ChatWindowProps) {
               </Button>
             </div>
 
-            <div style={{ flex: 1, overflow: 'auto' }}>
+            <div className="flex-1 overflow-y-auto" style={{ flex: 1, overflowY: 'auto' }}>
               {loading ? (
-                <div style={{ padding: '16px', textAlign: 'center', color: 'var(--muted-foreground)' }}>
+                <div className="p-4 text-center text-muted-foreground">
                   Carregando conversas...
                 </div>
               ) : conversations.length === 0 ? (
-                <div style={{ padding: '16px', textAlign: 'center', color: 'var(--muted-foreground)' }}>
-                  <p style={{ marginBottom: '8px' }}>Nenhuma conversa ainda</p>
-                  <p style={{ fontSize: '14px' }}>Use a busca para iniciar uma conversa</p>
+                <div className="p-4 text-center text-muted-foreground">
+                  <p className="mb-2">Nenhuma conversa ainda</p>
+                  <p className="text-sm">Use a busca para iniciar uma conversa</p>
                 </div>
               ) : (
                 <ChatConversationList
@@ -245,23 +234,17 @@ export default function ChatWindow({ onClose }: ChatWindowProps) {
             </div>
           </div>
 
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'var(--background)' }}>
+          <div className="flex-1 flex flex-col bg-background" style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'hsl(var(--background))' }}>
             {selectedConversation ? (
               <ChatMessageArea
                 conversation={selectedConversation}
                 onBack={() => setSelectedConversation(null)}
               />
             ) : (
-              <div style={{ 
-                flex: 1, 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                color: 'var(--muted-foreground)',
-              }}>
-                <div style={{ textAlign: 'center' }}>
+              <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                <div className="text-center">
                   <p>Selecione uma conversa</p>
-                  <p style={{ fontSize: '14px', marginTop: '4px' }}>ou inicie uma nova</p>
+                  <p className="text-sm mt-1">ou inicie uma nova</p>
                 </div>
               </div>
             )}
@@ -278,6 +261,10 @@ export default function ChatWindow({ onClose }: ChatWindowProps) {
           }}
         />
       )}
-    </>
+    </div>
   );
+}
+
+export default function ChatWindow(props: ChatWindowProps) {
+  return createPortal(<ChatWindowContent {...props} />, document.body);
 }
