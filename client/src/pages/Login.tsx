@@ -18,7 +18,7 @@ import { GraduationCap, Loader2, Copy, Check, Search, AlertCircle, Shield, Users
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { formatBrasiliaDateTime } from "@/lib/brasiliaTime";
+import { formatBrasiliaDateTime, getNowBrasiliaISO } from "@/lib/brasiliaTime";
 
 // Gera uma matrícula sequencial única usando transação atômica
 async function generateUniqueMatricula(db: any): Promise<string> {
@@ -39,7 +39,7 @@ async function generateUniqueMatricula(db: any): Promise<string> {
     // Atualizar o contador atomicamente
     transaction.set(contadorRef, { 
       ultimaMatricula: proximaMatricula,
-      ultimaAtualizacao: new Date().toISOString()
+      ultimaAtualizacao: getNowBrasiliaISO()
     });
     
     // Garantir que a matrícula tenha 4 dígitos
@@ -443,7 +443,7 @@ export default function Login() {
                 email: formData.email,
                 turma: formData.turma,
                 status: "pendente",
-                dataSolicitacao: new Date().toISOString(),
+                dataSolicitacao: getNowBrasiliaISO(),
                 dataNascimento: formData.dataNascimento,
                 cpf: formData.cpf,
                 escolaridade: formData.escolaridade,
@@ -471,7 +471,7 @@ export default function Login() {
           } else {
             // Criar nova solicitação
             matricula = await generateUniqueMatricula(db);
-            const dataSolicitacao = new Date().toISOString();
+            const dataSolicitacao = getNowBrasiliaISO();
             
             // Limpar reprovações antigas (se existir)
             const reprovacaoSnapshot = await getDocs(query(collection(db, "reprovacoes"), where("email", "==", formData.email)));

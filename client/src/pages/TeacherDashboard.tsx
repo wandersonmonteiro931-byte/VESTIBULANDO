@@ -29,6 +29,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { getNowBrasiliaISO } from "@/lib/brasiliaTime";
 
 const tarefaFormSchema = z.object({
   titulo: z.string().min(1, "Título é obrigatório"),
@@ -113,7 +114,7 @@ export default function TeacherDashboard() {
         ...data,
         professorId: userData.uid,
         professorNome: userData.nome,
-        criadoEm: new Date().toISOString(),
+        criadoEm: getNowBrasiliaISO(),
         arquivoAnexo,
         arquivoNome,
       };

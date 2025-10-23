@@ -31,7 +31,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
-import { brasiliaToUTC, utcToBrasilia, formatBrasiliaDateTime, getNowBrasilia } from "@/lib/brasiliaTime";
+import { brasiliaToUTC, utcToBrasilia, formatBrasiliaDateTime, getNowBrasilia, getNowBrasiliaISO } from "@/lib/brasiliaTime";
 
 const turmaFormSchema = z.object({
   nome: z.string().min(1, "Nome da turma é obrigatório"),
@@ -299,7 +299,7 @@ export default function AdminDashboard() {
           status: "aprovado",
           matricula: solicitacao.matricula,
           dataSolicitacao: solicitacao.dataSolicitacao,
-          dataAprovacao: new Date().toISOString(),
+          dataAprovacao: getNowBrasiliaISO(),
           // Campos adicionais do cadastro
           dataNascimento: solicitacao.dataNascimento,
           cpf: solicitacao.cpf,
@@ -357,7 +357,7 @@ export default function AdminDashboard() {
               status: "aprovado",
               matricula: solicitacao.matricula,
               dataSolicitacao: solicitacao.dataSolicitacao,
-              dataAprovacao: new Date().toISOString(),
+              dataAprovacao: getNowBrasiliaISO(),
               // Campos adicionais do cadastro
               dataNascimento: solicitacao.dataNascimento,
               cpf: solicitacao.cpf,
@@ -434,7 +434,7 @@ export default function AdminDashboard() {
       await updateDoc(doc(db, "solicitacoes", solicitacaoId), {
         status: "reprovado",
         comentarioReprovacao: comentario || "Sua solicitação foi reprovada pela diretoria.",
-        dataReprovacao: new Date().toISOString(),
+        dataReprovacao: getNowBrasiliaISO(),
       });
     },
     onSuccess: () => {
@@ -469,7 +469,7 @@ export default function AdminDashboard() {
       await updateDoc(doc(db, "solicitacoes", solicitacaoId), {
         status: "devolvido",
         comentarioDevolucao: comentario || "Seu cadastro precisa de correções. Por favor, revise as informações e envie novamente.",
-        dataDevolucao: new Date().toISOString(),
+        dataDevolucao: getNowBrasiliaISO(),
       });
     },
     onSuccess: () => {
@@ -504,7 +504,7 @@ export default function AdminDashboard() {
       await updateDoc(doc(db, "solicitacoes", solicitacaoId), {
         status: "standby",
         comentarioStandby: comentario || "Você foi colocado em fila de espera. Aguarde contato da diretoria.",
-        dataStandby: new Date().toISOString(),
+        dataStandby: getNowBrasiliaISO(),
       });
     },
     onSuccess: () => {
@@ -799,7 +799,7 @@ export default function AdminDashboard() {
         disponibilidade: disponibilidadeHorario,
         ativo: true,
         status: "aprovado",
-        dataCriacao: new Date().toISOString(),
+        dataCriacao: getNowBrasiliaISO(),
       });
       
       return { user: userCredential.user, matricula: novaMatricula };
@@ -939,7 +939,7 @@ export default function AdminDashboard() {
         comentario: String(comentario || ""),
         aplicadoPor: String(directorUid),
         aplicadoPorNome: String(directorNome),
-        dataAplicacao: new Date().toISOString(),
+        dataAplicacao: getNowBrasiliaISO(),
         ativo: true,
       };
       
@@ -988,7 +988,7 @@ export default function AdminDashboard() {
         comentario: String(comentario || ""),
         aplicadoPor: String(directorUid),
         aplicadoPorNome: String(directorNome),
-        dataAplicacao: new Date().toISOString(),
+        dataAplicacao: getNowBrasiliaISO(),
         dataTerminoSuspensao: dataTermino.toISOString(),
         ativo: true,
       };
@@ -1030,7 +1030,7 @@ export default function AdminDashboard() {
       // Atualizar o registro para marcar como removido
       await updateDoc(doc(db, "disciplinaryActions", actionId), {
         ativo: false,
-        dataRemocao: new Date().toISOString(),
+        dataRemocao: getNowBrasiliaISO(),
         removidoPor: directorUid,
         removidoPorNome: directorNome,
       });
@@ -1481,7 +1481,7 @@ export default function AdminDashboard() {
         tipo,
         dataInicio,
         dataFim: tipo === "determinada" ? dataFim : undefined,
-        dataAtivacao: new Date().toISOString(),
+        dataAtivacao: getNowBrasiliaISO(),
         iniciadoPor: directorUid,
         iniciadoPorNome: directorNome,
       };
@@ -1539,7 +1539,7 @@ export default function AdminDashboard() {
       // Finalizar a manutenção específica
       await updateDoc(doc(db, "systemMaintenance", targetMaintenanceId), {
         ativa: false,
-        dataFinalizacao: new Date().toISOString(),
+        dataFinalizacao: getNowBrasiliaISO(),
         finalizadoPor: directorUid,
         finalizadoPorNome: directorNome,
       });

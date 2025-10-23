@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { User as FirebaseUser } from 'firebase/auth';
+import { getNowBrasiliaISO } from '@/lib/brasiliaTime';
 
 const ACTIVITY_UPDATE_INTERVAL = 60000; // 1 minuto
 const ACTIVITY_THROTTLE = 5000; // 5 segundos
@@ -18,11 +19,11 @@ export function usePresence(currentUser: FirebaseUser | null) {
       const userRef = doc(db, 'usuarios', currentUser.uid);
       const updateData: any = {
         isOnline,
-        lastActivity: new Date().toISOString(),
+        lastActivity: getNowBrasiliaISO(),
       };
 
       if (!isOnline) {
-        updateData.lastSeen = new Date().toISOString();
+        updateData.lastSeen = getNowBrasiliaISO();
       }
 
       await updateDoc(userRef, updateData);
@@ -86,8 +87,8 @@ export function usePresence(currentUser: FirebaseUser | null) {
       const userRef = doc(db, 'usuarios', currentUser.uid);
       const offlineData = {
         isOnline: false,
-        lastSeen: new Date().toISOString(),
-        lastActivity: new Date().toISOString(),
+        lastSeen: getNowBrasiliaISO(),
+        lastActivity: getNowBrasiliaISO(),
       };
       
       updateDoc(userRef, offlineData).catch((error: any) => {

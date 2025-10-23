@@ -18,6 +18,7 @@ import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 import type { Announcement, Turma } from "@shared/schema";
 import { Checkbox } from "@/components/ui/checkbox";
+import { getNowBrasiliaISO } from "@/lib/brasiliaTime";
 
 export function AnnouncementsTab() {
   const { userData } = useAuth();
@@ -99,7 +100,7 @@ export function AnnouncementsTab() {
         ativo: true,
         criadoPor: userData.uid,
         criadoPorNome: userData.nome,
-        dataCriacao: new Date().toISOString(),
+        dataCriacao: getNowBrasiliaISO(),
       });
     },
     onSuccess: () => {
@@ -142,7 +143,7 @@ export function AnnouncementsTab() {
         conteudo: announcementType === "texto" ? announcementContent : imagePreview,
         publicoAlvo: announcementTarget,
         turmasSelecionadas: announcementTarget === "turmas" ? selectedTurmas : [],
-        dataAtualizacao: new Date().toISOString(),
+        dataAtualizacao: getNowBrasiliaISO(),
       });
     },
     onSuccess: () => {
@@ -167,7 +168,7 @@ export function AnnouncementsTab() {
     mutationFn: async (announcement: Announcement) => {
       await updateDoc(doc(db, "announcements", announcement.id), {
         ativo: !announcement.ativo,
-        dataAtualizacao: new Date().toISOString(),
+        dataAtualizacao: getNowBrasiliaISO(),
       });
     },
     onSuccess: () => {
