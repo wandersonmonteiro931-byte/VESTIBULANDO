@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, AlertTriangle, Eye, MessageCircle, Shield } from "lucide-react";
+import { Search, AlertTriangle, Eye, MessageCircle, Shield, FileText } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { collection, query, orderBy, limit, getDocs, doc, updateDoc, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import type { ChatMessage, ChatPenalty, ChatConversation } from "@shared/schema";
+import type { ChatMessage, ChatPenalty, ChatConversation, ChatLog } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -20,6 +20,7 @@ export default function ChatAuditPanel() {
   const [deletedMessages, setDeletedMessages] = useState<ChatMessage[]>([]);
   const [penalties, setPenalties] = useState<ChatPenalty[]>([]);
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
+  const [logs, setLogs] = useState<ChatLog[]>([]);
   const [selectedPenalty, setSelectedPenalty] = useState<ChatPenalty | null>(null);
   const [reviewDialog, setReviewDialog] = useState(false);
   const [reviewComment, setReviewComment] = useState("");
@@ -59,6 +60,13 @@ export default function ChatAuditPanel() {
       const conversationsSnapshot = await getDocs(conversationsQuery);
       const convs = conversationsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChatConversation));
       setConversations(convs);
+
+      // Carregar logs
+      const logsRef = collection(db, "chatLogs");
+      const logsQuery = query(logsRef, orderBy("timestamp", "desc"), limit(500));
+      const logsSnapshot = await getDocs(logsQuery);
+      const chatLogs = logsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChatLog));
+      setLogs(chatLogs);
     } catch (error) {
       console.error("Erro ao carregar dados de auditoria:", error);
       toast({
@@ -155,6 +163,46 @@ export default function ChatAuditPanel() {
     pen.mensagemInfratora.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const filteredLogs = logs.filter(log =>
+    log.usuarioNome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    log.detalhes.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    log.tipo.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case "critical": return "destructive";
+      case "error": return "destructive";
+      case "warning": return "secondary";
+      default: return "outline";
+    }
+  };
+
+  const getSeverityLabel = (severity: string) => {
+    switch (severity) {
+      case "critical": return "Crítico";
+      case "error": return "Erro";
+      case "warning": return "Aviso";
+      default: return "Info";
+    }
+  };
+
+  const getLogTypeLabel = (tipo: string) => {
+    const labels: Record<string, string> = {
+      "mensagem_enviada": "Mensagem Enviada",
+      "mensagem_lida": "Mensagem Lida",
+      "mensagem_deletada": "Mensagem Deletada",
+      "arquivo_enviado": "Arquivo Enviado",
+      "erro_envio": "Erro ao Enviar",
+      "erro_upload": "Erro no Upload",
+      "conexao_perdida": "Conexão Perdida",
+      "conexao_restaurada": "Conexão Restaurada",
+      "violacao_detectada": "Violação Detectada",
+      "penalidade_aplicada": "Penalidade Aplicada",
+    };
+    return labels[tipo] || tipo;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -189,7 +237,7 @@ export default function ChatAuditPanel() {
       </div>
 
       <Tabs defaultValue="messages" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="messages" data-testid="tab-messages">
             <MessageCircle className="h-4 w-4 mr-2" />
             Mensagens ({filteredMessages.length})
@@ -205,6 +253,10 @@ export default function ChatAuditPanel() {
           <TabsTrigger value="conversations" data-testid="tab-conversations">
             <Shield className="h-4 w-4 mr-2" />
             Conversas ({conversations.length})
+          </TabsTrigger>
+          <TabsTrigger value="logs" data-testid="tab-logs">
+            <FileText className="h-4 w-4 mr-2" />
+            Logs ({filteredLogs.length})
           </TabsTrigger>
         </TabsList>
 
@@ -257,27 +309,56 @@ export default function ChatAuditPanel() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4 max-h-[600px] overflow-y-auto">
-                {deletedMessages.map(msg => (
-                  <div key={msg.id} className="flex gap-3 p-3 rounded border border-destructive/50" data-testid={`deleted-message-${msg.id}`}>
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback>{getInitials(msg.remetenteNome)}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="font-medium text-sm">{msg.remetenteNome}</p>
-                        <span className="text-xs text-muted-foreground">→</span>
-                        <p className="font-medium text-sm">{msg.destinatarioNome}</p>
-                        <Badge variant="destructive" className="ml-auto text-xs">
-                          Deletada
-                        </Badge>
+                {deletedMessages.map(msg => {
+                  const deletadaPorRemetente = msg.deletadaPorRemetente;
+                  const deletadaPorDestinatario = msg.deletadaPorDestinatario;
+                  
+                  return (
+                    <div key={msg.id} className="flex gap-3 p-3 rounded border border-destructive/50" data-testid={`deleted-message-${msg.id}`}>
+                      <Avatar className="h-10 w-10">
+                        <AvatarFallback>{getInitials(msg.remetenteNome)}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-medium text-sm">{msg.remetenteNome}</p>
+                          <span className="text-xs text-muted-foreground">→</span>
+                          <p className="font-medium text-sm">{msg.destinatarioNome}</p>
+                          <Badge variant="destructive" className="ml-auto text-xs">
+                            Deletada
+                          </Badge>
+                        </div>
+                        <p className="text-sm">{msg.conteudo}</p>
+                        <div className="space-y-1 mt-2">
+                          <p className="text-xs text-muted-foreground">
+                            📤 Enviada {formatTimestamp(msg.timestamp)}
+                          </p>
+                          {deletadaPorRemetente && msg.dataDeletadaPorRemetente && (
+                            <p className="text-xs text-destructive font-medium">
+                              🗑️ Removida pelo remetente em {new Date(msg.dataDeletadaPorRemetente).toLocaleString('pt-BR', { 
+                                day: '2-digit', 
+                                month: '2-digit', 
+                                year: 'numeric', 
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                              })}
+                            </p>
+                          )}
+                          {deletadaPorDestinatario && msg.dataDeletadaPorDestinatario && (
+                            <p className="text-xs text-destructive font-medium">
+                              🗑️ Removida pelo destinatário em {new Date(msg.dataDeletadaPorDestinatario).toLocaleString('pt-BR', { 
+                                day: '2-digit', 
+                                month: '2-digit', 
+                                year: 'numeric', 
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                              })}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <p className="text-sm">{msg.conteudo}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Enviada {formatTimestamp(msg.timestamp)}
-                      </p>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
@@ -379,6 +460,68 @@ export default function ChatAuditPanel() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="logs" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Logs de Atividades</CardTitle>
+              <CardDescription>
+                Registro detalhado de todas as ações realizadas no chat
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 max-h-[600px] overflow-y-auto">
+                {filteredLogs.map(log => {
+                  let detalhes: any = {};
+                  try {
+                    detalhes = JSON.parse(log.detalhes);
+                  } catch {
+                    detalhes = { info: log.detalhes };
+                  }
+
+                  return (
+                    <div 
+                      key={log.id} 
+                      className={`p-3 rounded border ${
+                        log.nivelSeveridade === "critical" || log.nivelSeveridade === "error" 
+                          ? "border-destructive/50 bg-destructive/5" 
+                          : ""
+                      }`}
+                      data-testid={`log-${log.id}`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge variant={getSeverityColor(log.nivelSeveridade) as any} className="text-xs">
+                              {getSeverityLabel(log.nivelSeveridade)}
+                            </Badge>
+                            <span className="text-sm font-medium">{getLogTypeLabel(log.tipo)}</span>
+                            <span className="text-xs text-muted-foreground ml-auto">
+                              {formatTimestamp(log.timestamp)}
+                            </span>
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-1">
+                            Usuário: <span className="font-medium text-foreground">{log.usuarioNome}</span>
+                          </p>
+                          {Object.keys(detalhes).length > 0 && (
+                            <div className="text-xs bg-muted p-2 rounded mt-2">
+                              {Object.entries(detalhes).map(([key, value]) => (
+                                <div key={key} className="flex gap-2">
+                                  <span className="font-medium capitalize">{key}:</span>
+                                  <span>{String(value)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>

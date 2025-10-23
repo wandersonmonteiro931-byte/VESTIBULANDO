@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Send, Paperclip, X, File, Image as ImageIcon, Video, Music, FileText, Trash2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Send, Paperclip, X, File, Image as ImageIcon, Video, Music, FileText, Trash2, AlertTriangle, WifiOff, Wifi } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { collection, query, where, onSnapshot, addDoc, doc, updateDoc, serverTimestamp, orderBy, getDocs } from "firebase/firestore";
@@ -13,6 +14,9 @@ import type { ChatMessage, ChatConversation, User } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { checkMessageForViolations, applyPenalty } from "@/lib/chatModeration";
+import { ChatLogger } from "@/lib/chatLogger";
+import { validateFile, getFileTypeCategory } from "@/lib/fileValidation";
+import { useNetworkStatus, retryWithBackoff } from "@/hooks/useNetworkStatus";
 
 interface ChatMessageAreaProps {
   conversation: ChatConversation;
@@ -39,6 +43,7 @@ export default function ChatMessageArea({ conversation, onBack }: ChatMessageAre
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { userData } = useAuth();
   const { toast } = useToast();
+  const { isOnline } = useNetworkStatus();
 
   const otherParticipant = conversation.participante1Id === userData?.uid
     ? {
@@ -64,6 +69,7 @@ export default function ChatMessageArea({ conversation, onBack }: ChatMessageAre
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const msgs: ChatMessage[] = [];
+      
       snapshot.forEach((doc) => {
         msgs.push({ id: doc.id, ...doc.data() } as ChatMessage);
       });
@@ -73,7 +79,9 @@ export default function ChatMessageArea({ conversation, onBack }: ChatMessageAre
       setTimeout(() => markMessagesAsRead(msgs), 500);
     });
 
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+    };
   }, [conversation.id]);
 
   useEffect(() => {
@@ -134,6 +142,16 @@ export default function ChatMessageArea({ conversation, onBack }: ChatMessageAre
           lida: true,
           dataLeitura: new Date().toISOString(),
         });
+        
+        // Log de mensagem lida
+        if (userData) {
+          await ChatLogger.mensagemLida(
+            userData.uid,
+            userData.nome,
+            conversation.id,
+            msg.id
+          );
+        }
       } catch (error) {
         console.error("Erro ao marcar mensagem como lida:", error);
       }
@@ -156,12 +174,24 @@ export default function ChatMessageArea({ conversation, onBack }: ChatMessageAre
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const maxSize = 20 * 1024 * 1024; // 20MB
-    if (file.size > maxSize) {
+    // Validação avançada de arquivo
+    const validation = validateFile(file, 20 * 1024 * 1024);
+    
+    if (!validation.isValid) {
+      if (validation.isDangerous && userData) {
+        ChatLogger.erroUpload(
+          userData.uid,
+          userData.nome,
+          conversation.id,
+          file.name,
+          validation.error || "Arquivo perigoso detectado"
+        );
+      }
+      
       toast({
         variant: "destructive",
-        title: "Arquivo muito grande",
-        description: "O tamanho máximo permitido é 20MB.",
+        title: "Arquivo não permitido",
+        description: validation.error,
       });
       return;
     }
@@ -181,10 +211,26 @@ export default function ChatMessageArea({ conversation, onBack }: ChatMessageAre
     const fileName = `${timestamp}_${file.name}`;
     const storageRef = ref(storage, `chat/${conversation.id}/${fileName}`);
     
-    await uploadBytes(storageRef, file);
-    const downloadURL = await getDownloadURL(storageRef);
-    
-    return downloadURL;
+    try {
+      // Usar retry com backoff exponencial
+      const downloadURL = await retryWithBackoff(async () => {
+        await uploadBytes(storageRef, file);
+        return await getDownloadURL(storageRef);
+      }, 3, 1000);
+      
+      return downloadURL;
+    } catch (error) {
+      if (userData) {
+        ChatLogger.erroUpload(
+          userData.uid,
+          userData.nome,
+          conversation.id,
+          file.name,
+          (error as Error).message
+        );
+      }
+      throw error;
+    }
   };
 
   const sendMessage = async () => {
@@ -193,6 +239,15 @@ export default function ChatMessageArea({ conversation, onBack }: ChatMessageAre
         variant: "destructive",
         title: "Bloqueado",
         description: blockReason,
+      });
+      return;
+    }
+
+    if (!isOnline) {
+      toast({
+        variant: "destructive",
+        title: "Sem conexão",
+        description: "Você está offline. Verifique sua conexão com a internet.",
       });
       return;
     }
@@ -215,8 +270,17 @@ export default function ChatMessageArea({ conversation, onBack }: ChatMessageAre
         arquivoNome = selectedFile.name;
         arquivoTipo = selectedFile.type;
         arquivoTamanho = selectedFile.size;
-        tipoMensagem = getFileType(selectedFile);
+        tipoMensagem = getFileTypeCategory(selectedFile.name) as ChatMessage["tipo"];
         setUploading(false);
+
+        // Log de arquivo enviado
+        await ChatLogger.arquivoEnviado(
+          userData.uid,
+          userData.nome,
+          conversation.id,
+          "pending",
+          { nome: arquivoNome, tipo: arquivoTipo, tamanho: arquivoTamanho }
+        );
       }
 
       const messageContent = messageText.trim() || `[${tipoMensagem}]`;
@@ -225,7 +289,23 @@ export default function ChatMessageArea({ conversation, onBack }: ChatMessageAre
       const violation = await checkMessageForViolations(messageContent, userData.uid);
       
       if (violation) {
+        await ChatLogger.violacaoDetectada(
+          userData.uid,
+          userData.nome,
+          conversation.id,
+          messageContent,
+          violation.reason || "Violação detectada"
+        );
+
         await applyPenalty(userData.uid, violation, messageContent, conversation.id, otherParticipant.id, otherParticipant.nome);
+        
+        await ChatLogger.penalidadeAplicada(
+          userData.uid,
+          userData.nome,
+          conversation.id,
+          violation.penaltyMessage || "Penalidade aplicada",
+          violation.infractionNumber || 1
+        );
         
         toast({
           variant: "destructive",
@@ -259,7 +339,19 @@ export default function ChatMessageArea({ conversation, onBack }: ChatMessageAre
         deletadaPorDestinatario: false,
       };
 
-      await addDoc(collection(db, "chatMessages"), messageData);
+      // Usar retry com backoff
+      const docRef = await retryWithBackoff(async () => {
+        return await addDoc(collection(db, "chatMessages"), messageData);
+      }, 3, 1000);
+
+      // Log de mensagem enviada
+      await ChatLogger.mensagemEnviada(
+        userData.uid,
+        userData.nome,
+        conversation.id,
+        docRef.id,
+        tipoMensagem
+      );
 
       // Atualizar a conversa
       const conversationRef = doc(db, "chatConversations", conversation.id);
@@ -277,10 +369,18 @@ export default function ChatMessageArea({ conversation, onBack }: ChatMessageAre
       setSelectedFile(null);
     } catch (error) {
       console.error("Erro ao enviar mensagem:", error);
+      
+      await ChatLogger.erroEnvio(
+        userData.uid,
+        userData.nome,
+        conversation.id,
+        (error as Error).message
+      );
+      
       toast({
         variant: "destructive",
-        title: "Erro",
-        description: "Não foi possível enviar a mensagem.",
+        title: "Erro ao enviar",
+        description: "Não foi possível enviar a mensagem. Tentando novamente...",
       });
     } finally {
       setSending(false);
@@ -294,15 +394,34 @@ export default function ChatMessageArea({ conversation, onBack }: ChatMessageAre
     try {
       const messageRef = doc(db, "chatMessages", messageId);
       const msg = messages.find(m => m.id === messageId);
+      const now = new Date().toISOString();
       
       if (msg?.remetenteId === userData.uid) {
         await updateDoc(messageRef, {
           deletadaPorRemetente: true,
+          dataDeletadaPorRemetente: now,
         });
+        
+        await ChatLogger.mensagemDeletada(
+          userData.uid,
+          userData.nome,
+          conversation.id,
+          messageId,
+          "remetente"
+        );
       } else {
         await updateDoc(messageRef, {
           deletadaPorDestinatario: true,
+          dataDeletadaPorDestinatario: now,
         });
+        
+        await ChatLogger.mensagemDeletada(
+          userData.uid,
+          userData.nome,
+          conversation.id,
+          messageId,
+          "destinatario"
+        );
       }
 
       toast({
@@ -371,6 +490,20 @@ export default function ChatMessageArea({ conversation, onBack }: ChatMessageAre
           <p className="font-medium">{otherParticipant.nome}</p>
           <p className="text-sm text-muted-foreground capitalize">{otherParticipant.tipo}</p>
         </div>
+        
+        {!isOnline && (
+          <Badge variant="destructive" className="gap-1">
+            <WifiOff className="h-3 w-3" />
+            Offline
+          </Badge>
+        )}
+        
+        {isOnline && (
+          <Badge variant="secondary" className="gap-1">
+            <Wifi className="h-3 w-3" />
+            Online
+          </Badge>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -468,6 +601,13 @@ export default function ChatMessageArea({ conversation, onBack }: ChatMessageAre
       </div>
 
       <div className="p-4 border-t">
+        {!isOnline && (
+          <Alert variant="destructive" className="mb-4">
+            <WifiOff className="h-4 w-4" />
+            <AlertDescription>Você está offline. Conecte-se à internet para enviar mensagens.</AlertDescription>
+          </Alert>
+        )}
+        
         {blocked && (
           <Alert variant="destructive" className="mb-4">
             <AlertDescription>{blockReason}</AlertDescription>
@@ -502,14 +642,22 @@ export default function ChatMessageArea({ conversation, onBack }: ChatMessageAre
             size="icon"
             variant="outline"
             onClick={() => fileInputRef.current?.click()}
-            disabled={uploading || sending || blocked}
+            disabled={uploading || sending || blocked || !isOnline}
             data-testid="button-attach-file"
           >
             <Paperclip className="h-5 w-5" />
           </Button>
 
           <Input
-            placeholder={blocked ? "Chat bloqueado" : "Digite sua mensagem..."}
+            placeholder={
+              !isOnline 
+                ? "Sem conexão..." 
+                : blocked 
+                ? "Chat bloqueado" 
+                : uploading 
+                ? "Enviando arquivo..." 
+                : "Digite sua mensagem..."
+            }
             value={messageText}
             onChange={(e) => setMessageText(e.target.value)}
             onKeyDown={(e) => {
@@ -518,16 +666,16 @@ export default function ChatMessageArea({ conversation, onBack }: ChatMessageAre
                 sendMessage();
               }
             }}
-            disabled={uploading || sending || blocked}
+            disabled={uploading || sending || blocked || !isOnline}
             data-testid="input-message"
           />
 
           <Button
             onClick={sendMessage}
-            disabled={(!messageText.trim() && !selectedFile) || uploading || sending || blocked}
+            disabled={(!messageText.trim() && !selectedFile) || uploading || sending || blocked || !isOnline}
             data-testid="button-send-message"
           >
-            <Send className="h-5 w-5" />
+            {uploading ? "..." : <Send className="h-5 w-5" />}
           </Button>
         </div>
       </div>

@@ -254,12 +254,43 @@ export const chatMessageSchema = z.object({
   dataLeitura: z.string().optional(), // Data/hora em que foi lida
   deletadaPorRemetente: z.boolean().default(false), // Se foi deletada pelo remetente (só some da visualização)
   deletadaPorDestinatario: z.boolean().default(false), // Se foi deletada pelo destinatário (só some da visualização)
+  dataDeletadaPorRemetente: z.string().optional(), // Data/hora em que foi deletada pelo remetente
+  dataDeletadaPorDestinatario: z.string().optional(), // Data/hora em que foi deletada pelo destinatário
 });
 
 export const insertChatMessageSchema = chatMessageSchema.omit({ id: true });
 
 export type ChatMessage = z.infer<typeof chatMessageSchema>;
 export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
+
+// Chat Log schema - logs detalhados de todas as ações do chat
+export const chatLogSchema = z.object({
+  id: z.string(),
+  tipo: z.enum([
+    "mensagem_enviada",
+    "mensagem_lida",
+    "mensagem_deletada",
+    "arquivo_enviado",
+    "erro_envio",
+    "erro_upload",
+    "conexao_perdida",
+    "conexao_restaurada",
+    "violacao_detectada",
+    "penalidade_aplicada"
+  ]),
+  usuarioId: z.string(),
+  usuarioNome: z.string(),
+  conversationId: z.string().optional(),
+  messageId: z.string().optional(),
+  detalhes: z.string(), // Detalhes da ação em formato JSON string
+  timestamp: z.string(),
+  nivelSeveridade: z.enum(["info", "warning", "error", "critical"]).default("info"),
+});
+
+export const insertChatLogSchema = chatLogSchema.omit({ id: true });
+
+export type ChatLog = z.infer<typeof chatLogSchema>;
+export type InsertChatLog = z.infer<typeof insertChatLogSchema>;
 
 // Chat Conversation schema - conversas entre usuários
 export const chatConversationSchema = z.object({
