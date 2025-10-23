@@ -1858,9 +1858,10 @@ export default function AdminDashboard() {
           
           <div className="flex items-center gap-3">
             {maintenanceData && maintenanceData.some(m => m.ativa) && (
-              <div className="animate-pulse">
-                <p className="text-sm font-bold text-red-600 dark:text-red-400">
-                  SISTEMA EM MANUTENÇÃO
+              <div className="flex items-center gap-3 px-4 py-2 bg-red-600 dark:bg-red-700 rounded-full border-4 border-red-700 dark:border-red-900 shadow-lg blink-red" data-testid="maintenance-warning-badge">
+                <AlertTriangle className="h-5 w-5 text-white animate-pulse" />
+                <p className="text-base font-extrabold text-white uppercase tracking-wide">
+                  SISTEMA EM MANUTENÇÃO - TODOS USUÁRIOS BLOQUEADOS
                 </p>
               </div>
             )}
