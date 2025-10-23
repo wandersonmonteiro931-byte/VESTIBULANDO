@@ -20,7 +20,7 @@ import { MessageCircle, Send, Search, X, Paperclip, Image as ImageIcon, FileText
 import { VideoCallDialog } from "@/components/VideoCallDialog";
 import { where, orderBy } from "firebase/firestore";
 import { db, storage } from "@/lib/firebase";
-import { collection, addDoc, query, getDocs, updateDoc, doc, writeBatch } from "firebase/firestore";
+import { collection, addDoc, query, getDocs, updateDoc, doc, writeBatch, getDoc, setDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useToast } from "@/hooks/use-toast";
 
@@ -225,20 +225,16 @@ export function ChatPanel() {
 
       await addDoc(collection(db, "chat_messages"), messageData);
 
-      const conversationsQuery = query(
-        collection(db, "chat_conversations"),
-        where("id", "==", conversationId)
-      );
-      const conversationsSnapshot = await getDocs(conversationsQuery);
-
       const lastMessagePreview = messageType === "imagem" ? "📷 Imagem" : 
                                  messageType === "audio" ? "🎙️ Áudio" :
                                  messageType === "video" ? "🎬 Vídeo" :
                                  "📄 " + file.name;
 
-      if (conversationsSnapshot.empty) {
+      const conversationRef = doc(db, "chat_conversations", conversationId);
+      const conversationSnap = await getDoc(conversationRef);
+
+      if (!conversationSnap.exists()) {
         const conversationData: any = {
-          id: conversationId,
           participante1Id: userData.uid,
           participante1Nome: userData.nome,
           participante1Tipo: userData.tipo,
@@ -253,13 +249,12 @@ export function ChatPanel() {
           dataCriacao: timestamp,
           dataUltimaAtualizacao: timestamp,
         };
-        await addDoc(collection(db, "chat_conversations"), conversationData);
+        await setDoc(conversationRef, conversationData);
       } else {
-        const conversationDoc = conversationsSnapshot.docs[0];
-        const conversation = conversationDoc.data() as ChatConversation;
+        const conversation = conversationSnap.data() as ChatConversation;
         const isParticipant1 = conversation.participante1Id === userData.uid;
 
-        await updateDoc(doc(db, "chat_conversations", conversationDoc.id), {
+        await updateDoc(conversationRef, {
           ultimaMensagem: lastMessagePreview,
           ultimaMensagemTimestamp: timestamp,
           ultimaMensagemRemetenteId: userData.uid,
@@ -316,15 +311,11 @@ export function ChatPanel() {
 
       await addDoc(collection(db, "chat_messages"), messageData);
 
-      const conversationsQuery = query(
-        collection(db, "chat_conversations"),
-        where("id", "==", conversationId)
-      );
-      const conversationsSnapshot = await getDocs(conversationsQuery);
+      const conversationRef = doc(db, "chat_conversations", conversationId);
+      const conversationSnap = await getDoc(conversationRef);
 
-      if (conversationsSnapshot.empty) {
+      if (!conversationSnap.exists()) {
         const conversationData: any = {
-          id: conversationId,
           participante1Id: userData.uid,
           participante1Nome: userData.nome,
           participante1Tipo: userData.tipo,
@@ -339,13 +330,12 @@ export function ChatPanel() {
           dataCriacao: timestamp,
           dataUltimaAtualizacao: timestamp,
         };
-        await addDoc(collection(db, "chat_conversations"), conversationData);
+        await setDoc(conversationRef, conversationData);
       } else {
-        const conversationDoc = conversationsSnapshot.docs[0];
-        const conversation = conversationDoc.data() as ChatConversation;
+        const conversation = conversationSnap.data() as ChatConversation;
         const isParticipant1 = conversation.participante1Id === userData.uid;
 
-        await updateDoc(doc(db, "chat_conversations", conversationDoc.id), {
+        await updateDoc(conversationRef, {
           ultimaMensagem: messageInput,
           ultimaMensagemTimestamp: timestamp,
           ultimaMensagemRemetenteId: userData.uid,

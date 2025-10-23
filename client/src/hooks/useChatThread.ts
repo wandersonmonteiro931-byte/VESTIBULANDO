@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { collection, query, where, orderBy, onSnapshot, addDoc } from "firebase/firestore";
+import { collection, query, where, orderBy, onSnapshot, addDoc, doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { getNowBrasiliaISO } from "@/lib/brasiliaTime";
 import type { ChatConversation, ChatMessage, User } from "@shared/schema";
@@ -59,42 +59,56 @@ export function useChatThread({
       throw new Error("Missing user data for conversation creation");
     }
 
-    const conversationData = {
-      participante1Id: currentUserId,
-      participante1Nome: currentUserName,
-      participante1Tipo: currentUserType,
-      participante2Id: selectedUser.uid,
-      participante2Nome: selectedUser.nome,
-      participante2Tipo: selectedUser.tipo,
-      mensagensNaoLidas1: 0,
-      mensagensNaoLidas2: 1,
-      dataCriacao: getNowBrasiliaISO(),
-      dataUltimaAtualizacao: getNowBrasiliaISO(),
-      ultimaMensagem: messageData.conteudo?.substring(0, 50),
-      ultimaMensagemTimestamp: getNowBrasiliaISO(),
-      ultimaMensagemRemetenteId: currentUserId,
-    };
-
-    const conversationRef = await addDoc(collection(db, "chat_conversations"), conversationData);
+    const determinedConversationId = [currentUserId, selectedUser.uid].sort().join("_");
+    const conversationRef = doc(db, "chat_conversations", determinedConversationId);
     
-    const newConversation: ChatConversation = {
-      id: conversationRef.id,
-      ...conversationData,
-    };
+    const conversationSnap = await getDoc(conversationRef);
+    
+    if (!conversationSnap.exists()) {
+      const conversationData = {
+        participante1Id: currentUserId,
+        participante1Nome: currentUserName,
+        participante1Tipo: currentUserType,
+        participante2Id: selectedUser.uid,
+        participante2Nome: selectedUser.nome,
+        participante2Tipo: selectedUser.tipo,
+        mensagensNaoLidas1: 0,
+        mensagensNaoLidas2: 1,
+        dataCriacao: getNowBrasiliaISO(),
+        dataUltimaAtualizacao: getNowBrasiliaISO(),
+        ultimaMensagem: messageData.conteudo?.substring(0, 50) || "",
+        ultimaMensagemTimestamp: getNowBrasiliaISO(),
+        ultimaMensagemRemetenteId: currentUserId,
+      };
 
-    setResolvedConversation(newConversation);
-    setConversationId(conversationRef.id);
+      await setDoc(conversationRef, conversationData);
+      
+      const newConversation: ChatConversation = {
+        id: determinedConversationId,
+        ...conversationData,
+      };
+
+      setResolvedConversation(newConversation);
+    } else {
+      const existingConversation = conversationSnap.data() as Omit<ChatConversation, 'id'>;
+      setResolvedConversation({
+        id: determinedConversationId,
+        ...existingConversation,
+      });
+    }
+    
+    setConversationId(determinedConversationId);
 
     const fullMessageData = {
       ...messageData,
-      conversationId: conversationRef.id,
+      conversationId: determinedConversationId,
       timestamp: getNowBrasiliaISO(),
     };
 
     const messageRef = await addDoc(collection(db, "chat_messages"), fullMessageData);
 
     return {
-      conversationId: conversationRef.id,
+      conversationId: determinedConversationId,
       messageId: messageRef.id,
     };
   };

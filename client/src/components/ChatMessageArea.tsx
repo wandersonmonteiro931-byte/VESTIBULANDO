@@ -186,7 +186,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack }: 
     const validation = validateFile(file, 20 * 1024 * 1024);
     
     if (!validation.isValid) {
-      if (validation.isDangerous && userData) {
+      if (validation.isDangerous && userData && conversationId) {
         ChatLogger.erroUpload(
           userData.uid,
           userData.nome,
@@ -215,6 +215,10 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack }: 
   };
 
   const uploadFile = async (file: File): Promise<string> => {
+    if (!conversationId) {
+      throw new Error("Conversation ID is required for file upload");
+    }
+    
     const timestamp = Date.now();
     const fileName = `${timestamp}_${file.name}`;
     const storageRef = ref(storage, `chat/${conversationId}/${fileName}`);
@@ -228,7 +232,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack }: 
       
       return downloadURL;
     } catch (error) {
-      if (userData) {
+      if (userData && conversationId) {
         ChatLogger.erroUpload(
           userData.uid,
           userData.nome,
@@ -442,7 +446,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack }: 
   };
 
   const deleteMessage = async (messageId: string) => {
-    if (!userData?.uid) return;
+    if (!userData?.uid || !conversationId) return;
 
     try {
       const messageRef = doc(db, "chat_messages", messageId);
@@ -524,6 +528,14 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack }: 
     }
     return nome.substring(0, 2).toUpperCase();
   };
+
+  if (!otherParticipant) {
+    return (
+      <div className="flex flex-col h-full items-center justify-center">
+        <p className="text-muted-foreground">Selecione uma conversa para começar</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full">
