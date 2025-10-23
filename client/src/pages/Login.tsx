@@ -758,6 +758,7 @@ export default function Login() {
         // Verificar suspensões ativas
         if (currentUserData.tipo === "aluno") {
           try {
+            console.log("🔍 Verificando suspensões para aluno:", userCredential.user.uid);
             const { collection, getDocs, query, where } = await import("firebase/firestore");
             const suspensionsQuery = query(
               collection(db, "disciplinaryActions"),
@@ -766,6 +767,7 @@ export default function Login() {
               where("ativo", "==", true)
             );
             const suspensionsSnapshot = await getDocs(suspensionsQuery);
+            console.log("✅ Suspensões encontradas:", suspensionsSnapshot.docs.length);
             
             if (!suspensionsSnapshot.empty) {
               const activeSuspension = suspensionsSnapshot.docs[0].data();
@@ -773,10 +775,15 @@ export default function Login() {
               const dataAplicacao = new Date(activeSuspension.dataAplicacao);
               const agora = new Date();
               
+              console.log("📅 Data atual:", agora);
+              console.log("📅 Data término suspensão:", dataTermino);
+              console.log("⏰ Suspensão ativa?", agora < dataTermino);
+              
               if (agora < dataTermino) {
                 // Suspensão ainda ativa - mostrar overlay
                 const duracaoDias = Math.ceil((dataTermino.getTime() - dataAplicacao.getTime()) / (1000 * 60 * 60 * 24));
                 
+                console.log("🚫 Bloqueando login - Suspensão ativa");
                 setSuspensionData({
                   ...activeSuspension,
                   duracaoDias,
@@ -790,11 +797,18 @@ export default function Login() {
                 // O diretor precisará remover a suspensão manualmente
                 console.log("⚠️ Suspensão expirada, mas login permitido");
               }
+            } else {
+              console.log("✅ Nenhuma suspensão ativa encontrada");
             }
           } catch (suspensionError: any) {
-            // Ignorar erro de permissão ao verificar suspensões
-            if (suspensionError?.code !== 'permission-denied') {
-              console.error('Erro ao verificar suspensões:', suspensionError);
+            console.error('❌ Erro ao verificar suspensões:', suspensionError);
+            console.error('❌ Código do erro:', suspensionError?.code);
+            console.error('❌ Mensagem:', suspensionError?.message);
+            
+            // Se houver erro de permissão, logar para debug mas continuar
+            // Em produção, considere bloquear o login em caso de erros
+            if (suspensionError?.code === 'permission-denied') {
+              console.warn('⚠️ AVISO: Erro de permissão ao verificar suspensões - possível problema de segurança');
             }
           }
         }
