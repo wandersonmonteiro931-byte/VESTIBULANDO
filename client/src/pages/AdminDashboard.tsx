@@ -1510,7 +1510,7 @@ export default function AdminDashboard() {
   });
 
   const finalizarManutencaoMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (maintenanceId?: string) => {
       if (!userData || !firebaseAuth.currentUser) throw new Error("Usuário não autenticado");
       
       const directorUid = userData.uid || firebaseAuth.currentUser.uid;
@@ -1518,17 +1518,25 @@ export default function AdminDashboard() {
       
       if (!directorUid || !directorNome) throw new Error("Dados do usuário incompletos");
       
-      // Buscar manutenção ativa
-      const maintenanceQuery = query(collection(db, "systemMaintenance"), where("ativa", "==", true));
-      const maintenanceDocs = await getDocs(maintenanceQuery);
+      let targetMaintenanceId: string;
       
-      if (maintenanceDocs.empty) {
-        throw new Error("Nenhuma manutenção ativa encontrada");
+      if (maintenanceId) {
+        // Se um ID foi passado, usar esse ID diretamente
+        targetMaintenanceId = maintenanceId;
+      } else {
+        // Caso contrário, buscar a primeira manutenção ativa
+        const maintenanceQuery = query(collection(db, "systemMaintenance"), where("ativa", "==", true));
+        const maintenanceDocs = await getDocs(maintenanceQuery);
+        
+        if (maintenanceDocs.empty) {
+          throw new Error("Nenhuma manutenção ativa encontrada");
+        }
+        
+        targetMaintenanceId = maintenanceDocs.docs[0].id;
       }
       
-      // Finalizar a manutenção
-      const maintenanceDoc = maintenanceDocs.docs[0];
-      await updateDoc(doc(db, "systemMaintenance", maintenanceDoc.id), {
+      // Finalizar a manutenção específica
+      await updateDoc(doc(db, "systemMaintenance", targetMaintenanceId), {
         ativa: false,
         dataFinalizacao: new Date().toISOString(),
         finalizadoPor: directorUid,
@@ -2541,7 +2549,7 @@ export default function AdminDashboard() {
                     variant="destructive"
                     onClick={() => {
                       // Finalizar manutenção
-                      finalizarManutencaoMutation.mutate();
+                      finalizarManutencaoMutation.mutate(maintenanceData[0].id);
                     }}
                     disabled={finalizarManutencaoMutation.isPending}
                     data-testid="button-end-maintenance"
@@ -2671,17 +2679,30 @@ export default function AdminDashboard() {
                             </div>
                           </div>
                           
-                          {!maintenance.ativa && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => deletarManutencaoMutation.mutate(maintenance.id)}
-                              disabled={deletarManutencaoMutation.isPending}
-                              data-testid={`button-delete-maintenance-${maintenance.id}`}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
+                          <div className="flex gap-2">
+                            {maintenance.ativa ? (
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => finalizarManutencaoMutation.mutate(maintenance.id)}
+                                disabled={finalizarManutencaoMutation.isPending}
+                                data-testid={`button-finalize-maintenance-${maintenance.id}`}
+                              >
+                                <PowerOff className="h-4 w-4 mr-2" />
+                                Finalizar
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => deletarManutencaoMutation.mutate(maintenance.id)}
+                                disabled={deletarManutencaoMutation.isPending}
+                                data-testid={`button-delete-maintenance-${maintenance.id}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}
