@@ -3536,6 +3536,9 @@ export default function AdminDashboard() {
                               Acessar grupo
                               <MessageCircle className="h-4 w-4" />
                             </a>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Os horários de aulas são coordenados através do grupo WhatsApp
+                            </p>
                           </div>
                         )}
                       </>
