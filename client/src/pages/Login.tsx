@@ -1959,72 +1959,70 @@ export default function Login() {
       {/* Overlay de Suspensão Disciplinar */}
       {showSuspensionOverlay && suspensionData && (
         <div 
-          className="fixed inset-0 bg-background/95 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 bg-background/95 backdrop-blur-sm flex items-center justify-center p-3"
           style={{ zIndex: 999999 }}
           data-testid="overlay-suspension"
         >
-          <Card className="w-full max-w-2xl border-destructive">
-            <CardHeader className="space-y-4 text-center pb-6">
-              <div className="mx-auto w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center">
-                <Shield className="h-10 w-10 text-destructive" />
+          <Card className="w-full max-w-md border-destructive max-h-[90vh] overflow-auto">
+            <CardHeader className="space-y-2 text-center pb-3">
+              <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
+                <Shield className="h-6 w-6 text-destructive" />
               </div>
-              <CardTitle className="text-4xl font-bold text-destructive">
+              <CardTitle className="text-2xl font-bold text-destructive">
                 SUSPENSÃO DISCIPLINAR
               </CardTitle>
-              <CardDescription className="text-base">
-                Por favor, aguarde o término da suspensão para retomar suas atividades normalmente.
-                <br />
-                Em caso de dúvidas, entre em contato com o Diretor responsável.
+              <CardDescription className="text-sm">
+                Aguarde o término da suspensão para retomar suas atividades.
               </CardDescription>
             </CardHeader>
             
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-3">
               {/* Contador de tempo restante */}
-              <div className="p-6 bg-muted rounded-lg text-center">
-                <p className="text-sm text-muted-foreground mb-2">Tempo restante de suspensão</p>
-                <p className="text-3xl font-bold text-destructive font-mono" data-testid="text-suspension-countdown">
+              <div className="p-3 bg-muted rounded-lg text-center">
+                <p className="text-xs text-muted-foreground mb-1">Tempo restante</p>
+                <p className="text-xl font-bold text-destructive font-mono" data-testid="text-suspension-countdown">
                   {suspensionTimeRemaining}
                 </p>
               </div>
               
               {/* Informações da suspensão */}
-              <div className="space-y-4">
-                <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-lg">
-                  <Clock className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Duração da suspensão</p>
-                    <p className="text-sm text-muted-foreground" data-testid="text-suspension-duration">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium">Duração</p>
+                    <p className="text-xs text-muted-foreground" data-testid="text-suspension-duration">
                       {suspensionData.duracaoDias} {suspensionData.duracaoDias === 1 ? 'dia' : 'dias'}
                     </p>
                   </div>
                 </div>
                 
-                <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-lg">
-                  <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Reativação automática</p>
-                    <p className="text-sm text-muted-foreground" data-testid="text-suspension-end">
+                <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium">Reativação</p>
+                    <p className="text-xs text-muted-foreground" data-testid="text-suspension-end">
                       {format(new Date(suspensionData.dataTerminoSuspensao), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                     </p>
                   </div>
                 </div>
                 
-                <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-lg">
-                  <Users className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Aplicado por</p>
-                    <p className="text-sm text-muted-foreground" data-testid="text-suspension-applied-by">
-                      {suspensionData.aplicadoPorNome || 'Diretor'}
+                <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium">Aplicado por</p>
+                    <p className="text-xs text-muted-foreground" data-testid="text-suspension-applied-by">
+                      Diretoria
                     </p>
                   </div>
                 </div>
                 
                 {suspensionData.comentario && (
-                  <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-lg">
-                    <FileText className="h-5 w-5 text-muted-foreground mt-0.5" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Motivo</p>
-                      <p className="text-sm text-muted-foreground" data-testid="text-suspension-reason">
+                  <div className="flex items-start gap-2 p-2 bg-muted/50 rounded-lg">
+                    <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium">Motivo</p>
+                      <p className="text-xs text-muted-foreground break-words" data-testid="text-suspension-reason">
                         {suspensionData.comentario}
                       </p>
                     </div>
@@ -2033,20 +2031,17 @@ export default function Login() {
               </div>
               
               {/* Aviso */}
-              <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="h-5 w-5 text-destructive mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-destructive">Atenção</p>
-                    <p className="text-sm text-destructive/90 mt-1">
-                      Esta suspensão disciplinar será registrada em seu histórico junto à equipe Vestibulando.
-                    </p>
-                  </div>
+              <div className="p-2 bg-destructive/10 border border-destructive/20 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-destructive">
+                    Esta suspensão será registrada em seu histórico.
+                  </p>
                 </div>
               </div>
             </CardContent>
             
-            <CardFooter>
+            <CardFooter className="pt-3">
               <Button
                 onClick={async () => {
                   console.log("🔘 Fechando overlay de suspensão");
