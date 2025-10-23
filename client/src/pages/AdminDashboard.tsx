@@ -1199,6 +1199,8 @@ export default function AdminDashboard() {
   const bulkTransferStudentsMutation = useMutation({
     mutationFn: async ({ studentIds, novaTurmaId }: { studentIds: string[]; novaTurmaId: string }) => {
       await runTransaction(db, async (transaction) => {
+        // ===== FASE 1: TODAS AS LEITURAS =====
+        
         // Buscar turma de destino usando ID
         const turmaDestinoRef = doc(db, "turmas", novaTurmaId);
         const turmaDestinoDoc = await transaction.get(turmaDestinoRef);
@@ -1216,13 +1218,15 @@ export default function AdminDashboard() {
           throw new Error(`Não há vagas suficientes. Disponíveis: ${vagasDisponiveis}, Selecionados: ${studentIds.length}`);
         }
         
-        // Buscar turmas de origem e decrementar vagasPreenchidas (usando IDs)
-        const turmasOrigemMap = new Map<string, number>();
+        // Buscar todos os usuários
+        const userRefs = studentIds.map(uid => doc(db, "usuarios", uid));
+        const userDocs = await Promise.all(userRefs.map(ref => transaction.get(ref)));
         
-        for (const uid of studentIds) {
-          const userRef = doc(db, "usuarios", uid);
-          const userDoc = await transaction.get(userRef);
-          
+        // Mapear turmas de origem
+        const turmasOrigemMap = new Map<string, number>();
+        const userUpdates: { ref: any; turmaOrigemId: string | null }[] = [];
+        
+        userDocs.forEach((userDoc, index) => {
           if (userDoc.exists()) {
             const userData = userDoc.data();
             const turmaOrigemId = userData.turma;
@@ -1231,21 +1235,36 @@ export default function AdminDashboard() {
               turmasOrigemMap.set(turmaOrigemId, (turmasOrigemMap.get(turmaOrigemId) || 0) + 1);
             }
             
-            transaction.update(userRef, { turma: novaTurmaId });
+            userUpdates.push({
+              ref: userRefs[index],
+              turmaOrigemId
+            });
           }
-        }
+        });
         
-        // Decrementar vagasPreenchidas das turmas de origem (usando IDs diretamente)
-        for (const [turmaOrigemId, count] of Array.from(turmasOrigemMap.entries())) {
-          const turmaOrigemRef = doc(db, "turmas", turmaOrigemId);
-          const turmaOrigemDoc = await transaction.get(turmaOrigemRef);
+        // Buscar todas as turmas de origem
+        const turmasOrigemIds = Array.from(turmasOrigemMap.keys());
+        const turmasOrigemRefs = turmasOrigemIds.map(id => doc(db, "turmas", id));
+        const turmasOrigemDocs = await Promise.all(turmasOrigemRefs.map(ref => transaction.get(ref)));
+        
+        // ===== FASE 2: TODAS AS ESCRITAS =====
+        
+        // Atualizar todos os usuários
+        userUpdates.forEach(({ ref }) => {
+          transaction.update(ref, { turma: novaTurmaId });
+        });
+        
+        // Decrementar vagasPreenchidas das turmas de origem
+        turmasOrigemDocs.forEach((turmaOrigemDoc, index) => {
           if (turmaOrigemDoc.exists()) {
+            const turmaOrigemId = turmasOrigemIds[index];
+            const count = turmasOrigemMap.get(turmaOrigemId) || 0;
             const vagasPreencidasOrigem = turmaOrigemDoc.data().vagasPreenchidas || 0;
-            transaction.update(turmaOrigemRef, {
+            transaction.update(turmasOrigemRefs[index], {
               vagasPreenchidas: Math.max(0, vagasPreencidasOrigem - count)
             });
           }
-        }
+        });
         
         // Incrementar vagasPreenchidas da turma destino
         transaction.update(turmaDestinoRef, {
