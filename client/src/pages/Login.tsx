@@ -2136,7 +2136,7 @@ export default function Login() {
             <CardContent className="space-y-3">
               {/* Mensagem principal */}
               <div className="text-sm text-center space-y-2">
-                <p>Informamos que o sistema está temporariamente indisponível devido a uma manutenção programada para melhorias e atualizações.</p>
+                <p>Informamos que o sistema está temporariamente indisponível devido a uma manutenção programada.</p>
                 
                 <p className="text-muted-foreground text-xs">
                   Durante este período, o acesso a aulas, tarefas, mensagens e demais funcionalidades estarão suspensos.
