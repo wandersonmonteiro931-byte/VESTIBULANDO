@@ -20,11 +20,11 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { PresenceIndicator } from "@/components/PresenceIndicator";
 import { MonitoringTab } from "@/components/MonitoringTab";
 import { DocumentationTab } from "@/components/DocumentationTab";
-import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, MessageCircle, ArrowRightLeft, Clock, Search, Eye, AlertTriangle } from "lucide-react";
+import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, MessageCircle, ArrowRightLeft, Clock, Search, Eye, AlertTriangle, Settings, Power, PowerOff } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
-import type { User, Turma } from "@shared/schema";
+import type { User, Turma, Maintenance } from "@shared/schema";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -146,6 +146,12 @@ export default function AdminDashboard() {
   const [disciplinaryReason, setDisciplinaryReason] = useState("");
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [selectedStudentForHistory, setSelectedStudentForHistory] = useState<User | null>(null);
+  const [maintenanceDialogOpen, setMaintenanceDialogOpen] = useState(false);
+  const [maintenanceType, setMaintenanceType] = useState<"determinada" | "indeterminada">("determinada");
+  const [maintenanceStartDate, setMaintenanceStartDate] = useState("");
+  const [maintenanceStartTime, setMaintenanceStartTime] = useState("");
+  const [maintenanceEndDate, setMaintenanceEndDate] = useState("");
+  const [maintenanceEndTime, setMaintenanceEndTime] = useState("");
 
   const turmaForm = useForm<z.infer<typeof turmaFormSchema>>({
     resolver: zodResolver(turmaFormSchema),
@@ -239,6 +245,12 @@ export default function AdminDashboard() {
   const { data: disciplinaryActions } = useRealtimeQuery({
     collectionName: "disciplinaryActions",
     queryKey: ["/api/disciplinaryActions"],
+  });
+
+  const { data: maintenanceData } = useRealtimeQuery<Maintenance>({
+    collectionName: "systemMaintenance",
+    queryKey: ["/api/maintenance"],
+    transform: (docs) => docs as Maintenance[],
   });
 
   const pendingUsers = solicitacoes?.map((sol: any) => ({
@@ -1604,6 +1616,7 @@ export default function AdminDashboard() {
             <TabsTrigger value="disciplinares" data-testid="tab-disciplinares">Advertências e Suspensões</TabsTrigger>
             <TabsTrigger value="monitoramento" data-testid="tab-monitoramento">Monitoramento</TabsTrigger>
             <TabsTrigger value="documentacao" data-testid="tab-documentacao">Documentação</TabsTrigger>
+            <TabsTrigger value="manutencao" data-testid="tab-manutencao">Manutenção</TabsTrigger>
           </TabsList>
 
           <TabsContent value="aprovacoes" className="space-y-4">
@@ -2330,6 +2343,92 @@ export default function AdminDashboard() {
 
           <TabsContent value="documentacao" className="space-y-4">
             <DocumentationTab />
+          </TabsContent>
+
+          <TabsContent value="manutencao" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-xl font-semibold">Manutenção do Sistema</h3>
+            </div>
+
+            {maintenanceData && maintenanceData.length > 0 && maintenanceData[0].ativa ? (
+              <Card className="border-orange-200/50 dark:border-orange-900/50 bg-gradient-to-br from-card to-orange-50/30 dark:to-orange-950/10">
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Settings className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                    <CardTitle>Manutenção Ativa</CardTitle>
+                  </div>
+                  <CardDescription>
+                    O sistema está atualmente em modo de manutenção. Apenas diretores podem acessar o sistema.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm text-muted-foreground">Tipo</Label>
+                      <p className="font-medium capitalize">{maintenanceData[0].tipo}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm text-muted-foreground">Iniciada por</Label>
+                      <p className="font-medium">{maintenanceData[0].iniciadoPorNome}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm text-muted-foreground">Data/Hora de Início</Label>
+                      <p className="font-medium">
+                        {new Date(maintenanceData[0].dataInicio).toLocaleString('pt-BR')}
+                      </p>
+                    </div>
+                    {maintenanceData[0].dataFim && (
+                      <div>
+                        <Label className="text-sm text-muted-foreground">Previsão de Retorno</Label>
+                        <p className="font-medium">
+                          {new Date(maintenanceData[0].dataFim).toLocaleString('pt-BR')}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      // Finalizar manutenção
+                      finalizarManutencaoMutation.mutate();
+                    }}
+                    disabled={finalizarManutencaoMutation.isPending}
+                    data-testid="button-end-maintenance"
+                  >
+                    <PowerOff className="h-4 w-4 mr-2" />
+                    {finalizarManutencaoMutation.isPending ? "Finalizando..." : "Finalizar Manutenção"}
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Iniciar Manutenção</CardTitle>
+                  <CardDescription>
+                    Coloque o sistema em modo de manutenção. Todos os usuários (exceto diretores) serão impedidos de acessar o sistema.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    onClick={() => {
+                      setMaintenanceDialogOpen(true);
+                      const now = new Date();
+                      const nowStr = now.toISOString().slice(0, 16);
+                      setMaintenanceStartDate(nowStr.split('T')[0]);
+                      setMaintenanceStartTime(nowStr.split('T')[1]);
+                      const endDate = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+                      const endStr = endDate.toISOString().slice(0, 16);
+                      setMaintenanceEndDate(endStr.split('T')[0]);
+                      setMaintenanceEndTime(endStr.split('T')[1]);
+                    }}
+                    data-testid="button-start-maintenance"
+                  >
+                    <Power className="h-4 w-4 mr-2" />
+                    Iniciar Manutenção
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       </main>
