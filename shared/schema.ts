@@ -162,6 +162,7 @@ export type InsertDisciplinaryAction = z.infer<typeof insertDisciplinaryActionSc
 // Maintenance schema - manutenção do sistema
 export const maintenanceSchema = z.object({
   id: z.string(),
+  numeroManutencao: z.string(), // Número sequencial de identificação (ex: "0001", "0002")
   ativa: z.boolean().default(false), // se true, sistema está em manutenção
   tipo: z.enum(["determinada", "indeterminada"]), // determinada = com data fim, indeterminada = sem data fim
   dataInicio: z.string(), // Data/hora programada de início da manutenção
@@ -179,7 +180,7 @@ export const maintenanceSchema = z.object({
   arquivada: z.boolean().default(false), // se true, manutenção foi arquivada no histórico de auditoria
 });
 
-export const insertMaintenanceSchema = maintenanceSchema.omit({ id: true });
+export const insertMaintenanceSchema = maintenanceSchema.omit({ id: true, numeroManutencao: true });
 
 export type Maintenance = z.infer<typeof maintenanceSchema>;
 export type InsertMaintenance = z.infer<typeof insertMaintenanceSchema>;
