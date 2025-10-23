@@ -1456,6 +1456,99 @@ export default function AdminDashboard() {
     },
   });
 
+  const iniciarManutencaoMutation = useMutation({
+    mutationFn: async ({ tipo, dataInicio, dataFim }: { tipo: "determinada" | "indeterminada"; dataInicio: string; dataFim?: string }) => {
+      if (!userData || !firebaseAuth.currentUser) throw new Error("Usuário não autenticado");
+      
+      const directorUid = userData.uid || firebaseAuth.currentUser.uid;
+      const directorNome = userData.nome;
+      
+      if (!directorUid || !directorNome) throw new Error("Dados do usuário incompletos");
+      
+      // Verificar se já existe manutenção ativa
+      const maintenanceQuery = query(collection(db, "systemMaintenance"), where("ativa", "==", true));
+      const maintenanceDocs = await getDocs(maintenanceQuery);
+      
+      if (!maintenanceDocs.empty) {
+        throw new Error("Já existe uma manutenção ativa no sistema");
+      }
+      
+      const maintenanceData = {
+        ativa: true,
+        tipo,
+        dataInicio,
+        dataFim: tipo === "determinada" ? dataFim : undefined,
+        dataAtivacao: new Date().toISOString(),
+        iniciadoPor: directorUid,
+        iniciadoPorNome: directorNome,
+      };
+      
+      await addDoc(collection(db, "systemMaintenance"), maintenanceData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/maintenance"] });
+      toast({
+        title: "Manutenção iniciada!",
+        description: "O sistema está agora em modo de manutenção. Apenas diretores podem acessar.",
+      });
+      setMaintenanceDialogOpen(false);
+      setMaintenanceStartDate("");
+      setMaintenanceStartTime("");
+      setMaintenanceEndDate("");
+      setMaintenanceEndTime("");
+      setMaintenanceType("determinada");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao iniciar manutenção",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const finalizarManutencaoMutation = useMutation({
+    mutationFn: async () => {
+      if (!userData || !firebaseAuth.currentUser) throw new Error("Usuário não autenticado");
+      
+      const directorUid = userData.uid || firebaseAuth.currentUser.uid;
+      const directorNome = userData.nome;
+      
+      if (!directorUid || !directorNome) throw new Error("Dados do usuário incompletos");
+      
+      // Buscar manutenção ativa
+      const maintenanceQuery = query(collection(db, "systemMaintenance"), where("ativa", "==", true));
+      const maintenanceDocs = await getDocs(maintenanceQuery);
+      
+      if (maintenanceDocs.empty) {
+        throw new Error("Nenhuma manutenção ativa encontrada");
+      }
+      
+      // Finalizar a manutenção
+      const maintenanceDoc = maintenanceDocs.docs[0];
+      await updateDoc(doc(db, "systemMaintenance", maintenanceDoc.id), {
+        ativa: false,
+        dataFinalizacao: new Date().toISOString(),
+        finalizadoPor: directorUid,
+        finalizadoPorNome: directorNome,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/maintenance"] });
+      toast({
+        title: "Manutenção finalizada!",
+        description: "O sistema está agora disponível para todos os usuários.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao finalizar manutenção",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Funções auxiliares
   const getTurmaNome = (turmaId: string | undefined) => {
     if (!turmaId) return "-";
@@ -5141,6 +5234,175 @@ export default function AdminDashboard() {
               data-testid="button-confirm-bulk-transfer"
             >
               {bulkTransferStudentsMutation.isPending ? "Transferindo..." : "Transferir"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={maintenanceDialogOpen} onOpenChange={setMaintenanceDialogOpen}>
+        <DialogContent className="max-w-2xl" data-testid="dialog-maintenance">
+          <DialogHeader>
+            <DialogTitle>Iniciar Manutenção do Sistema</DialogTitle>
+            <DialogDescription>
+              Atenção: Ao iniciar uma manutenção, todos os usuários ficarão impossibilitados de acessar suas contas até que a manutenção seja finalizada.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="p-4 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900 rounded-lg">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-orange-800 dark:text-orange-200">
+                  <p className="font-semibold mb-1">Você realmente deseja iniciar uma manutenção no sistema agora?</p>
+                  <p>Todos os usuários (exceto diretores) serão bloqueados e não poderão acessar o sistema durante este período.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <Label>Tipo de Manutenção</Label>
+              <div className="flex gap-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="tipo-determinada"
+                    checked={maintenanceType === "determinada"}
+                    onCheckedChange={() => setMaintenanceType("determinada")}
+                    data-testid="checkbox-determinada"
+                  />
+                  <label
+                    htmlFor="tipo-determinada"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Período Determinado
+                  </label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="tipo-indeterminada"
+                    checked={maintenanceType === "indeterminada"}
+                    onCheckedChange={() => setMaintenanceType("indeterminada")}
+                    data-testid="checkbox-indeterminada"
+                  />
+                  <label
+                    htmlFor="tipo-indeterminada"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Período Indeterminado
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="start-date">Data de Início</Label>
+                <Input
+                  id="start-date"
+                  type="date"
+                  value={maintenanceStartDate}
+                  onChange={(e) => setMaintenanceStartDate(e.target.value)}
+                  data-testid="input-start-date"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="start-time">Horário de Início</Label>
+                <Input
+                  id="start-time"
+                  type="time"
+                  value={maintenanceStartTime}
+                  onChange={(e) => setMaintenanceStartTime(e.target.value)}
+                  data-testid="input-start-time"
+                />
+              </div>
+            </div>
+
+            {maintenanceType === "determinada" && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="end-date">Data de Término</Label>
+                  <Input
+                    id="end-date"
+                    type="date"
+                    value={maintenanceEndDate}
+                    onChange={(e) => setMaintenanceEndDate(e.target.value)}
+                    data-testid="input-end-date"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="end-time">Horário de Término</Label>
+                  <Input
+                    id="end-time"
+                    type="time"
+                    value={maintenanceEndTime}
+                    onChange={(e) => setMaintenanceEndTime(e.target.value)}
+                    data-testid="input-end-time"
+                  />
+                </div>
+              </div>
+            )}
+
+            {maintenanceType === "indeterminada" && (
+              <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  <strong>Período indeterminado:</strong> Você poderá finalizar a manutenção a qualquer momento através do botão "Finalizar Manutenção" na aba de Manutenção.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setMaintenanceDialogOpen(false);
+                setMaintenanceStartDate("");
+                setMaintenanceStartTime("");
+                setMaintenanceEndDate("");
+                setMaintenanceEndTime("");
+                setMaintenanceType("determinada");
+              }}
+              data-testid="button-cancel-maintenance"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                if (!maintenanceStartDate || !maintenanceStartTime) {
+                  toast({
+                    title: "Campos obrigatórios",
+                    description: "Por favor, preencha a data e horário de início.",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+
+                if (maintenanceType === "determinada" && (!maintenanceEndDate || !maintenanceEndTime)) {
+                  toast({
+                    title: "Campos obrigatórios",
+                    description: "Por favor, preencha a data e horário de término para manutenção determinada.",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+
+                const dataInicio = `${maintenanceStartDate}T${maintenanceStartTime}:00.000Z`;
+                const dataFim = maintenanceType === "determinada" 
+                  ? `${maintenanceEndDate}T${maintenanceEndTime}:00.000Z`
+                  : undefined;
+
+                iniciarManutencaoMutation.mutate({
+                  tipo: maintenanceType,
+                  dataInicio,
+                  dataFim,
+                });
+              }}
+              disabled={iniciarManutencaoMutation.isPending}
+              data-testid="button-confirm-maintenance"
+            >
+              {iniciarManutencaoMutation.isPending ? "Iniciando..." : "Confirmar e Iniciar Manutenção"}
             </Button>
           </DialogFooter>
         </DialogContent>
