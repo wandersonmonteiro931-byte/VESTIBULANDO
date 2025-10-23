@@ -1508,13 +1508,32 @@ export default function AdminDashboard() {
       if (semJustificativa.length > 0) {
         const detalhes = semJustificativa.map(doc => {
           const data = doc.data();
-          return `- Manutenção ${data.tipo} de ${formatBrasiliaDateTime(data.dataInicio)}`;
+          return `- Manutenção ${data.numeroManutencao || data.tipo} de ${formatBrasiliaDateTime(data.dataInicio)}`;
         }).join('\n');
         
         throw new Error(`❌ BLOQUEADO: Não é possível iniciar uma nova manutenção!\n\nExistem ${semJustificativa.length} manutenção(ões) finalizada(s) SEM JUSTIFICATIVA:\n\n${detalhes}\n\n⚠️ É OBRIGATÓRIO justificar TODAS as manutenções anteriores antes de iniciar uma nova.\n\nAcesse a aba "Manutenção" e clique em "Adicionar Justificativa" para cada manutenção pendente.`);
       }
       
+      // Gerar número sequencial para a manutenção
+      const allMaintenancesQuery = query(collection(db, "systemMaintenance"));
+      const allMaintenancesDocs = await getDocs(allMaintenancesQuery);
+      
+      let maxNumber = 0;
+      allMaintenancesDocs.docs.forEach(doc => {
+        const data = doc.data();
+        if (data.numeroManutencao) {
+          const num = parseInt(data.numeroManutencao, 10);
+          if (!isNaN(num) && num > maxNumber) {
+            maxNumber = num;
+          }
+        }
+      });
+      
+      const nextNumber = maxNumber + 1;
+      const numeroManutencao = nextNumber.toString().padStart(4, '0');
+      
       const maintenanceData: any = {
+        numeroManutencao,
         ativa: true,
         tipo,
         dataInicio,
