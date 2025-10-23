@@ -21,7 +21,7 @@ import type { Tarefa, Entrega } from "@shared/schema";
 import { format, formatDistanceToNow, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import jsPDF from "jspdf";
-import assinaturaDeclaracaoUrl from "@assets/image_1761193127347.png";
+import assinaturaDeclaracaoUrl from "@assets/Captura de tela 2025-10-23 011843_1761193443162.png";
 
 export default function StudentDashboard() {
   const { userData, signOut } = useAuth();
@@ -220,7 +220,7 @@ export default function StudentDashboard() {
     const dataExtenso = `${dia} de ${mes} de ${ano}.`;
     
     addCenteredText(dataExtenso, yPos, 11);
-    yPos += 30;
+    yPos += 10;
 
     // Assinatura
     try {
@@ -230,13 +230,11 @@ export default function StudentDashboard() {
         assinaturaImg.onload = resolve;
         assinaturaImg.onerror = resolve;
       });
-      // Centralizar a assinatura - BEM GRANDE
-      const imgWidth = 140;
-      const imgHeight = 43;
+      const imgWidth = assinaturaImg.width * 0.264583;
+      const imgHeight = assinaturaImg.height * 0.264583;
       doc.addImage(assinaturaImg, "PNG", (pageWidth - imgWidth) / 2, yPos, imgWidth, imgHeight);
     } catch (error) {
       console.error("Erro ao carregar assinatura:", error);
-      // Adicionar linha e texto caso a assinatura não carregue
       yPos += 5;
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
