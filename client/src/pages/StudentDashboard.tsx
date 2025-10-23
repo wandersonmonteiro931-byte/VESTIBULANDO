@@ -21,7 +21,7 @@ import type { Tarefa, Entrega } from "@shared/schema";
 import { format, formatDistanceToNow, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import jsPDF from "jspdf";
-import assinaturaDeclaracaoUrl from "@assets/Captura de tela 2025-10-23 010213_1761192331195.png";
+import assinaturaDeclaracaoUrl from "@assets/image_1761193127347.png";
 
 export default function StudentDashboard() {
   const { userData, signOut } = useAuth();

@@ -16,7 +16,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import logoUrl from "@assets/Blue and White Online School Logo (1)_1761189954480.png";
 import assinaturaUrl from "@assets/image_1761190362373.png";
-import assinaturaDeclaracaoUrl from "@assets/Captura de tela 2025-10-23 010213_1761192331195.png";
+import assinaturaDeclaracaoUrl from "@assets/image_1761193127347.png";
 
 export function DocumentationTab() {
   const { userData: currentUser } = useAuth();
