@@ -50,3 +50,23 @@ The core data model includes `Usuarios` (users with `aluno`, `professor`, `admin
 ## External Dependencies
 - **Firebase**: Authentication, Firestore (database), Storage (file storage).
 - **ViaCEP API**: Used for automatic address lookup by postal code (CEP) during user registration.
+
+## Required Secrets (Environment Variables)
+
+### Obrigatórios para Funcionamento
+O sistema requer os seguintes secrets configurados no Replit para funcionar:
+
+1. **VITE_FIREBASE_API_KEY** - Chave de API do Firebase
+2. **VITE_FIREBASE_PROJECT_ID** - ID do projeto Firebase  
+3. **VITE_FIREBASE_APP_ID** - ID da aplicação Firebase
+
+### Como Obter os Secrets
+1. Acesse [Firebase Console](https://console.firebase.google.com/)
+2. Vá em Project Settings > Your apps
+3. Copie os valores correspondentes do SDK configuration
+4. Adicione como Secrets no Replit (Tools > Secrets)
+
+### Secrets NÃO Necessários
+- **DATABASE_URL**: Este projeto usa Firebase Firestore. DATABASE_URL não é utilizado e pode ser ignorado.
+
+Para instruções completas de configuração, consulte `FIREBASE_SETUP.md` e `README.md`.
