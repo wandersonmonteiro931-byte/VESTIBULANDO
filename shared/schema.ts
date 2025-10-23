@@ -283,3 +283,17 @@ export const insertChatConversationSchema = chatConversationSchema.omit({ id: tr
 
 export type ChatConversation = z.infer<typeof chatConversationSchema>;
 export type InsertChatConversation = z.infer<typeof insertChatConversationSchema>;
+
+// Call Signal schema - sinalização WebRTC para chamadas de áudio/vídeo
+export interface CallSignal {
+  id: string;
+  callId: string; // ID único da chamada
+  callerId: string; // Quem está chamando
+  callerName: string;
+  receiverId: string; // Quem está recebendo
+  receiverName: string;
+  type: 'offer' | 'answer' | 'ice-candidate' | 'end' | 'reject';
+  data: any; // SDP ou ICE candidate data
+  timestamp: number;
+  read: boolean;
+}

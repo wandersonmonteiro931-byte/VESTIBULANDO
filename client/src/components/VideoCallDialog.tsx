@@ -1,83 +1,210 @@
 import { useState, useEffect, useRef } from "react";
-import { Phone, PhoneOff, Mic, MicOff, Video, VideoOff } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Phone, Video, Mic, MicOff, VideoOff, PhoneOff } from "lucide-react";
+import { db } from "@/lib/firebase";
+import { collection, addDoc, query, where, onSnapshot, orderBy, updateDoc, doc } from "firebase/firestore";
+import { CallSignal } from "@shared/schema";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 interface VideoCallDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   recipientName: string;
   recipientId: string;
-  isVideoCall?: boolean;
+  isVideoCall: boolean;
 }
 
-type CallStatus = "calling" | "connected" | "ended";
+type CallStatus = "calling" | "ringing" | "connected" | "ended" | "rejected";
+
+const ICE_SERVERS = {
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+  ],
+};
 
 export function VideoCallDialog({
   open,
   onOpenChange,
   recipientName,
   recipientId,
-  isVideoCall = true,
+  isVideoCall,
 }: VideoCallDialogProps) {
+  const { userData } = useAuth();
+  const { toast } = useToast();
   const [callStatus, setCallStatus] = useState<CallStatus>("calling");
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoEnabled, setIsVideoEnabled] = useState(isVideoCall);
+  const [callDuration, setCallDuration] = useState(0);
+  
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
+  const callIdRef = useRef<string>("");
+  const callStartTimeRef = useRef<number>(0);
+  const unsubscribeRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    if (!open) {
-      setCallStatus("calling");
-      setIsMuted(false);
-      setIsVideoEnabled(isVideoCall);
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach(track => track.stop());
-        localStreamRef.current = null;
-      }
-      return;
+    if (open && userData) {
+      initializeCall();
     }
 
-    const startLocalStream = async () => {
-      try {
-        const constraints: MediaStreamConstraints = {
-          audio: true,
-          video: isVideoCall,
-        };
-        
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
-        localStreamRef.current = stream;
-        
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = stream;
-        }
-
-        setTimeout(() => {
-          setCallStatus("connected");
-        }, 2000);
-      } catch (error) {
-        console.error("Erro ao acessar mídia:", error);
-        onOpenChange(false);
-      }
-    };
-
-    startLocalStream();
-
     return () => {
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach(track => track.stop());
-        localStreamRef.current = null;
-      }
+      cleanup();
     };
-  }, [open, isVideoCall, onOpenChange]);
+  }, [open]);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (callStatus === "connected") {
+      interval = setInterval(() => {
+        setCallDuration(Math.floor((Date.now() - callStartTimeRef.current) / 1000));
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [callStatus]);
+
+  const initializeCall = async () => {
+    try {
+      callIdRef.current = `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      const constraints = {
+        audio: true,
+        video: isVideoCall,
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      localStreamRef.current = stream;
+
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+      }
+
+      peerConnectionRef.current = new RTCPeerConnection(ICE_SERVERS);
+
+      stream.getTracks().forEach((track) => {
+        peerConnectionRef.current!.addTrack(track, stream);
+      });
+
+      peerConnectionRef.current.onicecandidate = (event) => {
+        if (event.candidate) {
+          sendSignal({
+            callId: callIdRef.current,
+            callerId: userData!.uid,
+            callerName: userData!.nome,
+            receiverId: recipientId,
+            receiverName: recipientName,
+            type: "ice-candidate",
+            data: event.candidate.toJSON(),
+            timestamp: Date.now(),
+            read: false,
+          });
+        }
+      };
+
+      peerConnectionRef.current.ontrack = (event) => {
+        if (remoteVideoRef.current && event.streams[0]) {
+          remoteVideoRef.current.srcObject = event.streams[0];
+        }
+      };
+
+      peerConnectionRef.current.onconnectionstatechange = () => {
+        const state = peerConnectionRef.current?.connectionState;
+        if (state === "connected") {
+          setCallStatus("connected");
+          callStartTimeRef.current = Date.now();
+        } else if (state === "disconnected" || state === "failed" || state === "closed") {
+          handleEndCall();
+        }
+      };
+
+      const offer = await peerConnectionRef.current.createOffer();
+      await peerConnectionRef.current.setLocalDescription(offer);
+
+      await sendSignal({
+        callId: callIdRef.current,
+        callerId: userData!.uid,
+        callerName: userData!.nome,
+        receiverId: recipientId,
+        receiverName: recipientName,
+        type: "offer",
+        data: offer,
+        timestamp: Date.now(),
+        read: false,
+      });
+
+      listenForSignals();
+    } catch (error) {
+      console.error("Erro ao inicializar chamada:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível iniciar a chamada. Verifique as permissões de câmera/microfone.",
+        variant: "destructive",
+      });
+      onOpenChange(false);
+    }
+  };
+
+  const sendSignal = async (signal: Omit<CallSignal, "id">) => {
+    try {
+      await addDoc(collection(db, "call_signals"), signal);
+    } catch (error) {
+      console.error("Erro ao enviar sinal:", error);
+    }
+  };
+
+  const listenForSignals = () => {
+    const q = query(
+      collection(db, "call_signals"),
+      where("callId", "==", callIdRef.current),
+      where("receiverId", "==", userData!.uid),
+      orderBy("timestamp", "asc")
+    );
+
+    unsubscribeRef.current = onSnapshot(q, async (snapshot) => {
+      for (const change of snapshot.docChanges()) {
+        if (change.type === "added") {
+          const signal = { id: change.doc.id, ...change.doc.data() } as CallSignal;
+          
+          if (!signal.read) {
+            await updateDoc(doc(db, "call_signals", signal.id), { read: true });
+            await handleSignal(signal);
+          }
+        }
+      }
+    });
+  };
+
+  const handleSignal = async (signal: CallSignal) => {
+    try {
+      if (signal.type === "answer" && peerConnectionRef.current) {
+        await peerConnectionRef.current.setRemoteDescription(
+          new RTCSessionDescription(signal.data)
+        );
+      } else if (signal.type === "ice-candidate" && peerConnectionRef.current) {
+        await peerConnectionRef.current.addIceCandidate(
+          new RTCIceCandidate(signal.data)
+        );
+      } else if (signal.type === "end") {
+        handleEndCall();
+      } else if (signal.type === "reject") {
+        setCallStatus("rejected");
+        setTimeout(() => onOpenChange(false), 2000);
+      }
+    } catch (error) {
+      console.error("Erro ao processar sinal:", error);
+    }
+  };
 
   const toggleMute = () => {
     if (localStreamRef.current) {
@@ -99,25 +226,67 @@ export function VideoCallDialog({
     }
   };
 
-  const endCall = () => {
+  const handleEndCall = async () => {
+    await sendSignal({
+      callId: callIdRef.current,
+      callerId: userData!.uid,
+      callerName: userData!.nome,
+      receiverId: recipientId,
+      receiverName: recipientName,
+      type: "end",
+      data: null,
+      timestamp: Date.now(),
+      read: false,
+    });
+
+    cleanup();
+    setCallStatus("ended");
+    setTimeout(() => onOpenChange(false), 2000);
+  };
+
+  const cleanup = () => {
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current();
+      unsubscribeRef.current = null;
+    }
+
     if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(track => track.stop());
+      localStreamRef.current.getTracks().forEach((track) => track.stop());
       localStreamRef.current = null;
     }
-    setCallStatus("ended");
-    setTimeout(() => {
-      onOpenChange(false);
-    }, 500);
+
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.close();
+      peerConnectionRef.current = null;
+    }
+
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = null;
+    }
+
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = null;
+    }
+  };
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
   const getStatusText = () => {
     switch (callStatus) {
       case "calling":
         return "Chamando...";
+      case "ringing":
+        return "Tocando...";
       case "connected":
-        return "Em chamada";
+        return formatDuration(callDuration);
       case "ended":
         return "Chamada encerrada";
+      case "rejected":
+        return "Chamada rejeitada";
       default:
         return "";
     }
@@ -126,10 +295,12 @@ export function VideoCallDialog({
   const getStatusVariant = (): "default" | "secondary" | "destructive" => {
     switch (callStatus) {
       case "calling":
+      case "ringing":
         return "secondary";
       case "connected":
         return "default";
       case "ended":
+      case "rejected":
         return "destructive";
       default:
         return "default";
@@ -138,74 +309,71 @@ export function VideoCallDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl">
+      <DialogContent className="sm:max-w-[600px]" data-testid="dialog-video-call">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            <span>{recipientName}</span>
-            <Badge variant={getStatusVariant()}>{getStatusText()}</Badge>
+          <DialogTitle>
+            {isVideoCall ? "Chamada de Vídeo" : "Chamada de Áudio"}
           </DialogTitle>
-          <DialogDescription>
-            {isVideoCall ? "Chamada de vídeo" : "Chamada de áudio"}
-          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {isVideoCall && (
-              <>
-                <div className="relative bg-muted rounded-lg overflow-hidden aspect-video">
-                  <video
-                    ref={remoteVideoRef}
-                    autoPlay
-                    playsInline
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute bottom-2 left-2 bg-background/80 px-2 py-1 rounded text-xs">
-                    {recipientName}
-                  </div>
-                </div>
-
-                <div className="relative bg-muted rounded-lg overflow-hidden aspect-video">
-                  <video
-                    ref={localVideoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute bottom-2 left-2 bg-background/80 px-2 py-1 rounded text-xs">
-                    Você
-                  </div>
-                  {!isVideoEnabled && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-muted">
-                      <VideoOff className="h-12 w-12 text-muted-foreground" />
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-
-            {!isVideoCall && (
-              <div className="col-span-2 flex items-center justify-center py-20 bg-muted rounded-lg">
-                <div className="text-center space-y-4">
-                  <div className="w-24 h-24 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
-                    <Phone className="h-12 w-12 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-lg font-semibold">{recipientName}</p>
-                    <p className="text-sm text-muted-foreground">{getStatusText()}</p>
-                  </div>
-                </div>
-              </div>
-            )}
+          <div className="flex items-center justify-center gap-4">
+            <Avatar className="h-16 w-16">
+              <AvatarImage src="" alt={recipientName} />
+              <AvatarFallback>
+                {recipientName
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")
+                  .toUpperCase()
+                  .substring(0, 2)}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <h3 className="font-semibold">{recipientName}</h3>
+              <Badge variant={getStatusVariant()} data-testid="badge-call-status">
+                {getStatusText()}
+              </Badge>
+            </div>
           </div>
+
+          {isVideoCall && (
+            <div className="relative bg-muted rounded-lg overflow-hidden" style={{ aspectRatio: "16/9" }}>
+              <video
+                ref={remoteVideoRef}
+                autoPlay
+                playsInline
+                className="w-full h-full object-cover"
+                data-testid="video-remote"
+              />
+              <div className="absolute bottom-4 right-4 w-32 h-24 bg-black rounded-lg overflow-hidden border-2 border-white">
+                <video
+                  ref={localVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover mirror"
+                  data-testid="video-local"
+                  style={{ transform: "scaleX(-1)" }}
+                />
+              </div>
+            </div>
+          )}
+
+          {!isVideoCall && (
+            <div className="h-48 bg-muted rounded-lg flex items-center justify-center">
+              <Phone className="h-16 w-16 text-muted-foreground" />
+              <video ref={localVideoRef} style={{ display: "none" }} autoPlay muted />
+              <video ref={remoteVideoRef} style={{ display: "none" }} autoPlay />
+            </div>
+          )}
 
           <div className="flex items-center justify-center gap-4">
             <Button
-              variant={isMuted ? "destructive" : "outline"}
+              variant={isMuted ? "destructive" : "secondary"}
               size="icon"
-              className="h-12 w-12 rounded-full"
               onClick={toggleMute}
+              disabled={callStatus !== "connected" && callStatus !== "calling"}
               data-testid="button-toggle-mute"
             >
               {isMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
@@ -213,28 +381,24 @@ export function VideoCallDialog({
 
             {isVideoCall && (
               <Button
-                variant={!isVideoEnabled ? "destructive" : "outline"}
+                variant={!isVideoEnabled ? "destructive" : "secondary"}
                 size="icon"
-                className="h-12 w-12 rounded-full"
                 onClick={toggleVideo}
+                disabled={callStatus !== "connected" && callStatus !== "calling"}
                 data-testid="button-toggle-video"
               >
-                {isVideoEnabled ? (
-                  <Video className="h-5 w-5" />
-                ) : (
-                  <VideoOff className="h-5 w-5" />
-                )}
+                {!isVideoEnabled ? <VideoOff className="h-5 w-5" /> : <Video className="h-5 w-5" />}
               </Button>
             )}
 
             <Button
               variant="destructive"
               size="icon"
-              className="h-14 w-14 rounded-full"
-              onClick={endCall}
+              onClick={handleEndCall}
+              disabled={callStatus === "ended" || callStatus === "rejected"}
               data-testid="button-end-call"
             >
-              <PhoneOff className="h-6 w-6" />
+              <PhoneOff className="h-5 w-5" />
             </Button>
           </div>
         </div>
