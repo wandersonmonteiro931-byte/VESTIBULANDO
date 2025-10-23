@@ -359,4 +359,14 @@
   .border.hover-elevate:not(.no-hover-interaction-elevate)::after {
     inset: -1px;
   }
+
+  /* Maintenance warning animations */
+  @keyframes blink-red {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .blink-red {
+    animation: blink-red 1.5s ease-in-out infinite;
+  }
 }
