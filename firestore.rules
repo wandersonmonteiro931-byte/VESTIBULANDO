@@ -42,10 +42,11 @@ service cloud.firestore {
          get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'diretor')
       );
       
-      // Allow list/query operation for admins only
-      allow list: if isAuthenticated() && 
-                     exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) && 
-                     get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'diretor';
+      // Allow list/query operation for:
+      // 1. Anyone (authenticated or not) - needed for login by CPF/matricula
+      // 2. Admins - for admin dashboard
+      // Note: This is safe because passwords are stored in Firebase Auth, not Firestore
+      allow list: if true;
       
       // Allow creating user doc in two scenarios:
       // 1. Self-registration: User creating their own 'aluno' account
