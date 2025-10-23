@@ -193,6 +193,10 @@ export default function Login() {
   const [showSuspensionOverlay, setShowSuspensionOverlay] = useState(false);
   const [suspensionData, setSuspensionData] = useState<any>(null);
   const [suspensionTimeRemaining, setSuspensionTimeRemaining] = useState<string>("");
+  
+  // Estados para manutenção do sistema
+  const [showMaintenanceOverlay, setShowMaintenanceOverlay] = useState(false);
+  const [maintenanceData, setMaintenanceData] = useState<any>(null);
 
   // Validar CPF em tempo real quando usuário digitar 11 números
   useEffect(() => {
@@ -208,7 +212,7 @@ export default function Login() {
   }, [formData.cpf, mode]);
 
   useEffect(() => {
-    if (userData && !showCodeDialog && !showSuspensionOverlay) {
+    if (userData && !showCodeDialog && !showSuspensionOverlay && !showMaintenanceOverlay) {
       switch (userData.tipo) {
         case "aluno":
           setLocation("/aluno");
@@ -221,7 +225,7 @@ export default function Login() {
           break;
       }
     }
-  }, [userData, showCodeDialog, showSuspensionOverlay, setLocation]);
+  }, [userData, showCodeDialog, showSuspensionOverlay, showMaintenanceOverlay, setLocation]);
 
   // Carregar turmas disponíveis
   useEffect(() => {
@@ -730,6 +734,44 @@ export default function Login() {
           return;
         }
         
+        // VERIFICAR MANUTENÇÃO DO SISTEMA ANTES DE AUTENTICAR (exceto para diretores)
+        if (userData.tipo !== "diretor") {
+          try {
+            console.log("🔧 Verificando manutenção do sistema...");
+            const { collection, getDocs, query, where } = await import("firebase/firestore");
+            const maintenanceQuery = query(
+              collection(db, "systemMaintenance"),
+              where("ativa", "==", true)
+            );
+            const maintenanceSnapshot = await getDocs(maintenanceQuery);
+            console.log("✅ Manutenções ativas encontradas:", maintenanceSnapshot.docs.length);
+            
+            if (!maintenanceSnapshot.empty) {
+              const activeMaintenance = maintenanceSnapshot.docs[0].data();
+              
+              console.log("🚫 BLOQUEANDO LOGIN - Sistema em manutenção");
+              console.log("📋 Dados da manutenção:", activeMaintenance);
+              
+              // Configurar overlay com dados da manutenção
+              setMaintenanceData(activeMaintenance);
+              setShowMaintenanceOverlay(true);
+              setLoading(false);
+              
+              console.log("✅ Overlay de manutenção configurado - NÃO AUTENTICAR");
+              
+              // RETORNAR AQUI - NÃO AUTENTICAR NO FIREBASE
+              return;
+            } else {
+              console.log("✅ Nenhuma manutenção ativa");
+            }
+          } catch (maintenanceError: any) {
+            console.error('❌ Erro ao verificar manutenção:', maintenanceError);
+            if (maintenanceError?.code === 'permission-denied') {
+              console.warn('⚠️ AVISO: Erro de permissão ao verificar manutenção');
+            }
+          }
+        }
+        
         // VERIFICAR SUSPENSÃO ANTES DE AUTENTICAR
         if (userData.tipo === "aluno") {
           try {
@@ -789,7 +831,7 @@ export default function Login() {
           }
         }
         
-        // Autenticar no Firebase APENAS se não estiver suspenso
+        // Autenticar no Firebase APENAS se não estiver suspenso ou em manutenção
         const userCredential = await signInWithEmailAndPassword(auth, userEmail, formData.password);
         
         // Verificar status da conta
