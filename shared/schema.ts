@@ -156,3 +156,23 @@ export const insertDisciplinaryActionSchema = disciplinaryActionSchema.omit({ id
 
 export type DisciplinaryAction = z.infer<typeof disciplinaryActionSchema>;
 export type InsertDisciplinaryAction = z.infer<typeof insertDisciplinaryActionSchema>;
+
+// Maintenance schema - manutenção do sistema
+export const maintenanceSchema = z.object({
+  id: z.string(),
+  ativa: z.boolean().default(false), // se true, sistema está em manutenção
+  tipo: z.enum(["determinada", "indeterminada"]), // determinada = com data fim, indeterminada = sem data fim
+  dataInicio: z.string(), // Data/hora programada de início da manutenção
+  dataFim: z.string().optional(), // Data/hora programada de término (opcional se indeterminada)
+  dataAtivacao: z.string(), // Data/hora em que foi ativada
+  dataFinalizacao: z.string().optional(), // Data/hora em que foi finalizada
+  iniciadoPor: z.string(), // ID do diretor que iniciou
+  iniciadoPorNome: z.string(), // Nome do diretor que iniciou
+  finalizadoPor: z.string().optional(), // ID do diretor que finalizou
+  finalizadoPorNome: z.string().optional(), // Nome do diretor que finalizou
+});
+
+export const insertMaintenanceSchema = maintenanceSchema.omit({ id: true });
+
+export type Maintenance = z.infer<typeof maintenanceSchema>;
+export type InsertMaintenance = z.infer<typeof insertMaintenanceSchema>;
