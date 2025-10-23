@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import logoUrl from "@assets/Blue and White Online School Logo (1)_1761189954480.png";
-import carimboUrl from "@assets/image_1761189945452.png";
+import assinaturaUrl from "@assets/image_1761190362373.png";
 
 export function DocumentationTab() {
   const { userData: currentUser } = useAuth();
@@ -364,28 +364,20 @@ export function DocumentationTab() {
       margin: { left: margin, right: margin },
     });
 
-    // ASSINATURA E CARIMBO DO DIRETOR (no final)
-    doc.addPage();
-    yPos = pageHeight - 80;
+    // ASSINATURA DO DIRETOR (no final da última página)
+    yPos = (doc as any).lastAutoTable.finalY + 15;
 
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.text("_".repeat(60), pageWidth / 2, yPos, { align: "center" });
-    yPos += 5;
-    doc.text("Diretor Responsável", pageWidth / 2, yPos, { align: "center" });
-    yPos += 10;
-
-    // Adicionar carimbo/assinatura
+    // Adicionar assinatura/carimbo
     try {
-      const carimboImg = new Image();
-      carimboImg.src = carimboUrl;
+      const assinaturaImg = new Image();
+      assinaturaImg.src = assinaturaUrl;
       await new Promise((resolve) => {
-        carimboImg.onload = resolve;
-        carimboImg.onerror = resolve;
+        assinaturaImg.onload = resolve;
+        assinaturaImg.onerror = resolve;
       });
-      doc.addImage(carimboImg, "PNG", pageWidth / 2 - 40, yPos, 80, 30);
+      doc.addImage(assinaturaImg, "PNG", pageWidth / 2 - 45, yPos, 90, 30);
     } catch (error) {
-      console.error("Erro ao carregar carimbo:", error);
+      console.error("Erro ao carregar assinatura:", error);
     }
 
     // Salvar PDF
