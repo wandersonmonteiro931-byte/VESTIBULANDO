@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,7 @@ export default function ChatButton() {
   const { userData } = useAuth();
 
   // Monitorar mensagens não lidas em tempo real
-  useState(() => {
+  useEffect(() => {
     if (!userData?.uid) return;
 
     const conversationsRef = collection(db, "chatConversations");
