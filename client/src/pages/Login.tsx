@@ -784,20 +784,19 @@ export default function Login() {
                 const duracaoDias = Math.ceil((dataTermino.getTime() - dataAplicacao.getTime()) / (1000 * 60 * 60 * 24));
                 
                 console.log("🚫 Bloqueando login - Suspensão ativa");
+                console.log("📋 Dados da suspensão:", activeSuspension);
                 
-                // Definir os estados ANTES de fazer signOut para garantir que o overlay apareça
+                // NÃO fazer signOut aqui - isso impede o overlay de aparecer
+                // O overlay será mostrado e o usuário fechará manualmente
+                
+                setLoading(false);
                 setSuspensionData({
                   ...activeSuspension,
                   duracaoDias,
                 });
                 setShowSuspensionOverlay(true);
-                setLoading(false);
                 
-                // Fazer signOut após definir os estados (isso permite que o overlay seja exibido)
-                // Usar setTimeout para garantir que os estados sejam atualizados primeiro
-                setTimeout(async () => {
-                  await auth.signOut();
-                }, 100);
+                console.log("✅ Estados definidos - overlay deve aparecer agora");
                 
                 return;
               } else {
@@ -2054,10 +2053,12 @@ export default function Login() {
             
             <CardFooter>
               <Button
-                onClick={() => {
+                onClick={async () => {
                   setShowSuspensionOverlay(false);
                   setSuspensionData(null);
                   setSuspensionTimeRemaining("");
+                  // Fazer logout ao fechar o overlay
+                  await auth.signOut();
                 }}
                 variant="outline"
                 className="w-full"
