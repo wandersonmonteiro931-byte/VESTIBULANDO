@@ -243,10 +243,17 @@ export const chatMessageSchema = z.object({
   destinatarioId: z.string(), // ID de quem recebe
   destinatarioNome: z.string(), // Nome de quem recebe
   destinatarioTipo: z.enum(["aluno", "professor", "diretor"]), // Tipo de quem recebe
-  conteudo: z.string().min(1, "Mensagem não pode ser vazia"), // Conteúdo da mensagem
+  tipo: z.enum(["texto", "audio", "imagem", "documento", "video"]).default("texto"), // Tipo de mensagem
+  conteudo: z.string(), // Conteúdo da mensagem (texto ou legenda para arquivos)
+  arquivoUrl: z.string().optional(), // URL do arquivo no Firebase Storage
+  arquivoNome: z.string().optional(), // Nome original do arquivo
+  arquivoTipo: z.string().optional(), // MIME type do arquivo
+  arquivoTamanho: z.number().optional(), // Tamanho do arquivo em bytes
   timestamp: z.string(), // Data/hora de envio (ISO datetime)
   lida: z.boolean().default(false), // Se a mensagem foi lida pelo destinatário
   dataLeitura: z.string().optional(), // Data/hora em que foi lida
+  deletadaPorRemetente: z.boolean().default(false), // Se foi deletada pelo remetente (só some da visualização)
+  deletadaPorDestinatario: z.boolean().default(false), // Se foi deletada pelo destinatário (só some da visualização)
 });
 
 export const insertChatMessageSchema = chatMessageSchema.omit({ id: true });
