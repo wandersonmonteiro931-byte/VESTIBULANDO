@@ -25,7 +25,6 @@ export default function ChatWindow({ onClose }: ChatWindowProps) {
   const createOrSelectConversation = async (otherUser: User) => {
     if (!userData?.uid) return;
 
-    // Verificar se já existe uma conversa
     const conversationsRef = collection(db, "chatConversations");
     
     const q1 = query(
@@ -57,7 +56,6 @@ export default function ChatWindow({ onClose }: ChatWindowProps) {
       return;
     }
 
-    // Criar nova conversa
     const newConversation = {
       participante1Id: userData.uid,
       participante1Nome: userData.nome,
@@ -143,11 +141,18 @@ export default function ChatWindow({ onClose }: ChatWindowProps) {
   }, [userData?.uid]);
 
   return (
-    <>
-      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50" onClick={onClose} />
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       
-      <Card className="fixed inset-4 md:inset-8 lg:left-1/2 lg:top-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2 lg:w-[90vw] lg:max-w-5xl lg:h-[80vh] z-[60] flex flex-col shadow-lg overflow-hidden">
-        <div className="flex items-center justify-between p-4 border-b shrink-0">
+      <div className="relative bg-card border rounded-lg shadow-lg w-full max-w-5xl h-[600px] max-h-[90vh] flex flex-col z-10">
+        <div className="flex items-center justify-between p-4 border-b bg-card">
           <h2 className="text-lg font-semibold" data-testid="text-chat-title">
             Mensagens
           </h2>
@@ -161,8 +166,8 @@ export default function ChatWindow({ onClose }: ChatWindowProps) {
           </Button>
         </div>
 
-        <div className="flex flex-1 overflow-hidden min-h-0">
-          <div className="w-full md:w-80 border-r flex flex-col shrink-0">
+        <div className="flex flex-1 overflow-hidden">
+          <div className="w-80 border-r flex flex-col bg-card">
             <div className="p-3 border-b">
               <Button
                 variant="outline"
@@ -195,7 +200,7 @@ export default function ChatWindow({ onClose }: ChatWindowProps) {
             </div>
           </div>
 
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col bg-background">
             {selectedConversation ? (
               <ChatMessageArea
                 conversation={selectedConversation}
@@ -211,7 +216,7 @@ export default function ChatWindow({ onClose }: ChatWindowProps) {
             )}
           </div>
         </div>
-      </Card>
+      </div>
 
       {showSearchDialog && (
         <UserSearchDialog
@@ -222,6 +227,6 @@ export default function ChatWindow({ onClose }: ChatWindowProps) {
           }}
         />
       )}
-    </>
+    </div>
   );
 }
