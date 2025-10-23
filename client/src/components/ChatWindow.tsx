@@ -146,8 +146,8 @@ export default function ChatWindow({ onClose }: ChatWindowProps) {
     <>
       <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50" onClick={onClose} />
       
-      <Card className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[95vw] max-w-4xl h-[90vh] max-h-[600px] z-50 flex flex-col shadow-lg">
-        <div className="flex items-center justify-between p-4 border-b">
+      <Card className="fixed inset-4 md:inset-8 lg:left-1/2 lg:top-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2 lg:w-[90vw] lg:max-w-5xl lg:h-[80vh] z-[60] flex flex-col shadow-lg overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b shrink-0">
           <h2 className="text-lg font-semibold" data-testid="text-chat-title">
             Mensagens
           </h2>
@@ -161,8 +161,8 @@ export default function ChatWindow({ onClose }: ChatWindowProps) {
           </Button>
         </div>
 
-        <div className="flex flex-1 overflow-hidden">
-          <div className="w-80 border-r flex flex-col">
+        <div className="flex flex-1 overflow-hidden min-h-0">
+          <div className="w-full md:w-80 border-r flex flex-col shrink-0">
             <div className="p-3 border-b">
               <Button
                 variant="outline"
