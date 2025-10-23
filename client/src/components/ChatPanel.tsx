@@ -9,10 +9,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { MessageCircle, Send, Search, X } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { MessageCircle, Send, Search, X, Paperclip, Image as ImageIcon, FileText, Video, Mic, Download, AlertTriangle } from "lucide-react";
 import { where, orderBy } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db, storage } from "@/lib/firebase";
 import { collection, addDoc, query, getDocs, updateDoc, doc, writeBatch } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useToast } from "@/hooks/use-toast";
 
 function getNowBrasiliaISO(): string {
@@ -58,13 +60,28 @@ function getConversationId(userId1: string, userId2: string): string {
   return [userId1, userId2].sort().join("_");
 }
 
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+}
+
+function getDisplayName(user: User): string {
+  if (user.tipo === "diretor") {
+    return "Diretoria";
+  }
+  return user.nome;
+}
+
 export function ChatPanel() {
   const { userData } = useAuth();
   const { toast } = useToast();
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [messageInput, setMessageInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [uploadingFile, setUploadingFile] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: users } = useRealtimeQuery<User>({
     collectionName: "usuarios",
@@ -81,7 +98,16 @@ export function ChatPanel() {
     constraints: currentConversationId
       ? [where("conversationId", "==", currentConversationId), orderBy("timestamp", "asc")]
       : [],
-    transform: (docs) => docs as ChatMessage[],
+    transform: (docs) => {
+      const allMessages = docs as ChatMessage[];
+      return allMessages.filter((msg) => {
+        if (msg.remetenteId === userData?.uid) {
+          return !msg.deletadaPorRemetente;
+        } else {
+          return !msg.deletadaPorDestinatario;
+        }
+      });
+    },
     enabled: !!currentConversationId,
   });
 
@@ -112,7 +138,7 @@ export function ChatPanel() {
   const allConversations = [...(conversations || []), ...(conversations2 || [])];
 
   const filteredUsers = users?.filter((user) =>
-    user.nome.toLowerCase().includes(searchQuery.toLowerCase())
+    getDisplayName(user).toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   useEffect(() => {
@@ -142,6 +168,120 @@ export function ChatPanel() {
     }
   }, [selectedUser, currentConversationId, messages, userData?.uid]);
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !selectedUser || !userData) return;
+
+    try {
+      setUploadingFile(true);
+
+      let messageType: "audio" | "imagem" | "documento" | "video" = "documento";
+      
+      if (file.type.startsWith("audio/")) {
+        messageType = "audio";
+      } else if (file.type.startsWith("image/")) {
+        messageType = "imagem";
+      } else if (file.type.startsWith("video/")) {
+        messageType = "video";
+      }
+
+      const timestamp = getNowBrasiliaISO();
+      const fileName = `chat/${currentConversationId}/${timestamp}_${file.name}`;
+      const storageRef = ref(storage, fileName);
+      
+      await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(storageRef);
+
+      const conversationId = getConversationId(userData.uid, selectedUser.uid);
+
+      const messageData: any = {
+        conversationId,
+        remetenteId: userData.uid,
+        remetenteNome: userData.nome,
+        remetenteTipo: userData.tipo,
+        destinatarioId: selectedUser.uid,
+        destinatarioNome: selectedUser.nome,
+        destinatarioTipo: selectedUser.tipo,
+        tipo: messageType,
+        conteudo: messageInput.trim() || file.name,
+        arquivoUrl: downloadURL,
+        arquivoNome: file.name,
+        arquivoTipo: file.type,
+        arquivoTamanho: file.size,
+        timestamp,
+        lida: false,
+        deletadaPorRemetente: false,
+        deletadaPorDestinatario: false,
+      };
+
+      await addDoc(collection(db, "chat_messages"), messageData);
+
+      const conversationsQuery = query(
+        collection(db, "chat_conversations"),
+        where("id", "==", conversationId)
+      );
+      const conversationsSnapshot = await getDocs(conversationsQuery);
+
+      const lastMessagePreview = messageType === "imagem" ? "📷 Imagem" : 
+                                 messageType === "audio" ? "🎙️ Áudio" :
+                                 messageType === "video" ? "🎬 Vídeo" :
+                                 "📄 " + file.name;
+
+      if (conversationsSnapshot.empty) {
+        const conversationData: any = {
+          id: conversationId,
+          participante1Id: userData.uid,
+          participante1Nome: userData.nome,
+          participante1Tipo: userData.tipo,
+          participante2Id: selectedUser.uid,
+          participante2Nome: selectedUser.nome,
+          participante2Tipo: selectedUser.tipo,
+          ultimaMensagem: lastMessagePreview,
+          ultimaMensagemTimestamp: timestamp,
+          ultimaMensagemRemetenteId: userData.uid,
+          mensagensNaoLidas1: 0,
+          mensagensNaoLidas2: 1,
+          dataCriacao: timestamp,
+          dataUltimaAtualizacao: timestamp,
+        };
+        await addDoc(collection(db, "chat_conversations"), conversationData);
+      } else {
+        const conversationDoc = conversationsSnapshot.docs[0];
+        const conversation = conversationDoc.data() as ChatConversation;
+        const isParticipant1 = conversation.participante1Id === userData.uid;
+
+        await updateDoc(doc(db, "chat_conversations", conversationDoc.id), {
+          ultimaMensagem: lastMessagePreview,
+          ultimaMensagemTimestamp: timestamp,
+          ultimaMensagemRemetenteId: userData.uid,
+          ...(isParticipant1
+            ? { mensagensNaoLidas2: (conversation.mensagensNaoLidas2 || 0) + 1 }
+            : { mensagensNaoLidas1: (conversation.mensagensNaoLidas1 || 0) + 1 }),
+          dataUltimaAtualizacao: timestamp,
+        });
+      }
+
+      setMessageInput("");
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+
+      toast({
+        title: "Arquivo enviado",
+        description: "O arquivo foi enviado com sucesso.",
+      });
+    } catch (error) {
+      console.error("Erro ao enviar arquivo:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível enviar o arquivo. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!messageInput.trim() || !selectedUser || !userData) return;
 
@@ -157,9 +297,12 @@ export function ChatPanel() {
         destinatarioId: selectedUser.uid,
         destinatarioNome: selectedUser.nome,
         destinatarioTipo: selectedUser.tipo,
+        tipo: "texto",
         conteudo: messageInput,
         timestamp,
         lida: false,
+        deletadaPorRemetente: false,
+        deletadaPorDestinatario: false,
       };
 
       await addDoc(collection(db, "chat_messages"), messageData);
@@ -224,6 +367,178 @@ export function ChatPanel() {
     return isParticipant1 ? conversation.mensagensNaoLidas1 : conversation.mensagensNaoLidas2;
   };
 
+  const renderMessage = (message: ChatMessage) => {
+    const isSentByMe = message.remetenteId === userData?.uid;
+
+    if (message.tipo === "texto") {
+      return (
+        <div
+          key={message.id}
+          className={`flex ${isSentByMe ? "justify-end" : "justify-start"}`}
+          data-testid={`message-${message.id}`}
+        >
+          <div
+            className={`max-w-[70%] rounded-lg p-3 ${
+              isSentByMe
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted"
+            }`}
+          >
+            <p className="text-sm whitespace-pre-wrap break-words">{message.conteudo}</p>
+            <p className="text-xs opacity-70 mt-1">
+              {new Date(message.timestamp).toLocaleTimeString("pt-BR", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    if (message.tipo === "imagem" && message.arquivoUrl) {
+      return (
+        <div
+          key={message.id}
+          className={`flex ${isSentByMe ? "justify-end" : "justify-start"}`}
+          data-testid={`message-${message.id}`}
+        >
+          <div
+            className={`max-w-[70%] rounded-lg p-2 ${
+              isSentByMe
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted"
+            }`}
+          >
+            <img 
+              src={message.arquivoUrl} 
+              alt={message.arquivoNome}
+              className="rounded max-w-full max-h-64 object-contain"
+            />
+            {message.conteudo !== message.arquivoNome && (
+              <p className="text-sm mt-2">{message.conteudo}</p>
+            )}
+            <p className="text-xs opacity-70 mt-1">
+              {new Date(message.timestamp).toLocaleTimeString("pt-BR", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    if (message.tipo === "audio" && message.arquivoUrl) {
+      return (
+        <div
+          key={message.id}
+          className={`flex ${isSentByMe ? "justify-end" : "justify-start"}`}
+          data-testid={`message-${message.id}`}
+        >
+          <div
+            className={`max-w-[70%] rounded-lg p-3 ${
+              isSentByMe
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted"
+            }`}
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <Mic className="h-4 w-4" />
+              <span className="text-sm font-medium">Mensagem de áudio</span>
+            </div>
+            <audio controls className="w-full">
+              <source src={message.arquivoUrl} type={message.arquivoTipo} />
+            </audio>
+            <p className="text-xs opacity-70 mt-1">
+              {new Date(message.timestamp).toLocaleTimeString("pt-BR", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    if (message.tipo === "video" && message.arquivoUrl) {
+      return (
+        <div
+          key={message.id}
+          className={`flex ${isSentByMe ? "justify-end" : "justify-start"}`}
+          data-testid={`message-${message.id}`}
+        >
+          <div
+            className={`max-w-[70%] rounded-lg p-2 ${
+              isSentByMe
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted"
+            }`}
+          >
+            <video controls className="rounded max-w-full max-h-64">
+              <source src={message.arquivoUrl} type={message.arquivoTipo} />
+            </video>
+            {message.conteudo !== message.arquivoNome && (
+              <p className="text-sm mt-2">{message.conteudo}</p>
+            )}
+            <p className="text-xs opacity-70 mt-1">
+              {new Date(message.timestamp).toLocaleTimeString("pt-BR", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    if (message.tipo === "documento" && message.arquivoUrl) {
+      return (
+        <div
+          key={message.id}
+          className={`flex ${isSentByMe ? "justify-end" : "justify-start"}`}
+          data-testid={`message-${message.id}`}
+        >
+          <div
+            className={`max-w-[70%] rounded-lg p-3 ${
+              isSentByMe
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <FileText className="h-8 w-8 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{message.arquivoNome}</p>
+                <p className="text-xs opacity-70">
+                  {message.arquivoTamanho ? formatFileSize(message.arquivoTamanho) : ""}
+                </p>
+              </div>
+              <a
+                href={message.arquivoUrl}
+                download={message.arquivoNome}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Button size="icon" variant="ghost" className="flex-shrink-0">
+                  <Download className="h-4 w-4" />
+                </Button>
+              </a>
+            </div>
+            <p className="text-xs opacity-70 mt-2">
+              {new Date(message.timestamp).toLocaleTimeString("pt-BR", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
       <Card className="lg:col-span-1">
@@ -260,7 +575,7 @@ export function ChatPanel() {
                   <div className="relative">
                     <Avatar>
                       <AvatarImage src={user.fotoBase64} />
-                      <AvatarFallback>{user.nome.charAt(0).toUpperCase()}</AvatarFallback>
+                      <AvatarFallback>{getDisplayName(user).charAt(0).toUpperCase()}</AvatarFallback>
                     </Avatar>
                     <div
                       className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-background ${getStatusColor(
@@ -270,7 +585,7 @@ export function ChatPanel() {
                   </div>
                   <div className="flex-1 text-left">
                     <div className="flex items-center justify-between">
-                      <p className="font-medium text-sm truncate">{user.nome}</p>
+                      <p className="font-medium text-sm truncate">{getDisplayName(user)}</p>
                       {unreadCount > 0 && (
                         <Badge variant="destructive" className="ml-2">
                           {unreadCount}
@@ -295,7 +610,7 @@ export function ChatPanel() {
                   <div className="relative">
                     <Avatar>
                       <AvatarImage src={selectedUser.fotoBase64} />
-                      <AvatarFallback>{selectedUser.nome.charAt(0).toUpperCase()}</AvatarFallback>
+                      <AvatarFallback>{getDisplayName(selectedUser).charAt(0).toUpperCase()}</AvatarFallback>
                     </Avatar>
                     <div
                       className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-background ${getStatusColor(
@@ -304,7 +619,7 @@ export function ChatPanel() {
                     />
                   </div>
                   <div>
-                    <CardTitle className="text-base">{selectedUser.nome}</CardTitle>
+                    <CardTitle className="text-base">{getDisplayName(selectedUser)}</CardTitle>
                     <p className="text-xs text-muted-foreground">{getStatusLabel(selectedUser.statusPresenca)}</p>
                     {selectedUser.mensagemStatus && (
                       <p className="text-xs text-muted-foreground italic">{selectedUser.mensagemStatus}</p>
@@ -325,51 +640,62 @@ export function ChatPanel() {
             <CardContent className="p-4 space-y-4">
               <ScrollArea className="h-[calc(100vh-20rem)]">
                 <div className="space-y-3">
-                  {messages?.map((message) => {
-                    const isSentByMe = message.remetenteId === userData?.uid;
-                    return (
-                      <div
-                        key={message.id}
-                        className={`flex ${isSentByMe ? "justify-end" : "justify-start"}`}
-                        data-testid={`message-${message.id}`}
-                      >
-                        <div
-                          className={`max-w-[70%] rounded-lg p-3 ${
-                            isSentByMe
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted"
-                          }`}
-                        >
-                          <p className="text-sm whitespace-pre-wrap break-words">{message.conteudo}</p>
-                          <p className="text-xs opacity-70 mt-1">
-                            {new Date(message.timestamp).toLocaleTimeString("pt-BR", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  <Alert className="bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800">
+                    <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    <AlertDescription className="text-xs text-amber-900 dark:text-amber-100">
+                      <strong>⚠️ Atenção:</strong> Este canal de comunicação é exclusivo para assuntos acadêmicos e administrativos da plataforma Vestibulando.
+                      Todas as mensagens, áudios, documentos e chamadas são monitorados e registrados pela Diretoria para fins de auditoria.
+                      Não é permitido o envio de conteúdos ofensivos, inapropriados ou fora do contexto educacional.
+                      Ao enviar qualquer mensagem, o usuário concorda com os termos de uso e política de conduta da plataforma.
+                    </AlertDescription>
+                  </Alert>
+                  
+                  {messages?.map((message) => renderMessage(message))}
                   <div ref={messagesEndRef} />
                 </div>
               </ScrollArea>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Digite sua mensagem..."
-                  value={messageInput}
-                  onChange={(e) => setMessageInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendMessage();
-                    }
-                  }}
-                  data-testid="input-message"
-                />
-                <Button onClick={handleSendMessage} size="icon" data-testid="button-send-message">
-                  <Send className="h-4 w-4" />
-                </Button>
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Digite sua mensagem..."
+                    value={messageInput}
+                    onChange={(e) => setMessageInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                    data-testid="input-message"
+                  />
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    className="hidden"
+                    onChange={handleFileUpload}
+                    accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                  />
+                  <Button
+                    onClick={() => fileInputRef.current?.click()}
+                    size="icon"
+                    variant="outline"
+                    disabled={uploadingFile}
+                    data-testid="button-attach-file"
+                  >
+                    <Paperclip className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    onClick={handleSendMessage} 
+                    size="icon" 
+                    data-testid="button-send-message"
+                    disabled={uploadingFile}
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+                {uploadingFile && (
+                  <p className="text-xs text-muted-foreground">Enviando arquivo...</p>
+                )}
               </div>
             </CardContent>
           </>
