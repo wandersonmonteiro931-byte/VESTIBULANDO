@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
-import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
+import { collection, query, where, onSnapshot, orderBy, addDoc, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { ChatConversation, User } from "@shared/schema";
 import ChatConversationList from "./ChatConversationList";
@@ -21,6 +21,62 @@ export default function ChatWindow({ onClose }: ChatWindowProps) {
   const [showSearchDialog, setShowSearchDialog] = useState(false);
   const [loading, setLoading] = useState(true);
   const { userData } = useAuth();
+
+  const createOrSelectConversation = async (otherUser: User) => {
+    if (!userData?.uid) return;
+
+    // Verificar se já existe uma conversa
+    const conversationsRef = collection(db, "chatConversations");
+    
+    const q1 = query(
+      conversationsRef,
+      where("participante1Id", "==", userData.uid),
+      where("participante2Id", "==", otherUser.uid)
+    );
+    
+    const q2 = query(
+      conversationsRef,
+      where("participante1Id", "==", otherUser.uid),
+      where("participante2Id", "==", userData.uid)
+    );
+
+    const [snapshot1, snapshot2] = await Promise.all([
+      getDocs(q1),
+      getDocs(q2)
+    ]);
+
+    if (!snapshot1.empty) {
+      const conv = { id: snapshot1.docs[0].id, ...snapshot1.docs[0].data() } as ChatConversation;
+      setSelectedConversation(conv);
+      return;
+    }
+
+    if (!snapshot2.empty) {
+      const conv = { id: snapshot2.docs[0].id, ...snapshot2.docs[0].data() } as ChatConversation;
+      setSelectedConversation(conv);
+      return;
+    }
+
+    // Criar nova conversa
+    const newConversation = {
+      participante1Id: userData.uid,
+      participante1Nome: userData.nome,
+      participante1Tipo: userData.tipo,
+      participante2Id: otherUser.uid,
+      participante2Nome: otherUser.nome,
+      participante2Tipo: otherUser.tipo,
+      mensagensNaoLidas1: 0,
+      mensagensNaoLidas2: 0,
+      dataCriacao: new Date().toISOString(),
+      dataUltimaAtualizacao: new Date().toISOString(),
+    };
+
+    const docRef = await addDoc(conversationsRef, newConversation);
+    setSelectedConversation({
+      id: docRef.id,
+      ...newConversation,
+    } as ChatConversation);
+  };
 
   useEffect(() => {
     if (!userData?.uid) return;
@@ -160,9 +216,9 @@ export default function ChatWindow({ onClose }: ChatWindowProps) {
       {showSearchDialog && (
         <UserSearchDialog
           onClose={() => setShowSearchDialog(false)}
-          onSelectUser={(user: User) => {
+          onSelectUser={async (user: User) => {
             setShowSearchDialog(false);
-            // Criar ou selecionar conversa com o usuário
+            await createOrSelectConversation(user);
           }}
         />
       )}
