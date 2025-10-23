@@ -22,7 +22,7 @@ import { MonitoringTab } from "@/components/MonitoringTab";
 import { DocumentationTab } from "@/components/DocumentationTab";
 import { AnnouncementsTab } from "@/components/AnnouncementsTab";
 import { BrasiliaClock } from "@/components/BrasiliaClock";
-import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, MessageCircle, ArrowRightLeft, Clock, Search, Eye, AlertTriangle, Settings, Power, PowerOff } from "lucide-react";
+import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, MessageCircle, ArrowRightLeft, Clock, Search, Eye, AlertTriangle, Settings, Power, PowerOff, Archive } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
@@ -162,6 +162,11 @@ export default function AdminDashboard() {
   const [editMaintenanceStartTime, setEditMaintenanceStartTime] = useState("");
   const [editMaintenanceEndDate, setEditMaintenanceEndDate] = useState("");
   const [editMaintenanceEndTime, setEditMaintenanceEndTime] = useState("");
+  const [justificativaDialogOpen, setJustificativaDialogOpen] = useState(false);
+  const [maintenanceToJustify, setMaintenanceToJustify] = useState<Maintenance | null>(null);
+  const [justificativaText, setJustificativaText] = useState("");
+  const [bloqueioDialogOpen, setBloqueioDialogOpen] = useState(false);
+  const [manutencoesPendentes, setManutencoesPendentes] = useState<Maintenance[]>([]);
 
   const turmaForm = useForm<z.infer<typeof turmaFormSchema>>({
     resolver: zodResolver(turmaFormSchema),
@@ -1483,6 +1488,28 @@ export default function AdminDashboard() {
         throw new Error("Já existe uma manutenção ativa no sistema");
       }
       
+      // VERIFICAÇÃO OBRIGATÓRIA: Bloquear criação de nova manutenção se houver pendentes de justificativa
+      const finalizadasQuery = query(
+        collection(db, "systemMaintenance"), 
+        where("ativa", "==", false),
+        where("arquivada", "==", false)
+      );
+      const finalizadasDocs = await getDocs(finalizadasQuery);
+      
+      const semJustificativa = finalizadasDocs.docs.filter(doc => {
+        const data = doc.data();
+        return !data.justificativa || data.justificativa.trim() === "";
+      });
+      
+      if (semJustificativa.length > 0) {
+        const detalhes = semJustificativa.map(doc => {
+          const data = doc.data();
+          return `- Manutenção ${data.tipo} de ${formatBrasiliaDateTime(data.dataInicio)}`;
+        }).join('\n');
+        
+        throw new Error(`❌ BLOQUEADO: Não é possível iniciar uma nova manutenção!\n\nExistem ${semJustificativa.length} manutenção(ões) finalizada(s) SEM JUSTIFICATIVA:\n\n${detalhes}\n\n⚠️ É OBRIGATÓRIO justificar TODAS as manutenções anteriores antes de iniciar uma nova.\n\nAcesse a aba "Manutenção" e clique em "Adicionar Justificativa" para cada manutenção pendente.`);
+      }
+      
       const maintenanceData: any = {
         ativa: true,
         tipo,
@@ -1490,6 +1517,7 @@ export default function AdminDashboard() {
         dataAtivacao: getNowBrasiliaISO(),
         iniciadoPor: directorUid,
         iniciadoPorNome: directorNome,
+        arquivada: false,
       };
       
       // Apenas adicionar dataFim se for manutenção determinada e tiver valor
@@ -1573,6 +1601,25 @@ export default function AdminDashboard() {
 
   const deletarManutencaoMutation = useMutation({
     mutationFn: async (maintenanceId: string) => {
+      const maintenanceDoc = await getDoc(doc(db, "systemMaintenance", maintenanceId));
+      const maintenanceData = maintenanceDoc.data();
+      
+      if (!maintenanceData) {
+        throw new Error("Manutenção não encontrada");
+      }
+      
+      // Bloquear exclusão de manutenções arquivadas (histórico de auditoria é permanente)
+      if (maintenanceData.arquivada) {
+        throw new Error("Não é possível deletar uma manutenção arquivada. O histórico de auditoria deve ser mantido permanentemente.");
+      }
+      
+      // Se a manutenção está finalizada e não arquivada, verificar se tem justificativa
+      if (!maintenanceData.ativa) {
+        if (!maintenanceData.justificativa || maintenanceData.justificativa.trim() === "") {
+          throw new Error("Não é possível deletar uma manutenção sem justificativa. Por favor, adicione uma justificativa primeiro.");
+        }
+      }
+      
       await deleteDoc(doc(db, "systemMaintenance", maintenanceId));
     },
     onSuccess: () => {
@@ -1585,6 +1632,73 @@ export default function AdminDashboard() {
     onError: (error: any) => {
       toast({
         title: "Erro ao deletar manutenção",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const adicionarJustificativaMutation = useMutation({
+    mutationFn: async ({ maintenanceId, justificativa }: { maintenanceId: string; justificativa: string }) => {
+      if (!userData || !firebaseAuth.currentUser) throw new Error("Usuário não autenticado");
+      
+      const directorUid = userData.uid || firebaseAuth.currentUser.uid;
+      const directorNome = userData.nome;
+      
+      if (!justificativa || justificativa.trim() === "") {
+        throw new Error("A justificativa não pode estar vazia");
+      }
+      
+      await updateDoc(doc(db, "systemMaintenance", maintenanceId), {
+        justificativa: justificativa.trim(),
+        justificadaPor: directorUid,
+        justificadaPorNome: directorNome,
+        dataJustificativa: getNowBrasiliaISO(),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/maintenance"] });
+      toast({
+        title: "Justificativa adicionada!",
+        description: "A justificativa foi salva com sucesso.",
+      });
+      setJustificativaDialogOpen(false);
+      setMaintenanceToJustify(null);
+      setJustificativaText("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao adicionar justificativa",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const arquivarManutencaoMutation = useMutation({
+    mutationFn: async (maintenanceId: string) => {
+      // Verificar se tem justificativa antes de arquivar
+      const maintenanceDoc = await getDoc(doc(db, "systemMaintenance", maintenanceId));
+      const maintenanceData = maintenanceDoc.data();
+      
+      if (!maintenanceData?.justificativa || maintenanceData.justificativa.trim() === "") {
+        throw new Error("Não é possível arquivar uma manutenção sem justificativa");
+      }
+      
+      await updateDoc(doc(db, "systemMaintenance", maintenanceId), {
+        arquivada: true,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/maintenance"] });
+      toast({
+        title: "Manutenção arquivada!",
+        description: "A manutenção foi movida para o histórico de auditoria.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao arquivar manutenção",
         description: error.message,
         variant: "destructive",
       });
@@ -1743,6 +1857,13 @@ export default function AdminDashboard() {
           </div>
           
           <div className="flex items-center gap-3">
+            {maintenanceData && maintenanceData.some(m => m.ativa) && (
+              <div className="animate-pulse">
+                <p className="text-sm font-bold text-red-600 dark:text-red-400">
+                  SISTEMA EM MANUTENÇÃO
+                </p>
+              </div>
+            )}
             <div className="text-right mr-2 hidden sm:block">
               <p className="text-sm font-semibold">{userData?.nome}</p>
               <p className="text-xs text-muted-foreground">Diretoria</p>
@@ -2650,7 +2771,18 @@ export default function AdminDashboard() {
                 </CardHeader>
                 <CardContent>
                   <Button
-                    onClick={() => {
+                    onClick={async () => {
+                      // VERIFICAÇÃO PRÉVIA: Bloquear abertura do diálogo se houver manutenções sem justificativa
+                      const finalizadasSemArquivar = maintenanceData?.filter(m => !m.ativa && !m.arquivada) || [];
+                      const semJustificativa = finalizadasSemArquivar.filter(m => !m.justificativa || m.justificativa.trim() === "");
+                      
+                      if (semJustificativa.length > 0) {
+                        setManutencoesPendentes(semJustificativa);
+                        setBloqueioDialogOpen(true);
+                        return;
+                      }
+                      
+                      // Se não há pendências, abrir o diálogo normalmente
                       setMaintenanceDialogOpen(true);
                       const nowBrasilia = getNowBrasilia();
                       setMaintenanceStartDate(nowBrasilia.dateString);
@@ -2673,120 +2805,286 @@ export default function AdminDashboard() {
               </Card>
             )}
 
-            {/* Histórico de Manutenções */}
-            {maintenanceData && maintenanceData.length > 0 && (
+            {/* Manutenções Recentes (Não Arquivadas) */}
+            {maintenanceData && maintenanceData.filter(m => !m.arquivada).length > 0 && (
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle>Histórico de Manutenções</CardTitle>
+                      <CardTitle>Manutenções Recentes</CardTitle>
                       <CardDescription>
-                        Visualize e gerencie todas as manutenções do sistema
+                        Manutenções que ainda não foram arquivadas no histórico de auditoria
                       </CardDescription>
                     </div>
-                    {maintenanceData.some(m => !m.ativa) && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => limparTodasManutencoesMutation.mutate()}
-                        disabled={limparTodasManutencoesMutation.isPending}
-                        data-testid="button-clear-old-maintenances"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Limpar Finalizadas
-                      </Button>
-                    )}
                   </div>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {maintenanceData.map((maintenance) => (
-                      <div
-                        key={maintenance.id}
-                        className={`p-4 rounded-lg border ${
-                          maintenance.ativa 
-                            ? 'border-orange-200 dark:border-orange-900 bg-orange-50/30 dark:bg-orange-950/10' 
-                            : 'border-border bg-muted/30'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 space-y-2">
-                            <div className="flex items-center gap-2">
-                              <Badge variant={maintenance.ativa ? "destructive" : "secondary"}>
-                                {maintenance.ativa ? "ATIVA" : "Finalizada"}
-                              </Badge>
-                              <span className="text-sm font-medium capitalize">
-                                {maintenance.tipo}
-                              </span>
+                    {maintenanceData
+                      .filter(m => !m.arquivada)
+                      .map((maintenance) => {
+                        const needsJustification = !maintenance.ativa && (!maintenance.justificativa || maintenance.justificativa.trim() === "");
+                        const hasJustification = maintenance.justificativa && maintenance.justificativa.trim() !== "";
+                        
+                        return (
+                          <div
+                            key={maintenance.id}
+                            className={`p-4 rounded-lg border ${
+                              maintenance.ativa 
+                                ? 'border-orange-200 dark:border-orange-900 bg-orange-50/30 dark:bg-orange-950/10' 
+                                : needsJustification
+                                ? 'border-red-300 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20'
+                                : 'border-border bg-muted/30'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1 space-y-2">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <Badge variant={maintenance.ativa ? "destructive" : "secondary"}>
+                                    {maintenance.ativa ? "ATIVA" : "Finalizada"}
+                                  </Badge>
+                                  {needsJustification && (
+                                    <Badge variant="destructive" className="animate-pulse">
+                                      REQUER JUSTIFICATIVA
+                                    </Badge>
+                                  )}
+                                  {hasJustification && !maintenance.arquivada && (
+                                    <Badge variant="default" className="bg-green-600 dark:bg-green-700">
+                                      Justificada
+                                    </Badge>
+                                  )}
+                                  <span className="text-sm font-medium capitalize">
+                                    {maintenance.tipo}
+                                  </span>
+                                </div>
+                                
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                                  <div>
+                                    <span className="text-muted-foreground">Início:</span>{" "}
+                                    <span className="font-medium">
+                                      {formatBrasiliaDateTime(maintenance.dataInicio)}
+                                    </span>
+                                  </div>
+                                  
+                                  {maintenance.dataFim && (
+                                    <div>
+                                      <span className="text-muted-foreground">Fim Previsto:</span>{" "}
+                                      <span className="font-medium">
+                                        {formatBrasiliaDateTime(maintenance.dataFim)}
+                                      </span>
+                                    </div>
+                                  )}
+                                  
+                                  <div>
+                                    <span className="text-muted-foreground">Iniciada por:</span>{" "}
+                                    <span className="font-medium">{maintenance.iniciadoPorNome}</span>
+                                  </div>
+                                  
+                                  {maintenance.dataFinalizacao && (
+                                    <div>
+                                      <span className="text-muted-foreground">Finalizada em:</span>{" "}
+                                      <span className="font-medium">
+                                        {formatBrasiliaDateTime(maintenance.dataFinalizacao)}
+                                      </span>
+                                    </div>
+                                  )}
+                                  
+                                  {maintenance.finalizadoPorNome && (
+                                    <div>
+                                      <span className="text-muted-foreground">Finalizada por:</span>{" "}
+                                      <span className="font-medium">{maintenance.finalizadoPorNome}</span>
+                                    </div>
+                                  )}
+
+                                  {hasJustification && (
+                                    <>
+                                      <div className="col-span-2">
+                                        <span className="text-muted-foreground">Justificativa:</span>{" "}
+                                        <p className="text-sm mt-1 p-2 bg-muted rounded">{maintenance.justificativa}</p>
+                                      </div>
+                                      {maintenance.justificadaPorNome && (
+                                        <div>
+                                          <span className="text-muted-foreground">Justificada por:</span>{" "}
+                                          <span className="font-medium">{maintenance.justificadaPorNome}</span>
+                                        </div>
+                                      )}
+                                      {maintenance.dataJustificativa && (
+                                        <div>
+                                          <span className="text-muted-foreground">Data da justificativa:</span>{" "}
+                                          <span className="font-medium">
+                                            {formatBrasiliaDateTime(maintenance.dataJustificativa)}
+                                          </span>
+                                        </div>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              <div className="flex gap-2 flex-col">
+                                {maintenance.ativa ? (
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => finalizarManutencaoMutation.mutate(maintenance.id)}
+                                    disabled={finalizarManutencaoMutation.isPending}
+                                    data-testid={`button-finalize-maintenance-${maintenance.id}`}
+                                  >
+                                    <PowerOff className="h-4 w-4 mr-2" />
+                                    Finalizar
+                                  </Button>
+                                ) : (
+                                  <>
+                                    {needsJustification ? (
+                                      <Button
+                                        variant="default"
+                                        size="sm"
+                                        onClick={() => {
+                                          setMaintenanceToJustify(maintenance);
+                                          setJustificativaText("");
+                                          setJustificativaDialogOpen(true);
+                                        }}
+                                        data-testid={`button-add-justification-${maintenance.id}`}
+                                      >
+                                        <FileText className="h-4 w-4 mr-2" />
+                                        Adicionar Justificativa
+                                      </Button>
+                                    ) : (
+                                      <>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => {
+                                            setMaintenanceToJustify(maintenance);
+                                            setJustificativaText(maintenance.justificativa || "");
+                                            setJustificativaDialogOpen(true);
+                                          }}
+                                          data-testid={`button-edit-justification-${maintenance.id}`}
+                                        >
+                                          <Edit className="h-4 w-4 mr-2" />
+                                          Editar Justificativa
+                                        </Button>
+                                        <Button
+                                          variant="default"
+                                          size="sm"
+                                          onClick={() => arquivarManutencaoMutation.mutate(maintenance.id)}
+                                          disabled={arquivarManutencaoMutation.isPending}
+                                          data-testid={`button-archive-maintenance-${maintenance.id}`}
+                                        >
+                                          <Archive className="h-4 w-4 mr-2" />
+                                          Arquivar
+                                        </Button>
+                                      </>
+                                    )}
+                                  </>
+                                )}
+                              </div>
                             </div>
-                            
-                            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                              <div>
-                                <span className="text-muted-foreground">Início:</span>{" "}
-                                <span className="font-medium">
-                                  {formatBrasiliaDateTime(maintenance.dataInicio)}
+                          </div>
+                        );
+                      })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Histórico de Auditoria */}
+            {maintenanceData && maintenanceData.filter(m => m.arquivada).length > 0 && (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Histórico de Auditoria</CardTitle>
+                      <CardDescription>
+                        Registro permanente de todas as manutenções justificadas e arquivadas
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {maintenanceData
+                      .filter(m => m.arquivada)
+                      .sort((a, b) => new Date(b.dataFinalizacao || b.dataAtivacao).getTime() - new Date(a.dataFinalizacao || a.dataAtivacao).getTime())
+                      .map((maintenance) => (
+                        <div
+                          key={maintenance.id}
+                          className="p-4 rounded-lg border border-border bg-muted/30"
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 space-y-2">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="secondary">Arquivada</Badge>
+                                <span className="text-sm font-medium capitalize">
+                                  {maintenance.tipo}
                                 </span>
                               </div>
                               
-                              {maintenance.dataFim && (
+                              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                                 <div>
-                                  <span className="text-muted-foreground">Fim Previsto:</span>{" "}
+                                  <span className="text-muted-foreground">Início:</span>{" "}
                                   <span className="font-medium">
-                                    {formatBrasiliaDateTime(maintenance.dataFim)}
+                                    {formatBrasiliaDateTime(maintenance.dataInicio)}
                                   </span>
                                 </div>
-                              )}
-                              
-                              <div>
-                                <span className="text-muted-foreground">Iniciada por:</span>{" "}
-                                <span className="font-medium">{maintenance.iniciadoPorNome}</span>
+                                
+                                {maintenance.dataFim && (
+                                  <div>
+                                    <span className="text-muted-foreground">Fim Previsto:</span>{" "}
+                                    <span className="font-medium">
+                                      {formatBrasiliaDateTime(maintenance.dataFim)}
+                                    </span>
+                                  </div>
+                                )}
+                                
+                                <div>
+                                  <span className="text-muted-foreground">Iniciada por:</span>{" "}
+                                  <span className="font-medium">{maintenance.iniciadoPorNome}</span>
+                                </div>
+                                
+                                {maintenance.dataFinalizacao && (
+                                  <div>
+                                    <span className="text-muted-foreground">Finalizada em:</span>{" "}
+                                    <span className="font-medium">
+                                      {formatBrasiliaDateTime(maintenance.dataFinalizacao)}
+                                    </span>
+                                  </div>
+                                )}
+                                
+                                {maintenance.finalizadoPorNome && (
+                                  <div>
+                                    <span className="text-muted-foreground">Finalizada por:</span>{" "}
+                                    <span className="font-medium">{maintenance.finalizadoPorNome}</span>
+                                  </div>
+                                )}
+
+                                {maintenance.justificativa && (
+                                  <>
+                                    <div className="col-span-2">
+                                      <span className="text-muted-foreground">Justificativa:</span>{" "}
+                                      <p className="text-sm mt-1 p-2 bg-background rounded">{maintenance.justificativa}</p>
+                                    </div>
+                                    {maintenance.justificadaPorNome && (
+                                      <div>
+                                        <span className="text-muted-foreground">Justificada por:</span>{" "}
+                                        <span className="font-medium">{maintenance.justificadaPorNome}</span>
+                                      </div>
+                                    )}
+                                    {maintenance.dataJustificativa && (
+                                      <div>
+                                        <span className="text-muted-foreground">Data da justificativa:</span>{" "}
+                                        <span className="font-medium">
+                                          {formatBrasiliaDateTime(maintenance.dataJustificativa)}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </>
+                                )}
                               </div>
-                              
-                              {maintenance.dataFinalizacao && (
-                                <div>
-                                  <span className="text-muted-foreground">Finalizada em:</span>{" "}
-                                  <span className="font-medium">
-                                    {formatBrasiliaDateTime(maintenance.dataFinalizacao)}
-                                  </span>
-                                </div>
-                              )}
-                              
-                              {maintenance.finalizadoPorNome && (
-                                <div>
-                                  <span className="text-muted-foreground">Finalizada por:</span>{" "}
-                                  <span className="font-medium">{maintenance.finalizadoPorNome}</span>
-                                </div>
-                              )}
                             </div>
                           </div>
-                          
-                          <div className="flex gap-2">
-                            {maintenance.ativa ? (
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => finalizarManutencaoMutation.mutate(maintenance.id)}
-                                disabled={finalizarManutencaoMutation.isPending}
-                                data-testid={`button-finalize-maintenance-${maintenance.id}`}
-                              >
-                                <PowerOff className="h-4 w-4 mr-2" />
-                                Finalizar
-                              </Button>
-                            ) : (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => deletarManutencaoMutation.mutate(maintenance.id)}
-                                disabled={deletarManutencaoMutation.isPending}
-                                data-testid={`button-delete-maintenance-${maintenance.id}`}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
                   </div>
                 </CardContent>
               </Card>
@@ -5845,6 +6143,176 @@ export default function AdminDashboard() {
               data-testid="button-confirm-edit-maintenance"
             >
               {editarManutencaoMutation.isPending ? "Salvando..." : "Salvar Alterações"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={bloqueioDialogOpen} onOpenChange={setBloqueioDialogOpen}>
+        <DialogContent className="max-w-2xl" data-testid="dialog-bloqueio">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
+              <AlertTriangle className="h-5 w-5" />
+              Bloqueado: Justifique as Manutenções Anteriores
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-300 dark:border-red-800 rounded-lg">
+              <p className="text-sm text-red-900 dark:text-red-100 font-medium">
+                {manutencoesPendentes.length} manutenção(ões) sem justificativa. É obrigatório justificar todas antes de iniciar uma nova.
+              </p>
+            </div>
+
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {manutencoesPendentes.map((maintenance) => (
+                <div
+                  key={maintenance.id}
+                  className="p-2 bg-muted rounded border border-red-200 dark:border-red-800 flex items-center justify-between gap-2"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1 mb-1">
+                      <Badge variant="destructive" className="text-xs">SEM JUSTIFICATIVA</Badge>
+                      <Badge variant="outline" className="text-xs capitalize">{maintenance.tipo}</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {formatBrasiliaDateTime(maintenance.dataInicio)} • {maintenance.iniciadoPorNome}
+                    </p>
+                  </div>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => {
+                      setMaintenanceToJustify(maintenance);
+                      setJustificativaText("");
+                      setBloqueioDialogOpen(false);
+                      setJustificativaDialogOpen(true);
+                    }}
+                    data-testid={`button-justify-from-bloqueio-${maintenance.id}`}
+                  >
+                    Justificar
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setBloqueioDialogOpen(false);
+                setManutencoesPendentes([]);
+              }}
+              data-testid="button-close-bloqueio"
+            >
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={justificativaDialogOpen} onOpenChange={setJustificativaDialogOpen}>
+        <DialogContent className="max-w-3xl" data-testid="dialog-justificativa">
+          <DialogHeader>
+            <DialogTitle>Justificativa de Manutenção</DialogTitle>
+            <DialogDescription>
+              Adicione uma justificativa detalhada explicando todas as alterações realizadas durante a manutenção do sistema.
+              Esta justificativa será arquivada permanentemente no histórico de auditoria.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded-lg">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-amber-900 dark:text-amber-100">Justificativa Obrigatória</p>
+                  <p className="text-sm text-amber-800 dark:text-amber-200 mt-1">
+                    É obrigatório justificar todas as manutenções realizadas no sistema. 
+                    Descreva detalhadamente quais alterações foram feitas e por qual motivo.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {maintenanceToJustify && (
+              <div className="p-4 bg-muted rounded-lg space-y-2">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Tipo:</span>{" "}
+                    <span className="font-medium capitalize">{maintenanceToJustify.tipo}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Iniciada por:</span>{" "}
+                    <span className="font-medium">{maintenanceToJustify.iniciadoPorNome}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Data de Início:</span>{" "}
+                    <span className="font-medium">
+                      {formatBrasiliaDateTime(maintenanceToJustify.dataInicio)}
+                    </span>
+                  </div>
+                  {maintenanceToJustify.dataFinalizacao && (
+                    <div>
+                      <span className="text-muted-foreground">Data de Finalização:</span>{" "}
+                      <span className="font-medium">
+                        {formatBrasiliaDateTime(maintenanceToJustify.dataFinalizacao)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="justificativa-text">
+                Justificativa das Alterações <span className="text-red-500">*</span>
+              </Label>
+              <Textarea
+                id="justificativa-text"
+                placeholder="Descreva detalhadamente todas as alterações realizadas no sistema durante esta manutenção. Exemplo: Atualização do módulo de cadastro de alunos, correção de bugs no sistema de notas e entregas, otimização do carregamento de turmas, ajustes no painel de advertências..."
+                value={justificativaText}
+                onChange={(e) => setJustificativaText(e.target.value)}
+                rows={8}
+                className="resize-none"
+                data-testid="textarea-justificativa"
+              />
+              <p className="text-xs text-muted-foreground">
+                Caracteres: {justificativaText.length}
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setJustificativaDialogOpen(false);
+                setMaintenanceToJustify(null);
+                setJustificativaText("");
+              }}
+              data-testid="button-cancel-justificativa"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="default"
+              onClick={() => {
+                if (maintenanceToJustify) {
+                  adicionarJustificativaMutation.mutate({
+                    maintenanceId: maintenanceToJustify.id,
+                    justificativa: justificativaText,
+                  });
+                }
+              }}
+              disabled={adicionarJustificativaMutation.isPending || !justificativaText.trim()}
+              data-testid="button-save-justificativa"
+            >
+              {adicionarJustificativaMutation.isPending ? "Salvando..." : "Salvar Justificativa"}
             </Button>
           </DialogFooter>
         </DialogContent>
