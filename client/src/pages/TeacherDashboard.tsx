@@ -19,8 +19,7 @@ import { BrasiliaClock } from "@/components/BrasiliaClock";
 import { StatusBadge } from "@/components/StatusBadge";
 import { FileUploadZone } from "@/components/FileUploadZone";
 import { AnnouncementsCarousel } from "@/components/AnnouncementsCarousel";
-import { ChatPanel } from "@/components/ChatPanel";
-import { ChatModal } from "@/components/ChatModal";
+import ChatButton from "@/components/ChatButton";
 import { LogOut, Plus, FileText, Users, Download, Edit, Calendar, Award } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
@@ -203,7 +202,7 @@ export default function TeacherDashboard() {
               <p className="text-xs text-muted-foreground">Professor</p>
             </div>
             <BrasiliaClock />
-            <ChatModal />
+            <ChatButton />
             <ThemeToggle />
             <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout">
               <LogOut className="h-5 w-5" />
@@ -280,7 +279,6 @@ export default function TeacherDashboard() {
                 <Badge variant="destructive" className="ml-2">{pendingGradings}</Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="chat" data-testid="tab-chat">Chat</TabsTrigger>
           </TabsList>
 
           <TabsContent value="tarefas" className="space-y-4">
@@ -363,10 +361,6 @@ export default function TeacherDashboard() {
                 </CardContent>
               </Card>
             )}
-          </TabsContent>
-
-          <TabsContent value="chat" className="space-y-4">
-            <ChatPanel />
           </TabsContent>
 
           <TabsContent value="correcoes" className="space-y-4">

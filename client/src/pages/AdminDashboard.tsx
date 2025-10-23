@@ -22,9 +22,8 @@ import { MonitoringTab } from "@/components/MonitoringTab";
 import { DocumentationTab } from "@/components/DocumentationTab";
 import { AnnouncementsTab } from "@/components/AnnouncementsTab";
 import { BrasiliaClock } from "@/components/BrasiliaClock";
-import { ChatPanel } from "@/components/ChatPanel";
-import { ChatAuditTab } from "@/components/ChatAuditTab";
-import { ChatModal } from "@/components/ChatModal";
+import ChatButton from "@/components/ChatButton";
+import ChatAuditPanel from "@/components/ChatAuditPanel";
 import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, MessageCircle, ArrowRightLeft, Clock, Search, Eye, AlertTriangle, Settings, Power, PowerOff, Archive, Download, ChevronDown, ChevronUp } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { queryClient } from "@/lib/queryClient";
@@ -2081,7 +2080,7 @@ export default function AdminDashboard() {
               <p className="text-xs text-muted-foreground">Diretoria</p>
             </div>
             <BrasiliaClock />
-            <ChatModal />
+            <ChatButton />
             <ThemeToggle />
             <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout">
               <LogOut className="h-5 w-5" />
@@ -2153,7 +2152,6 @@ export default function AdminDashboard() {
             <TabsTrigger value="turmas" data-testid="tab-turmas">Turmas</TabsTrigger>
             <TabsTrigger value="disciplinares" data-testid="tab-disciplinares">Advertências e Suspensões</TabsTrigger>
             <TabsTrigger value="monitoramento" data-testid="tab-monitoramento">Frequência</TabsTrigger>
-            <TabsTrigger value="chat" data-testid="tab-chat">Chat</TabsTrigger>
             <TabsTrigger value="auditoria-chat" data-testid="tab-auditoria-chat">Auditoria de Chat</TabsTrigger>
             <TabsTrigger value="documentacao" data-testid="tab-documentacao">Documentação</TabsTrigger>
             <TabsTrigger value="avisos" data-testid="tab-avisos">Avisos</TabsTrigger>
@@ -2882,12 +2880,8 @@ export default function AdminDashboard() {
             <MonitoringTab />
           </TabsContent>
 
-          <TabsContent value="chat" className="space-y-4">
-            <ChatPanel />
-          </TabsContent>
-
           <TabsContent value="auditoria-chat" className="space-y-4">
-            <ChatAuditTab />
+            <ChatAuditPanel />
           </TabsContent>
 
           <TabsContent value="documentacao" className="space-y-4">

@@ -245,6 +245,74 @@ service cloud.firestore {
       allow delete: if isAdmin() && isUserActive();
     }
     
+    // Chat Messages collection
+    match /chatMessages/{messageId} {
+      // Apenas participantes da conversa e diretores podem ler mensagens
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        resource.data.remetenteId == request.auth.uid ||
+        resource.data.destinatarioId == request.auth.uid
+      );
+      
+      // Apenas usuários autenticados podem criar mensagens
+      allow create: if isAuthenticated() && isUserActive() &&
+                       request.resource.data.remetenteId == request.auth.uid;
+      
+      // Apenas o remetente ou destinatário podem atualizar (para marcar como lida ou deletada)
+      allow update: if isAuthenticated() && (
+        resource.data.remetenteId == request.auth.uid ||
+        resource.data.destinatarioId == request.auth.uid ||
+        isAdmin()
+      );
+      
+      // Apenas diretores podem deletar mensagens (fisicamente)
+      allow delete: if isAdmin();
+    }
+    
+    // Chat Conversations collection
+    match /chatConversations/{conversationId} {
+      // Apenas participantes da conversa e diretores podem ler
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        resource.data.participante1Id == request.auth.uid ||
+        resource.data.participante2Id == request.auth.uid
+      );
+      
+      // Usuários autenticados podem criar conversas
+      allow create: if isAuthenticated() && isUserActive() && (
+        request.resource.data.participante1Id == request.auth.uid ||
+        request.resource.data.participante2Id == request.auth.uid
+      );
+      
+      // Apenas participantes podem atualizar conversas
+      allow update: if isAuthenticated() && (
+        resource.data.participante1Id == request.auth.uid ||
+        resource.data.participante2Id == request.auth.uid ||
+        isAdmin()
+      );
+      
+      // Apenas diretores podem deletar conversas
+      allow delete: if isAdmin();
+    }
+    
+    // Chat Penalties collection
+    match /chatPenalties/{penaltyId} {
+      // Usuários podem ler suas próprias penalidades, diretores podem ler todas
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        resource.data.usuarioId == request.auth.uid
+      );
+      
+      // Apenas o sistema (via Cloud Functions) ou diretores podem criar penalidades
+      allow create: if isAdmin();
+      
+      // Apenas diretores podem atualizar penalidades (para revisar)
+      allow update: if isAdmin() && isUserActive();
+      
+      // Apenas diretores podem deletar penalidades
+      allow delete: if isAdmin();
+    }
+    
     // System collection - for counters and system-wide settings
     match /system/{documentId} {
       // Matricula counter can be read by anyone (needed for transactions)
