@@ -16,6 +16,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import logoUrl from "@assets/Blue and White Online School Logo (1)_1761189954480.png";
 import assinaturaUrl from "@assets/image_1761190362373.png";
+import assinaturaDeclaracaoUrl from "@assets/image_1761191579284.png";
 
 export function DocumentationTab() {
   const { userData: currentUser } = useAuth();
@@ -411,6 +412,110 @@ export function DocumentationTab() {
     doc.save(fileName);
   };
 
+  // Gerar Declaração de Matrícula
+  const generateDeclaracaoMatricula = async () => {
+    if (!selectedUser) return;
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 20;
+    let yPos = 30;
+
+    // Função para adicionar texto centralizado
+    const addCenteredText = (text: string, y: number, fontSize: number, bold: boolean = false) => {
+      doc.setFontSize(fontSize);
+      doc.setFont("helvetica", bold ? "bold" : "normal");
+      doc.text(text, pageWidth / 2, y, { align: "center" });
+    };
+
+    // Função para adicionar texto justificado
+    const addJustifiedText = (text: string, y: number, fontSize: number = 11) => {
+      doc.setFontSize(fontSize);
+      doc.setFont("helvetica", "normal");
+      const lines = doc.splitTextToSize(text, pageWidth - 2 * margin);
+      doc.text(lines, margin, y, { align: "justify", maxWidth: pageWidth - 2 * margin });
+      return y + (lines.length * fontSize * 0.5);
+    };
+
+    // Título
+    addCenteredText("PREPARATÓRIO VESTIBULANDO", yPos, 14, true);
+    yPos += 10;
+    addCenteredText("DECLARAÇÃO DE MATRÍCULA", yPos, 12, true);
+    yPos += 15;
+
+    // Parágrafo 1
+    const nome = selectedUser.nome.toUpperCase();
+    const cpf = selectedUser.cpf || "N/A";
+    const texto1 = `          Declaramos para os devidos fins, que o(a) aluno(a): ${nome}, portador(a) do CPF de Número: ${cpf}, encontra-se devidamente matriculado(a) no CURSO ONLINE PREPARATÓRIO, na área de formação continuada em EDUCAÇÃO. O curso é oferecido por VESTIBULANDO EAD, por meio da plataforma online.`;
+    yPos = addJustifiedText(texto1, yPos);
+    yPos += 10;
+
+    // Parágrafo 2
+    const texto2 = `          Esta declaração não substitui o certificado de conclusão de curso, caso o aluno não apresente o respectivo em 60(sessenta) dias, a mesma será considerada inválida.`;
+    yPos = addJustifiedText(texto2, yPos);
+    yPos += 10;
+
+    // Parágrafo 3
+    const texto3 = `          Somos uma Instituição de Ensino a Distância, devidamente constituída, fazemos parte do grupo Vestibulando Cursos On-line. Nossos cursos são todos online e são considerados cursos livres (nível básico). Não somos uma IES (Instituição de Ensino Superior). Não oferecemos cursos de graduação, extensão ou pós-graduação.`;
+    yPos = addJustifiedText(texto3, yPos);
+    yPos += 10;
+
+    // Parágrafo 4
+    const texto4 = `          Nosso certificado é um documento verídico, com amparo legal em todo o território nacional, pois está em conformidade com a Lei nº 9.394/96, com o Decreto Presidencial nº 5.154/04 e o 1º a ser emitido, de acordo com os critérios do Ministério Público de Goiás.`;
+    yPos = addJustifiedText(texto4, yPos);
+    yPos += 10;
+
+    // Parágrafo 5
+    const texto5 = `          O título do curso não implica em formação profissional. Sua certificação não permite o exercício da profissão regulamentada em lei, sem que sejam atendidos todos os requisitos legalmente exigidos pela categoria.`;
+    yPos = addJustifiedText(texto5, yPos);
+    yPos += 10;
+
+    // Número de matrícula
+    const matricula = selectedUser.matricula || "N/A";
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text(`          Número de matrícula atual do aluno: ${matricula}`, margin, yPos);
+    yPos += 20;
+
+    // Data
+    const hoje = new Date();
+    const dia = hoje.getDate().toString().padStart(2, '0');
+    const meses = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+    const mes = meses[hoje.getMonth()];
+    const ano = hoje.getFullYear();
+    const dataExtenso = `${dia} de ${mes} de ${ano}.`;
+    
+    addCenteredText(dataExtenso, yPos, 11);
+    yPos += 30;
+
+    // Assinatura
+    try {
+      const assinaturaImg = new Image();
+      assinaturaImg.src = assinaturaDeclaracaoUrl;
+      await new Promise((resolve) => {
+        assinaturaImg.onload = resolve;
+        assinaturaImg.onerror = resolve;
+      });
+      // Centralizar a assinatura - BEM GRANDE
+      const imgWidth = 140;
+      const imgHeight = 43;
+      doc.addImage(assinaturaImg, "PNG", (pageWidth - imgWidth) / 2, yPos, imgWidth, imgHeight);
+    } catch (error) {
+      console.error("Erro ao carregar assinatura:", error);
+      // Adicionar linha e texto caso a assinatura não carregue
+      yPos += 5;
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text("_".repeat(50), pageWidth / 2, yPos, { align: "center" });
+      yPos += 5;
+      doc.text("Diretor Responsável", pageWidth / 2, yPos, { align: "center" });
+    }
+
+    // Salvar PDF
+    const fileName = `Declaracao_Matricula_${selectedUser.nome.replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`;
+    doc.save(fileName);
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -546,10 +651,14 @@ export function DocumentationTab() {
               </DialogHeader>
 
               <div className="space-y-6">
-                <div className="flex justify-end">
+                <div className="flex justify-end gap-2">
                   <Button onClick={generatePDF} data-testid="button-download-pdf">
                     <Download className="h-4 w-4 mr-2" />
-                    Baixar PDF
+                    Documentação Completa
+                  </Button>
+                  <Button onClick={generateDeclaracaoMatricula} variant="outline" data-testid="button-download-declaracao">
+                    <FileText className="h-4 w-4 mr-2" />
+                    Declaração de Matrícula
                   </Button>
                 </div>
 
