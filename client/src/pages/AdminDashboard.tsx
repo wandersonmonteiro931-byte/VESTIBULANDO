@@ -155,6 +155,13 @@ export default function AdminDashboard() {
   const [maintenanceStartTime, setMaintenanceStartTime] = useState("");
   const [maintenanceEndDate, setMaintenanceEndDate] = useState("");
   const [maintenanceEndTime, setMaintenanceEndTime] = useState("");
+  const [editMaintenanceDialogOpen, setEditMaintenanceDialogOpen] = useState(false);
+  const [editingMaintenance, setEditingMaintenance] = useState<Maintenance | null>(null);
+  const [editMaintenanceType, setEditMaintenanceType] = useState<"determinada" | "indeterminada">("determinada");
+  const [editMaintenanceStartDate, setEditMaintenanceStartDate] = useState("");
+  const [editMaintenanceStartTime, setEditMaintenanceStartTime] = useState("");
+  const [editMaintenanceEndDate, setEditMaintenanceEndDate] = useState("");
+  const [editMaintenanceEndTime, setEditMaintenanceEndTime] = useState("");
 
   const turmaForm = useForm<z.infer<typeof turmaFormSchema>>({
     resolver: zodResolver(turmaFormSchema),
@@ -1476,15 +1483,19 @@ export default function AdminDashboard() {
         throw new Error("Já existe uma manutenção ativa no sistema");
       }
       
-      const maintenanceData = {
+      const maintenanceData: any = {
         ativa: true,
         tipo,
         dataInicio,
-        dataFim: tipo === "determinada" ? dataFim : undefined,
         dataAtivacao: getNowBrasiliaISO(),
         iniciadoPor: directorUid,
         iniciadoPorNome: directorNome,
       };
+      
+      // Apenas adicionar dataFim se for manutenção determinada e tiver valor
+      if (tipo === "determinada" && dataFim) {
+        maintenanceData.dataFim = dataFim;
+      }
       
       await addDoc(collection(db, "systemMaintenance"), maintenanceData);
     },
@@ -1605,6 +1616,43 @@ export default function AdminDashboard() {
     onError: (error: any) => {
       toast({
         title: "Erro ao limpar manutenções",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const editarManutencaoMutation = useMutation({
+    mutationFn: async ({ maintenanceId, tipo, dataInicio, dataFim }: { maintenanceId: string; tipo: "determinada" | "indeterminada"; dataInicio: string; dataFim?: string }) => {
+      if (!userData || !firebaseAuth.currentUser) throw new Error("Usuário não autenticado");
+      
+      const updateData: any = {
+        tipo,
+        dataInicio,
+      };
+      
+      // Apenas adicionar dataFim se for manutenção determinada e tiver valor
+      if (tipo === "determinada" && dataFim) {
+        updateData.dataFim = dataFim;
+      } else {
+        // Se mudou de determinada para indeterminada, remover dataFim
+        updateData.dataFim = null;
+      }
+      
+      await updateDoc(doc(db, "systemMaintenance", maintenanceId), updateData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/maintenance"] });
+      toast({
+        title: "Manutenção atualizada!",
+        description: "As informações da manutenção foram atualizadas com sucesso.",
+      });
+      setEditMaintenanceDialogOpen(false);
+      setEditingMaintenance(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao atualizar manutenção",
         description: error.message,
         variant: "destructive",
       });
@@ -2538,27 +2586,58 @@ export default function AdminDashboard() {
                         {formatBrasiliaDateTime(maintenanceData[0].dataInicio)}
                       </p>
                     </div>
-                    {maintenanceData[0].dataFim && (
-                      <div>
-                        <Label className="text-sm text-muted-foreground">Previsão de Retorno</Label>
-                        <p className="font-medium">
-                          {formatBrasiliaDateTime(maintenanceData[0].dataFim)}
-                        </p>
-                      </div>
-                    )}
+                    <div>
+                      <Label className="text-sm text-muted-foreground">Previsão de Retorno</Label>
+                      <p className="font-medium">
+                        {maintenanceData[0].dataFim 
+                          ? formatBrasiliaDateTime(maintenanceData[0].dataFim)
+                          : "Indeterminado"
+                        }
+                      </p>
+                    </div>
                   </div>
-                  <Button
-                    variant="destructive"
-                    onClick={() => {
-                      // Finalizar manutenção
-                      finalizarManutencaoMutation.mutate(maintenanceData[0].id);
-                    }}
-                    disabled={finalizarManutencaoMutation.isPending}
-                    data-testid="button-end-maintenance"
-                  >
-                    <PowerOff className="h-4 w-4 mr-2" />
-                    {finalizarManutencaoMutation.isPending ? "Finalizando..." : "Finalizar Manutenção"}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        const maintenance = maintenanceData[0];
+                        setEditingMaintenance(maintenance);
+                        setEditMaintenanceType(maintenance.tipo);
+                        
+                        // Preencher os campos com os dados atuais
+                        const startData = utcToBrasilia(maintenance.dataInicio);
+                        setEditMaintenanceStartDate(startData.dateString);
+                        setEditMaintenanceStartTime(startData.timeString);
+                        
+                        if (maintenance.dataFim) {
+                          const endData = utcToBrasilia(maintenance.dataFim);
+                          setEditMaintenanceEndDate(endData.dateString);
+                          setEditMaintenanceEndTime(endData.timeString);
+                        } else {
+                          setEditMaintenanceEndDate("");
+                          setEditMaintenanceEndTime("");
+                        }
+                        
+                        setEditMaintenanceDialogOpen(true);
+                      }}
+                      data-testid="button-edit-maintenance"
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Editar
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => {
+                        // Finalizar manutenção
+                        finalizarManutencaoMutation.mutate(maintenanceData[0].id);
+                      }}
+                      disabled={finalizarManutencaoMutation.isPending}
+                      data-testid="button-end-maintenance"
+                    >
+                      <PowerOff className="h-4 w-4 mr-2" />
+                      {finalizarManutencaoMutation.isPending ? "Finalizando..." : "Finalizar Manutenção"}
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ) : (
@@ -5594,6 +5673,178 @@ export default function AdminDashboard() {
               data-testid="button-confirm-maintenance"
             >
               {iniciarManutencaoMutation.isPending ? "Iniciando..." : "Confirmar e Iniciar Manutenção"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editMaintenanceDialogOpen} onOpenChange={setEditMaintenanceDialogOpen}>
+        <DialogContent className="max-w-2xl" data-testid="dialog-edit-maintenance">
+          <DialogHeader>
+            <DialogTitle>Editar Manutenção Ativa</DialogTitle>
+            <DialogDescription>
+              Altere as informações da manutenção em andamento. As mudanças serão aplicadas imediatamente.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded-lg">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
+                <div>
+                  <p className="font-medium text-amber-900 dark:text-amber-100">Atenção: Manutenção ativa</p>
+                  <p className="text-sm text-amber-800 dark:text-amber-200 mt-1">
+                    As alterações serão aplicadas imediatamente à manutenção em andamento.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Tipo de Manutenção</Label>
+              <div className="flex gap-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="edit-tipo-determinada"
+                    checked={editMaintenanceType === "determinada"}
+                    onCheckedChange={() => setEditMaintenanceType("determinada")}
+                    data-testid="checkbox-edit-determinada"
+                  />
+                  <label
+                    htmlFor="edit-tipo-determinada"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Período Determinado
+                  </label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="edit-tipo-indeterminada"
+                    checked={editMaintenanceType === "indeterminada"}
+                    onCheckedChange={() => setEditMaintenanceType("indeterminada")}
+                    data-testid="checkbox-edit-indeterminada"
+                  />
+                  <label
+                    htmlFor="edit-tipo-indeterminada"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Período Indeterminado
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-start-date">Data de Início</Label>
+                <Input
+                  id="edit-start-date"
+                  type="date"
+                  value={editMaintenanceStartDate}
+                  onChange={(e) => setEditMaintenanceStartDate(e.target.value)}
+                  data-testid="input-edit-start-date"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-start-time">Horário de Início</Label>
+                <Input
+                  id="edit-start-time"
+                  type="time"
+                  value={editMaintenanceStartTime}
+                  onChange={(e) => setEditMaintenanceStartTime(e.target.value)}
+                  data-testid="input-edit-start-time"
+                />
+              </div>
+            </div>
+
+            {editMaintenanceType === "determinada" && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-end-date">Data de Término</Label>
+                  <Input
+                    id="edit-end-date"
+                    type="date"
+                    value={editMaintenanceEndDate}
+                    onChange={(e) => setEditMaintenanceEndDate(e.target.value)}
+                    data-testid="input-edit-end-date"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-end-time">Horário de Término</Label>
+                  <Input
+                    id="edit-end-time"
+                    type="time"
+                    value={editMaintenanceEndTime}
+                    onChange={(e) => setEditMaintenanceEndTime(e.target.value)}
+                    data-testid="input-edit-end-time"
+                  />
+                </div>
+              </div>
+            )}
+
+            {editMaintenanceType === "indeterminada" && (
+              <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  <strong>Período indeterminado:</strong> A manutenção não terá data de término programada.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setEditMaintenanceDialogOpen(false);
+                setEditingMaintenance(null);
+              }}
+              data-testid="button-cancel-edit-maintenance"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="default"
+              onClick={() => {
+                if (!editingMaintenance) return;
+
+                if (!editMaintenanceStartDate || !editMaintenanceStartTime) {
+                  toast({
+                    title: "Campos obrigatórios",
+                    description: "Por favor, preencha a data e horário de início.",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+
+                if (editMaintenanceType === "determinada" && (!editMaintenanceEndDate || !editMaintenanceEndTime)) {
+                  toast({
+                    title: "Campos obrigatórios",
+                    description: "Por favor, preencha a data e horário de término para manutenção determinada.",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+
+                // Converter horários de Brasília para UTC
+                const dataInicio = brasiliaToUTC(editMaintenanceStartDate, editMaintenanceStartTime);
+                const dataFim = editMaintenanceType === "determinada" 
+                  ? brasiliaToUTC(editMaintenanceEndDate, editMaintenanceEndTime)
+                  : undefined;
+
+                editarManutencaoMutation.mutate({
+                  maintenanceId: editingMaintenance.id,
+                  tipo: editMaintenanceType,
+                  dataInicio,
+                  dataFim,
+                });
+              }}
+              disabled={editarManutencaoMutation.isPending}
+              data-testid="button-confirm-edit-maintenance"
+            >
+              {editarManutencaoMutation.isPending ? "Salvando..." : "Salvar Alterações"}
             </Button>
           </DialogFooter>
         </DialogContent>
