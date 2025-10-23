@@ -3970,7 +3970,28 @@ export default function AdminDashboard() {
                   Fechar
                 </Button>
                 <Button
-                  onClick={() => setIsEditingStudent(true)}
+                  onClick={() => {
+                    if (selectedStudentDetails) {
+                      editStudentForm.reset({
+                        nome: selectedStudentDetails.nome || "",
+                        email: selectedStudentDetails.email || "",
+                        matricula: selectedStudentDetails.matricula || "",
+                        dataNascimento: selectedStudentDetails.dataNascimento || "",
+                        cpf: selectedStudentDetails.cpf || "",
+                        telefone: selectedStudentDetails.telefone || "",
+                        escolaridade: selectedStudentDetails.escolaridade || "",
+                        cep: selectedStudentDetails.cep || "",
+                        rua: selectedStudentDetails.rua || "",
+                        bairro: selectedStudentDetails.bairro || "",
+                        cidade: selectedStudentDetails.cidade || "",
+                        estado: selectedStudentDetails.estado || "",
+                        turma: selectedStudentDetails.turma || "",
+                        disponibilidade: selectedStudentDetails.disponibilidade || [],
+                      });
+                      setEditStudentDisponibilidade(selectedStudentDetails.disponibilidade || []);
+                    }
+                    setIsEditingStudent(true);
+                  }}
                   data-testid="button-edit-student"
                 >
                   <Edit className="h-4 w-4 mr-2" />
