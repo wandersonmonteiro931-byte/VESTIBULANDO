@@ -85,56 +85,56 @@ export default function ChatWindow({ onClose }: ChatWindowProps) {
     
     const q1 = query(
       conversationsRef,
-      where("participante1Id", "==", userData.uid),
-      orderBy("dataUltimaAtualizacao", "desc")
+      where("participante1Id", "==", userData.uid)
     );
     
     const q2 = query(
       conversationsRef,
-      where("participante2Id", "==", userData.uid),
-      orderBy("dataUltimaAtualizacao", "desc")
+      where("participante2Id", "==", userData.uid)
     );
 
-    const allConversations: ChatConversation[] = [];
-    const conversationIds = new Set<string>();
+    let conversations1: ChatConversation[] = [];
+    let conversations2: ChatConversation[] = [];
 
     const unsubscribe1 = onSnapshot(q1, (snapshot) => {
-      snapshot.forEach((doc) => {
-        const conversation = { id: doc.id, ...doc.data() } as ChatConversation;
-        if (!conversationIds.has(doc.id)) {
-          conversationIds.add(doc.id);
-          allConversations.push(conversation);
-        }
-      });
+      conversations1 = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data()
+      } as ChatConversation));
       
-      allConversations.sort((a, b) => {
-        const dateA = new Date(a.dataUltimaAtualizacao || a.dataCriacao).getTime();
-        const dateB = new Date(b.dataUltimaAtualizacao || b.dataCriacao).getTime();
-        return dateB - dateA;
-      });
-      
-      setConversations([...allConversations]);
-      setLoading(false);
+      mergeAndUpdateConversations();
     });
 
     const unsubscribe2 = onSnapshot(q2, (snapshot) => {
-      snapshot.forEach((doc) => {
-        const conversation = { id: doc.id, ...doc.data() } as ChatConversation;
-        if (!conversationIds.has(doc.id)) {
-          conversationIds.add(doc.id);
-          allConversations.push(conversation);
+      conversations2 = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data()
+      } as ChatConversation));
+      
+      mergeAndUpdateConversations();
+    });
+
+    const mergeAndUpdateConversations = () => {
+      const allConversations = [...conversations1, ...conversations2];
+      const conversationMap = new Map<string, ChatConversation>();
+      
+      allConversations.forEach((conv) => {
+        if (!conversationMap.has(conv.id)) {
+          conversationMap.set(conv.id, conv);
         }
       });
       
-      allConversations.sort((a, b) => {
+      const uniqueConversations = Array.from(conversationMap.values());
+      
+      uniqueConversations.sort((a, b) => {
         const dateA = new Date(a.dataUltimaAtualizacao || a.dataCriacao).getTime();
         const dateB = new Date(b.dataUltimaAtualizacao || b.dataCriacao).getTime();
         return dateB - dateA;
       });
       
-      setConversations([...allConversations]);
+      setConversations(uniqueConversations);
       setLoading(false);
-    });
+    };
 
     return () => {
       unsubscribe1();
