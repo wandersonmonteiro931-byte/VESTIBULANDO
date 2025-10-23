@@ -2171,7 +2171,7 @@ export default function Login() {
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold">Previsão de retorno:</p>
                       <p className="text-xs text-muted-foreground" data-testid="text-maintenance-duration">
-                        A definir
+                        Indeterminado
                       </p>
                     </div>
                   </div>
