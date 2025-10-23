@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
-import { collection, query, where, onSnapshot, orderBy, addDoc, getDocs } from "firebase/firestore";
+import { collection, query, where, onSnapshot, addDoc, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { ChatConversation, User } from "@shared/schema";
 import ChatConversationList from "./ChatConversationList";
