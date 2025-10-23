@@ -792,13 +792,21 @@ export default function Login() {
               console.log("⏰ Suspensão ativa?", agora < dataTermino);
               
               if (agora < dataTermino) {
-                // Suspensão ainda ativa - mostrar overlay IMEDIATAMENTE
+                // Suspensão ainda ativa - BLOQUEAR LOGIN IMEDIATAMENTE
                 const duracaoDias = Math.ceil((dataTermino.getTime() - dataAplicacao.getTime()) / (1000 * 60 * 60 * 24));
                 
                 console.log("🚫 Bloqueando login - Suspensão ativa");
                 console.log("📋 Dados da suspensão:", activeSuspension);
                 
-                // Configurar dados da suspensão ANTES de fazer logout
+                // PASSO 1: Fazer logout PRIMEIRO para evitar que AuthContext redirecione
+                try {
+                  await auth.signOut();
+                  console.log("🔓 Logout realizado - usuário desautenticado");
+                } catch (logoutError) {
+                  console.error("Erro ao fazer logout:", logoutError);
+                }
+                
+                // PASSO 2: Configurar dados da suspensão DEPOIS do logout
                 setSuspensionData({
                   ...activeSuspension,
                   duracaoDias,
@@ -810,10 +818,6 @@ export default function Login() {
                 console.log("✅ Estados definidos - overlay deve aparecer agora");
                 console.log("🎨 showSuspensionOverlay:", true);
                 console.log("📊 suspensionData definido");
-                
-                // IMPORTANTE: NÃO fazer logout aqui!
-                // Fazer logout SOMENTE quando o usuário fechar o overlay
-                // Isso garante que o overlay seja exibido corretamente
                 
                 setLoading(false);
                 return;
@@ -2072,12 +2076,10 @@ export default function Login() {
             
             <CardFooter>
               <Button
-                onClick={async () => {
+                onClick={() => {
                   setShowSuspensionOverlay(false);
                   setSuspensionData(null);
                   setSuspensionTimeRemaining("");
-                  // Fazer logout ao fechar o overlay
-                  await auth.signOut();
                 }}
                 variant="outline"
                 className="w-full"
