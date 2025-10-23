@@ -559,11 +559,44 @@ export default function AdminDashboard() {
     mutationFn: async (data: z.infer<typeof editStudentFormSchema> & { userId: string }) => {
       const { userId, ...updateData } = data;
       const userRef = doc(db, "usuarios", userId);
+      
+      const userDoc = await getDoc(userRef);
+      if (!userDoc.exists()) {
+        throw new Error("Aluno não encontrado");
+      }
+      
+      const currentUserData = userDoc.data();
+      const oldTurma = currentUserData.turma;
+      const newTurma = updateData.turma;
+      
+      if (oldTurma !== newTurma) {
+        if (oldTurma) {
+          const oldTurmaRef = doc(db, "turmas", oldTurma);
+          const oldTurmaDoc = await getDoc(oldTurmaRef);
+          if (oldTurmaDoc.exists()) {
+            await updateDoc(oldTurmaRef, {
+              vagasPreenchidas: increment(-1)
+            });
+          }
+        }
+        
+        if (newTurma) {
+          const newTurmaRef = doc(db, "turmas", newTurma);
+          const newTurmaDoc = await getDoc(newTurmaRef);
+          if (newTurmaDoc.exists()) {
+            await updateDoc(newTurmaRef, {
+              vagasPreenchidas: increment(1)
+            });
+          }
+        }
+      }
+      
       await updateDoc(userRef, updateData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
       queryClient.invalidateQueries({ queryKey: ["/api/usuarios/all"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/turmas"] });
       toast({
         title: "Dados atualizados!",
         description: "Os dados do aluno foram atualizados com sucesso.",
@@ -3659,8 +3692,11 @@ export default function AdminDashboard() {
                           <FormItem>
                             <FormLabel>Email</FormLabel>
                             <FormControl>
-                              <Input {...field} type="email" data-testid="input-edit-email" />
+                              <Input {...field} type="email" disabled data-testid="input-edit-email" />
                             </FormControl>
+                            <FormDescription className="text-xs">
+                              O email não pode ser alterado pois está vinculado à conta de acesso
+                            </FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
