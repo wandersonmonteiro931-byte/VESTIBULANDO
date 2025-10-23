@@ -2123,27 +2123,31 @@ export default function Login() {
           data-testid="overlay-maintenance"
         >
           <Card className="w-full max-w-md border-orange-500 max-h-[90vh] overflow-auto">
-            <CardHeader className="space-y-3 text-center pb-3">
+            <CardHeader className="space-y-2 text-center pb-3">
               <div className="mx-auto w-12 h-12 rounded-full bg-orange-500/10 flex items-center justify-center">
                 <Wrench className="h-6 w-6 text-orange-600" />
               </div>
-              <div className="space-y-2">
-                <CardTitle className="text-2xl font-bold text-orange-600">
-                  Sistema Temporariamente Indisponível
-                </CardTitle>
-                <CardDescription className="text-sm font-medium">
-                  Todos os usuários (exceto diretores) estão bloqueados durante este período de manutenção.
-                </CardDescription>
-              </div>
+              <CardTitle className="text-xl font-bold text-orange-600">
+                🛠 Manutenção Programada 🛠
+              </CardTitle>
             </CardHeader>
             
             <CardContent className="space-y-3">
-              {/* Informações da manutenção */}
+              {/* Mensagem principal */}
+              <div className="text-sm text-center space-y-2">
+                <p>Informamos que o sistema <span className="font-semibold">Vestibulando</span> passará por uma manutenção temporária para melhorias e atualizações.</p>
+                
+                <p className="text-muted-foreground text-xs">
+                  Durante este período, o acesso a aulas, tarefas, mensagens e demais funcionalidades estará indisponível.
+                </p>
+              </div>
+              
+              {/* Informações de data/hora */}
               <div className="space-y-2">
-                <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                <div className="flex items-start gap-2 p-2 bg-muted/50 rounded-lg">
+                  <div className="text-lg mt-0.5">📅</div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium">Início da Manutenção</p>
+                    <p className="text-xs font-semibold">Início:</p>
                     <p className="text-xs text-muted-foreground" data-testid="text-maintenance-start">
                       {format(new Date(maintenanceData.dataInicio), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                     </p>
@@ -2151,36 +2155,39 @@ export default function Login() {
                 </div>
                 
                 {maintenanceData.dataFim ? (
-                  <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex items-start gap-2 p-2 bg-muted/50 rounded-lg">
+                    <div className="text-lg mt-0.5">⏳</div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium">Previsão de Término</p>
+                      <p className="text-xs font-semibold">Previsão de retorno:</p>
                       <p className="text-xs text-muted-foreground" data-testid="text-maintenance-end">
                         {format(new Date(maintenanceData.dataFim), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                       </p>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex items-start gap-2 p-2 bg-muted/50 rounded-lg">
+                    <div className="text-lg mt-0.5">⏳</div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium">Duração</p>
+                      <p className="text-xs font-semibold">Previsão de retorno:</p>
                       <p className="text-xs text-muted-foreground" data-testid="text-maintenance-duration">
-                        Indeterminada
+                        A definir
                       </p>
                     </div>
                   </div>
                 )}
               </div>
               
-              {/* Aviso adicional */}
+              {/* Mensagem de compreensão */}
               <div className="p-2 bg-orange-500/10 border border-orange-500/20 rounded-lg">
-                <div className="flex items-start gap-2">
-                  <AlertTriangle className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-orange-600">
-                    Estamos realizando melhorias importantes no sistema. Por favor, aguarde o término da manutenção para acessar novamente.
-                  </p>
-                </div>
+                <p className="text-xs text-orange-600 text-center">
+                  Pedimos a compreensão de todos — essa atualização é essencial para garantir mais estabilidade, segurança e desempenho na plataforma.
+                </p>
+              </div>
+              
+              {/* Rodapé */}
+              <div className="text-center pt-1">
+                <p className="text-xs font-medium">Agradecemos pela paciência e colaboração!</p>
+                <p className="text-xs text-muted-foreground mt-1">Diretoria - Preparatório Vestibulando</p>
               </div>
             </CardContent>
             
