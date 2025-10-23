@@ -1,0 +1,137 @@
+💬 ESPECIFICAÇÃO COMPLETA DO MÓDULO DE CHAT
+Plataforma: Preparatório Vestibulando
+🧭 1️⃣ Acesso ao Chat
+
+O chat será acessado por meio de um ícone fixo no cabeçalho (💬).
+
+Ao clicar, o sistema abrirá uma janela lateral ou modal responsiva exibindo as conversas do usuário.
+
+O acesso deve estar disponível tanto na versão web quanto na versão mobile.
+
+👤 2️⃣ Exibição de Conversas
+
+Usuários com conversas recentes verão uma lista lateral com:
+
+Nome do contato;
+
+Foto de perfil;
+
+Última mensagem enviada ou recebida.
+
+Caso o usuário não possua conversas recentes, o sistema exibirá apenas:
+🔍 Uma barra de pesquisa para que o usuário encontre manualmente outro participante (Aluno, Professor ou Diretoria).
+
+Nenhum contato deve ser sugerido automaticamente.
+
+📨 3️⃣ Recursos de Mensagens
+
+O chat permitirá o envio e recebimento em tempo real dos seguintes conteúdos:
+
+📝 Mensagens de texto
+
+🎙️ Mensagens de áudio (voz)
+
+🖼️ Imagens (JPG, PNG, etc.)
+
+📄 Documentos (PDF, Word, Excel, PowerPoint, etc.)
+
+🎬 Vídeos curtos
+
+🎵 Músicas e áudios diversos
+
+Todos os arquivos devem ser armazenados com segurança no Firebase Storage (ou equivalente), com auditoria total pela Diretoria.
+
+🧑‍💼 4️⃣ Chat da Diretoria
+
+A Diretoria possui um chat institucional.
+
+O nome exibido deve ser “Diretoria”, sem mostrar o nome real da conta do diretor.
+
+A Diretoria pode:
+
+Enviar mensagens gerais ou individuais;
+
+Visualizar conversas de todos os usuários;
+
+Acessar a auditoria completa (mensagens, arquivos e registros).
+
+🗂️ 5️⃣ Histórico e Auditoria
+
+Todo o histórico de mensagens deve permanecer salvo e visível sem limite de tempo.
+
+Caso um usuário apague mensagens ou uma conversa:
+
+A exclusão é apenas local (visualmente para ele);
+
+O conteúdo permanece salvo na auditoria da Diretoria.
+
+As mensagens e arquivos apagados ficam marcados como:
+
+🕵️ “Removido pelo usuário em [data/hora]”
+
+visível apenas na área administrativa.
+
+🔒 6️⃣ Confiabilidade e Segurança
+
+O chat deve:
+
+Operar em tempo real com sincronização contínua;
+
+Garantir criptografia básica de ponta a ponta;
+
+Ser otimizado para uso em redes lentas ou instáveis;
+
+Impedir o envio de arquivos maliciosos (verificação de formato e tamanho máximo, ex: 20 MB).
+
+Gravar logs de:
+
+Envio e recebimento de mensagens;
+
+Tentativas de exclusão;
+
+Falhas de conexão e erros.
+
+🚨 7️⃣ Regras de Conduta e Penalidades Automáticas
+
+O sistema deve aplicar filtros automáticos de moderação e registro disciplinar em caso de violações.
+
+Regras do Chat:
+
+🚫 É proibido enviar mensagens ofensivas, vulgares, discriminatórias ou provocativas.
+
+🚫 É proibido enviar conteúdos que não estejam relacionados ao contexto acadêmico.
+
+🚫 É proibido o compartilhamento de links suspeitos, spam, propaganda ou solicitações pessoais.
+
+🚫 É proibido divulgar informações pessoais de terceiros sem autorização.
+
+⚠️ O descumprimento das normas poderá gerar advertência, bloqueio temporário ou suspensão da conta.
+
+Sistema de Penalidades Automáticas:
+
+1ª infração: ⚠️ Advertência automática + registro no histórico disciplinar.
+
+2ª infração: ⏸️ Bloqueio de 24 horas no chat.
+
+3ª infração: 🚫 Suspensão temporária da conta (analisada pela Diretoria).
+
+Todos os registros são encaminhados ao painel de auditoria da Diretoria, com:
+
+Nome do usuário;
+
+Mensagem infratora;
+
+Data/hora;
+
+Ação aplicada automaticamente.
+
+🗨️ 8️⃣ Mensagem Fixa Automática (antes de iniciar conversa)
+
+Antes do início de qualquer conversa, o sistema deve exibir a seguinte mensagem institucional:
+
+🟦 Mensagem Fixa do Sistema
+
+⚠️ Atenção: Este canal é exclusivo para assuntos acadêmicos e administrativos da plataforma Vestibulando.
+Todas as mensagens, áudios, documentos e mídias são monitorados e registrados pela Diretoria para fins de auditoria e segurança.
+O envio de conteúdos ofensivos, inapropriados ou fora do contexto educacional pode resultar em suspensão da conta.
+Ao utilizar este chat, o usuário concorda com os termos de uso e a política de conduta da plataforma.
