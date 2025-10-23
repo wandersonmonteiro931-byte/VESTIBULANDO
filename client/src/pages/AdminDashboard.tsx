@@ -1648,12 +1648,35 @@ export default function AdminDashboard() {
         targetMaintenanceId = maintenanceDocs.docs[0].id;
       }
       
+      // Buscar dados da manutenção para calcular duração
+      const maintenanceDoc = await getDoc(doc(db, "systemMaintenance", targetMaintenanceId));
+      const maintenanceData = maintenanceDoc.data();
+      
+      if (!maintenanceData) {
+        throw new Error("Manutenção não encontrada");
+      }
+      
+      // Calcular duração
+      const dataFinalizacao = getNowBrasiliaISO();
+      const inicio = new Date(maintenanceData.dataAtivacao);
+      const fim = new Date(dataFinalizacao);
+      const duracaoMs = fim.getTime() - inicio.getTime();
+      const duracaoSegundos = Math.floor(duracaoMs / 1000);
+      
+      // Formatar duração como HH:MM:SS
+      const horas = Math.floor(duracaoSegundos / 3600);
+      const minutos = Math.floor((duracaoSegundos % 3600) / 60);
+      const segundos = duracaoSegundos % 60;
+      const duracaoFormatada = `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
+      
       // Finalizar a manutenção específica
       await updateDoc(doc(db, "systemMaintenance", targetMaintenanceId), {
         ativa: false,
-        dataFinalizacao: getNowBrasiliaISO(),
+        dataFinalizacao,
         finalizadoPor: directorUid,
         finalizadoPorNome: directorNome,
+        duracaoSegundos,
+        duracaoFormatada,
       });
     },
     onSuccess: () => {
