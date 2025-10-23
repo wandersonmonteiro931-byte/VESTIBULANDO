@@ -785,16 +785,20 @@ export default function Login() {
                 
                 console.log("🚫 Bloqueando login - Suspensão ativa");
                 
-                // Fazer signOut ANTES de definir os estados para evitar race condition
-                await auth.signOut();
-                
-                // Agora definir os estados para mostrar o overlay
+                // Definir os estados ANTES de fazer signOut para garantir que o overlay apareça
                 setSuspensionData({
                   ...activeSuspension,
                   duracaoDias,
                 });
                 setShowSuspensionOverlay(true);
                 setLoading(false);
+                
+                // Fazer signOut após definir os estados (isso permite que o overlay seja exibido)
+                // Usar setTimeout para garantir que os estados sejam atualizados primeiro
+                setTimeout(async () => {
+                  await auth.signOut();
+                }, 100);
+                
                 return;
               } else {
                 // Suspensão expirou, mas não tentar atualizar (requer permissão de admin)
