@@ -229,6 +229,22 @@ service cloud.firestore {
       allow delete: if isAdmin() && isUserActive();
     }
     
+    // Announcements collection - avisos para alunos e professores
+    match /announcements/{announcementId} {
+      // Todos os usuários autenticados podem ler avisos ativos
+      allow read: if isAuthenticated();
+      
+      // Apenas diretores podem criar avisos
+      allow create: if isAdmin() && isUserActive() &&
+                       request.resource.data.criadoPor == request.auth.uid;
+      
+      // Apenas diretores podem atualizar avisos
+      allow update: if isAdmin() && isUserActive();
+      
+      // Apenas diretores podem deletar avisos
+      allow delete: if isAdmin() && isUserActive();
+    }
+    
     // System collection - for counters and system-wide settings
     match /system/{documentId} {
       // Matricula counter can be read by anyone (needed for transactions)
