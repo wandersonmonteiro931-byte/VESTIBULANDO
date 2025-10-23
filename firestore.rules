@@ -212,6 +212,22 @@ service cloud.firestore {
       allow update, delete: if false;
     }
     
+    // System Maintenance collection - for system maintenance mode
+    match /systemMaintenance/{maintenanceId} {
+      // Todos podem ler o status de manutenção (para verificar se o sistema está em manutenção)
+      allow read: if true;
+      
+      // Apenas diretores podem criar registros de manutenção
+      allow create: if isAdmin() && isUserActive() &&
+                       request.resource.data.iniciadoPor == request.auth.uid;
+      
+      // Apenas diretores podem atualizar registros de manutenção (para finalizar)
+      allow update: if isAdmin() && isUserActive();
+      
+      // Apenas diretores podem deletar registros de manutenção
+      allow delete: if isAdmin() && isUserActive();
+    }
+    
     // System collection - for counters and system-wide settings
     match /system/{documentId} {
       // Matricula counter can be read by anyone (needed for transactions)
