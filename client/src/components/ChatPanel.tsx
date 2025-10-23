@@ -10,7 +10,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { MessageCircle, Send, Search, X, Paperclip, Image as ImageIcon, FileText, Video, Mic, Download, AlertTriangle } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MessageCircle, Send, Search, X, Paperclip, Image as ImageIcon, FileText, Video, Mic, Download, AlertTriangle, Phone, VideoIcon, MoreVertical, Trash2 } from "lucide-react";
+import { VideoCallDialog } from "@/components/VideoCallDialog";
 import { where, orderBy } from "firebase/firestore";
 import { db, storage } from "@/lib/firebase";
 import { collection, addDoc, query, getDocs, updateDoc, doc, writeBatch } from "firebase/firestore";
@@ -80,6 +87,8 @@ export function ChatPanel() {
   const [messageInput, setMessageInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [callDialogOpen, setCallDialogOpen] = useState(false);
+  const [isVideoCall, setIsVideoCall] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -358,6 +367,29 @@ export function ChatPanel() {
     }
   };
 
+  const handleDeleteMessage = async (messageId: string, isSentByMe: boolean) => {
+    try {
+      const messageRef = doc(db, "chat_messages", messageId);
+      const updateData = isSentByMe
+        ? { deletadaPorRemetente: true }
+        : { deletadaPorDestinatario: true };
+      
+      await updateDoc(messageRef, updateData);
+      
+      toast({
+        title: "Mensagem removida",
+        description: "A mensagem foi removida da sua visualização.",
+      });
+    } catch (error) {
+      console.error("Erro ao deletar mensagem:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível remover a mensagem.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getUnreadCount = (user: User): number => {
     const conversationId = getConversationId(userData!.uid, user.uid);
     const conversation = allConversations.find((c) => c.id === conversationId);
@@ -374,23 +406,69 @@ export function ChatPanel() {
       return (
         <div
           key={message.id}
-          className={`flex ${isSentByMe ? "justify-end" : "justify-start"}`}
+          className={`flex ${isSentByMe ? "justify-end" : "justify-start"} group`}
           data-testid={`message-${message.id}`}
         >
-          <div
-            className={`max-w-[70%] rounded-lg p-3 ${
-              isSentByMe
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted"
-            }`}
-          >
-            <p className="text-sm whitespace-pre-wrap break-words">{message.conteudo}</p>
-            <p className="text-xs opacity-70 mt-1">
-              {new Date(message.timestamp).toLocaleTimeString("pt-BR", {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </p>
+          <div className="flex items-start gap-2">
+            {isSentByMe && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <MoreVertical className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => handleDeleteMessage(message.id, isSentByMe)}
+                    className="text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Deletar mensagem
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            <div
+              className={`max-w-[70%] rounded-lg p-3 ${
+                isSentByMe
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted"
+              }`}
+            >
+              <p className="text-sm whitespace-pre-wrap break-words">{message.conteudo}</p>
+              <p className="text-xs opacity-70 mt-1">
+                {new Date(message.timestamp).toLocaleTimeString("pt-BR", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </p>
+            </div>
+            {!isSentByMe && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <MoreVertical className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuItem
+                    onClick={() => handleDeleteMessage(message.id, isSentByMe)}
+                    className="text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Deletar mensagem
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
       );
@@ -626,14 +704,38 @@ export function ChatPanel() {
                     )}
                   </div>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setSelectedUser(null)}
-                  data-testid="button-close-chat"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      setIsVideoCall(false);
+                      setCallDialogOpen(true);
+                    }}
+                    data-testid="button-audio-call"
+                  >
+                    <Phone className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      setIsVideoCall(true);
+                      setCallDialogOpen(true);
+                    }}
+                    data-testid="button-video-call"
+                  >
+                    <VideoIcon className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setSelectedUser(null)}
+                    data-testid="button-close-chat"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <Separator />
@@ -708,6 +810,16 @@ export function ChatPanel() {
           </CardContent>
         )}
       </Card>
+
+      {selectedUser && (
+        <VideoCallDialog
+          open={callDialogOpen}
+          onOpenChange={setCallDialogOpen}
+          recipientName={getDisplayName(selectedUser)}
+          recipientId={selectedUser.uid}
+          isVideoCall={isVideoCall}
+        />
+      )}
     </div>
   );
 }
