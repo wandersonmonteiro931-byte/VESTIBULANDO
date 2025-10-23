@@ -100,7 +100,8 @@ export function DocumentationTab() {
 
   const userDisciplinary = useMemo(() => {
     if (!selectedUser || !disciplinaryActions) return [];
-    return disciplinaryActions.filter(d => d.alunoId === selectedUser.uid && d.ativo);
+    // Incluir TODAS as ações disciplinares (ativas e removidas)
+    return disciplinaryActions.filter(d => d.alunoId === selectedUser.uid);
   }, [selectedUser, disciplinaryActions]);
 
   // Verificar se pode ver a foto
@@ -141,7 +142,18 @@ export function DocumentationTab() {
     doc.text("DOCUMENTAÇÃO DO ALUNO", pageWidth / 2, yPos, { align: "center" });
     yPos += 10;
 
-    // Adicionar foto 3x4 do aluno (canto superior direito)
+    // Quadrado para foto 3x4 do aluno (sempre presente)
+    const fotoX = pageWidth - margin - 30;
+    const fotoY = yPos;
+    const fotoWidth = 25;
+    const fotoHeight = 33;
+    
+    // Desenhar borda do quadrado da foto
+    doc.setDrawColor(100, 100, 100);
+    doc.setLineWidth(0.5);
+    doc.rect(fotoX, fotoY, fotoWidth, fotoHeight);
+    
+    // Adicionar foto se existir
     if (selectedUser.fotoBase64 && canViewPhoto(selectedUser)) {
       try {
         // Detectar formato da imagem (PNG ou JPEG)
@@ -151,10 +163,22 @@ export function DocumentationTab() {
         } else if (selectedUser.fotoBase64.startsWith("data:image/jpeg") || selectedUser.fotoBase64.startsWith("data:image/jpg")) {
           imageFormat = "JPEG";
         }
-        doc.addImage(selectedUser.fotoBase64, imageFormat, pageWidth - margin - 30, yPos, 25, 33);
+        doc.addImage(selectedUser.fotoBase64, imageFormat, fotoX, fotoY, fotoWidth, fotoHeight);
       } catch (error) {
         console.error("Erro ao adicionar foto:", error);
+        // Mostrar texto "SEM FOTO" dentro do quadrado se houver erro
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text("SEM FOTO", fotoX + fotoWidth / 2, fotoY + fotoHeight / 2, { align: "center" });
+        doc.setTextColor(0, 0, 0);
       }
+    } else {
+      // Mostrar texto "3x4" dentro do quadrado quando não há foto
+      doc.setFontSize(10);
+      doc.setTextColor(150, 150, 150);
+      doc.text("FOTO", fotoX + fotoWidth / 2, fotoY + fotoHeight / 2 - 2, { align: "center" });
+      doc.text("3x4", fotoX + fotoWidth / 2, fotoY + fotoHeight / 2 + 4, { align: "center" });
+      doc.setTextColor(0, 0, 0);
     }
 
     // SEÇÃO 1: DADOS PESSOAIS
@@ -345,21 +369,23 @@ export function DocumentationTab() {
           formatBrasiliaTime(d.dataAplicacao).split(" ")[0],
           d.comentario || "",
           d.aplicadoPorNome || "",
+          d.ativo ? "Ativa" : "Removida",
         ])
-      : [["", "", "", ""]];
+      : [["", "", "", "", ""]];
 
     autoTable(doc, {
       startY: yPos,
-      head: [["Tipo", "Data", "Motivo", "Aplicado Por"]],
+      head: [["Tipo", "Data", "Motivo", "Aplicado Por", "Status"]],
       body: disciplinaryData,
       theme: "grid",
       styles: { fontSize: 8, cellPadding: 2 },
       headStyles: { fillColor: [220, 53, 69], fontSize: 9 },
       columnStyles: {
-        0: { cellWidth: 30 },
-        1: { cellWidth: 30 },
-        2: { cellWidth: 80 },
-        3: { cellWidth: 40 },
+        0: { cellWidth: 28 },
+        1: { cellWidth: 25 },
+        2: { cellWidth: 70 },
+        3: { cellWidth: 35 },
+        4: { cellWidth: 22 },
       },
       margin: { left: margin, right: margin },
     });
