@@ -379,7 +379,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack }: 
         return;
       }
 
-      const messageData = {
+      const messageData: any = {
         conversationId: conversationId,
         remetenteId: userData.uid,
         remetenteNome: userData.nome,
@@ -389,15 +389,18 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack }: 
         destinatarioTipo: otherParticipant.tipo,
         tipo: tipoMensagem,
         conteudo: finalContent,
-        arquivoUrl,
-        arquivoNome,
-        arquivoTipo,
-        arquivoTamanho,
         timestamp: getNowBrasiliaISO(),
         lida: false,
         deletadaPorRemetente: false,
         deletadaPorDestinatario: false,
       };
+
+      if (arquivoUrl) {
+        messageData.arquivoUrl = arquivoUrl;
+        messageData.arquivoNome = arquivoNome;
+        messageData.arquivoTipo = arquivoTipo;
+        messageData.arquivoTamanho = arquivoTamanho;
+      }
 
       const docRef = await retryWithBackoff(async () => {
         return await addDoc(collection(db, "chat_messages"), messageData);

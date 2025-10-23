@@ -17,16 +17,22 @@ interface LogParams {
 
 export async function logChatAction(params: LogParams): Promise<void> {
   try {
-    const logData = {
+    const logData: any = {
       tipo: params.tipo,
       usuarioId: params.usuarioId,
       usuarioNome: params.usuarioNome,
-      conversationId: params.conversationId,
-      messageId: params.messageId,
       detalhes: JSON.stringify(params.detalhes),
       timestamp: new Date().toISOString(),
       nivelSeveridade: params.nivelSeveridade || "info",
     };
+
+    if (params.conversationId) {
+      logData.conversationId = params.conversationId;
+    }
+
+    if (params.messageId) {
+      logData.messageId = params.messageId;
+    }
 
     await addDoc(collection(db, "chat_logs"), logData);
   } catch (error) {

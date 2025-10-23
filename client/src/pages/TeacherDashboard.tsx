@@ -111,14 +111,17 @@ export default function TeacherDashboard() {
         arquivoNome = attachmentFile.name;
       }
       
-      const tarefaData = {
+      const tarefaData: any = {
         ...data,
         professorId: userData.uid,
         professorNome: userData.nome,
         criadoEm: getNowBrasiliaISO(),
-        arquivoAnexo,
-        arquivoNome,
       };
+      
+      if (arquivoAnexo) {
+        tarefaData.arquivoAnexo = arquivoAnexo;
+        tarefaData.arquivoNome = arquivoNome;
+      }
       
       await addDoc(collection(db, "tarefas"), tarefaData);
       return tarefaData;
