@@ -23,6 +23,27 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 
+// Função auxiliar para limpar dados do Firestore
+const cleanFirestoreData = (obj: any): any => {
+  if (obj === null || obj === undefined) return obj;
+  
+  if (Array.isArray(obj)) {
+    return obj.map(item => cleanFirestoreData(item));
+  }
+  
+  if (typeof obj === 'object' && obj.constructor === Object) {
+    const cleaned: any = {};
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        cleaned[key] = cleanFirestoreData(obj[key]);
+      }
+    }
+    return cleaned;
+  }
+  
+  return obj;
+};
+
 export function AnnouncementsTab() {
   const { userData } = useAuth();
   const { toast } = useToast();
@@ -305,10 +326,14 @@ export function AnnouncementsTab() {
       };
 
       if (dataFim) {
-        updateData.dataFim = dataFim;
+        updateData.dataFim = String(dataFim);
       } else {
         updateData.dataFim = null;
       }
+
+      console.log("📝 Dados de atualização a serem salvos:", JSON.stringify(updateData, null, 2));
+      console.log("🔍 Slides originais:", slides);
+      console.log("🔍 Slides limpos:", slidesData);
 
       await updateDoc(doc(db, "announcements", selectedAnnouncement.id), updateData);
     },
@@ -541,7 +566,12 @@ export function AnnouncementsTab() {
   const openEditDialog = (announcement: Announcement) => {
     setSelectedAnnouncement(announcement);
     setAnnouncementTitle(announcement.titulo);
-    setSlides(announcement.slides);
+    // Limpar completamente os slides de qualquer referência do Firestore
+    const cleanedSlides = cleanFirestoreData(announcement.slides).map((slide: any) => ({
+      tipo: slide.tipo as "texto" | "imagem",
+      conteudo: slide.conteudo,
+    }));
+    setSlides(cleanedSlides);
     setAnnouncementTarget(announcement.publicoAlvo);
     setSelectedTurmas(announcement.turmasSelecionadas || []);
     setTipoAviso(announcement.tipoAviso);
