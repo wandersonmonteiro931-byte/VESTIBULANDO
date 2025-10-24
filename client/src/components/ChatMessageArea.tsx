@@ -196,16 +196,32 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
         }
       }
 
-      if (unreadMessages.length > 0) {
+      if (unreadMessages.length > 0 || undeliveredMessages.length > 0) {
         try {
           const conversationRef = doc(db, "chat_conversations", conversationId);
           const conversationSnap = await getDoc(conversationRef);
           
           if (conversationSnap.exists()) {
             const isParticipant1 = resolvedConversation.participante1Id === userData?.uid;
-            await updateDoc(conversationRef, {
+            const conversation = conversationSnap.data();
+            
+            // Atualizar contador de não lidas
+            const updateData: any = {
               [isParticipant1 ? "mensagensNaoLidas1" : "mensagensNaoLidas2"]: 0,
-            });
+            };
+            
+            // Se a última mensagem foi enviada para mim (não foi eu quem enviou)
+            if (conversation.ultimaMensagemRemetenteId !== userData?.uid) {
+              // Atualizar status de entrega e leitura da última mensagem
+              if (undeliveredMessages.length > 0) {
+                updateData.ultimaMensagemEntregue = true;
+              }
+              if (unreadMessages.length > 0) {
+                updateData.ultimaMensagemLida = true;
+              }
+            }
+            
+            await updateDoc(conversationRef, updateData);
           }
         } catch (error) {
           console.error("Erro ao atualizar contador de não lidas:", error);
