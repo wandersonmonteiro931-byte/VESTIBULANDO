@@ -589,19 +589,27 @@
       width: 36px;
     }
 
-    /* Ensure chat window uses full viewport - outer container */
-    .chat-window-mobile {
+    /* CRITICAL: Fix outer container height to prevent scrolling when keyboard opens */
+    .chat-outer-container {
       position: fixed !important;
       top: 0 !important;
       left: 0 !important;
       right: 0 !important;
       bottom: 0 !important;
+      height: 100vh !important;
+      height: 100dvh !important;
+      max-height: 100vh !important;
+      max-height: 100dvh !important;
+    }
+
+    /* Wrapper for chat area - fills parent */
+    .chat-window-mobile {
       width: 100% !important;
       height: 100% !important;
       overflow: hidden !important;
     }
 
-    /* Critical: Mobile chat flexbox layout - inner container */
+    /* Critical: Mobile chat flexbox layout - messages container */
     .chat-message-container {
       display: flex;
       flex-direction: column;
@@ -623,7 +631,7 @@
       background-color: #202c33;
     }
 
-    /* Messages area - scrollable with flex grow */
+    /* Messages area - ONLY scrollable element */
     .chat-messages-area {
       flex: 1;
       min-height: 0;
