@@ -935,21 +935,18 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
           </Badge>
         )}
         
-        <DropdownMenu onOpenChange={(open) => console.log('🔔 Dropdown estado:', open)}>
+        <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               size="icon"
               variant="ghost"
-              className="text-white hover:bg-white/10"
+              className="text-white hover:bg-white/10 touch-manipulation"
               data-testid="button-chat-menu"
-              onClick={(e) => {
-                console.log('🖱️ Clique no botão dropdown detectado', e);
-              }}
             >
               <MoreVertical className="h-5 w-5" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" onCloseAutoFocus={(e) => console.log('🔔 DropdownContent fechando', e)}>
+          <DropdownMenuContent align="end" className="touch-manipulation"  sideOffset={8}>
             <DropdownMenuItem
               onClick={() => setShowUserProfile(true)}
               data-testid="menu-view-profile"

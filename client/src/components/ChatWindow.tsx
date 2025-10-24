@@ -508,7 +508,7 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-0 md:p-4">
-      <div className="relative bg-card w-full h-full md:h-[95vh] md:max-w-md md:rounded-lg shadow-2xl flex flex-col overflow-hidden">
+      <div className="relative bg-card w-full h-full md:h-[95vh] md:max-w-md md:rounded-lg shadow-2xl flex flex-col md:overflow-hidden">
         {/* Lista de conversas */}
         <div className={`${showChatView ? 'hidden' : 'flex'} flex-col w-full h-full whatsapp-conversation-list`}>
           {/* Header da lista */}
@@ -631,7 +631,7 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
         </div>
 
         {/* Área de chat */}
-        <div className={`${showChatView ? 'flex' : 'hidden'} flex-1 flex-col bg-background overflow-hidden`}>
+        <div className={`${showChatView ? 'flex' : 'hidden'} flex-1 flex-col bg-background md:overflow-hidden`}>
           {selectedConversation ? (
             <ChatMessageArea
               conversation={selectedConversation}
