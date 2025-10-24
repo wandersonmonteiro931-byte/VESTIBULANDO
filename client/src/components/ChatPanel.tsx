@@ -95,8 +95,20 @@ export function ChatPanel() {
   const { data: users } = useRealtimeQuery<User>({
     collectionName: "usuarios",
     queryKey: ["/api/usuarios/chat"],
-    constraints: [where("status", "==", "aprovado"), where("ativo", "==", true)],
-    transform: (docs) => docs.filter((u: any) => u.uid !== userData?.uid) as User[],
+    constraints: [],
+    transform: (docs) => {
+      return docs.filter((u: any) => {
+        if (u.uid === userData?.uid) return false;
+        // Diretor sempre aparece se ativo, outros apenas se aprovados e ativos
+        // Aceitar dados antigos onde ativo pode ser string "true" e status pode ser boolean
+        const isActive = u.ativo === true || u.ativo === "true";
+        const isApproved = u.status === "aprovado" || u.status === true;
+        if (u.tipo === "diretor") {
+          return isActive;
+        }
+        return isActive && isApproved;
+      }) as User[];
+    },
   });
 
   const currentConversationId = selectedUser ? getConversationId(userData!.uid, selectedUser.uid) : null;

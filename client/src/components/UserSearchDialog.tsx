@@ -41,19 +41,20 @@ export default function UserSearchDialog({ onClose, onSelectUser }: UserSearchDi
 
         // Carregar TODOS os usuários aprovados
         const usersRef = collection(db, "usuarios");
-        const q = query(
-          usersRef,
-          where("status", "==", "aprovado")
-        );
-        
-        const snapshot = await getDocs(q);
+        const snapshot = await getDocs(usersRef);
         const results: User[] = [];
         
         snapshot.forEach((doc) => {
           const user = { uid: doc.id, ...doc.data() } as User;
           // Filtrar apenas usuários ativos e excluir o próprio usuário
-          if (user.ativo && user.uid !== userData?.uid) {
-            results.push(user);
+          const isActive = user.ativo === true || (user.ativo as any) === "true";
+          const isApproved = user.status === "aprovado" || (user.status as any) === true;
+          
+          if (user.uid !== userData?.uid && isActive) {
+            // Diretor sempre aparece se ativo, outros apenas se aprovados
+            if (user.tipo === "diretor" || isApproved) {
+              results.push(user);
+            }
           }
         });
         

@@ -86,19 +86,23 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
 
       try {
         const usersRef = collection(db, "usuarios");
-        const q = query(
-          usersRef,
-          where("status", "==", "aprovado"),
-          where("ativo", "==", true)
-        );
-        
-        const snapshot = await getDocs(q);
+        const snapshot = await getDocs(usersRef);
         const users: User[] = [];
         
         snapshot.forEach((doc) => {
           const user = { uid: doc.id, ...doc.data() } as User;
           if (user.uid !== userData.uid) {
-            users.push(user);
+            // Aceitar ativo como string "true" ou boolean true para compatibilidade
+            const isActive = user.ativo === true || (user.ativo as any) === "true";
+            // Aceitar status como boolean true ou string "aprovado" para compatibilidade
+            const isApproved = user.status === "aprovado" || (user.status as any) === true;
+            
+            if (isActive) {
+              // Diretor sempre aparece se ativo, outros apenas se aprovados
+              if (user.tipo === "diretor" || isApproved) {
+                users.push(user);
+              }
+            }
           }
         });
         
