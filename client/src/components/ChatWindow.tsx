@@ -249,6 +249,19 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
   }, [userData?.uid]);
 
   const handleSelectUser = (user: User) => {
+    console.log("🖱️ Clique em usuário:", user.nome, "| Tipo:", user.tipo, "| UID:", user.uid);
+    
+    if (!hasAcceptedTerms) {
+      console.warn("⚠️ Usuário ainda não aceitou os termos do chat");
+      toast({
+        title: "Aceite os termos",
+        description: "Você precisa aceitar os termos de uso do chat antes de conversar.",
+        variant: "destructive",
+      });
+      setTermsModalOpen(true);
+      return;
+    }
+    
     if (blockedUsers.has(user.uid)) {
       toast({
         title: "Usuário bloqueado",
@@ -258,6 +271,7 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
       return;
     }
 
+    console.log("✅ Selecionando usuário:", getDisplayName(user));
     setSelectedUser(user);
     setSelectedConversation(null);
     setSearchQuery("");
