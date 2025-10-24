@@ -1142,16 +1142,16 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
 
       <div className="p-2 whatsapp-input-area">
         {!isOnline && (
-          <Alert variant="destructive" className="mb-2 mx-2">
+          <Alert variant="destructive" className="mb-2 mx-2 py-2">
             <WifiOff className="h-4 w-4" />
-            <AlertDescription>Você está offline. Conecte-se à internet para enviar mensagens.</AlertDescription>
+            <AlertDescription className="text-xs md:text-sm">Você está offline. Conecte-se à internet para enviar mensagens.</AlertDescription>
           </Alert>
         )}
         
         {blocked && (
-          <Alert variant="destructive" className="mb-2 mx-2">
+          <Alert variant="destructive" className="mb-2 mx-2 py-2">
             <UserX className="h-4 w-4" />
-            <AlertDescription className="font-medium">{blockReason}</AlertDescription>
+            <AlertDescription className="text-xs md:text-sm font-medium">{blockReason}</AlertDescription>
           </Alert>
         )}
 
