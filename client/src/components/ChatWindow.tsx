@@ -502,10 +502,10 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 md:p-4">
-      <div className="relative bg-card w-full h-full md:h-[90vh] md:max-w-6xl md:rounded-lg shadow-2xl flex flex-col overflow-hidden">
-        {/* Lista de conversas - esconde em mobile quando chat está aberto */}
-        <div className={`${showChatView ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-96 h-full whatsapp-conversation-list border-r whatsapp-divider`}>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-0 md:p-4">
+      <div className="relative bg-card w-full h-full md:h-[95vh] md:max-w-md md:rounded-lg shadow-2xl flex flex-col overflow-hidden">
+        {/* Lista de conversas */}
+        <div className={`${showChatView ? 'hidden' : 'flex'} flex-col w-full h-full whatsapp-conversation-list`}>
           {/* Header da lista */}
           <div className="whatsapp-header p-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-white dark:text-foreground" data-testid="text-chat-title">
@@ -625,8 +625,8 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
           </ScrollArea>
         </div>
 
-        {/* Área de chat - sempre visível em desktop, só visível quando selecionado em mobile */}
-        <div className={`${showChatView ? 'flex' : 'hidden md:flex'} flex-1 flex-col bg-background overflow-hidden`}>
+        {/* Área de chat */}
+        <div className={`${showChatView ? 'flex' : 'hidden'} flex-1 flex-col bg-background overflow-hidden`}>
           {selectedConversation ? (
             <ChatMessageArea
               conversation={selectedConversation}
