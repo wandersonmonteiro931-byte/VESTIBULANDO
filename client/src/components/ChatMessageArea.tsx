@@ -651,14 +651,14 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
     }
     
     if (!otherParticipant?.lastSeen) {
-      return "Offline";
+      return "Nunca visto";
     }
     
     try {
       const date = new Date(otherParticipant.lastSeen);
       
       if (isNaN(date.getTime())) {
-        return "Offline";
+        return "Nunca visto";
       }
       
       const time = format(date, "HH:mm", { locale: ptBR });
@@ -672,7 +672,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
         return `Visto por último em ${dateStr} às ${time}`;
       }
     } catch (error) {
-      return "Offline";
+      return "Nunca visto";
     }
   };
 

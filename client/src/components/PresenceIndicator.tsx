@@ -23,7 +23,7 @@ export function PresenceIndicator({
 }: PresenceIndicatorProps) {
   const getFormattedLastSeen = () => {
     if (isLoading) return "...";
-    if (!lastSeen) return "Offline";
+    if (!lastSeen) return "Nunca visto";
     
     try {
       const date = new Date(lastSeen);
@@ -38,7 +38,7 @@ export function PresenceIndicator({
         return `Visto por último em ${dateStr} às ${time}`;
       }
     } catch (error) {
-      return "Offline";
+      return "Nunca visto";
     }
   };
 
