@@ -27,12 +27,12 @@ export function PresenceIndicator({
       const time = format(date, "HH:mm", { locale: ptBR });
       
       if (isToday(date)) {
-        return `Visto por último às ${time}`;
+        return `Visto por último hoje às ${time}`;
       } else if (isYesterday(date)) {
-        return `Visto ontem às ${time}`;
+        return `Visto por último ontem às ${time}`;
       } else {
-        const dateStr = format(date, "dd/MM", { locale: ptBR });
-        return `Visto em ${dateStr} às ${time}`;
+        const dateStr = format(date, "dd/MM/yyyy", { locale: ptBR });
+        return `Visto por último em ${dateStr} às ${time}`;
       }
     } catch (error) {
       return "Data inválida";
