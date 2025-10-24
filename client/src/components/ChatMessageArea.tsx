@@ -147,7 +147,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
       if (!userData?.uid || !otherParticipantId) return;
 
       try {
-        const blocksRef = collection(db, "user_blocks");
+        const blocksRef = collection(db, "chat_user_blocks");
         const q1 = query(
           blocksRef,
           where("bloqueadorId", "==", userData.uid),
@@ -816,7 +816,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
 
     setBlockLoading(true);
     try {
-      await addDoc(collection(db, "user_blocks"), {
+      await addDoc(collection(db, "chat_user_blocks"), {
         bloqueadorId: userData.uid,
         bloqueadorNome: userData.nome,
         bloqueadoId: otherParticipant.id,
