@@ -7,7 +7,8 @@ export function useConversationStatusSync(currentUserId: string | undefined) {
     if (!currentUserId) return;
 
     const conversationsRef = collection(db, 'chat_conversations');
-    const q = query(
+    
+    const q1 = query(
       conversationsRef,
       where('participante1Id', '==', currentUserId)
     );
@@ -17,63 +18,101 @@ export function useConversationStatusSync(currentUserId: string | undefined) {
       where('participante2Id', '==', currentUserId)
     );
 
-    const syncConversationStatuses = async () => {
+    const updateConversationStatus = async (conversationId: string, senderId: string) => {
       try {
-        const [snapshot1, snapshot2] = await Promise.all([
-          getDocs(q),
-          getDocs(q2)
-        ]);
+        const messagesRef = collection(db, 'chat_messages');
+        const lastMessageQuery = query(
+          messagesRef,
+          where('conversationId', '==', conversationId),
+          where('remetenteId', '==', senderId),
+          orderBy('timestamp', 'desc'),
+          limit(1)
+        );
 
-        const allConversations = [...snapshot1.docs, ...snapshot2.docs];
-
-        const updatePromises = allConversations.map(async (conversationDoc) => {
-          const conversation = conversationDoc.data();
-          const conversationId = conversationDoc.id;
+        const snapshot = await getDocs(lastMessageQuery);
+        
+        if (!snapshot.empty) {
+          const lastMessage = snapshot.docs[0].data();
           
-          const lastMessageSenderId = conversation.ultimaMensagemRemetenteId;
+          const conversationRef = doc(db, 'chat_conversations', conversationId);
+          await updateDoc(conversationRef, {
+            ultimaMensagemEntregue: lastMessage.entregue || false,
+            ultimaMensagemLida: lastMessage.lida || false,
+          });
           
-          if (lastMessageSenderId === currentUserId) {
-            const messagesRef = collection(db, 'chat_messages');
-            const lastMessageQuery = query(
-              messagesRef,
-              where('conversationId', '==', conversationId),
-              where('remetenteId', '==', currentUserId),
-              orderBy('timestamp', 'desc'),
-              limit(1)
-            );
-
-            const lastMessageSnapshot = await getDocs(lastMessageQuery);
-            
-            if (!lastMessageSnapshot.empty) {
-              const lastMessage = lastMessageSnapshot.docs[0].data();
-              
-              const conversationRef = doc(db, 'chat_conversations', conversationId);
-              await updateDoc(conversationRef, {
-                ultimaMensagemEntregue: lastMessage.entregue || false,
-                ultimaMensagemLida: lastMessage.lida || false,
-              });
-            }
-          }
-        });
-
-        await Promise.all(updatePromises);
+          console.log('✓ Status atualizado na conversa:', conversationId, {
+            entregue: lastMessage.entregue || false,
+            lida: lastMessage.lida || false,
+          });
+        }
       } catch (error) {
-        console.error('Erro ao sincronizar status das conversas:', error);
+        console.error('Erro ao atualizar status da conversa:', error);
       }
     };
 
-    syncConversationStatuses();
+    const syncAllConversations = async () => {
+      try {
+        const [snapshot1, snapshot2] = await Promise.all([
+          getDocs(q1),
+          getDocs(q2)
+        ]);
+
+        const allDocs = [...snapshot1.docs, ...snapshot2.docs];
+        
+        for (const conversationDoc of allDocs) {
+          const conversation = conversationDoc.data();
+          if (conversation.ultimaMensagemRemetenteId === currentUserId) {
+            await updateConversationStatus(conversationDoc.id, currentUserId);
+          }
+        }
+      } catch (error) {
+        console.error('Erro na sincronização inicial:', error);
+      }
+    };
+
+    syncAllConversations();
+
+    const unsubscribe1 = onSnapshot(q1, (snapshot) => {
+      snapshot.docs.forEach((conversationDoc) => {
+        const conversation = conversationDoc.data();
+        if (conversation.ultimaMensagemRemetenteId === currentUserId) {
+          updateConversationStatus(conversationDoc.id, currentUserId);
+        }
+      });
+    });
+
+    const unsubscribe2 = onSnapshot(q2, (snapshot) => {
+      snapshot.docs.forEach((conversationDoc) => {
+        const conversation = conversationDoc.data();
+        if (conversation.ultimaMensagemRemetenteId === currentUserId) {
+          updateConversationStatus(conversationDoc.id, currentUserId);
+        }
+      });
+    });
 
     const messagesRef = collection(db, 'chat_messages');
-    const messagesQuery = query(
+    const myMessagesQuery = query(
       messagesRef,
       where('remetenteId', '==', currentUserId)
     );
 
-    const unsubscribe = onSnapshot(messagesQuery, () => {
-      syncConversationStatuses();
+    const unsubscribe3 = onSnapshot(myMessagesQuery, (snapshot) => {
+      snapshot.docChanges().forEach(async (change) => {
+        if (change.type === 'modified') {
+          const message = change.doc.data();
+          const conversationId = message.conversationId;
+          
+          if (conversationId) {
+            await updateConversationStatus(conversationId, currentUserId);
+          }
+        }
+      });
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe1();
+      unsubscribe2();
+      unsubscribe3();
+    };
   }, [currentUserId]);
 }
