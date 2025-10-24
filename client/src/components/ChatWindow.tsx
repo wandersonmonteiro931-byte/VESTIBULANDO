@@ -32,6 +32,7 @@ import type { ChatConversation, User, UserBlock } from "@shared/schema";
 import ChatMessageArea from "./ChatMessageArea";
 import UserAccountMenu from "./UserAccountMenu";
 import { PresenceIndicator } from "./PresenceIndicator";
+import { ConversationItem } from "./ConversationItem";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -508,94 +509,28 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
                   <div className="divide-y">
                     {conversations.map((conversation) => {
                       const other = getOtherParticipant(conversation);
-                      const unreadCount = getUnreadCount(conversation);
                       const isSelected = selectedConversation?.id === conversation.id;
                       const otherUser = getUserFromId(other.id);
 
                       return (
-                        <div
+                        <ConversationItem
                           key={conversation.id}
-                          className={`p-3 hover-elevate cursor-pointer group flex items-center gap-2 ${
-                            isSelected ? "bg-accent" : ""
-                          }`}
-                          data-testid={`conversation-${conversation.id}`}
-                        >
-                          <div className="flex-1 min-w-0" onClick={() => handleSelectConversation(conversation)}>
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-10 w-10 shrink-0">
-                                {otherUser?.fotoBase64 && otherUser.fotoPublica ? (
-                                  <AvatarImage src={otherUser.fotoBase64} alt={other.nome} />
-                                ) : null}
-                                <AvatarFallback>
-                                  {getInitials(other.nome)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between gap-2">
-                                  <p className="font-medium text-sm truncate">{other.nome}</p>
-                                  {unreadCount > 0 && (
-                                    <Badge variant="destructive" className="text-xs shrink-0">
-                                      {unreadCount}
-                                    </Badge>
-                                  )}
-                                </div>
-                                <p className="text-xs text-muted-foreground truncate">
-                                  {conversation.ultimaMensagem}
-                                </p>
-                                {conversation.ultimaMensagemTimestamp && (
-                                  <p className="text-xs text-muted-foreground mt-0.5">
-                                    {formatTimestamp(conversation.ultimaMensagemTimestamp)}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8 opacity-0 group-hover:opacity-100"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setConversationToDelete(conversation);
-                                  setDeleteDialogOpen(true);
-                                }}
-                                className="text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Excluir conversa
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              {blockedUsers.has(other.id) ? (
-                                <DropdownMenuItem
-                                  onClick={() => handleUnblockUser(other.id)}
-                                >
-                                  <UserPlus className="h-4 w-4 mr-2" />
-                                  Desbloquear usuário
-                                </DropdownMenuItem>
-                              ) : (
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setUserToBlock({ id: other.id, nome: other.nome });
-                                    setBlockDialogOpen(true);
-                                  }}
-                                  className="text-destructive"
-                                >
-                                  <Ban className="h-4 w-4 mr-2" />
-                                  Bloquear usuário
-                                </DropdownMenuItem>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
+                          conversation={conversation}
+                          currentUserId={userData?.uid || ""}
+                          otherUser={otherUser}
+                          isSelected={isSelected}
+                          isBlocked={blockedUsers.has(other.id)}
+                          onSelectConversation={handleSelectConversation}
+                          onDeleteConversation={(conv) => {
+                            setConversationToDelete(conv);
+                            setDeleteDialogOpen(true);
+                          }}
+                          onBlockUser={(userId, userName) => {
+                            setUserToBlock({ id: userId, nome: userName });
+                            setBlockDialogOpen(true);
+                          }}
+                          onUnblockUser={handleUnblockUser}
+                        />
                       );
                     })}
                   </div>
