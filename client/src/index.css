@@ -540,6 +540,33 @@
     z-index: 100000 !important;
   }
 
+  /* Desktop layout - normal flex */
+  @media (min-width: 769px) {
+    .chat-message-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      position: relative;
+    }
+
+    .chat-header-fixed {
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .chat-messages-area {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    .whatsapp-input-area {
+      flex-shrink: 0;
+      position: relative;
+    }
+  }
+
   /* Mobile touch optimizations */
   @media (max-width: 768px) {
     /* Prevent zoom on input focus in iOS */
@@ -624,10 +651,10 @@
     /* Messages area - scrollable between header and input */
     .chat-messages-area {
       position: fixed;
-      top: 56px; /* Height of header */
+      top: 60px; /* Height of header (p-2 + 44px button + p-2) */
       left: 0;
       right: 0;
-      bottom: 65px; /* Height of input area */
+      bottom: 80px; /* Height of input area (p-1.5 + input/buttons + alerts + p-1.5) */
       overflow-y: auto;
       overflow-x: hidden;
       -webkit-overflow-scrolling: touch;
