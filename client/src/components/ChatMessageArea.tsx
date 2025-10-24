@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Send, Paperclip, X, File, Image as ImageIcon, Video, Music, FileText, Trash2, AlertTriangle, WifiOff, Wifi, User as UserIcon } from "lucide-react";
+import { ArrowLeft, Send, Paperclip, X, File, Image as ImageIcon, Video, Music, FileText, Trash2, AlertTriangle, WifiOff, Wifi, User as UserIcon, MoreVertical } from "lucide-react";
 import { PresenceIndicator } from "@/components/PresenceIndicator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,6 +54,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
   const [blocked, setBlocked] = useState(false);
   const [blockReason, setBlockReason] = useState("");
   const [showUserProfile, setShowUserProfile] = useState(false);
+  const [contextMenuMessage, setContextMenuMessage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { userData } = useAuth();
@@ -477,7 +478,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
     try {
       const messageRef = doc(db, "chat_messages", messageId);
       const msg = messages.find(m => m.id === messageId);
-      const now = new Date().toISOString();
+      const now = getNowBrasiliaISO();
       
       if (msg?.remetenteId === userData.uid) {
         await updateDoc(messageRef, {
@@ -517,6 +518,54 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
         variant: "destructive",
         title: "Erro",
         description: "Não foi possível remover a mensagem.",
+      });
+    }
+  };
+
+  const deleteMessageForEveryone = async (messageId: string) => {
+    if (!userData?.uid || !conversationId) return;
+
+    const msg = messages.find(m => m.id === messageId);
+    
+    // Só o remetente pode deletar para todos
+    if (msg?.remetenteId !== userData.uid) {
+      toast({
+        variant: "destructive",
+        title: "Permissão negada",
+        description: "Apenas o remetente pode apagar a mensagem para todos.",
+      });
+      return;
+    }
+
+    try {
+      const messageRef = doc(db, "chat_messages", messageId);
+      const now = getNowBrasiliaISO();
+      
+      await updateDoc(messageRef, {
+        deletadaPorRemetente: true,
+        dataDeletadaPorRemetente: now,
+        deletadaPorDestinatario: true,
+        dataDeletadaPorDestinatario: now,
+      });
+      
+      await ChatLogger.mensagemDeletada(
+        userData.uid,
+        userData.nome,
+        conversationId,
+        messageId,
+        "remetente"
+      );
+
+      toast({
+        title: "Mensagem apagada",
+        description: "A mensagem foi removida para todos.",
+      });
+    } catch (error) {
+      console.error("Erro ao deletar mensagem para todos:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível apagar a mensagem.",
       });
     }
   };
@@ -574,7 +623,11 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div className="relative">
+        <div 
+          className="relative cursor-pointer hover-elevate rounded-full p-1 -m-1"
+          onClick={() => setShowUserProfile(true)}
+          data-testid="button-open-user-profile"
+        >
           <Avatar className="h-10 w-10">
             <AvatarFallback>{getInitials(otherParticipant.nome)}</AvatarFallback>
           </Avatar>
@@ -584,7 +637,10 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
             }`}
           />
         </div>
-        <div className="flex-1">
+        <div 
+          className="flex-1 cursor-pointer hover-elevate rounded p-2 -m-2"
+          onClick={() => setShowUserProfile(true)}
+        >
           <p className="font-medium">{otherParticipant.nome}</p>
           <PresenceIndicator 
             isOnline={otherParticipant.isOnline}
@@ -643,69 +699,90 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
                 </AvatarFallback>
               </Avatar>
 
-              <div className={`flex flex-col ${isOwn ? "items-end" : "items-start"} max-w-[70%]`}>
-                <div
-                  className={`rounded-lg p-3 ${
-                    isOwn 
-                      ? "bg-primary text-primary-foreground" 
-                      : "bg-muted"
-                  }`}
-                >
-                  {msg.arquivoUrl && msg.tipo === "imagem" && (
-                    <img
-                      src={msg.arquivoUrl}
-                      alt={msg.arquivoNome || "Imagem"}
-                      className="max-w-full rounded mb-2 max-h-64 object-contain"
-                    />
-                  )}
+              <div className={`flex flex-col ${isOwn ? "items-end" : "items-start"} max-w-[70%] group`}>
+                <div className="relative">
+                  <div
+                    className={`rounded-lg p-3 ${
+                      isOwn 
+                        ? "bg-primary text-primary-foreground" 
+                        : "bg-muted"
+                    }`}
+                  >
+                    {msg.arquivoUrl && msg.tipo === "imagem" && (
+                      <img
+                        src={msg.arquivoUrl}
+                        alt={msg.arquivoNome || "Imagem"}
+                        className="max-w-full rounded mb-2 max-h-64 object-contain"
+                      />
+                    )}
 
-                  {msg.arquivoUrl && msg.tipo === "video" && (
-                    <video
-                      src={msg.arquivoUrl}
-                      controls
-                      className="max-w-full rounded mb-2 max-h-64"
-                    />
-                  )}
+                    {msg.arquivoUrl && msg.tipo === "video" && (
+                      <video
+                        src={msg.arquivoUrl}
+                        controls
+                        className="max-w-full rounded mb-2 max-h-64"
+                      />
+                    )}
 
-                  {msg.arquivoUrl && msg.tipo === "audio" && (
-                    <audio
-                      src={msg.arquivoUrl}
-                      controls
-                      className="mb-2"
-                    />
-                  )}
+                    {msg.arquivoUrl && msg.tipo === "audio" && (
+                      <audio
+                        src={msg.arquivoUrl}
+                        controls
+                        className="mb-2"
+                      />
+                    )}
 
-                  {msg.arquivoUrl && msg.tipo === "documento" && (
-                    <a
-                      href={msg.arquivoUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 mb-2 hover:underline"
-                    >
-                      {getFileIcon(msg.tipo)}
-                      <span className="text-sm">{msg.arquivoNome}</span>
-                    </a>
-                  )}
+                    {msg.arquivoUrl && msg.tipo === "documento" && (
+                      <a
+                        href={msg.arquivoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 mb-2 hover:underline"
+                      >
+                        {getFileIcon(msg.tipo)}
+                        <span className="text-sm">{msg.arquivoNome}</span>
+                      </a>
+                    )}
 
-                  <p className="text-sm">{msg.conteudo}</p>
+                    <p className="text-sm">{msg.conteudo}</p>
+                  </div>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className={`absolute ${isOwn ? '-left-8' : '-right-8'} top-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity`}
+                        data-testid={`button-message-menu-${msg.id}`}
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align={isOwn ? "end" : "start"}>
+                      <DropdownMenuItem
+                        onClick={() => deleteMessage(msg.id)}
+                        data-testid={`button-delete-for-me-${msg.id}`}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Apagar para mim
+                      </DropdownMenuItem>
+                      {isOwn && (
+                        <DropdownMenuItem
+                          onClick={() => deleteMessageForEveryone(msg.id)}
+                          className="text-destructive"
+                          data-testid={`button-delete-for-all-${msg.id}`}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Apagar para todos
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
 
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-xs text-muted-foreground">
-                    {formatTimestamp(msg.timestamp)}
-                  </span>
-                  {isOwn && (
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-5 w-5"
-                      onClick={() => deleteMessage(msg.id)}
-                      data-testid={`button-delete-${msg.id}`}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  )}
-                </div>
+                <span className="text-xs text-muted-foreground mt-1">
+                  {formatTimestamp(msg.timestamp)}
+                </span>
               </div>
             </div>
           );
@@ -793,6 +870,13 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
           </Button>
         </div>
       </div>
+
+      {showUserProfile && otherParticipant && (
+        <UserProfileDialog
+          userId={otherParticipant.id}
+          onClose={() => setShowUserProfile(false)}
+        />
+      )}
     </div>
   );
 }

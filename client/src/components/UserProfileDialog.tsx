@@ -164,25 +164,6 @@ export default function UserProfileDialog({ userId, onClose }: UserProfileDialog
                 <p className="text-sm mt-1">{turmaName}</p>
               </div>
             )}
-
-            {user.tipo === "aluno" && user.matricula && (
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Matrícula</p>
-                <p className="text-sm mt-1">{user.matricula}</p>
-              </div>
-            )}
-
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Email</p>
-              <p className="text-sm mt-1">{user.email}</p>
-            </div>
-
-            {user.telefone && (
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Telefone</p>
-                <p className="text-sm mt-1">{user.telefone}</p>
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>
