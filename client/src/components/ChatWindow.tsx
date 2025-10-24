@@ -19,10 +19,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { collection, query, where, onSnapshot, addDoc, getDocs, deleteDoc, doc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { getNowBrasiliaISO } from "@/lib/brasiliaTime";
-import type { ChatConversation, User, UserBlock } from "@shared/schema";
+import type { ChatConversation, User, UserBlock, CallSignal } from "@shared/schema";
 import ChatMessageArea from "./ChatMessageArea";
 import { ConversationItem } from "./ConversationItem";
 import { ChatTermsModal } from "./ChatTermsModal";
+import { VideoCallDialog } from "./VideoCallDialog";
+import { IncomingCallDialog } from "./IncomingCallDialog";
+import { useIncomingCalls } from "@/hooks/useIncomingCalls";
 import { useToast } from "@/hooks/use-toast";
 
 interface ChatWindowProps {
@@ -44,8 +47,13 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
   const [userToBlock, setUserToBlock] = useState<{ id: string; nome: string } | null>(null);
   const [termsModalOpen, setTermsModalOpen] = useState(false);
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
+  const [callDialogOpen, setCallDialogOpen] = useState(false);
+  const [isVideoCall, setIsVideoCall] = useState(true);
+  const [callRecipient, setCallRecipient] = useState<{ id: string; nome: string } | null>(null);
   const { userData } = useAuth();
   const { toast } = useToast();
+
+  const { incomingCall } = useIncomingCalls(userData?.uid || "");
 
   const showChatView = selectedConversation || selectedUser;
 
@@ -437,6 +445,46 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
     setSelectedUser(null);
   };
 
+  const handleStartVideoCall = () => {
+    const otherParticipantId = selectedConversation 
+      ? (selectedConversation.participante1Id === userData?.uid 
+          ? selectedConversation.participante2Id 
+          : selectedConversation.participante1Id)
+      : selectedUser?.uid;
+
+    const otherParticipantNome = selectedConversation
+      ? (selectedConversation.participante1Id === userData?.uid
+          ? (selectedConversation.participante2Tipo === "diretor" ? "Diretoria" : selectedConversation.participante2Nome)
+          : (selectedConversation.participante1Tipo === "diretor" ? "Diretoria" : selectedConversation.participante1Nome))
+      : selectedUser?.tipo === "diretor" ? "Diretoria" : selectedUser?.nome;
+
+    if (otherParticipantId && otherParticipantNome) {
+      setCallRecipient({ id: otherParticipantId, nome: otherParticipantNome });
+      setIsVideoCall(true);
+      setCallDialogOpen(true);
+    }
+  };
+
+  const handleStartAudioCall = () => {
+    const otherParticipantId = selectedConversation 
+      ? (selectedConversation.participante1Id === userData?.uid 
+          ? selectedConversation.participante2Id 
+          : selectedConversation.participante1Id)
+      : selectedUser?.uid;
+
+    const otherParticipantNome = selectedConversation
+      ? (selectedConversation.participante1Id === userData?.uid
+          ? (selectedConversation.participante2Tipo === "diretor" ? "Diretoria" : selectedConversation.participante2Nome)
+          : (selectedConversation.participante1Tipo === "diretor" ? "Diretoria" : selectedConversation.participante1Nome))
+      : selectedUser?.tipo === "diretor" ? "Diretoria" : selectedUser?.nome;
+
+    if (otherParticipantId && otherParticipantNome) {
+      setCallRecipient({ id: otherParticipantId, nome: otherParticipantNome });
+      setIsVideoCall(false);
+      setCallDialogOpen(true);
+    }
+  };
+
   const getInitials = (nome: string) => {
     if (nome === "Diretoria") return "DIR";
     const names = nome.split(" ");
@@ -566,12 +614,16 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
               conversation={selectedConversation}
               onBack={handleBackToList}
               onOpenTerms={handleOpenTerms}
+              onStartVideoCall={handleStartVideoCall}
+              onStartAudioCall={handleStartAudioCall}
             />
           ) : selectedUser ? (
             <ChatMessageArea
               selectedUser={selectedUser}
               onBack={handleBackToList}
               onOpenTerms={handleOpenTerms}
+              onStartVideoCall={handleStartVideoCall}
+              onStartAudioCall={handleStartAudioCall}
             />
           ) : (
             <div className="flex-1 flex items-center justify-center text-muted-foreground whatsapp-bg">
@@ -629,6 +681,25 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {callRecipient && (
+        <VideoCallDialog
+          open={callDialogOpen}
+          onOpenChange={setCallDialogOpen}
+          recipientName={callRecipient.nome}
+          recipientId={callRecipient.id}
+          isVideoCall={isVideoCall}
+        />
+      )}
+
+      {incomingCall && (
+        <IncomingCallDialog
+          open={!!incomingCall}
+          callSignal={incomingCall.signal}
+          onAccept={incomingCall.onAccept}
+          onReject={incomingCall.onReject}
+        />
+      )}
     </div>
   );
 }

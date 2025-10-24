@@ -368,3 +368,22 @@ export const insertUserBlockSchema = userBlockSchema.omit({ id: true });
 
 export type UserBlock = z.infer<typeof userBlockSchema>;
 export type InsertUserBlock = z.infer<typeof insertUserBlockSchema>;
+
+// Call Signal schema - sinais de chamada de vídeo/áudio
+export const callSignalSchema = z.object({
+  id: z.string(),
+  callId: z.string().optional(),
+  type: z.enum(["offer", "answer", "ice-candidate", "end", "reject"]),
+  callerId: z.string(),
+  callerName: z.string(),
+  receiverId: z.string(),
+  receiverName: z.string().optional(),
+  data: z.any().optional(), // SDP offer/answer ou ICE candidate
+  timestamp: z.union([z.string(), z.number()]),
+  read: z.boolean().default(false),
+});
+
+export const insertCallSignalSchema = callSignalSchema.omit({ id: true });
+
+export type CallSignal = z.infer<typeof callSignalSchema>;
+export type InsertCallSignal = z.infer<typeof insertCallSignalSchema>;

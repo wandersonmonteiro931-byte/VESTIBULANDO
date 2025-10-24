@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Send, Paperclip, X, File, Image as ImageIcon, Video, Music, FileText, Trash2, AlertTriangle, WifiOff, Wifi, User as UserIcon, MoreVertical } from "lucide-react";
+import { ArrowLeft, Send, Paperclip, X, File, Image as ImageIcon, Video, Music, FileText, Trash2, AlertTriangle, WifiOff, Wifi, User as UserIcon, MoreVertical, Phone, VideoIcon } from "lucide-react";
 import { PresenceIndicator } from "@/components/PresenceIndicator";
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { MessageStatusIndicator } from "@/components/MessageStatusIndicator";
@@ -37,6 +37,8 @@ interface ChatMessageAreaProps {
   selectedUser?: User;
   onBack: () => void;
   onOpenTerms: () => void;
+  onStartVideoCall?: () => void;
+  onStartAudioCall?: () => void;
 }
 
 interface OtherParticipant {
@@ -49,7 +51,7 @@ interface OtherParticipant {
 }
 
 
-export default function ChatMessageArea({ conversation, selectedUser, onBack, onOpenTerms }: ChatMessageAreaProps) {
+export default function ChatMessageArea({ conversation, selectedUser, onBack, onOpenTerms, onStartVideoCall, onStartAudioCall }: ChatMessageAreaProps) {
   const [messageText, setMessageText] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -687,6 +689,59 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
             Sem conexão
           </Badge>
         )}
+        
+        {onStartVideoCall && (
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={onStartVideoCall}
+            className="text-white hover:bg-white/10"
+            data-testid="button-video-call"
+          >
+            <VideoIcon className="h-5 w-5" />
+          </Button>
+        )}
+        
+        {onStartAudioCall && (
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={onStartAudioCall}
+            className="text-white hover:bg-white/10"
+            data-testid="button-audio-call"
+          >
+            <Phone className="h-5 w-5" />
+          </Button>
+        )}
+        
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="text-white hover:bg-white/10"
+              data-testid="button-chat-menu"
+            >
+              <MoreVertical className="h-5 w-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={() => setShowUserProfile(true)}
+              data-testid="menu-view-profile"
+            >
+              <UserIcon className="h-4 w-4 mr-2" />
+              Ver perfil
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={onOpenTerms}
+              data-testid="menu-view-terms"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Termos de uso
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-2 whatsapp-bg">
