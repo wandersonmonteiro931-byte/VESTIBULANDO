@@ -82,13 +82,24 @@ export default function UserSearchDialog({ onClose, onSelectUser }: UserSearchDi
     const term = searchTerm.toLowerCase();
     const filtered = allUsers.filter((user) => {
       const displayName = user.tipo === "diretor" ? "Diretoria" : user.nome;
+      
+      // Se for diretor, verificar se o termo busca por "dir", "diretor" ou "diretoria"
+      if (user.tipo === "diretor") {
+        return (
+          "diretoria".includes(term) ||
+          "diretor".includes(term) ||
+          "dir".includes(term) ||
+          displayName.toLowerCase().includes(term) ||
+          user.email.toLowerCase().includes(term)
+        );
+      }
+      
       return (
         displayName.toLowerCase().includes(term) ||
         user.nome.toLowerCase().includes(term) ||
         user.email.toLowerCase().includes(term) ||
         getTipoLabel(user.tipo).toLowerCase().includes(term) ||
-        (user.turma && turmas.get(user.turma)?.toLowerCase().includes(term)) ||
-        (user.tipo === "diretor" && (term.includes("diretor") || term.includes("diretoria")))
+        (user.turma && turmas.get(user.turma)?.toLowerCase().includes(term))
       );
     });
     

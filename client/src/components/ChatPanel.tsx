@@ -150,11 +150,21 @@ export function ChatPanel() {
     const query = searchQuery.toLowerCase();
     const displayName = getDisplayName(user);
     
+    // Se for diretor, verificar se o termo busca por "dir", "diretor" ou "diretoria"
+    if (user.tipo === "diretor") {
+      return (
+        "diretoria".includes(query) ||
+        "diretor".includes(query) ||
+        "dir".includes(query) ||
+        displayName.toLowerCase().includes(query) ||
+        user.email.toLowerCase().includes(query)
+      );
+    }
+    
     return (
       displayName.toLowerCase().includes(query) ||
       user.nome.toLowerCase().includes(query) ||
-      user.email.toLowerCase().includes(query) ||
-      (user.tipo === "diretor" && (query.includes("diretor") || query.includes("diretoria")))
+      user.email.toLowerCase().includes(query)
     );
   });
 
