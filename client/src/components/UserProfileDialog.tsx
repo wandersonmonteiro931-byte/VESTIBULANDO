@@ -153,7 +153,7 @@ export default function UserProfileDialog({ userId, onClose }: UserProfileDialog
           <div className="space-y-3">
             {user.mensagemStatus && (
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Status</p>
+                <p className="text-sm font-medium text-muted-foreground">Recado</p>
                 <p className="text-sm mt-1">{user.mensagemStatus}</p>
               </div>
             )}
