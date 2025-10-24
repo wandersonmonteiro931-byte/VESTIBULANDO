@@ -203,6 +203,48 @@ export default function ChatAuditPanel() {
     return labels[tipo] || tipo;
   };
 
+  const groupMessagesByStudent = (messages: ChatMessage[]) => {
+    const groups: Record<string, ChatMessage[]> = {};
+    
+    messages.forEach(msg => {
+      let studentName: string | null = null;
+      let studentId: string | null = null;
+
+      if (msg.remetenteTipo === "aluno") {
+        studentName = msg.remetenteNome;
+        studentId = msg.remetenteId || null;
+      } else if (msg.destinatarioTipo === "aluno") {
+        studentName = msg.destinatarioNome;
+        studentId = msg.destinatarioId || null;
+      }
+
+      if (studentName) {
+        const key = studentId ? `${studentId}-${studentName}` : `unknown-${studentName}`;
+        if (!groups[key]) {
+          groups[key] = [];
+        }
+        groups[key].push(msg);
+      } else {
+        if (!groups["outros-Outros"]) {
+          groups["outros-Outros"] = [];
+        }
+        groups["outros-Outros"].push(msg);
+      }
+    });
+
+    return Object.entries(groups)
+      .map(([key, messages]) => {
+        const parts = key.split('-');
+        const name = parts.slice(1).join('-') || "Dados incompletos";
+        return [name, messages] as [string, ChatMessage[]];
+      })
+      .sort(([nameA], [nameB]) => {
+        if (nameA === "Outros") return 1;
+        if (nameB === "Outros") return -1;
+        return nameA.localeCompare(nameB);
+      });
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -265,35 +307,59 @@ export default function ChatAuditPanel() {
             <CardHeader>
               <CardTitle>Histórico de Mensagens</CardTitle>
               <CardDescription>
-                Todas as mensagens enviadas na plataforma
+                Todas as mensagens enviadas na plataforma, agrupadas por aluno
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4 max-h-[600px] overflow-y-auto">
-                {filteredMessages.map(msg => (
-                  <div key={msg.id} className="flex gap-3 p-3 rounded border" data-testid={`audit-message-${msg.id}`}>
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback>{getInitials(msg.remetenteNome)}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="font-medium text-sm">{msg.remetenteNome}</p>
-                        <span className="text-xs text-muted-foreground">→</span>
-                        <p className="font-medium text-sm">{msg.destinatarioNome}</p>
-                        <Badge variant="secondary" className="ml-auto text-xs">
-                          {msg.tipo}
-                        </Badge>
+              <div className="space-y-6 max-h-[600px] overflow-y-auto">
+                {groupMessagesByStudent(filteredMessages).map(([studentName, messages]) => (
+                  <div key={studentName} className="space-y-3">
+                    <div className="flex items-center gap-3 pb-2 border-b">
+                      <Avatar className="h-10 w-10">
+                        <AvatarFallback>{getInitials(studentName)}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg">{studentName}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {messages.length} {messages.length === 1 ? 'mensagem' : 'mensagens'}
+                        </p>
                       </div>
-                      <p className="text-sm">{msg.conteudo}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {formatTimestamp(msg.timestamp)}
-                        {(msg.deletadaPorRemetente || msg.deletadaPorDestinatario) && (
-                          <span className="ml-2 text-destructive">• Deletada</span>
-                        )}
-                      </p>
+                    </div>
+                    <div className="space-y-3 pl-4">
+                      {messages.map(msg => {
+                        const isStudentSender = msg.remetenteTipo === "aluno";
+                        const otherPartyName = isStudentSender ? msg.destinatarioNome : msg.remetenteNome;
+                        const direction = isStudentSender ? "enviou para" : "recebeu de";
+                        
+                        return (
+                          <div key={msg.id} className="flex gap-3 p-3 rounded border bg-card" data-testid={`audit-message-${msg.id}`}>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs text-muted-foreground capitalize">{direction}:</span>
+                                <p className="font-medium text-sm">{otherPartyName}</p>
+                                <Badge variant="secondary" className="ml-auto text-xs">
+                                  {msg.tipo}
+                                </Badge>
+                              </div>
+                              <p className="text-sm">{msg.conteudo}</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {formatTimestamp(msg.timestamp)}
+                                {(msg.deletadaPorRemetente || msg.deletadaPorDestinatario) && (
+                                  <span className="ml-2 text-destructive">• Deletada</span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
+                {filteredMessages.length === 0 && (
+                  <p className="text-center text-muted-foreground py-8">
+                    Nenhuma mensagem encontrada
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
