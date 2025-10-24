@@ -31,6 +31,15 @@ Development Guidelines:
 - Transform animations should be combined with height transitions for smooth mobile rendering
 - All future chat modifications must maintain desktop/mobile parity
 
+**Recent Mobile Optimizations (Oct 2024):**
+- Implemented safe-area-inset support for notched devices (iOS)
+- Fixed scroll behavior with touch optimization and overscroll containment
+- Optimized dropdown z-index and visibility on mobile
+- Compact alert messages to save vertical space
+- Touch targets (44px) applied only to chat control buttons
+- Prevented zoom on input focus in iOS (16px font minimum)
+- Fixed layout overflow issues in ChatWindow and ChatMessageArea
+
 ### Feature Specifications
 
 #### Authentication
