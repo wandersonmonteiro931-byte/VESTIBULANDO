@@ -22,6 +22,9 @@ export const userSchema = z.object({
   mensagemStatus: z.string().optional(), // mensagem personalizada de status (ex: "Em reunião até 15h")
   // Campo para controlar primeiro acesso e troca de senha
   primeiroAcesso: z.boolean().optional().default(true), // true se ainda não alterou a senha inicial
+  // Campo para controlar aceite dos termos do chat
+  chatTermsAccepted: z.boolean().optional().default(false), // true se aceitou os termos do chat
+  chatTermsAcceptedDate: z.string().optional(), // data e hora da aceitação dos termos do chat
   // Campos de foto
   fotoBase64: z.string().optional(), // Foto 3x4 em Base64
   fotoPublica: z.boolean().optional().default(false), // se true, foto visível para todos; se false, apenas para diretor

@@ -33,6 +33,7 @@ import ChatMessageArea from "./ChatMessageArea";
 import UserAccountMenu from "./UserAccountMenu";
 import { PresenceIndicator } from "./PresenceIndicator";
 import { ConversationItem } from "./ConversationItem";
+import { ChatTermsModal } from "./ChatTermsModal";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -54,6 +55,8 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
   const [conversationToDelete, setConversationToDelete] = useState<ChatConversation | null>(null);
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [userToBlock, setUserToBlock] = useState<{ id: string; nome: string } | null>(null);
+  const [termsModalOpen, setTermsModalOpen] = useState(false);
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
   const { userData } = useAuth();
   const { toast } = useToast();
 
@@ -155,6 +158,32 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
     
     setFilteredUsers(filtered);
   }, [searchQuery, allUsers, blockedUsers]);
+
+  // Verificar se usuário aceitou os termos do chat
+  useEffect(() => {
+    const checkTermsAcceptance = async () => {
+      if (!userData?.uid) return;
+
+      try {
+        const userRef = doc(db, "usuarios", userData.uid);
+        const userSnap = await getDoc(userRef);
+        
+        if (userSnap.exists()) {
+          const user = userSnap.data();
+          const accepted = user.chatTermsAccepted === true;
+          setHasAcceptedTerms(accepted);
+          
+          if (!accepted) {
+            setTermsModalOpen(true);
+          }
+        }
+      } catch (error) {
+        console.error("Erro ao verificar aceitação dos termos:", error);
+      }
+    };
+
+    checkTermsAcceptance();
+  }, [userData?.uid]);
 
   // Carregar conversas existentes
   useEffect(() => {
@@ -407,6 +436,37 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
     return allUsers.find(u => u.uid === userId);
   };
 
+  const handleAcceptTerms = async () => {
+    if (!userData?.uid) return;
+
+    try {
+      const userRef = doc(db, "usuarios", userData.uid);
+      await updateDoc(userRef, {
+        chatTermsAccepted: true,
+        chatTermsAcceptedDate: getNowBrasiliaISO(),
+      });
+
+      setHasAcceptedTerms(true);
+      setTermsModalOpen(false);
+
+      toast({
+        title: "Termos aceitos",
+        description: "Você aceitou os termos de uso do chat.",
+      });
+    } catch (error) {
+      console.error("Erro ao aceitar termos:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível registrar a aceitação dos termos.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleOpenTerms = () => {
+    setTermsModalOpen(true);
+  };
+
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
       <div 
@@ -544,11 +604,13 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
               <ChatMessageArea
                 conversation={selectedConversation}
                 onBack={() => setSelectedConversation(null)}
+                onOpenTerms={handleOpenTerms}
               />
             ) : selectedUser ? (
               <ChatMessageArea
                 selectedUser={selectedUser}
                 onBack={() => setSelectedUser(null)}
+                onOpenTerms={handleOpenTerms}
               />
             ) : (
               <div className="flex-1 flex items-center justify-center text-muted-foreground">
@@ -561,6 +623,11 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
           </div>
         </div>
       </div>
+
+      <ChatTermsModal
+        open={termsModalOpen}
+        onAccept={handleAcceptTerms}
+      />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>

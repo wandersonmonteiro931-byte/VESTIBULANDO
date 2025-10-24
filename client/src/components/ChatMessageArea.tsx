@@ -33,6 +33,7 @@ interface ChatMessageAreaProps {
   conversation?: ChatConversation;
   selectedUser?: User;
   onBack: () => void;
+  onOpenTerms: () => void;
 }
 
 interface OtherParticipant {
@@ -44,15 +45,8 @@ interface OtherParticipant {
   lastActivity?: string;
 }
 
-const INSTITUTIONAL_MESSAGE = `⚠️ Atenção: Este canal é exclusivo para assuntos acadêmicos e administrativos da plataforma Vestibulando.
 
-Todas as mensagens, áudios, documentos e mídias são monitorados e registrados pela Diretoria para fins de auditoria e segurança.
-
-O envio de conteúdos ofensivos, inapropriados ou fora do contexto educacional pode resultar em suspensão da conta.
-
-Ao utilizar este chat, o usuário concorda com os termos de uso e a política de conduta da plataforma.`;
-
-export default function ChatMessageArea({ conversation, selectedUser, onBack }: ChatMessageAreaProps) {
+export default function ChatMessageArea({ conversation, selectedUser, onBack, onOpenTerms }: ChatMessageAreaProps) {
   const [messageText, setMessageText] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -610,10 +604,27 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack }: 
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        <Alert className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
-          <AlertTriangle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-          <AlertDescription className="text-sm text-blue-900 dark:text-blue-100 whitespace-pre-line">
-            {INSTITUTIONAL_MESSAGE}
+        <Alert className="bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800">
+          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+          <AlertDescription className="text-sm text-amber-900 dark:text-amber-100">
+            <p className="font-bold mb-2">ATENÇÃO: Antes de iniciar sua conversa, leia atentamente:</p>
+            <ul className="space-y-1 list-none">
+              <li>💬 Este chat é exclusivo para assuntos acadêmicos e administrativos.</li>
+              <li>🚫 É proibido enviar mensagens ofensivas, discriminatórias, políticas, religiosas, propagandas, correntes ou qualquer conteúdo que desrespeite outros usuários.</li>
+              <li>📜 Toda a comunicação é monitorada e registrada pela Diretoria, conforme os Termos de Uso e a Lei nº 13.709/2018 (LGPD).</li>
+              <li>⚖️ Condutas inadequadas poderão resultar em advertência, suspensão ou outras medidas cabíveis, conforme o Código Civil (Lei nº 10.406/2002) e a Lei nº 9.394/1996 (LDB).</li>
+            </ul>
+            <p className="mt-3">
+              Ao continuar, você declara estar ciente e de acordo com as Regras do Chat e Termos de Uso da Plataforma Vestibulando. 
+              Acesse clicando{" "}
+              <button
+                onClick={onOpenTerms}
+                className="underline font-semibold hover:text-amber-700 dark:hover:text-amber-300 transition-colors"
+                data-testid="link-open-terms"
+              >
+                aqui
+              </button>.
+            </p>
           </AlertDescription>
         </Alert>
 
