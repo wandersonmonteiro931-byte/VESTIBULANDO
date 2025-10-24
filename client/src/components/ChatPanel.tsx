@@ -618,8 +618,9 @@ export function ChatPanel() {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
-      <Card className="lg:col-span-1">
+    <div className="flex justify-center h-full w-full">
+      <div className="w-full max-w-md flex flex-col gap-4 h-full">
+      <Card className={selectedUser ? "hidden" : ""}>
         <CardHeader className="space-y-1 pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
             <MessageCircle className="h-5 w-5" />
@@ -685,7 +686,7 @@ export function ChatPanel() {
         </CardContent>
       </Card>
 
-      <Card className="lg:col-span-2">
+      <Card className={!selectedUser ? "hidden" : ""}>
         {selectedUser ? (
           <>
             <CardHeader className="pb-3">
@@ -832,6 +833,7 @@ export function ChatPanel() {
           isVideoCall={isVideoCall}
         />
       )}
+      </div>
     </div>
   );
 }
