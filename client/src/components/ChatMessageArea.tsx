@@ -15,7 +15,7 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import { getNowBrasiliaISO } from "@/lib/brasiliaTime";
 import type { ChatMessage, ChatConversation, User } from "@shared/schema";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format, isToday, isYesterday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { checkMessageForViolations, applyPenalty } from "@/lib/chatModeration";
 import { ChatLogger } from "@/lib/chatLogger";
@@ -639,6 +639,32 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
     return nome.substring(0, 2).toUpperCase();
   };
 
+  const getPresenceText = () => {
+    if (otherParticipant?.isOnline) {
+      return "Online agora";
+    }
+    
+    if (!otherParticipant?.lastSeen) {
+      return "Offline";
+    }
+    
+    try {
+      const date = new Date(otherParticipant.lastSeen);
+      const time = format(date, "HH:mm", { locale: ptBR });
+      
+      if (isToday(date)) {
+        return `Visto por último hoje às ${time}`;
+      } else if (isYesterday(date)) {
+        return `Visto por último ontem às ${time}`;
+      } else {
+        const dateStr = format(date, "dd/MM/yy", { locale: ptBR });
+        return `Visto por último em ${dateStr} às ${time}`;
+      }
+    } catch (error) {
+      return "Offline";
+    }
+  };
+
   if (!otherParticipant) {
     return (
       <div className="flex flex-col h-full items-center justify-center">
@@ -679,7 +705,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
         >
           <p className="font-medium text-white">{otherParticipant.nome}</p>
           <p className="text-xs text-white/80">
-            {otherParticipant.isOnline ? "online" : "offline"}
+            {getPresenceText()}
           </p>
         </div>
         
