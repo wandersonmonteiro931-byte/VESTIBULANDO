@@ -227,10 +227,20 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
   }, [messages, otherUserTyping]);
 
   useEffect(() => {
+    let lastHeight = window.visualViewport?.height || window.innerHeight;
+
     const updateViewportHeight = () => {
       if (window.visualViewport) {
-        const height = window.visualViewport.height;
-        document.documentElement.style.setProperty('--available-height', `${height}px`);
+        const currentHeight = window.visualViewport.height;
+        document.documentElement.style.setProperty('--available-height', `${currentHeight}px`);
+        
+        if (currentHeight < lastHeight) {
+          setTimeout(() => {
+            messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+          }, 100);
+        }
+        
+        lastHeight = currentHeight;
       } else {
         document.documentElement.style.setProperty('--available-height', '100vh');
       }
