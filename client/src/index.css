@@ -474,10 +474,6 @@
       right: 0 !important;
       width: 100% !important;
       z-index: 9999 !important;
-      -webkit-transform: translate3d(0, 0, 0);
-      transform: translate3d(0, 0, 0);
-      -webkit-backface-visibility: hidden;
-      backface-visibility: hidden;
     }
 
     /* Add top padding to messages area to account for fixed header */

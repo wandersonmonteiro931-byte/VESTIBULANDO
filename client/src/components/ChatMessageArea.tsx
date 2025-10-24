@@ -70,6 +70,8 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
   const [longPressMessageId, setLongPressMessageId] = useState<string | null>(null);
   const [pressedMessageId, setPressedMessageId] = useState<string | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left?: number; right?: number } | null>(null);
+  const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [showBlockDialog, setShowBlockDialog] = useState(false);
@@ -734,15 +736,67 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
     }
   };
 
+  const calculateMenuPosition = (messageId: string) => {
+    const messageElement = messageRefs.current.get(messageId);
+    if (!messageElement) return;
+    
+    const rect = messageElement.getBoundingClientRect();
+    const isOwn = messages.find(m => m.id === messageId)?.remetenteId === userData?.uid;
+    
+    // Menu dimensions
+    const menuWidth = 180;
+    const menuHeight = 100;
+    const padding = 8;
+    
+    // Calculate initial position
+    let top = rect.top - menuHeight - padding;
+    let left: number | undefined;
+    let right: number | undefined;
+    
+    // If menu would go off top, position below message
+    if (top < padding) {
+      top = rect.bottom + padding;
+    }
+    
+    // Clamp top to viewport
+    const maxTop = window.innerHeight - menuHeight - padding;
+    top = Math.max(padding, Math.min(top, maxTop));
+    
+    if (isOwn) {
+      // For own messages (right side), align to right
+      right = window.innerWidth - rect.right;
+      // Ensure menu doesn't go off left edge
+      const minRight = padding;
+      const maxRight = window.innerWidth - menuWidth - padding;
+      right = Math.max(minRight, Math.min(right, maxRight));
+    } else {
+      // For received messages (left side), align to left
+      left = rect.left;
+      // Ensure menu doesn't go off right edge
+      const maxLeft = window.innerWidth - menuWidth - padding;
+      left = Math.max(padding, Math.min(left, maxLeft));
+    }
+    
+    setMenuPosition({ top, left, right });
+  };
+
   const handleLongPressStart = (messageId: string) => {
     setPressedMessageId(messageId);
     const timer = setTimeout(() => {
       setLongPressMessageId(messageId);
+      calculateMenuPosition(messageId);
+      
       if (navigator.vibrate) {
         navigator.vibrate(50);
       }
     }, 500);
     setLongPressTimer(timer);
+  };
+  
+  const handleContextMenu = (messageId: string, event: React.MouseEvent) => {
+    event.preventDefault();
+    setLongPressMessageId(messageId);
+    calculateMenuPosition(messageId);
   };
 
   const handleLongPressEnd = () => {
@@ -1082,6 +1136,13 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
               <div className={`flex flex-col ${isOwn ? "items-end" : "items-start"} max-w-[85%] sm:max-w-[80%] md:max-w-[70%] group`}>
                 <div className="relative">
                   <div
+                    ref={(el) => {
+                      if (el) {
+                        messageRefs.current.set(msg.id, el);
+                      } else {
+                        messageRefs.current.delete(msg.id);
+                      }
+                    }}
                     className={`relative p-1.5 px-2 md:p-2 md:px-3 transition-all duration-100 select-none ${
                       isOwn 
                         ? "message-sent" 
@@ -1097,10 +1158,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
                     onMouseDown={() => setPressedMessageId(msg.id)}
                     onMouseUp={() => setTimeout(() => setPressedMessageId(null), 150)}
                     onMouseLeave={() => setPressedMessageId(null)}
-                    onContextMenu={(e) => {
-                      e.preventDefault();
-                      setLongPressMessageId(msg.id);
-                    }}
+                    onContextMenu={(e) => handleContextMenu(msg.id, e)}
                   >
                     {pressedMessageId === msg.id && (
                       <div className="absolute inset-0 bg-black/5 dark:bg-white/5 rounded-md pointer-events-none" />
@@ -1156,54 +1214,18 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
                     </div>
                   </div>
 
-                  <DropdownMenu 
-                    modal={false}
-                    open={longPressMessageId === msg.id}
-                    onOpenChange={(open) => {
-                      if (!open) {
-                        setLongPressMessageId(null);
-                      }
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className={`absolute ${isOwn ? '-left-8' : '-right-8'} top-1 h-6 w-6 hidden md:opacity-0 md:group-hover:opacity-100 md:flex transition-opacity`}
+                    data-testid={`button-message-menu-${msg.id}`}
+                    onClick={() => {
+                      setLongPressMessageId(msg.id);
+                      calculateMenuPosition(msg.id);
                     }}
                   >
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className={`absolute ${isOwn ? '-left-8' : '-right-8'} top-1 h-6 w-6 hidden md:opacity-0 md:group-hover:opacity-100 md:flex transition-opacity`}
-                        data-testid={`button-message-menu-${msg.id}`}
-                        onClick={() => setLongPressMessageId(msg.id)}
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent 
-                      align={isOwn ? "end" : "start"} 
-                      side="top"
-                      className="min-w-[180px] z-[100000]" 
-                      sideOffset={4}
-                      avoidCollisions={true}
-                      collisionPadding={8}
-                    >
-                      <DropdownMenuItem
-                        onClick={() => deleteMessage(msg.id)}
-                        className="cursor-pointer"
-                        data-testid={`button-delete-for-me-${msg.id}`}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Apagar para mim
-                      </DropdownMenuItem>
-                      {isOwn && (
-                        <DropdownMenuItem
-                          onClick={() => deleteMessageForEveryone(msg.id)}
-                          className="text-destructive cursor-pointer"
-                          data-testid={`button-delete-for-all-${msg.id}`}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Apagar para todos
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             </div>
@@ -1217,6 +1239,55 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
 
         <div ref={messagesEndRef} />
       </div>
+
+      {longPressMessageId && menuPosition && (
+        <>
+          <div 
+            className="fixed inset-0 z-[99998]" 
+            onClick={() => {
+              setLongPressMessageId(null);
+              setMenuPosition(null);
+            }}
+          />
+          <div
+            className="fixed z-[99999] bg-popover text-popover-foreground rounded-md shadow-lg border min-w-[180px] animate-in fade-in-0 zoom-in-95"
+            style={{
+              top: `${menuPosition.top}px`,
+              left: menuPosition.left !== undefined ? `${menuPosition.left}px` : undefined,
+              right: menuPosition.right !== undefined ? `${menuPosition.right}px` : undefined,
+            }}
+          >
+            <div className="p-1">
+              <button
+                onClick={() => {
+                  deleteMessage(longPressMessageId);
+                  setLongPressMessageId(null);
+                  setMenuPosition(null);
+                }}
+                className="w-full flex items-center px-2 py-1.5 text-sm hover-elevate active-elevate-2 rounded-sm cursor-pointer"
+                data-testid={`button-delete-for-me-${longPressMessageId}`}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Apagar para mim
+              </button>
+              {messages.find(m => m.id === longPressMessageId)?.remetenteId === userData?.uid && (
+                <button
+                  onClick={() => {
+                    deleteMessageForEveryone(longPressMessageId);
+                    setLongPressMessageId(null);
+                    setMenuPosition(null);
+                  }}
+                  className="w-full flex items-center px-2 py-1.5 text-sm text-destructive hover-elevate active-elevate-2 rounded-sm cursor-pointer"
+                  data-testid={`button-delete-for-all-${longPressMessageId}`}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Apagar para todos
+                </button>
+              )}
+            </div>
+          </div>
+        </>
+      )}
 
       <div className="p-1.5 md:p-2 whatsapp-input-area flex-shrink-0 sticky bottom-0 z-40">
         {!isOnline && (
