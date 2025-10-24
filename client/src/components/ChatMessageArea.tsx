@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Send, Paperclip, X, File, Image as ImageIcon, Video, Music, FileText, Trash2, AlertTriangle, WifiOff, Wifi, User as UserIcon, MoreVertical, Phone, VideoIcon } from "lucide-react";
+import { ArrowLeft, Send, Paperclip, X, File, Image as ImageIcon, Video, Music, FileText, Trash2, AlertTriangle, WifiOff, Wifi, User as UserIcon, MoreVertical } from "lucide-react";
 import { PresenceIndicator } from "@/components/PresenceIndicator";
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { MessageStatusIndicator } from "@/components/MessageStatusIndicator";
@@ -774,30 +774,6 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
             <WifiOff className="h-3 w-3" />
             Sem conexão
           </Badge>
-        )}
-        
-        {onStartVideoCall && (
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={onStartVideoCall}
-            className="text-white hover:bg-white/10"
-            data-testid="button-video-call"
-          >
-            <VideoIcon className="h-5 w-5" />
-          </Button>
-        )}
-        
-        {onStartAudioCall && (
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={onStartAudioCall}
-            className="text-white hover:bg-white/10"
-            data-testid="button-audio-call"
-          >
-            <Phone className="h-5 w-5" />
-          </Button>
         )}
         
         <DropdownMenu>
