@@ -146,24 +146,24 @@ export function ConversationItem({
               </Badge>
             )}
             
-            <DropdownMenu>
+            <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-6 w-6 opacity-0 group-hover:opacity-100 hover:bg-gray-200 dark:hover:bg-gray-700"
+                  className="h-6 w-6 md:opacity-0 md:group-hover:opacity-100"
                   data-testid={`button-conversation-menu-${conversation.id}`}
                 >
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="min-w-[200px]" sideOffset={8}>
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.stopPropagation();
                     onDeleteConversation(conversation);
                   }}
-                  className="text-destructive"
+                  className="text-destructive cursor-pointer"
                   data-testid="button-delete-conversation"
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
@@ -176,6 +176,7 @@ export function ConversationItem({
                       e.stopPropagation();
                       onUnblockUser(other.id);
                     }}
+                    className="cursor-pointer"
                     data-testid="button-unblock-user"
                   >
                     <UserPlus className="h-4 w-4 mr-2" />
@@ -187,7 +188,7 @@ export function ConversationItem({
                       e.stopPropagation();
                       onBlockUser(other.id, other.nome);
                     }}
-                    className="text-destructive"
+                    className="text-destructive cursor-pointer"
                     data-testid="button-block-user"
                   >
                     <Ban className="h-4 w-4 mr-2" />

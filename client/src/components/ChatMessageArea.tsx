@@ -935,20 +935,21 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
           </Badge>
         )}
         
-        <DropdownMenu>
+        <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
             <Button
               size="icon"
               variant="ghost"
-              className="text-white hover:bg-white/10 touch-manipulation transition-transform duration-150 active:scale-90"
+              className="text-white"
               data-testid="button-chat-menu"
             >
               <MoreVertical className="h-5 w-5" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="touch-manipulation"  sideOffset={8}>
+          <DropdownMenuContent align="end" className="min-w-[200px]" sideOffset={8}>
             <DropdownMenuItem
               onClick={() => setShowUserProfile(true)}
+              className="cursor-pointer"
               data-testid="menu-view-profile"
             >
               <UserIcon className="h-4 w-4 mr-2" />
@@ -956,6 +957,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={onOpenTerms}
+              className="cursor-pointer"
               data-testid="menu-view-terms"
             >
               <FileText className="h-4 w-4 mr-2" />
@@ -964,7 +966,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => setShowReportDialog(true)}
-              className="text-destructive focus:text-destructive"
+              className="text-destructive focus:text-destructive cursor-pointer"
               data-testid="menu-report-conversation"
             >
               <Flag className="h-4 w-4 mr-2" />
@@ -972,7 +974,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => setShowBlockDialog(true)}
-              className="text-destructive focus:text-destructive"
+              className="text-destructive focus:text-destructive cursor-pointer"
               data-testid="menu-block-user"
             >
               <UserX className="h-4 w-4 mr-2" />
@@ -980,7 +982,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => setShowDeleteDialog(true)}
-              className="text-destructive focus:text-destructive"
+              className="text-destructive focus:text-destructive cursor-pointer"
               data-testid="menu-delete-conversation"
             >
               <Trash2 className="h-4 w-4 mr-2" />
@@ -1084,20 +1086,21 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
                     </div>
                   </div>
 
-                  <DropdownMenu>
+                  <DropdownMenu modal={false}>
                     <DropdownMenuTrigger asChild>
                       <Button
                         size="icon"
                         variant="ghost"
-                        className={`absolute ${isOwn ? '-left-8' : '-right-8'} top-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity`}
+                        className={`absolute ${isOwn ? '-left-8' : '-right-8'} top-1 h-6 w-6 md:opacity-0 md:group-hover:opacity-100 transition-opacity`}
                         data-testid={`button-message-menu-${msg.id}`}
                       >
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align={isOwn ? "end" : "start"}>
+                    <DropdownMenuContent align={isOwn ? "end" : "start"} className="min-w-[180px]" sideOffset={8}>
                       <DropdownMenuItem
                         onClick={() => deleteMessage(msg.id)}
+                        className="cursor-pointer"
                         data-testid={`button-delete-for-me-${msg.id}`}
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
@@ -1106,7 +1109,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
                       {isOwn && (
                         <DropdownMenuItem
                           onClick={() => deleteMessageForEveryone(msg.id)}
-                          className="text-destructive"
+                          className="text-destructive cursor-pointer"
                           data-testid={`button-delete-for-all-${msg.id}`}
                         >
                           <Trash2 className="h-4 w-4 mr-2" />

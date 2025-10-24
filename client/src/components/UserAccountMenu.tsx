@@ -95,7 +95,7 @@ export default function UserAccountMenu({ onClose }: UserAccountMenuProps) {
 
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           <Button
             size="icon"
@@ -113,8 +113,8 @@ export default function UserAccountMenu({ onClose }: UserAccountMenuProps) {
             </Avatar>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => setIsDialogOpen(true)}>
+        <DropdownMenuContent align="end" className="min-w-[180px]" sideOffset={8}>
+          <DropdownMenuItem onClick={() => setIsDialogOpen(true)} className="cursor-pointer">
             <UserIcon className="h-4 w-4 mr-2" />
             Editar Perfil
           </DropdownMenuItem>
