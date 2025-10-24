@@ -1145,7 +1145,8 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
         
         {blocked && (
           <Alert variant="destructive" className="mb-2 mx-2">
-            <AlertDescription>{blockReason}</AlertDescription>
+            <UserX className="h-4 w-4" />
+            <AlertDescription className="font-medium">{blockReason}</AlertDescription>
           </Alert>
         )}
 
