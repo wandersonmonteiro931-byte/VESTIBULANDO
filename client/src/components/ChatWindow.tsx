@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { X, Search, ArrowLeft, MoreVertical } from "lucide-react";
+import { X, Search, ArrowLeft, MoreVertical, User as UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -25,6 +25,7 @@ import { ConversationItem } from "./ConversationItem";
 import { ChatTermsModal } from "./ChatTermsModal";
 import { VideoCallDialog } from "./VideoCallDialog";
 import { IncomingCallDialog } from "./IncomingCallDialog";
+import EditProfileDialog from "./EditProfileDialog";
 import { useIncomingCalls } from "@/hooks/useIncomingCalls";
 import { useToast } from "@/hooks/use-toast";
 import { useDeliveryOnPresence } from "@/hooks/useDeliveryOnPresence";
@@ -52,7 +53,8 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
   const [callDialogOpen, setCallDialogOpen] = useState(false);
   const [isVideoCall, setIsVideoCall] = useState(true);
   const [callRecipient, setCallRecipient] = useState<{ id: string; nome: string } | null>(null);
-  const { userData } = useAuth();
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
+  const { userData, refreshUserData } = useAuth();
   const { toast } = useToast();
 
   useDeliveryOnPresence(userData?.uid);
@@ -509,15 +511,26 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
             <h2 className="text-lg font-semibold text-white dark:text-foreground" data-testid="text-chat-title">
               WhatsApp
             </h2>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={onClose}
-              className="text-white dark:text-foreground hover:bg-white/10"
-              data-testid="button-close-chat"
-            >
-              <X className="h-5 w-5" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => setEditProfileOpen(true)}
+                className="text-white dark:text-foreground hover:bg-white/10"
+                data-testid="button-edit-profile"
+              >
+                <UserIcon className="h-5 w-5" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={onClose}
+                className="text-white dark:text-foreground hover:bg-white/10"
+                data-testid="button-close-chat"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
 
           {/* Barra de busca */}
@@ -703,6 +716,14 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
           callSignal={incomingCall.signal}
           onAccept={incomingCall.onAccept}
           onReject={incomingCall.onReject}
+        />
+      )}
+
+      {editProfileOpen && userData && (
+        <EditProfileDialog
+          user={userData}
+          onClose={() => setEditProfileOpen(false)}
+          onUpdate={() => refreshUserData()}
         />
       )}
     </div>
