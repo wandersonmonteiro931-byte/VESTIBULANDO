@@ -1872,10 +1872,18 @@ export default function AdminDashboard() {
   });
 
   // Funções auxiliares
-  const getTurmaNome = (turmaId: string | undefined) => {
-    if (!turmaId) return "-";
-    const turma = turmas?.find(t => t.id === turmaId);
-    return turma ? turma.nome : turmaId;
+  const getTurmaNome = (turmaValue: string | undefined) => {
+    if (!turmaValue) return "-";
+    
+    // Se já é um nome de turma (ex: "T-07", "T-10"), retorna o valor
+    // IDs do Firestore geralmente têm 20+ caracteres com caracteres aleatórios
+    if (turmaValue.length < 20 && turmaValue.includes("-")) {
+      return turmaValue;
+    }
+    
+    // Caso contrário, é um ID antigo - busca o nome da turma
+    const turma = turmas?.find(t => t.id === turmaValue);
+    return turma ? turma.nome : turmaValue;
   };
 
   const formatarCPF = (cpf: string) => {
@@ -3538,7 +3546,7 @@ export default function AdminDashboard() {
                 <div className="space-y-2">
                   <Label>Turma</Label>
                   <div className="p-2 bg-muted rounded">
-                    {selectedSolicitacao.turma || "-"}
+                    {getTurmaNome(selectedSolicitacao.turma)}
                   </div>
                 </div>
               </div>
