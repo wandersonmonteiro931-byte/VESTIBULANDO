@@ -34,15 +34,20 @@ export function useConversationStatusSync(currentUserId: string | undefined) {
         const lastMessageQuery = query(
           messagesRef,
           where('conversationId', '==', conversationId),
-          where('remetenteId', '==', senderId),
-          orderBy('timestamp', 'desc'),
-          limit(1)
+          where('remetenteId', '==', senderId)
         );
 
         const snapshot = await getDocs(lastMessageQuery);
         
         if (!snapshot.empty) {
-          const lastMessage = snapshot.docs[0].data();
+          const messages = snapshot.docs.map(doc => doc.data());
+          messages.sort((a, b) => {
+            const dateA = new Date(a.timestamp).getTime();
+            const dateB = new Date(b.timestamp).getTime();
+            return dateB - dateA;
+          });
+          
+          const lastMessage = messages[0];
           
           const conversationRef = doc(db, 'chat_conversations', conversationId);
           await updateDoc(conversationRef, {
@@ -66,19 +71,23 @@ export function useConversationStatusSync(currentUserId: string | undefined) {
 
     const syncAllConversations = async () => {
       try {
+        console.log('🔄 Iniciando sincronização de todas as conversas...');
         const [snapshot1, snapshot2] = await Promise.all([
           getDocs(q1),
           getDocs(q2)
         ]);
 
         const allDocs = [...snapshot1.docs, ...snapshot2.docs];
+        console.log(`📊 Total de conversas encontradas: ${allDocs.length}`);
         
         for (const conversationDoc of allDocs) {
           const conversation = conversationDoc.data();
           if (conversation.ultimaMensagemRemetenteId === currentUserId) {
+            console.log(`🔄 Sincronizando conversa: ${conversationDoc.id}`);
             await updateConversationStatus(conversationDoc.id, currentUserId);
           }
         }
+        console.log('✅ Sincronização inicial concluída');
       } catch (error) {
         console.error('Erro na sincronização inicial:', error);
       }
@@ -94,12 +103,45 @@ export function useConversationStatusSync(currentUserId: string | undefined) {
 
     const unsubscribe1 = onSnapshot(myMessagesQuery, (snapshot) => {
       snapshot.docChanges().forEach((change) => {
+        const message = change.doc.data();
+        
+        console.log('🔔 Mudança detectada em mensagem:', {
+          type: change.type,
+          conversationId: message.conversationId,
+          entregue: message.entregue,
+          lida: message.lida,
+        });
+        
         if (change.type === 'modified' || change.type === 'added') {
-          const message = change.doc.data();
           const conversationId = message.conversationId;
           
           if (conversationId) {
+            console.log('🔄 Atualizando status da conversa:', conversationId);
             updateConversationStatus(conversationId, currentUserId);
+          }
+        }
+      });
+    });
+
+    const unsubscribe2 = onSnapshot(q1, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'modified') {
+          const conversation = change.doc.data();
+          if (conversation.ultimaMensagemRemetenteId === currentUserId) {
+            console.log('🔄 Conversa modificada, re-sincronizando:', change.doc.id);
+            updateConversationStatus(change.doc.id, currentUserId);
+          }
+        }
+      });
+    });
+
+    const unsubscribe3 = onSnapshot(q2, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'modified') {
+          const conversation = change.doc.data();
+          if (conversation.ultimaMensagemRemetenteId === currentUserId) {
+            console.log('🔄 Conversa modificada, re-sincronizando:', change.doc.id);
+            updateConversationStatus(change.doc.id, currentUserId);
           }
         }
       });
@@ -107,6 +149,8 @@ export function useConversationStatusSync(currentUserId: string | undefined) {
 
     return () => {
       unsubscribe1();
+      unsubscribe2();
+      unsubscribe3();
     };
   }, [currentUserId]);
 }

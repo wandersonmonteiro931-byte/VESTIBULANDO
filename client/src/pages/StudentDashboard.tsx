@@ -20,6 +20,8 @@ import ChatButton from "@/components/ChatButton";
 import { LogOut, FileText, Upload, Download, Calendar, Award, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
+import { useDeliveryOnPresence } from "@/hooks/useDeliveryOnPresence";
+import { useConversationStatusSync } from "@/hooks/useConversationStatusSync";
 import type { Tarefa, Entrega } from "@shared/schema";
 import { format, formatDistanceToNow, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -32,6 +34,9 @@ export default function StudentDashboard() {
   const [selectedTarefa, setSelectedTarefa] = useState<Tarefa | null>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [submissionDialogOpen, setSubmissionDialogOpen] = useState(false);
+
+  useDeliveryOnPresence(userData?.uid);
+  useConversationStatusSync(userData?.uid);
 
   useEffect(() => {
     const handleFileError = (event: any) => {

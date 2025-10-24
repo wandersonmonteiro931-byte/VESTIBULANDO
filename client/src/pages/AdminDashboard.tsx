@@ -29,6 +29,8 @@ import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, C
 import { Checkbox } from "@/components/ui/checkbox";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
+import { useDeliveryOnPresence } from "@/hooks/useDeliveryOnPresence";
+import { useConversationStatusSync } from "@/hooks/useConversationStatusSync";
 import type { User, Turma, Maintenance } from "@shared/schema";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -161,6 +163,9 @@ export default function AdminDashboard() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<any | null>(null);
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+
+  useDeliveryOnPresence(userData?.uid);
+  useConversationStatusSync(userData?.uid);
   const [solicitacaoToApprove, setSolicitacaoToApprove] = useState<any | null>(null);
   const [senhaInicial, setSenhaInicial] = useState("");
   const [editWhatsAppDialogOpen, setEditWhatsAppDialogOpen] = useState(false);

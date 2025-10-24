@@ -23,6 +23,8 @@ import ChatButton from "@/components/ChatButton";
 import { LogOut, Plus, FileText, Users, Download, Edit, Calendar, Award } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
+import { useDeliveryOnPresence } from "@/hooks/useDeliveryOnPresence";
+import { useConversationStatusSync } from "@/hooks/useConversationStatusSync";
 import type { Tarefa, Entrega } from "@shared/schema";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -51,6 +53,9 @@ export default function TeacherDashboard() {
   const [gradeDialogOpen, setGradeDialogOpen] = useState(false);
   const [selectedEntrega, setSelectedEntrega] = useState<Entrega | null>(null);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+
+  useDeliveryOnPresence(userData?.uid);
+  useConversationStatusSync(userData?.uid);
 
   useEffect(() => {
     const handleFileError = (event: any) => {
