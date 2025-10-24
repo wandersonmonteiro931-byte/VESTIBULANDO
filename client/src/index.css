@@ -511,4 +511,9 @@
   .dark .whatsapp-divider {
     border-color: #2a3942;
   }
+
+  /* Force Radix dropdown menu wrapper to have high z-index */
+  [data-radix-popper-content-wrapper] {
+    z-index: 100000 !important;
+  }
 }
