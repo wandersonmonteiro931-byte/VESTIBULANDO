@@ -589,52 +589,48 @@
       width: 36px;
     }
 
-    /* CRITICAL: Prevent modal wrapper from scrolling */
+    /* Modal wrapper - apenas backdrop fixo */
     .chat-modal-wrapper {
       position: fixed !important;
-      overflow: hidden !important;
-      overscroll-behavior: none !important;
-      touch-action: none !important;
     }
 
-    /* CRITICAL: Outer container - fixed height, no scroll */
+    /* SOLUÇÃO CORRETA: Container relativo com min-height 100dvh */
     .chat-outer-container {
-      position: fixed !important;
-      top: 0 !important;
-      left: 0 !important;
-      right: 0 !important;
-      bottom: 0 !important;
-      height: 100% !important;
-      width: 100% !important;
-      overflow: hidden !important;
+      position: relative !important;
+      min-height: 100vh !important;
+      min-height: 100dvh !important;
       display: flex !important;
       flex-direction: column !important;
+      overflow: hidden !important;
     }
 
-    /* Wrapper for chat area - fills parent */
+    /* Wrapper for chat area */
     .chat-window-mobile {
       width: 100% !important;
-      height: 100% !important;
+      min-height: 100vh !important;
+      min-height: 100dvh !important;
       display: flex !important;
       flex-direction: column !important;
-      overflow: hidden !important;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
       position: relative !important;
     }
 
-    /* Critical: Mobile chat flexbox layout - messages container */
+    /* Messages container */
     .chat-message-container {
       display: flex !important;
       flex-direction: column !important;
       width: 100% !important;
-      height: 100% !important;
-      overflow: hidden !important;
+      min-height: 100vh !important;
+      min-height: 100dvh !important;
       position: relative !important;
     }
 
-    /* HEADER TOTALMENTE FIXO - SEMPRE VISÍVEL NO TOPO */
+    /* HEADER COM STICKY - SEMPRE VISÍVEL */
     .chat-header-fixed {
-      position: absolute !important;
+      position: sticky !important;
       top: 0 !important;
+      top: env(safe-area-inset-top, 0) !important;
       left: 0 !important;
       right: 0 !important;
       width: 100% !important;
@@ -647,7 +643,7 @@
       background-color: #202c33 !important;
     }
 
-    /* Messages area - ONLY scrollable element */
+    /* Messages area - área rolável */
     .chat-messages-area {
       flex: 1 !important;
       min-height: 0 !important;
@@ -656,11 +652,9 @@
       -webkit-overflow-scrolling: touch !important;
       overscroll-behavior: contain !important;
       position: relative !important;
-      padding-top: 60px !important;
-      margin-top: 0 !important;
     }
 
-    /* Input stays at bottom */
+    /* Input no final */
     .whatsapp-input-area {
       position: relative !important;
       flex-shrink: 0 !important;
