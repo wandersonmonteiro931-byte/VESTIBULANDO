@@ -940,7 +940,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
             <Button
               size="icon"
               variant="ghost"
-              className="text-white hover:bg-white/10 touch-manipulation"
+              className="text-white hover:bg-white/10 touch-manipulation transition-transform duration-150 active:scale-90"
               data-testid="button-chat-menu"
             >
               <MoreVertical className="h-5 w-5" />
