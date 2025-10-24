@@ -906,8 +906,8 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center gap-3 p-3 whatsapp-header shadow-sm">
+    <div className="flex flex-col h-full overflow-hidden">
+      <div className="flex items-center gap-3 p-3 whatsapp-header shadow-sm flex-shrink-0">
         <Button
           size="icon"
           variant="ghost"
@@ -962,7 +962,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
               <MoreVertical className="h-5 w-5" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-[200px]" sideOffset={8}>
+          <DropdownMenuContent align="end" className="min-w-[200px] z-[100000]" sideOffset={8}>
             <DropdownMenuItem
               onClick={() => setShowUserProfile(true)}
               className="cursor-pointer"
@@ -1008,27 +1008,24 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
         </DropdownMenu>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 pb-4 space-y-2 whatsapp-bg">
-        <Alert className="bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800">
-          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-          <AlertDescription className="text-sm text-amber-900 dark:text-amber-100">
-            <p className="font-bold mb-2">ATENÇÃO: Antes de iniciar sua conversa, leia atentamente:</p>
-            <ul className="space-y-1 list-none">
-              <li>💬 Este chat é exclusivo para assuntos acadêmicos e administrativos.</li>
-              <li>🚫 É proibido enviar mensagens ofensivas, discriminatórias, políticas, religiosas, propagandas, correntes ou qualquer conteúdo que desrespeite outros usuários.</li>
-              <li>📜 Toda a comunicação é monitorada e registrada pela Diretoria, conforme os Termos de Uso e a Lei nº 13.709/2018 (LGPD).</li>
-              <li>⚖️ Condutas inadequadas poderão resultar em advertência, suspensão ou outras medidas cabíveis, conforme o Código Civil (Lei nº 10.406/2002) e a Lei nº 9.394/1996 (LDB).</li>
+      <div className="flex-1 overflow-y-auto p-4 space-y-2 whatsapp-bg" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
+        <Alert className="bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800 mb-2">
+          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+          <AlertDescription className="text-xs md:text-sm text-amber-900 dark:text-amber-100">
+            <p className="font-bold mb-1">ATENÇÃO: Antes de iniciar sua conversa, leia:</p>
+            <ul className="space-y-0.5 list-none text-xs">
+              <li>💬 Chat exclusivo para assuntos acadêmicos.</li>
+              <li>🚫 Proibido: mensagens ofensivas, discriminatórias ou spam.</li>
+              <li>📜 Comunicação monitorada pela Diretoria (LGPD).</li>
             </ul>
-            <p className="mt-3">
-              Ao continuar, você declara estar ciente e de acordo com as Regras do Chat e Termos de Uso da Plataforma Vestibulando. 
-              Acesse clicando{" "}
+            <p className="mt-2 text-xs">
               <button
                 onClick={onOpenTerms}
                 className="underline font-semibold hover:text-amber-700 dark:hover:text-amber-300 transition-colors"
                 data-testid="link-open-terms"
               >
-                aqui
-              </button>.
+                Ver Termos de Uso completos
+              </button>
             </p>
           </AlertDescription>
         </Alert>
@@ -1042,7 +1039,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
               className={`flex ${isOwn ? "justify-end" : "justify-start"}`}
               data-testid={`message-${msg.id}`}
             >
-              <div className={`flex flex-col ${isOwn ? "items-end" : "items-start"} max-w-[85%] md:max-w-[70%] group`}>
+              <div className={`flex flex-col ${isOwn ? "items-end" : "items-start"} max-w-[80%] sm:max-w-[75%] md:max-w-[70%] group`}>
                 <div className="relative">
                   <div
                     className={`p-2 px-3 ${
@@ -1107,13 +1104,13 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
                       <Button
                         size="icon"
                         variant="ghost"
-                        className={`absolute ${isOwn ? '-left-8' : '-right-8'} top-1 h-6 w-6 md:opacity-0 md:group-hover:opacity-100 transition-opacity`}
+                        className={`absolute ${isOwn ? '-left-8' : '-right-8'} top-1 h-6 w-6 opacity-60 md:opacity-0 md:group-hover:opacity-100 active:opacity-100 transition-opacity`}
                         data-testid={`button-message-menu-${msg.id}`}
                       >
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align={isOwn ? "end" : "start"} className="min-w-[180px]" sideOffset={8}>
+                    <DropdownMenuContent align={isOwn ? "end" : "start"} className="min-w-[180px] z-[100000]" sideOffset={8}>
                       <DropdownMenuItem
                         onClick={() => deleteMessage(msg.id)}
                         className="cursor-pointer"
@@ -1148,7 +1145,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="p-2 whatsapp-input-area">
+      <div className="p-2 whatsapp-input-area flex-shrink-0">
         {!isOnline && (
           <Alert variant="destructive" className="mb-2 mx-2 py-2">
             <WifiOff className="h-4 w-4" />

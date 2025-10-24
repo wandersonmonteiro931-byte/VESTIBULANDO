@@ -523,4 +523,51 @@
   [role="menu"][data-radix-dropdown-menu-content] {
     z-index: 100000 !important;
   }
+
+  /* Mobile touch optimizations */
+  @media (max-width: 768px) {
+    /* Prevent zoom on input focus in iOS */
+    input[type="text"],
+    input[type="search"],
+    textarea {
+      font-size: 16px !important;
+    }
+
+    /* Better touch targets for mobile - only for chat control buttons */
+    .whatsapp-header button,
+    .whatsapp-input-area button,
+    [data-testid*="button-message-menu"] {
+      min-height: 44px;
+      min-width: 44px;
+    }
+
+    /* Smooth scrolling for touch devices */
+    .overflow-y-auto,
+    .overflow-x-auto,
+    [class*="overflow-"] {
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+    }
+
+    /* Prevent pull-to-refresh on chat */
+    .whatsapp-bg {
+      overscroll-behavior-y: contain;
+    }
+
+    /* Compact alerts on mobile */
+    .whatsapp-bg .alert {
+      padding: 0.5rem;
+    }
+  }
+
+  /* Safe area support for notched devices */
+  @supports (padding: env(safe-area-inset-top)) {
+    .whatsapp-header {
+      padding-top: calc(0.75rem + env(safe-area-inset-top));
+    }
+
+    .whatsapp-input-area {
+      padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+    }
+  }
 }
