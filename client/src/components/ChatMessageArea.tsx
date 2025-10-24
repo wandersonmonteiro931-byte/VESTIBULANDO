@@ -115,6 +115,8 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
         lastActivity: presenceData.lastActivity,
       }
     : null;
+  
+  console.log('👥 otherParticipant criado:', otherParticipant);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -664,16 +666,28 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
     
     try {
       const date = new Date(otherParticipant.lastSeen);
-      const time = format(date, "HH:mm", { locale: ptBR });
+      console.log('📅 Data criada:', date, 'válida?', !isNaN(date.getTime()));
       
+      if (isNaN(date.getTime())) {
+        console.error('❌ Data inválida:', otherParticipant.lastSeen);
+        return "Offline";
+      }
+      
+      const time = format(date, "HH:mm", { locale: ptBR });
+      console.log('⏰ Hora formatada:', time);
+      
+      let result;
       if (isToday(date)) {
-        return `Visto por último hoje às ${time}`;
+        result = `Visto por último hoje às ${time}`;
       } else if (isYesterday(date)) {
-        return `Visto por último ontem às ${time}`;
+        result = `Visto por último ontem às ${time}`;
       } else {
         const dateStr = format(date, "dd/MM/yy", { locale: ptBR });
-        return `Visto por último em ${dateStr} às ${time}`;
+        result = `Visto por último em ${dateStr} às ${time}`;
       }
+      
+      console.log('✅ Resultado final:', result);
+      return result;
     } catch (error) {
       console.error('❌ Erro ao formatar data:', error);
       return "Offline";
