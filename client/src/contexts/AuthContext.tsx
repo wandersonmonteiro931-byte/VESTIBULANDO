@@ -3,6 +3,7 @@ import { onAuthStateChanged, signOut as firebaseSignOut, User as FirebaseUser } 
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { auth, db, firebaseError } from "@/lib/firebase";
 import { usePresence } from "@/hooks/usePresence";
+import { useAutoDelivery } from "@/hooks/useAutoDelivery";
 import type { User } from "@shared/schema";
 
 interface AuthContextType {
@@ -23,6 +24,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   // Rastrear presença online/offline
   const { setUserOffline } = usePresence(currentUser);
+  
+  // Marcar mensagens como entregues automaticamente quando usuário está online
+  useAutoDelivery(currentUser?.uid);
 
   const fetchUserData = async (uid: string): Promise<boolean> => {
     try {

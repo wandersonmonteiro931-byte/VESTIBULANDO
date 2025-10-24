@@ -32,11 +32,12 @@ export function useUserPresence(userId: string | undefined): UserPresenceData {
       (snapshot) => {
         if (snapshot.exists()) {
           const data = snapshot.data();
-          setPresence({
+          const presenceData = {
             isOnline: data.isOnline || false,
             lastSeen: data.lastSeen,
             lastActivity: data.lastActivity,
-          });
+          };
+          setPresence(presenceData);
         } else {
           setPresence({
             isOnline: false,
