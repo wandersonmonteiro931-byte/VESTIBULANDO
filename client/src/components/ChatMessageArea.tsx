@@ -830,7 +830,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
         </DropdownMenu>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 pb-6 space-y-2 whatsapp-bg">
+      <div className="flex-1 overflow-y-auto p-4 pb-20 space-y-2 whatsapp-bg">
         <Alert className="bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800">
           <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
           <AlertDescription className="text-sm text-amber-900 dark:text-amber-100">
