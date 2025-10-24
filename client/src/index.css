@@ -589,12 +589,12 @@
       width: 36px;
     }
 
-    /* Modal wrapper - apenas backdrop fixo */
+    /* Modal wrapper */
     .chat-modal-wrapper {
       position: fixed !important;
     }
 
-    /* SOLUÇÃO CORRETA: Container relativo com min-height 100dvh */
+    /* Container principal */
     .chat-outer-container {
       position: relative !important;
       min-height: 100vh !important;
@@ -604,61 +604,56 @@
       overflow: hidden !important;
     }
 
-    /* Wrapper for chat area */
+    /* Wrapper para área de chat */
     .chat-window-mobile {
       width: 100% !important;
-      min-height: 100vh !important;
-      min-height: 100dvh !important;
+      height: 100vh !important;
+      height: 100dvh !important;
       display: flex !important;
       flex-direction: column !important;
-      overflow-y: auto !important;
-      overflow-x: hidden !important;
+      overflow: hidden !important;
       position: relative !important;
     }
 
-    /* Messages container */
+    /* Container de mensagens */
     .chat-message-container {
       display: flex !important;
       flex-direction: column !important;
       width: 100% !important;
-      min-height: 100vh !important;
-      min-height: 100dvh !important;
+      height: 100% !important;
       position: relative !important;
     }
 
-    /* HEADER COM STICKY - SEMPRE VISÍVEL */
+    /* CABEÇALHO FIXADO NO TOPO DA TELA - NÃO SOBE COM MENSAGENS */
     .chat-header-fixed {
-      position: sticky !important;
+      position: fixed !important;
       top: 0 !important;
-      top: env(safe-area-inset-top, 0) !important;
       left: 0 !important;
       right: 0 !important;
-      width: 100% !important;
-      z-index: 10000 !important;
+      width: 100vw !important;
+      z-index: 99999 !important;
       background-color: #008069 !important;
-      flex-shrink: 0 !important;
     }
 
     .dark .chat-header-fixed {
       background-color: #202c33 !important;
     }
 
-    /* Messages area - área rolável */
+    /* Área de mensagens - ÚNICA com scroll + espaço para header */
     .chat-messages-area {
       flex: 1 !important;
-      min-height: 0 !important;
       overflow-y: auto !important;
       overflow-x: hidden !important;
       -webkit-overflow-scrolling: touch !important;
       overscroll-behavior: contain !important;
-      position: relative !important;
+      padding-top: 64px !important;
+      padding-bottom: 0 !important;
     }
 
-    /* Input no final */
+    /* Input SEMPRE no final do container */
     .whatsapp-input-area {
-      position: relative !important;
       flex-shrink: 0 !important;
-      z-index: 100 !important;
+      width: 100% !important;
       background-color: #f0f2f5 !important;
       padding-bottom: env(safe-area-inset-bottom, 0) !important;
     }
