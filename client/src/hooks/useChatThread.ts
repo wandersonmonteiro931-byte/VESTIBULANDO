@@ -74,11 +74,15 @@ export function useChatThread({
         participante2Tipo: selectedUser.tipo,
         mensagensNaoLidas1: 0,
         mensagensNaoLidas2: 1,
+        participante1Digitando: false,
+        participante2Digitando: false,
         dataCriacao: getNowBrasiliaISO(),
         dataUltimaAtualizacao: getNowBrasiliaISO(),
         ultimaMensagem: messageData.conteudo?.substring(0, 50) || "",
         ultimaMensagemTimestamp: getNowBrasiliaISO(),
         ultimaMensagemRemetenteId: currentUserId,
+        ultimaMensagemEntregue: false,
+        ultimaMensagemLida: false,
       };
 
       await setDoc(conversationRef, conversationData);

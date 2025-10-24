@@ -2714,7 +2714,7 @@ export default function AdminDashboard() {
                               data-testid={`button-whatsapp-${turma.id}`}
                             >
                               <MessageCircle className="h-4 w-4 mr-1" />
-                              {turma.linkWhatsApp ? "Editar" : "Add"} WhatsApp
+                              {turma.linkWhatsApp ? "Editar" : "Adicionar"} WhatsApp
                             </Button>
                             <Button
                               variant="outline"

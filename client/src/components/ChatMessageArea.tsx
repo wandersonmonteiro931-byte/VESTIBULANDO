@@ -474,6 +474,8 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
             ultimaMensagem: finalContent.substring(0, 50),
             ultimaMensagemTimestamp: getNowBrasiliaISO(),
             ultimaMensagemRemetenteId: userData.uid,
+            ultimaMensagemEntregue: false,
+            ultimaMensagemLida: false,
             [isParticipant1 ? "mensagensNaoLidas2" : "mensagensNaoLidas1"]: 
               ((isParticipant1 ? resolvedConversation.mensagensNaoLidas2 : resolvedConversation.mensagensNaoLidas1) || 0) + 1,
             dataUltimaAtualizacao: getNowBrasiliaISO(),

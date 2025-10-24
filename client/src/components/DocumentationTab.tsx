@@ -786,7 +786,7 @@ export function DocumentationTab() {
                                   <TableRow key={idx}>
                                     <TableCell>
                                       <Badge variant={history.action === "login" ? "default" : "secondary"}>
-                                        {history.action === "login" ? "Login" : "Logout"}
+                                        {history.action === "login" ? "Entrada" : "Saída"}
                                       </Badge>
                                     </TableCell>
                                     <TableCell>{formatBrasiliaTime(history.timestamp)}</TableCell>

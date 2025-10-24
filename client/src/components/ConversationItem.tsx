@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useUserPresence } from "@/hooks/useUserPresence";
 import type { ChatConversation, User } from "@shared/schema";
-import { MoreVertical, Trash2, Ban, UserPlus, Check } from "lucide-react";
+import { MoreVertical, Trash2, Ban, UserPlus, Check, CheckCheck } from "lucide-react";
 import { format, formatDistanceToNow, isToday, isYesterday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -115,7 +115,13 @@ export function ConversationItem({
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1 flex-1 min-w-0">
             {isSentByMe && (
-              <Check className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              conversation.ultimaMensagemLida ? (
+                <CheckCheck className="h-4 w-4 text-blue-500 dark:text-blue-400 flex-shrink-0" data-testid="status-read-conversation" />
+              ) : conversation.ultimaMensagemEntregue ? (
+                <CheckCheck className="h-4 w-4 text-muted-foreground flex-shrink-0" data-testid="status-delivered-conversation" />
+              ) : (
+                <Check className="h-4 w-4 text-muted-foreground flex-shrink-0" data-testid="status-sent-conversation" />
+              )
             )}
             <p className="text-sm text-muted-foreground truncate">
               {conversation.ultimaMensagem}

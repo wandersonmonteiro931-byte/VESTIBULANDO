@@ -309,6 +309,8 @@ export const chatConversationSchema = z.object({
   ultimaMensagem: z.string().optional(), // Conteúdo da última mensagem
   ultimaMensagemTimestamp: z.string().optional(), // Timestamp da última mensagem
   ultimaMensagemRemetenteId: z.string().optional(), // Quem enviou a última mensagem
+  ultimaMensagemEntregue: z.boolean().default(false), // Se a última mensagem foi entregue
+  ultimaMensagemLida: z.boolean().default(false), // Se a última mensagem foi lida
   mensagensNaoLidas1: z.number().default(0), // Mensagens não lidas pelo participante 1
   mensagensNaoLidas2: z.number().default(0), // Mensagens não lidas pelo participante 2
   participante1Digitando: z.boolean().default(false), // Se o participante 1 está digitando

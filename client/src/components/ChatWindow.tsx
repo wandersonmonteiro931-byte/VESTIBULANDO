@@ -27,6 +27,10 @@ import { VideoCallDialog } from "./VideoCallDialog";
 import { IncomingCallDialog } from "./IncomingCallDialog";
 import { useIncomingCalls } from "@/hooks/useIncomingCalls";
 import { useToast } from "@/hooks/use-toast";
+import { useAutoDelivery } from "@/hooks/useAutoDelivery";
+import { usePresence } from "@/hooks/usePresence";
+import { useDeliveryOnPresence } from "@/hooks/useDeliveryOnPresence";
+import { useConversationStatusSync } from "@/hooks/useConversationStatusSync";
 
 interface ChatWindowProps {
   onClose: () => void;
@@ -52,6 +56,11 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
   const [callRecipient, setCallRecipient] = useState<{ id: string; nome: string } | null>(null);
   const { userData } = useAuth();
   const { toast } = useToast();
+
+  useAutoDelivery(userData?.uid);
+  usePresence(userData || null);
+  useDeliveryOnPresence(userData?.uid);
+  useConversationStatusSync(userData?.uid);
 
   const { incomingCall } = useIncomingCalls(userData?.uid || "");
 

@@ -14,7 +14,7 @@ export function TypingIndicator({ userName = "Usuário", show }: TypingIndicator
           <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '200ms', animationDuration: '1.4s' }}></div>
           <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '400ms', animationDuration: '1.4s' }}></div>
         </div>
-        <span className="ml-2">{userName} está digitando...</span>
+        <span className="ml-2">digitando...</span>
       </div>
     </div>
   );
