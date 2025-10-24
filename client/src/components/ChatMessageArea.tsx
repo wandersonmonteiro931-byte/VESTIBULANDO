@@ -998,7 +998,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
   }
 
   return (
-    <div className="flex flex-col h-full w-full overflow-hidden relative min-h-0 chat-message-container">
+    <div className="flex flex-col h-full w-full relative min-h-0 chat-message-container">
       <div className="flex items-center gap-2 p-2 md:p-3 whatsapp-header shadow-sm flex-shrink-0 chat-header-fixed">
         <Button
           size="icon"

@@ -467,6 +467,11 @@
 
   /* Mobile-specific: keep header ALWAYS fixed even when keyboard opens */
   @media (max-width: 768px) {
+    /* Remove overflow-hidden from containers to allow position:fixed to work */
+    .chat-message-container {
+      overflow: visible !important;
+    }
+    
     .chat-header-fixed {
       position: fixed !important;
       top: 0 !important;
