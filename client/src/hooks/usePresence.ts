@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { getNowBrasiliaISO } from '@/lib/brasiliaTime';
@@ -11,6 +11,7 @@ export function usePresence(currentUser: FirebaseUser | null) {
   const lastActivityRef = useRef<number>(Date.now());
   const activityTimeoutRef = useRef<NodeJS.Timeout>();
   const intervalRef = useRef<NodeJS.Timeout>();
+  const lastSeenInitializedRef = useRef<boolean>(false);
 
   const updatePresence = async (isOnline: boolean) => {
     if (!currentUser) return;
@@ -24,6 +25,12 @@ export function usePresence(currentUser: FirebaseUser | null) {
 
       if (!isOnline) {
         updateData.lastSeen = getNowBrasiliaISO();
+      } else if (!lastSeenInitializedRef.current) {
+        const userDoc = await getDoc(userRef);
+        if (userDoc.exists() && !userDoc.data().lastSeen) {
+          updateData.lastSeen = getNowBrasiliaISO();
+        }
+        lastSeenInitializedRef.current = true;
       }
 
       await updateDoc(userRef, updateData);

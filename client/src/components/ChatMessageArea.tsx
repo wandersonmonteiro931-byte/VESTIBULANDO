@@ -647,7 +647,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
     }
     
     if (!otherParticipant?.lastSeen) {
-      return "Offline";
+      return "Nunca visto";
     }
     
     try {
@@ -663,7 +663,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
         return `Visto por último em ${dateStr} às ${time}`;
       }
     } catch (error) {
-      return "Offline";
+      return "Data inválida";
     }
   };
 
