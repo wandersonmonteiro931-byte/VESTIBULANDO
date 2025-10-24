@@ -227,44 +227,6 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
   }, [messages, otherUserTyping]);
 
   useEffect(() => {
-    let lastHeight = window.visualViewport?.height || window.innerHeight;
-
-    const updateViewportHeight = () => {
-      if (window.visualViewport) {
-        const currentHeight = window.visualViewport.height;
-        document.documentElement.style.setProperty('--available-height', `${currentHeight}px`);
-        
-        if (currentHeight < lastHeight) {
-          setTimeout(() => {
-            messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-          }, 100);
-        }
-        
-        lastHeight = currentHeight;
-      } else {
-        document.documentElement.style.setProperty('--available-height', '100vh');
-      }
-    };
-
-    updateViewportHeight();
-
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', updateViewportHeight);
-      window.visualViewport.addEventListener('scroll', updateViewportHeight);
-    }
-
-    window.addEventListener('resize', updateViewportHeight);
-
-    return () => {
-      if (window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', updateViewportHeight);
-        window.visualViewport.removeEventListener('scroll', updateViewportHeight);
-      }
-      window.removeEventListener('resize', updateViewportHeight);
-    };
-  }, []);
-
-  useEffect(() => {
     if (!conversationId || !resolvedConversation) return;
     
     const markMessagesAsDeliveredAndRead = async () => {
@@ -1036,7 +998,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
   }
 
   return (
-    <div className="flex flex-col h-full w-full relative chat-message-container">
+    <div className="flex flex-col w-full relative chat-message-container md:h-full">
       <div className="flex items-center gap-2 p-2 md:p-3 whatsapp-header shadow-sm flex-shrink-0 chat-header-fixed">
         <Button
           size="icon"

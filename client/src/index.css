@@ -458,29 +458,18 @@
     color: #e9edef;
   }
 
-  /* Chat-specific header behavior - sticky in all viewports */
+  /* Chat-specific header behavior - ALWAYS sticky at top */
   .chat-header-fixed {
     position: sticky;
     top: 0;
-    top: env(safe-area-inset-top);
     z-index: 50;
   }
 
-  /* Mobile-specific optimizations for keyboard handling */
+  /* Mobile-specific: Container fills viewport, letting content flow naturally */
   @media (max-width: 768px) {
-    /* Container adapts to viewport changes when keyboard opens */
     .chat-message-container {
-      height: 100dvh;
-      height: var(--available-height, 100dvh);
-      max-height: 100dvh;
-      max-height: var(--available-height, 100dvh);
-    }
-    
-    /* Keep header sticky at top */
-    .chat-header-fixed {
-      position: sticky;
-      top: 0;
-      z-index: 50;
+      min-height: 100vh;
+      min-height: 100dvh;
     }
   }
 
