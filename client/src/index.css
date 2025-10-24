@@ -589,26 +589,33 @@
       width: 36px;
     }
 
-    /* Critical: Mobile chat flexbox layout with dynamic viewport */
+    /* Ensure chat window uses full viewport - outer container */
+    .chat-window-mobile {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      overflow: hidden !important;
+    }
+
+    /* Critical: Mobile chat flexbox layout - inner container */
     .chat-message-container {
       display: flex;
       flex-direction: column;
-      min-height: 100vh;
-      min-height: 100dvh; /* Dynamic viewport - adjusts with keyboard */
-      max-height: 100vh;
-      max-height: 100dvh;
-      height: 100vh;
-      height: 100dvh;
+      width: 100%;
+      height: 100%;
       overflow: hidden;
       position: relative;
     }
 
-    /* Sticky header - stays at top */
+    /* Fixed header - stays at top */
     .chat-header-fixed {
-      position: sticky;
-      top: 0;
-      z-index: 100;
+      position: relative;
       flex-shrink: 0;
+      z-index: 100;
       background-color: #008069;
     }
 
@@ -616,10 +623,10 @@
       background-color: #202c33;
     }
 
-    /* Messages area - flex with scroll */
+    /* Messages area - scrollable with flex grow */
     .chat-messages-area {
-      flex: 1 1 auto;
-      min-height: 0; /* Critical for flexbox scrolling */
+      flex: 1;
+      min-height: 0;
       overflow-y: auto;
       overflow-x: hidden;
       -webkit-overflow-scrolling: touch;
@@ -627,29 +634,17 @@
       position: relative;
     }
 
-    /* Sticky input - stays at bottom */
+    /* Fixed input - stays at bottom */
     .whatsapp-input-area {
-      position: sticky;
-      bottom: 0;
-      z-index: 100;
+      position: relative;
       flex-shrink: 0;
+      z-index: 100;
       background-color: #f0f2f5;
-      padding-bottom: env(safe-area-inset-bottom, 0); /* iOS safe area */
+      padding-bottom: env(safe-area-inset-bottom, 0);
     }
 
     .dark .whatsapp-input-area {
       background-color: #202c33;
-    }
-
-    /* Ensure chat window uses full viewport */
-    .chat-window-mobile {
-      min-height: 100vh !important;
-      min-height: 100dvh !important;
-      max-height: 100vh !important;
-      max-height: 100dvh !important;
-      height: 100vh !important;
-      height: 100dvh !important;
-      overflow: hidden !important;
     }
   }
 
