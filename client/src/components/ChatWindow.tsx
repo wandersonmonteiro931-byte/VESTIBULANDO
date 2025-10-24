@@ -492,7 +492,7 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-[9998] flex md:items-center md:justify-center bg-black/50 p-0 md:p-4 overflow-hidden">
+    <div className="fixed inset-0 z-[9998] flex md:items-center md:justify-center bg-black/50 p-0 md:p-4 overflow-hidden chat-modal-wrapper">
       <div className="relative bg-card w-full h-full md:h-[95vh] md:max-w-md md:rounded-lg shadow-2xl flex flex-col overflow-hidden min-h-0 chat-outer-container">
         {/* Lista de conversas */}
         <div className={`${showChatView ? 'hidden' : 'flex'} flex-col w-full h-full whatsapp-conversation-list`}>
