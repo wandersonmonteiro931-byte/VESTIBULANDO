@@ -452,11 +452,16 @@ export default function Login() {
             if (solicitacaoDoc.exists()) {
               matricula = solicitacaoDoc.data().matricula;
               
+              // Buscar o nome da turma selecionada
+              const turmaSelecionada = turmasDisponiveis.find(t => t.id === formData.turma);
+              const turmaNome = turmaSelecionada ? turmaSelecionada.nome : formData.turma;
+              
               // Atualizar solicitação existente com status "pendente" novamente
               await updateDoc(solicitacaoRef, {
                 nome: formData.nome,
                 email: formData.email,
-                turma: formData.turma,
+                turma: turmaNome,
+                turmaId: formData.turma,
                 status: "pendente",
                 dataSolicitacao: getNowBrasiliaISO(),
                 dataNascimento: formData.dataNascimento,
@@ -488,6 +493,10 @@ export default function Login() {
             matricula = await generateUniqueMatricula(db);
             const dataSolicitacao = getNowBrasiliaISO();
             
+            // Buscar o nome da turma selecionada
+            const turmaSelecionada = turmasDisponiveis.find(t => t.id === formData.turma);
+            const turmaNome = turmaSelecionada ? turmaSelecionada.nome : formData.turma;
+            
             // Limpar reprovações antigas (se existir)
             const reprovacaoSnapshot = await getDocs(query(collection(db, "reprovacoes"), where("email", "==", formData.email)));
             
@@ -501,7 +510,8 @@ export default function Login() {
               nome: formData.nome,
               email: formData.email,
               tipo: "aluno",
-              turma: formData.turma,
+              turma: turmaNome,
+              turmaId: formData.turma,
               status: "pendente",
               matricula: matricula,
               dataSolicitacao: dataSolicitacao,
