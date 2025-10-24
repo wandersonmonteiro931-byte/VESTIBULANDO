@@ -998,8 +998,8 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
   }
 
   return (
-    <div className="flex flex-col w-full relative chat-message-container md:h-full">
-      <div className="flex items-center gap-2 p-2 md:p-3 whatsapp-header shadow-sm flex-shrink-0 chat-header-fixed">
+    <div className="flex flex-col w-full h-full chat-message-container">
+      <div className="flex items-center gap-2 p-2 md:p-3 whatsapp-header shadow-sm chat-header-fixed">
         <Button
           size="icon"
           variant="ghost"
@@ -1289,7 +1289,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
         </>
       )}
 
-      <div className="p-1.5 md:p-2 whatsapp-input-area flex-shrink-0 sticky bottom-0 z-40">
+      <div className="p-1.5 md:p-2 whatsapp-input-area flex-shrink-0">
         {!isOnline && (
           <Alert variant="destructive" className="mb-1 mx-1 md:mx-2 py-1 md:py-2">
             <WifiOff className="h-3 w-3 md:h-4 md:w-4" />
