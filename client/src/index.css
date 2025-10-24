@@ -590,6 +590,57 @@
       height: 36px;
       width: 36px;
     }
+
+    /* Critical: Fixed height container for mobile chat */
+    .chat-message-container {
+      height: 100vh;
+      height: 100dvh; /* Dynamic viewport height - adjusts when keyboard opens */
+      max-height: 100vh;
+      max-height: 100dvh;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Fixed header that stays visible when keyboard opens */
+    .chat-header-fixed {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      flex-shrink: 0;
+    }
+
+    /* Messages area with proper scroll behavior */
+    .chat-messages-area {
+      flex: 1;
+      min-height: 0; /* Critical for flexbox scrolling */
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      position: relative;
+    }
+
+    /* Input area always at bottom, above keyboard */
+    .whatsapp-input-area {
+      flex-shrink: 0;
+      position: sticky;
+      bottom: 0;
+      z-index: 40;
+      background-color: #f0f2f5;
+    }
+
+    .dark .whatsapp-input-area {
+      background-color: #202c33;
+    }
+
+    /* Ensure chat window uses full viewport height */
+    .chat-window-mobile {
+      height: 100vh !important;
+      height: 100dvh !important;
+      max-height: 100vh !important;
+      max-height: 100dvh !important;
+      overflow: hidden;
+    }
   }
 
   /* Safe area support for notched devices */
