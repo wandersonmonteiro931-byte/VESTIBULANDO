@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, AlertTriangle, Eye, MessageCircle, Shield, FileText } from "lucide-react";
+import { Search, AlertTriangle, Eye, MessageCircle, Shield, FileText, ChevronDown, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ export default function ChatAuditPanel() {
   const [reviewDecision, setReviewDecision] = useState<"mantida" | "removida">("mantida");
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
+  const [expandedStudents, setExpandedStudents] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   useEffect(() => {
@@ -203,6 +204,18 @@ export default function ChatAuditPanel() {
     return labels[tipo] || tipo;
   };
 
+  const toggleStudentExpansion = (studentName: string) => {
+    setExpandedStudents(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(studentName)) {
+        newSet.delete(studentName);
+      } else {
+        newSet.add(studentName);
+      }
+      return newSet;
+    });
+  };
+
   const groupMessagesByStudent = (messages: ChatMessage[]) => {
     const groups: Record<string, ChatMessage[]> = {};
     
@@ -311,50 +324,66 @@ export default function ChatAuditPanel() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6 max-h-[600px] overflow-y-auto">
-                {groupMessagesByStudent(filteredMessages).map(([studentName, messages]) => (
-                  <div key={studentName} className="space-y-3">
-                    <div className="flex items-center gap-3 pb-2 border-b">
-                      <Avatar className="h-10 w-10">
-                        <AvatarFallback>{getInitials(studentName)}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg">{studentName}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {messages.length} {messages.length === 1 ? 'mensagem' : 'mensagens'}
-                        </p>
+              <div className="space-y-4 max-h-[600px] overflow-y-auto">
+                {groupMessagesByStudent(filteredMessages).map(([studentName, messages]) => {
+                  const isExpanded = expandedStudents.has(studentName);
+                  
+                  return (
+                    <div key={studentName} className="space-y-3">
+                      <div 
+                        className="flex items-center gap-3 p-3 rounded border cursor-pointer hover-elevate active-elevate-2"
+                        onClick={() => toggleStudentExpansion(studentName)}
+                        data-testid={`student-header-${studentName}`}
+                      >
+                        {isExpanded ? (
+                          <ChevronDown className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                        ) : (
+                          <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                        )}
+                        <Avatar className="h-10 w-10 flex-shrink-0">
+                          <AvatarFallback>{getInitials(studentName)}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-lg">{studentName}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {messages.length} {messages.length === 1 ? 'mensagem' : 'mensagens'}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="space-y-3 pl-4">
-                      {messages.map(msg => {
-                        const isStudentSender = msg.remetenteTipo === "aluno";
-                        const otherPartyName = isStudentSender ? msg.destinatarioNome : msg.remetenteNome;
-                        const direction = isStudentSender ? "enviou para" : "recebeu de";
-                        
-                        return (
-                          <div key={msg.id} className="flex gap-3 p-3 rounded border bg-card" data-testid={`audit-message-${msg.id}`}>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-xs text-muted-foreground capitalize">{direction}:</span>
-                                <p className="font-medium text-sm">{otherPartyName}</p>
-                                <Badge variant="secondary" className="ml-auto text-xs">
-                                  {msg.tipo}
-                                </Badge>
+                      
+                      {isExpanded && (
+                        <div className="space-y-3 pl-4">
+                          {messages.map(msg => {
+                            const isStudentSender = msg.remetenteTipo === "aluno";
+                            const otherPartyName = isStudentSender ? msg.destinatarioNome : msg.remetenteNome;
+                            const direction = isStudentSender ? "enviou para" : "recebeu de";
+                            
+                            return (
+                              <div key={msg.id} className="flex gap-3 p-3 rounded border bg-card" data-testid={`audit-message-${msg.id}`}>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-xs text-muted-foreground capitalize">{direction}:</span>
+                                    <p className="font-medium text-sm">{otherPartyName}</p>
+                                    <Badge variant="secondary" className="ml-auto text-xs">
+                                      {msg.tipo}
+                                    </Badge>
+                                  </div>
+                                  <p className="text-sm">{msg.conteudo}</p>
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    {formatTimestamp(msg.timestamp)}
+                                    {(msg.deletadaPorRemetente || msg.deletadaPorDestinatario) && (
+                                      <span className="ml-2 text-destructive">• Deletada</span>
+                                    )}
+                                  </p>
+                                </div>
                               </div>
-                              <p className="text-sm">{msg.conteudo}</p>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {formatTimestamp(msg.timestamp)}
-                                {(msg.deletadaPorRemetente || msg.deletadaPorDestinatario) && (
-                                  <span className="ml-2 text-destructive">• Deletada</span>
-                                )}
-                              </p>
-                            </div>
-                          </div>
-                        );
-                      })}
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 {filteredMessages.length === 0 && (
                   <p className="text-center text-muted-foreground py-8">
                     Nenhuma mensagem encontrada
