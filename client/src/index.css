@@ -458,38 +458,54 @@
     color: #e9edef;
   }
 
-  /* Chat-specific header behavior */
+  /* Chat container with viewport-aware height */
+  .chat-message-container {
+    height: 100dvh;
+    height: var(--available-height, 100dvh);
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Chat-specific header behavior - sticky in all viewports */
   .chat-header-fixed {
     position: sticky;
     top: 0;
-    z-index: 10;
+    top: env(safe-area-inset-top);
+    z-index: 50;
+    flex-shrink: 0;
   }
 
-  /* Mobile-specific: keep header ALWAYS fixed even when keyboard opens */
+  /* Messages area with proper flex and scroll */
+  .chat-messages-area {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  /* Mobile-specific optimizations */
   @media (max-width: 768px) {
-    /* Remove overflow-hidden from containers to allow position:fixed to work */
+    /* Ensure container respects dynamic viewport */
     .chat-message-container {
-      overflow: visible !important;
+      height: 100dvh;
+      height: var(--available-height, 100dvh);
+      max-height: 100dvh;
+      max-height: var(--available-height, 100dvh);
     }
     
+    /* Keep header sticky, not fixed */
     .chat-header-fixed {
-      position: fixed !important;
-      top: 0 !important;
-      left: 0 !important;
-      right: 0 !important;
-      width: 100% !important;
-      z-index: 9999 !important;
-    }
-
-    /* Add top padding to messages area to account for fixed header */
-    .chat-messages-area {
-      padding-top: 64px !important; /* Height of fixed header ~56px + some spacing */
+      position: sticky;
+      top: 0;
+      z-index: 50;
     }
   }
 
   /* WhatsApp input area */
   .whatsapp-input-area {
     background-color: #f0f2f5;
+    flex-shrink: 0;
   }
 
   .dark .whatsapp-input-area {
