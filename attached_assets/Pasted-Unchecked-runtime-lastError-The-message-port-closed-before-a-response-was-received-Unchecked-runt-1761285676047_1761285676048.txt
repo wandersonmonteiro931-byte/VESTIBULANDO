@@ -1,0 +1,970 @@
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+Unchecked runtime.lastError: The message port closed before a response was received.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+PlataformaEnem:1 The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+PlataformaEnem:1 The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+PlataformaEnem:1 The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+ 
+      /////////////////////
+   ///////////////////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////        Curious and driven?
+  ///////////////@@@@@@@///////        Work with us!
+  ///////////////@@@@@@@///////
+  ///////////////@@@@@@@///////        https://join.replit.com/hack.with.us
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@#//////////////
+   ///////////////////////////
+      /////////////////////
+      
+ [LaunchDarkly] LaunchDarkly client initialized
+googleads.g.doubleclick.net/pagead/viewthroughconversion/11411994397/?random=1761285609664&cv=11&fst=1761285609664&bg=ffffff&guid=ON&async=1&en=gtag.config&gtm=45be5am0v9171242957za200zd9171242957xec&gcd=13l3l3l3l1l1&dma=0&tag_exp=101509157~103116026~103200004~103233427~104527906~104528501~104684208~104684211~104948813~105322302~115480710~115734859~115734861~115938466~115938469~116210082~116210084&u_w=1536&u_h=864&url=https%3A%2F%2Freplit.com%2F%40ndxqflyvt7zhc%2FPlataformaEnem&frm=0&tiba=Loading...%20-%20Replit&hn=www.googleadservices.com&npa=0&pscdl=noapi&auid=1466138546.1758761735&data=event%3Dgtag.config&rfmt=3&fmt=4:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+PlataformaEnem:1 Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner.
+m.stripe.com/6:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+ Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+_ @ framework-ff9e7105bac8ff32.js:1
+ Unrecognized feature: 'ambient-light-sensor'.
+_ @ framework-ff9e7105bac8ff32.js:1
+ Unrecognized feature: 'battery'.
+_ @ framework-ff9e7105bac8ff32.js:1
+ Unrecognized feature: 'execution-while-not-rendered'.
+_ @ framework-ff9e7105bac8ff32.js:1
+ Unrecognized feature: 'execution-while-out-of-viewport'.
+_ @ framework-ff9e7105bac8ff32.js:1
+ Unrecognized feature: 'layout-animations'.
+_ @ framework-ff9e7105bac8ff32.js:1
+ Unrecognized feature: 'legacy-image-formats'.
+_ @ framework-ff9e7105bac8ff32.js:1
+ Unrecognized feature: 'navigation-override'.
+_ @ framework-ff9e7105bac8ff32.js:1
+ Unrecognized feature: 'oversized-images'.
+_ @ framework-ff9e7105bac8ff32.js:1
+ Unrecognized feature: 'publickey-credentials'.
+_ @ framework-ff9e7105bac8ff32.js:1
+ Unrecognized feature: 'speaker-selection'.
+_ @ framework-ff9e7105bac8ff32.js:1
+ Unrecognized feature: 'unoptimized-images'.
+_ @ framework-ff9e7105bac8ff32.js:1
+ Unrecognized feature: 'unsized-media'.
+_ @ framework-ff9e7105bac8ff32.js:1
+ Unrecognized feature: 'pointer-lock'.
+_ @ framework-ff9e7105bac8ff32.js:1
+ Allow attribute will take precedence over 'allowfullscreen'.
+_ @ framework-ff9e7105bac8ff32.js:1
+ Allow attribute will take precedence over 'allowpaymentrequest'.
+_ @ framework-ff9e7105bac8ff32.js:1
+workspace_iframe.html?initialPath=%2F&id=%3Ar20%3A:32 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+workspace_iframe.html?initialPath=%2F&id=%3Ar20%3A:32 Unrecognized feature: 'ambient-light-sensor'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar20%3A:32 Unrecognized feature: 'battery'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar20%3A:32 Unrecognized feature: 'execution-while-not-rendered'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar20%3A:32 Unrecognized feature: 'execution-while-out-of-viewport'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar20%3A:32 Unrecognized feature: 'layout-animations'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar20%3A:32 Unrecognized feature: 'legacy-image-formats'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar20%3A:32 Unrecognized feature: 'navigation-override'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar20%3A:32 Unrecognized feature: 'oversized-images'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar20%3A:32 Unrecognized feature: 'publickey-credentials'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar20%3A:32 Unrecognized feature: 'speaker-selection'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar20%3A:32 Unrecognized feature: 'unoptimized-images'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar20%3A:32 Unrecognized feature: 'unsized-media'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar20%3A:32 Allow attribute will take precedence over 'allowfullscreen'.
+workspace_iframe.html?initialPath=%2F&id=%3Ar20%3A:32 Allow attribute will take precedence over 'allowpaymentrequest'.
+ 🔧 Verificando configuração do Firebase...
+ API Key presente: true
+ Project ID presente: true
+ App ID presente: true
+ ✅ Inicializando Firebase...
+ 📌 Project ID: plataforma-enem-f3682
+ ✅ Firebase inicializado com sucesso!
+ 🔄 Iniciando sincronização de todas as conversas...
+ 📊 Total de conversas encontradas: 3
+ 🔄 Sincronizando conversa: 0v7a0tYPa8swFwC7WJWm
+ 🔔 Mudança detectada em mensagem: Object
+ 🔄 Atualizando status da conversa: KmtAHDxTJNXvccNphdfyU2rF1Bc2_Pwwuu7G5PGeYHGKPxIsGauvT5Dc2
+ 🔔 Mudança detectada em mensagem: Object
+ 🔄 Atualizando status da conversa: KmtAHDxTJNXvccNphdfyU2rF1Bc2_Pwwuu7G5PGeYHGKPxIsGauvT5Dc2
+ 🔔 Mudança detectada em mensagem: Object
+ 🔄 Atualizando status da conversa: KmtAHDxTJNXvccNphdfyU2rF1Bc2_Pwwuu7G5PGeYHGKPxIsGauvT5Dc2
+ 🔔 Mudança detectada em mensagem: Object
+ 🔄 Atualizando status da conversa: KmtAHDxTJNXvccNphdfyU2rF1Bc2_Pwwuu7G5PGeYHGKPxIsGauvT5Dc2
+ 🔔 Mudança detectada em mensagem: Object
+ 🔄 Atualizando status da conversa: Pwwuu7G5PGeYHGKPxIsGauvT5Dc2_w0C0FlBtCidjLURonmjY8KhZ4Mx2
+ 🔔 Mudança detectada em mensagem: Object
+ 🔄 Atualizando status da conversa: KmtAHDxTJNXvccNphdfyU2rF1Bc2_Pwwuu7G5PGeYHGKPxIsGauvT5Dc2
+ 🔔 Mudança detectada em mensagem: Object
+ 🔄 Atualizando status da conversa: KmtAHDxTJNXvccNphdfyU2rF1Bc2_Pwwuu7G5PGeYHGKPxIsGauvT5Dc2
+ 🔔 Mudança detectada em mensagem: Object
+ 🔄 Atualizando status da conversa: KmtAHDxTJNXvccNphdfyU2rF1Bc2_Pwwuu7G5PGeYHGKPxIsGauvT5Dc2
+ 🔔 Mudança detectada em mensagem: Object
+ 🔄 Atualizando status da conversa: Pwwuu7G5PGeYHGKPxIsGauvT5Dc2_eGFsvwpblCUfnh4Aw9A1XJi6w1H3
+injected.js:27 🔔 Mudança detectada em mensagem: Object
+injected.js:27 🔄 Atualizando status da conversa: KmtAHDxTJNXvccNphdfyU2rF1Bc2_Pwwuu7G5PGeYHGKPxIsGauvT5Dc2
+injected.js:27 🔔 Mudança detectada em mensagem: Object
+injected.js:27 🔄 Atualizando status da conversa: KmtAHDxTJNXvccNphdfyU2rF1Bc2_Pwwuu7G5PGeYHGKPxIsGauvT5Dc2
+injected.js:27 🔔 Mudança detectada em mensagem: Object
+injected.js:27 🔄 Atualizando status da conversa: Pwwuu7G5PGeYHGKPxIsGauvT5Dc2_eGFsvwpblCUfnh4Aw9A1XJi6w1H3
+injected.js:27 🔔 Mudança detectada em mensagem: Object
+injected.js:27 🔄 Atualizando status da conversa: Pwwuu7G5PGeYHGKPxIsGauvT5Dc2_w0C0FlBtCidjLURonmjY8KhZ4Mx2
+injected.js:27 🔔 Mudança detectada em mensagem: Object
+injected.js:27 🔄 Atualizando status da conversa: Pwwuu7G5PGeYHGKPxIsGauvT5Dc2_eGFsvwpblCUfnh4Aw9A1XJi6w1H3
+injected.js:27 🔄 Sincronizando conversa: KmtAHDxTJNXvccNphdfyU2rF1Bc2_Pwwuu7G5PGeYHGKPxIsGauvT5Dc2
+injected.js:27 🔄 Sincronizando conversa: Pwwuu7G5PGeYHGKPxIsGauvT5Dc2_w0C0FlBtCidjLURonmjY8KhZ4Mx2
+injected.js:27 ✅ Sincronização inicial concluída
+firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?gsessionid=jeW7Z57FZgk1iF0YO2U1gGP8fK7VHRe3TvWm42hzVZo&VER=8&database=projects%2Fplataforma-enem-f3682%2Fdatabases%2F(default)&RID=rpc&SID=YKwy2GgEWry0y24kEmNYxw&AID=4&CI=1&TYPE=xmlhttp&zx=2vv81dystpsq&t=1:1  Failed to load resource: the server responded with a status of 400 ()
+injected.js:27 [2025-10-24T06:00:20.811Z]  @firebase/firestore: Firestore (12.4.0): WebChannelConnection RPC 'Write' stream 0x421455cb transport errored. Name: undefined Message: undefined
+(anonymous) @ injected.js:27
+injected.js:27 ✓ Status atualizado na conversa: KmtAHDxTJNXvccNphdfyU2rF1Bc2_Pwwuu7G5PGeYHGKPxIsGauvT5Dc2 Object
+firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?gsessionid=VaHuIEICSk-N5oXje8naL0dzX4Tsis17nW2uJNffY3Q&VER=8&database=projects%2Fplataforma-enem-f3682%2Fdatabases%2F(default)&RID=rpc&SID=3IfiPDEsE_1adNUoGDYjRg&AID=4&CI=1&TYPE=xmlhttp&zx=fy387gka0ju&t=1:1  Failed to load resource: the server responded with a status of 400 ()
+injected.js:27 [2025-10-24T06:00:22.197Z]  @firebase/firestore: Firestore (12.4.0): WebChannelConnection RPC 'Write' stream 0x421455cc transport errored. Name: undefined Message: undefined
+(anonymous) @ injected.js:27
+injected.js:27 🔄 Iniciando sincronização de todas as conversas...
+injected.js:27 📊 Total de conversas encontradas: 3
+injected.js:27 🔄 Sincronizando conversa: 0v7a0tYPa8swFwC7WJWm
+injected.js:27 🔔 Mudança detectada em mensagem: Object
+injected.js:27 🔄 Atualizando status da conversa: KmtAHDxTJNXvccNphdfyU2rF1Bc2_Pwwuu7G5PGeYHGKPxIsGauvT5Dc2
+injected.js:27 🔔 Mudança detectada em mensagem: Object
+injected.js:27 🔄 Atualizando status da conversa: KmtAHDxTJNXvccNphdfyU2rF1Bc2_Pwwuu7G5PGeYHGKPxIsGauvT5Dc2
+injected.js:27 🔔 Mudança detectada em mensagem: Object
+injected.js:27 🔄 Atualizando status da conversa: KmtAHDxTJNXvccNphdfyU2rF1Bc2_Pwwuu7G5PGeYHGKPxIsGauvT5Dc2
+injected.js:27 🔔 Mudança detectada em mensagem: Object
+injected.js:27 🔄 Atualizando status da conversa: KmtAHDxTJNXvccNphdfyU2rF1Bc2_Pwwuu7G5PGeYHGKPxIsGauvT5Dc2
+injected.js:27 🔔 Mudança detectada em mensagem: Object
+injected.js:27 🔄 Atualizando status da conversa: Pwwuu7G5PGeYHGKPxIsGauvT5Dc2_w0C0FlBtCidjLURonmjY8KhZ4Mx2
+injected.js:27 🔔 Mudança detectada em mensagem: Object
+injected.js:27 🔄 Atualizando status da conversa: KmtAHDxTJNXvccNphdfyU2rF1Bc2_Pwwuu7G5PGeYHGKPxIsGauvT5Dc2
+injected.js:27 🔔 Mudança detectada em mensagem: Object
+injected.js:27 🔄 Atualizando status da conversa: KmtAHDxTJNXvccNphdfyU2rF1Bc2_Pwwuu7G5PGeYHGKPxIsGauvT5Dc2
+injected.js:27 🔔 Mudança detectada em mensagem: Object
+injected.js:27 🔄 Atualizando status da conversa: KmtAHDxTJNXvccNphdfyU2rF1Bc2_Pwwuu7G5PGeYHGKPxIsGauvT5Dc2
+injected.js:27 🔔 Mudança detectada em mensagem: Object
+injected.js:27 🔄 Atualizando status da conversa: Pwwuu7G5PGeYHGKPxIsGauvT5Dc2_eGFsvwpblCUfnh4Aw9A1XJi6w1H3
+injected.js:27 🔔 Mudança detectada em mensagem: Object
+injected.js:27 🔄 Atualizando status da conversa: KmtAHDxTJNXvccNphdfyU2rF1Bc2_Pwwuu7G5PGeYHGKPxIsGauvT5Dc2
+injected.js:27 🔔 Mudança detectada em mensagem: Object
+injected.js:27 🔄 Atualizando status da conversa: KmtAHDxTJNXvccNphdfyU2rF1Bc2_Pwwuu7G5PGeYHGKPxIsGauvT5Dc2
+injected.js:27 🔔 Mudança detectada em mensagem: Object
+injected.js:27 🔄 Atualizando status da conversa: Pwwuu7G5PGeYHGKPxIsGauvT5Dc2_eGFsvwpblCUfnh4Aw9A1XJi6w1H3
+injected.js:27 🔔 Mudança detectada em mensagem: Object
+injected.js:27 🔄 Atualizando status da conversa: Pwwuu7G5PGeYHGKPxIsGauvT5Dc2_w0C0FlBtCidjLURonmjY8KhZ4Mx2
+injected.js:27 🔔 Mudança detectada em mensagem: Object
+injected.js:27 🔄 Atualizando status da conversa: Pwwuu7G5PGeYHGKPxIsGauvT5Dc2_eGFsvwpblCUfnh4Aw9A1XJi6w1H3
+injected.js:27 ✓ Status atualizado na conversa: Pwwuu7G5PGeYHGKPxIsGauvT5Dc2_w0C0FlBtCidjLURonmjY8KhZ4Mx2 Object
+injected.js:27 [2025-10-24T06:00:22.579Z]  @firebase/firestore: Firestore (12.4.0): Uncaught Error in snapshot listener: FirebaseError: [code=failed-precondition]: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/plataforma-enem-f3682/firestore/indexes?create_composite=Clpwcm9qZWN0cy9wbGF0YWZvcm1hLWVuZW0tZjM2ODIvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2NhbGxfc2lnbmFscy9pbmRleGVzL18QARoICgRyZWFkEAEaDgoKcmVjZWl2ZXJJZBABGggKBHR5cGUQARoNCgl0aW1lc3RhbXAQAhoMCghfX25hbWVfXxAC
+(anonymous) @ injected.js:27
+injected.js:27 🔄 Sincronizando conversa: KmtAHDxTJNXvccNphdfyU2rF1Bc2_Pwwuu7G5PGeYHGKPxIsGauvT5Dc2
+injected.js:27 🔄 Sincronizando conversa: Pwwuu7G5PGeYHGKPxIsGauvT5Dc2_w0C0FlBtCidjLURonmjY8KhZ4Mx2
+injected.js:27 ✅ Sincronização inicial concluída
+injected.js:27 📊 Dados de presença recebidos: Object
+injected.js:27 📊 Dados de presença recebidos: Object
+injected.js:27 📊 Dados de presença recebidos: Object
+firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?gsessionid=H5mc--nZcDTsHWOdrvE5631ICB1uO1DemCEX7uYHJg0&VER=8&database=projects%2Fplataforma-enem-f3682%2Fdatabases%2F(default)&RID=rpc&SID=vGyCile2dOyRXgPl_UY-GA&AID=4&CI=1&TYPE=xmlhttp&zx=8mcq8ig2kqwt&t=1:1  Failed to load resource: the server responded with a status of 400 ()
+firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Fplataforma-enem-f3682%2Fdatabases%2F(default)&gsessionid=H5mc--nZcDTsHWOdrvE5631ICB1uO1DemCEX7uYHJg0&SID=vGyCile2dOyRXgPl_UY-GA&RID=84966&AID=4&zx=uwjgms1rfnm0&t=1:1  Failed to load resource: the server responded with a status of 400 ()
+injected.js:27 👥 otherParticipant criado: Object
+injected.js:27 🔍 getPresenceText chamado: Object
+injected.js:27 👥 otherParticipant criado: Object
+injected.js:27 🔍 getPresenceText chamado: Object
+injected.js:27 📊 Dados de presença recebidos: Object
+injected.js:27 👥 otherParticipant criado: Object
+injected.js:27 🔍 getPresenceText chamado: Object
+injected.js:27 📅 Data criada: Fri Oct 24 2025 02:29:50 GMT-0300 (Horário Padrão de Brasília) válida? true
+injected.js:27 ⏰ Hora formatada: 02:29
+injected.js:27 ✅ Resultado final: Visto por último hoje às 02:29
+injected.js:27 👥 otherParticipant criado: Object
+injected.js:27 🔍 getPresenceText chamado: Object
+injected.js:27 📅 Data criada: Fri Oct 24 2025 02:29:50 GMT-0300 (Horário Padrão de Brasília) válida? true
+injected.js:27 ⏰ Hora formatada: 02:29
+injected.js:27 ✅ Resultado final: Visto por último hoje às 02:29
+injected.js:27 [2025-10-24T06:00:23.615Z]  @firebase/firestore: Firestore (12.4.0): WebChannelConnection RPC 'Write' stream 0x421455cd transport errored. Name: undefined Message: undefined
+(anonymous) @ injected.js:27
+injected.js:27 Erro ao atualizar status da conversa: FirebaseError: No document to update: projects/plataforma-enem-f3682/databases/(default)/documents/chat_conversations/Pwwuu7G5PGeYHGKPxIsGauvT5Dc2_eGFsvwpblCUfnh4Aw9A1XJi6w1H3
+(anonymous) @ injected.js:27
+firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Fplataforma-enem-f3682%2Fdatabases%2F(default)&gsessionid=j-fKx-z-n0Aa0tOpN2eEDuEVeMyIxzrjFk3VN0Kpvcs&SID=8GjO6yny87TelMRt9SQb4g&RID=26731&TYPE=terminate&zx=rla3v39iwbs:1  Failed to load resource: the server responded with a status of 400 ()
+injected.js:27 ✓ Status atualizado na conversa: KmtAHDxTJNXvccNphdfyU2rF1Bc2_Pwwuu7G5PGeYHGKPxIsGauvT5Dc2 Object
+firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?gsessionid=0a-ho_R8BCxHYzNtRj2HStxNwsflqH3fvxRLvX6msdw&VER=8&database=projects%2Fplataforma-enem-f3682%2Fdatabases%2F(default)&RID=rpc&SID=xT63QAnvyhs_mHVn3Xd9GQ&AID=4&CI=1&TYPE=xmlhttp&zx=sun5ne9dbs7o&t=1:1  Failed to load resource: the server responded with a status of 400 ()
+injected.js:27 [2025-10-24T06:00:25.326Z]  @firebase/firestore: Firestore (12.4.0): WebChannelConnection RPC 'Write' stream 0x421455cf transport errored. Name: undefined Message: undefined
+(anonymous) @ injected.js:27
+defaultLogHandler @ chunk-B3OT22E3.js?v=d7400764:1211
+warn @ chunk-B3OT22E3.js?v=d7400764:1275
+__PRIVATE_logWarn @ firebase_firestore.js?v=d7400764:2569
+(anonymous) @ firebase_firestore.js?v=d7400764:12606
+(anonymous) @ firebase_firestore.js?v=d7400764:12593
+Va @ firebase_firestore.js?v=d7400764:920
+D @ firebase_firestore.js?v=d7400764:888
+Z2.pa @ firebase_firestore.js?v=d7400764:2480
+R @ firebase_firestore.js?v=d7400764:2335
+Qb @ firebase_firestore.js?v=d7400764:2312
+Mb @ firebase_firestore.js?v=d7400764:1314
+N2.Y @ firebase_firestore.js?v=d7400764:1256
+N2.ba @ firebase_firestore.js?v=d7400764:1189
+Va @ firebase_firestore.js?v=d7400764:920
+D @ firebase_firestore.js?v=d7400764:888
+Qc @ firebase_firestore.js?v=d7400764:1885
+h.Xa @ firebase_firestore.js?v=d7400764:1880
+h.Ca @ firebase_firestore.js?v=d7400764:1877
+Gc @ firebase_firestore.js?v=d7400764:1778
+h.Ma @ firebase_firestore.js?v=d7400764:1745
+Promise.then
+Ic @ firebase_firestore.js?v=d7400764:1736
+h.Pa @ firebase_firestore.js?v=d7400764:1732
+injected.js:27 👥 otherParticipant criado: {id: 'KmtAHDxTJNXvccNphdfyU2rF1Bc2', nome: 'Ueslaine Maria Monteiro', tipo: 'aluno', isOnline: false, lastSeen: '2025-10-24T05:29:50.000Z', …}
+injected.js:27 🔍 getPresenceText chamado: {isLoading: false, isOnline: false, lastSeen: '2025-10-24T05:29:50.000Z', presenceData: {…}}
+injected.js:27 📅 Data criada: Fri Oct 24 2025 02:29:50 GMT-0300 (Horário Padrão de Brasília) válida? true
+injected.js:27 ⏰ Hora formatada: 02:29
+injected.js:27 ✅ Resultado final: Visto por último hoje às 02:29
+injected.js:27 ✓ Status atualizado na conversa: Pwwuu7G5PGeYHGKPxIsGauvT5Dc2_w0C0FlBtCidjLURonmjY8KhZ4Mx2 {entregue: true, lida: true}
+injected.js:204  GET https://firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?gsessionid=R7a2ouNV5bFbzVtVGpmY6EvjuTxVCgRIsXnLwTkM3IA&VER=8&database=projects%2Fplataforma-enem-f3682%2Fdatabases%2F(default)&RID=rpc&SID=iLCF99vnwEryAKR-l5A0rQ&AID=4&CI=1&TYPE=xmlhttp&zx=8qs9plw5ovfs&t=1 400 (Bad Request)
+apply @ injected.js:204
+h.send @ firebase_firestore.js?v=d7400764:1712
+h.ea @ firebase_firestore.js?v=d7400764:1853
+Eb @ firebase_firestore.js?v=d7400764:1182
+$c @ firebase_firestore.js?v=d7400764:2278
+h.Da @ firebase_firestore.js?v=d7400764:2245
+sa @ firebase_firestore.js?v=d7400764:624
+Promise.then
+u @ firebase_firestore.js?v=d7400764:618
+ac @ firebase_firestore.js?v=d7400764:2231
+Qb @ firebase_firestore.js?v=d7400764:2303
+N2.Y @ firebase_firestore.js?v=d7400764:1255
+N2.ba @ firebase_firestore.js?v=d7400764:1189
+Va @ firebase_firestore.js?v=d7400764:920
+D @ firebase_firestore.js?v=d7400764:888
+Qc @ firebase_firestore.js?v=d7400764:1885
+h.Xa @ firebase_firestore.js?v=d7400764:1880
+h.Ca @ firebase_firestore.js?v=d7400764:1877
+Gc @ firebase_firestore.js?v=d7400764:1778
+Hc @ firebase_firestore.js?v=d7400764:1763
+h.Ma @ firebase_firestore.js?v=d7400764:1745
+Promise.then
+Ic @ firebase_firestore.js?v=d7400764:1736
+h.Ma @ firebase_firestore.js?v=d7400764:1746
+Promise.then
+Ic @ firebase_firestore.js?v=d7400764:1736
+h.Ma @ firebase_firestore.js?v=d7400764:1746
+Promise.then
+Ic @ firebase_firestore.js?v=d7400764:1736
+h.Pa @ firebase_firestore.js?v=d7400764:1732
+Promise.then
+h.send @ firebase_firestore.js?v=d7400764:1712
+h.ea @ firebase_firestore.js?v=d7400764:1853
+Eb @ firebase_firestore.js?v=d7400764:1182
+$c @ firebase_firestore.js?v=d7400764:2278
+h.Da @ firebase_firestore.js?v=d7400764:2245
+sa @ firebase_firestore.js?v=d7400764:624
+Promise.then
+u @ firebase_firestore.js?v=d7400764:618
+bc @ firebase_firestore.js?v=d7400764:2098
+Y2.o @ firebase_firestore.js?v=d7400764:2438
+Yo @ firebase_firestore.js?v=d7400764:12587
+send @ firebase_firestore.js?v=d7400764:12478
+q_ @ firebase_firestore.js?v=d7400764:12795
+ea @ firebase_firestore.js?v=d7400764:13006
+__PRIVATE_onWriteHandshakeComplete @ firebase_firestore.js?v=d7400764:13354
+J_ @ firebase_firestore.js?v=d7400764:12981
+(anonymous) @ firebase_firestore.js?v=d7400764:12877
+(anonymous) @ firebase_firestore.js?v=d7400764:12897
+(anonymous) @ firebase_firestore.js?v=d7400764:15988
+(anonymous) @ firebase_firestore.js?v=d7400764:16019
+Promise.then
+cc @ firebase_firestore.js?v=d7400764:16019
+enqueue @ firebase_firestore.js?v=d7400764:15988
+enqueueAndForget @ firebase_firestore.js?v=d7400764:15970
+(anonymous) @ firebase_firestore.js?v=d7400764:12897
+(anonymous) @ firebase_firestore.js?v=d7400764:12877
+u_ @ firebase_firestore.js?v=d7400764:12490
+(anonymous) @ firebase_firestore.js?v=d7400764:12630
+(anonymous) @ firebase_firestore.js?v=d7400764:12593
+Va @ firebase_firestore.js?v=d7400764:920
+D @ firebase_firestore.js?v=d7400764:888
+Z2.qa @ firebase_firestore.js?v=d7400764:2477
+Lb @ firebase_firestore.js?v=d7400764:1387
+N2.Y @ firebase_firestore.js?v=d7400764:1238
+N2.ba @ firebase_firestore.js?v=d7400764:1189
+Va @ firebase_firestore.js?v=d7400764:920
+D @ firebase_firestore.js?v=d7400764:888
+Qc @ firebase_firestore.js?v=d7400764:1885
+h.Xa @ firebase_firestore.js?v=d7400764:1880
+h.Ca @ firebase_firestore.js?v=d7400764:1877
+Gc @ firebase_firestore.js?v=d7400764:1778
+h.Ma @ firebase_firestore.js?v=d7400764:1745
+Promise.then
+Ic @ firebase_firestore.js?v=d7400764:1736
+h.Pa @ firebase_firestore.js?v=d7400764:1732
+Promise.then
+h.send @ firebase_firestore.js?v=d7400764:1712
+h.ea @ firebase_firestore.js?v=d7400764:1853
+Eb @ firebase_firestore.js?v=d7400764:1182
+$c @ firebase_firestore.js?v=d7400764:2278
+h.Wa @ firebase_firestore.js?v=d7400764:2253
+(anonymous) @ firebase_firestore.js?v=d7400764:1032
+setTimeout
+ob @ firebase_firestore.js?v=d7400764:1031
+h.Da @ firebase_firestore.js?v=d7400764:2249
+sa @ firebase_firestore.js?v=d7400764:624
+Promise.then
+u @ firebase_firestore.js?v=d7400764:618
+ac @ firebase_firestore.js?v=d7400764:2231
+Lb @ firebase_firestore.js?v=d7400764:1384
+N2.Y @ firebase_firestore.js?v=d7400764:1238
+N2.ba @ firebase_firestore.js?v=d7400764:1189
+Va @ firebase_firestore.js?v=d7400764:920
+D @ firebase_firestore.js?v=d7400764:888
+Qc @ firebase_firestore.js?v=d7400764:1885
+h.Xa @ firebase_firestore.js?v=d7400764:1880
+h.Ca @ firebase_firestore.js?v=d7400764:1877
+Gc @ firebase_firestore.js?v=d7400764:1778
+h.Ma @ firebase_firestore.js?v=d7400764:1745
+Promise.then
+Ic @ firebase_firestore.js?v=d7400764:1736
+h.Pa @ firebase_firestore.js?v=d7400764:1732
+Promise.then
+h.send @ firebase_firestore.js?v=d7400764:1712
+h.ea @ firebase_firestore.js?v=d7400764:1853
+Eb @ firebase_firestore.js?v=d7400764:1177
+Cb @ firebase_firestore.js?v=d7400764:1152
+h.Ea @ firebase_firestore.js?v=d7400764:2154
+sa @ firebase_firestore.js?v=d7400764:624
+Promise.then
+u @ firebase_firestore.js?v=d7400764:618
+bc @ firebase_firestore.js?v=d7400764:2098
+h.connect @ firebase_firestore.js?v=d7400764:2058
+Y2.m @ firebase_firestore.js?v=d7400764:2425
+Yo @ firebase_firestore.js?v=d7400764:12587
+send @ firebase_firestore.js?v=d7400764:12478
+q_ @ firebase_firestore.js?v=d7400764:12795
+ra @ firebase_firestore.js?v=d7400764:12998
+__PRIVATE_onWriteStreamOpen @ firebase_firestore.js?v=d7400764:13350
+(anonymous) @ firebase_firestore.js?v=d7400764:12873
+(anonymous) @ firebase_firestore.js?v=d7400764:12897
+(anonymous) @ firebase_firestore.js?v=d7400764:15988
+(anonymous) @ firebase_firestore.js?v=d7400764:16019
+Promise.then
+cc @ firebase_firestore.js?v=d7400764:16019
+enqueue @ firebase_firestore.js?v=d7400764:15988
+enqueueAndForget @ firebase_firestore.js?v=d7400764:15970
+(anonymous) @ firebase_firestore.js?v=d7400764:12897
+(anonymous) @ firebase_firestore.js?v=d7400764:12873
+__ @ firebase_firestore.js?v=d7400764:12484
+(anonymous) @ firebase_firestore.js?v=d7400764:12635
+setTimeout
+T_ @ firebase_firestore.js?v=d7400764:12634
+j_ @ firebase_firestore.js?v=d7400764:12977
+G_ @ firebase_firestore.js?v=d7400764:12870
+(anonymous) @ firebase_firestore.js?v=d7400764:12860
+Promise.then
+auth @ firebase_firestore.js?v=d7400764:12856
+start @ firebase_firestore.js?v=d7400764:12755
+start @ firebase_firestore.js?v=d7400764:12971
+(anonymous) @ firebase_firestore.js?v=d7400764:12882
+(anonymous) @ firebase_firestore.js?v=d7400764:12702
+(anonymous) @ firebase_firestore.js?v=d7400764:13493
+(anonymous) @ firebase_firestore.js?v=d7400764:15988
+(anonymous) @ firebase_firestore.js?v=d7400764:16019
+Promise.then
+cc @ firebase_firestore.js?v=d7400764:16019
+enqueue @ firebase_firestore.js?v=d7400764:15988
+enqueueAndForget @ firebase_firestore.js?v=d7400764:15970
+handleDelayElapsed @ firebase_firestore.js?v=d7400764:13493
+(anonymous) @ firebase_firestore.js?v=d7400764:13473
+setTimeout
+start @ firebase_firestore.js?v=d7400764:13473
+createAndSchedule @ firebase_firestore.js?v=d7400764:13466
+enqueueAfterDelay @ firebase_firestore.js?v=d7400764:16028
+p_ @ firebase_firestore.js?v=d7400764:12702
+N_ @ firebase_firestore.js?v=d7400764:12881
+start @ firebase_firestore.js?v=d7400764:12755
+start @ firebase_firestore.js?v=d7400764:12971
+__PRIVATE_startWriteStream @ firebase_firestore.js?v=d7400764:13347
+__PRIVATE_onWriteStreamClose @ firebase_firestore.js?v=d7400764:13375
+await in __PRIVATE_onWriteStreamClose
+close @ firebase_firestore.js?v=d7400764:12845
+z_ @ firebase_firestore.js?v=d7400764:12887
+(anonymous) @ firebase_firestore.js?v=d7400764:12875
+(anonymous) @ firebase_firestore.js?v=d7400764:12897
+(anonymous) @ firebase_firestore.js?v=d7400764:15988
+(anonymous) @ firebase_firestore.js?v=d7400764:16019
+Promise.then
+cc @ firebase_firestore.js?v=d7400764:16019
+enqueue @ firebase_firestore.js?v=d7400764:15988
+enqueueAndForget @ firebase_firestore.js?v=d7400764:15970
+(anonymous) @ firebase_firestore.js?v=d7400764:12897
+(anonymous) @ firebase_firestore.js?v=d7400764:12875
+a_ @ firebase_firestore.js?v=d7400764:12487
+(anonymous) @ firebase_firestore.js?v=d7400764:12606
+(anonymous) @ firebase_firestore.js?v=d7400764:12593
+Va @ firebase_firestore.js?v=d7400764:920
+D @ firebase_firestore.js?v=d7400764:888
+Z2.pa @ firebase_firestore.js?v=d7400764:2480
+R @ firebase_firestore.js?v=d7400764:2335
+Qb @ firebase_firestore.js?v=d7400764:2312
+Mb @ firebase_firestore.js?v=d7400764:1314
+N2.Y @ firebase_firestore.js?v=d7400764:1256
+N2.ba @ firebase_firestore.js?v=d7400764:1189
+Va @ firebase_firestore.js?v=d7400764:920
+D @ firebase_firestore.js?v=d7400764:888
+Qc @ firebase_firestore.js?v=d7400764:1885
+h.Xa @ firebase_firestore.js?v=d7400764:1880
+h.Ca @ firebase_firestore.js?v=d7400764:1877
+Gc @ firebase_firestore.js?v=d7400764:1778
+h.Ma @ firebase_firestore.js?v=d7400764:1745
+Promise.then
+Ic @ firebase_firestore.js?v=d7400764:1736
+h.Pa @ firebase_firestore.js?v=d7400764:1732
+stallwart.build.js:1 stallwart: failed ping 1
+injected.js:27 [2025-10-24T06:00:26.765Z]  @firebase/firestore: Firestore (12.4.0): WebChannelConnection RPC 'Write' stream 0x421455d0 transport errored. Name: undefined Message: undefined
+(anonymous) @ injected.js:27
+defaultLogHandler @ chunk-B3OT22E3.js?v=d7400764:1211
+warn @ chunk-B3OT22E3.js?v=d7400764:1275
+__PRIVATE_logWarn @ firebase_firestore.js?v=d7400764:2569
+(anonymous) @ firebase_firestore.js?v=d7400764:12606
+(anonymous) @ firebase_firestore.js?v=d7400764:12593
+Va @ firebase_firestore.js?v=d7400764:920
+D @ firebase_firestore.js?v=d7400764:888
+Z2.pa @ firebase_firestore.js?v=d7400764:2480
+R @ firebase_firestore.js?v=d7400764:2335
+Qb @ firebase_firestore.js?v=d7400764:2312
+Mb @ firebase_firestore.js?v=d7400764:1314
+N2.Y @ firebase_firestore.js?v=d7400764:1256
+N2.ba @ firebase_firestore.js?v=d7400764:1189
+Va @ firebase_firestore.js?v=d7400764:920
+D @ firebase_firestore.js?v=d7400764:888
+Qc @ firebase_firestore.js?v=d7400764:1885
+h.Xa @ firebase_firestore.js?v=d7400764:1880
+h.Ca @ firebase_firestore.js?v=d7400764:1877
+Gc @ firebase_firestore.js?v=d7400764:1778
+h.Ma @ firebase_firestore.js?v=d7400764:1745
+Promise.then
+Ic @ firebase_firestore.js?v=d7400764:1736
+h.Pa @ firebase_firestore.js?v=d7400764:1732
+Promise.then
+h.send @ firebase_firestore.js?v=d7400764:1712
+h.ea @ firebase_firestore.js?v=d7400764:1853
+Eb @ firebase_firestore.js?v=d7400764:1182
+$c @ firebase_firestore.js?v=d7400764:2278
+h.Da @ firebase_firestore.js?v=d7400764:2245
+sa @ firebase_firestore.js?v=d7400764:624
+Promise.then
+u @ firebase_firestore.js?v=d7400764:618
+ac @ firebase_firestore.js?v=d7400764:2231
+Qb @ firebase_firestore.js?v=d7400764:2303
+N2.Y @ firebase_firestore.js?v=d7400764:1255
+N2.ba @ firebase_firestore.js?v=d7400764:1189
+Va @ firebase_firestore.js?v=d7400764:920
+D @ firebase_firestore.js?v=d7400764:888
+Qc @ firebase_firestore.js?v=d7400764:1885
+h.Xa @ firebase_firestore.js?v=d7400764:1880
+h.Ca @ firebase_firestore.js?v=d7400764:1877
+Gc @ firebase_firestore.js?v=d7400764:1778
+Hc @ firebase_firestore.js?v=d7400764:1763
+h.Ma @ firebase_firestore.js?v=d7400764:1745
+Promise.then
+Ic @ firebase_firestore.js?v=d7400764:1736
+h.Ma @ firebase_firestore.js?v=d7400764:1746
+Promise.then
+Ic @ firebase_firestore.js?v=d7400764:1736
+h.Ma @ firebase_firestore.js?v=d7400764:1746
+Promise.then
+Ic @ firebase_firestore.js?v=d7400764:1736
+h.Pa @ firebase_firestore.js?v=d7400764:1732
+Promise.then
+h.send @ firebase_firestore.js?v=d7400764:1712
+h.ea @ firebase_firestore.js?v=d7400764:1853
+Eb @ firebase_firestore.js?v=d7400764:1182
+$c @ firebase_firestore.js?v=d7400764:2278
+h.Da @ firebase_firestore.js?v=d7400764:2245
+sa @ firebase_firestore.js?v=d7400764:624
+Promise.then
+u @ firebase_firestore.js?v=d7400764:618
+bc @ firebase_firestore.js?v=d7400764:2098
+Y2.o @ firebase_firestore.js?v=d7400764:2438
+Yo @ firebase_firestore.js?v=d7400764:12587
+send @ firebase_firestore.js?v=d7400764:12478
+q_ @ firebase_firestore.js?v=d7400764:12795
+ea @ firebase_firestore.js?v=d7400764:13006
+__PRIVATE_onWriteHandshakeComplete @ firebase_firestore.js?v=d7400764:13354
+J_ @ firebase_firestore.js?v=d7400764:12981
+(anonymous) @ firebase_firestore.js?v=d7400764:12877
+(anonymous) @ firebase_firestore.js?v=d7400764:12897
+(anonymous) @ firebase_firestore.js?v=d7400764:15988
+(anonymous) @ firebase_firestore.js?v=d7400764:16019
+Promise.then
+cc @ firebase_firestore.js?v=d7400764:16019
+enqueue @ firebase_firestore.js?v=d7400764:15988
+enqueueAndForget @ firebase_firestore.js?v=d7400764:15970
+(anonymous) @ firebase_firestore.js?v=d7400764:12897
+(anonymous) @ firebase_firestore.js?v=d7400764:12877
+u_ @ firebase_firestore.js?v=d7400764:12490
+(anonymous) @ firebase_firestore.js?v=d7400764:12630
+(anonymous) @ firebase_firestore.js?v=d7400764:12593
+Va @ firebase_firestore.js?v=d7400764:920
+D @ firebase_firestore.js?v=d7400764:888
+Z2.qa @ firebase_firestore.js?v=d7400764:2477
+Lb @ firebase_firestore.js?v=d7400764:1387
+N2.Y @ firebase_firestore.js?v=d7400764:1238
+N2.ba @ firebase_firestore.js?v=d7400764:1189
+Va @ firebase_firestore.js?v=d7400764:920
+D @ firebase_firestore.js?v=d7400764:888
+Qc @ firebase_firestore.js?v=d7400764:1885
+h.Xa @ firebase_firestore.js?v=d7400764:1880
+h.Ca @ firebase_firestore.js?v=d7400764:1877
+Gc @ firebase_firestore.js?v=d7400764:1778
+h.Ma @ firebase_firestore.js?v=d7400764:1745
+Promise.then
+Ic @ firebase_firestore.js?v=d7400764:1736
+h.Pa @ firebase_firestore.js?v=d7400764:1732
+Promise.then
+h.send @ firebase_firestore.js?v=d7400764:1712
+h.ea @ firebase_firestore.js?v=d7400764:1853
+Eb @ firebase_firestore.js?v=d7400764:1182
+$c @ firebase_firestore.js?v=d7400764:2278
+h.Wa @ firebase_firestore.js?v=d7400764:2253
+(anonymous) @ firebase_firestore.js?v=d7400764:1032
+setTimeout
+ob @ firebase_firestore.js?v=d7400764:1031
+h.Da @ firebase_firestore.js?v=d7400764:2249
+sa @ firebase_firestore.js?v=d7400764:624
+Promise.then
+u @ firebase_firestore.js?v=d7400764:618
+ac @ firebase_firestore.js?v=d7400764:2231
+Lb @ firebase_firestore.js?v=d7400764:1384
+N2.Y @ firebase_firestore.js?v=d7400764:1238
+N2.ba @ firebase_firestore.js?v=d7400764:1189
+Va @ firebase_firestore.js?v=d7400764:920
+D @ firebase_firestore.js?v=d7400764:888
+Qc @ firebase_firestore.js?v=d7400764:1885
+h.Xa @ firebase_firestore.js?v=d7400764:1880
+h.Ca @ firebase_firestore.js?v=d7400764:1877
+Gc @ firebase_firestore.js?v=d7400764:1778
+h.Ma @ firebase_firestore.js?v=d7400764:1745
+Promise.then
+Ic @ firebase_firestore.js?v=d7400764:1736
+h.Pa @ firebase_firestore.js?v=d7400764:1732
+Promise.then
+h.send @ firebase_firestore.js?v=d7400764:1712
+h.ea @ firebase_firestore.js?v=d7400764:1853
+Eb @ firebase_firestore.js?v=d7400764:1177
+Cb @ firebase_firestore.js?v=d7400764:1152
+h.Ea @ firebase_firestore.js?v=d7400764:2154
+sa @ firebase_firestore.js?v=d7400764:624
+Promise.then
+u @ firebase_firestore.js?v=d7400764:618
+bc @ firebase_firestore.js?v=d7400764:2098
+h.connect @ firebase_firestore.js?v=d7400764:2058
+Y2.m @ firebase_firestore.js?v=d7400764:2425
+Yo @ firebase_firestore.js?v=d7400764:12587
+send @ firebase_firestore.js?v=d7400764:12478
+q_ @ firebase_firestore.js?v=d7400764:12795
+ra @ firebase_firestore.js?v=d7400764:12998
+__PRIVATE_onWriteStreamOpen @ firebase_firestore.js?v=d7400764:13350
+(anonymous) @ firebase_firestore.js?v=d7400764:12873
+(anonymous) @ firebase_firestore.js?v=d7400764:12897
+(anonymous) @ firebase_firestore.js?v=d7400764:15988
+(anonymous) @ firebase_firestore.js?v=d7400764:16019
+Promise.then
+cc @ firebase_firestore.js?v=d7400764:16019
+enqueue @ firebase_firestore.js?v=d7400764:15988
+enqueueAndForget @ firebase_firestore.js?v=d7400764:15970
+(anonymous) @ firebase_firestore.js?v=d7400764:12897
+(anonymous) @ firebase_firestore.js?v=d7400764:12873
+__ @ firebase_firestore.js?v=d7400764:12484
+(anonymous) @ firebase_firestore.js?v=d7400764:12635
+setTimeout
+T_ @ firebase_firestore.js?v=d7400764:12634
+j_ @ firebase_firestore.js?v=d7400764:12977
+G_ @ firebase_firestore.js?v=d7400764:12870
+(anonymous) @ firebase_firestore.js?v=d7400764:12860
+Promise.then
+auth @ firebase_firestore.js?v=d7400764:12856
+start @ firebase_firestore.js?v=d7400764:12755
+start @ firebase_firestore.js?v=d7400764:12971
+(anonymous) @ firebase_firestore.js?v=d7400764:12882
+(anonymous) @ firebase_firestore.js?v=d7400764:12702
+(anonymous) @ firebase_firestore.js?v=d7400764:13493
+(anonymous) @ firebase_firestore.js?v=d7400764:15988
+(anonymous) @ firebase_firestore.js?v=d7400764:16019
+Promise.then
+cc @ firebase_firestore.js?v=d7400764:16019
+enqueue @ firebase_firestore.js?v=d7400764:15988
+enqueueAndForget @ firebase_firestore.js?v=d7400764:15970
+handleDelayElapsed @ firebase_firestore.js?v=d7400764:13493
+(anonymous) @ firebase_firestore.js?v=d7400764:13473
+setTimeout
+start @ firebase_firestore.js?v=d7400764:13473
+createAndSchedule @ firebase_firestore.js?v=d7400764:13466
+enqueueAfterDelay @ firebase_firestore.js?v=d7400764:16028
+p_ @ firebase_firestore.js?v=d7400764:12702
+N_ @ firebase_firestore.js?v=d7400764:12881
+start @ firebase_firestore.js?v=d7400764:12755
+start @ firebase_firestore.js?v=d7400764:12971
+__PRIVATE_startWriteStream @ firebase_firestore.js?v=d7400764:13347
+__PRIVATE_onWriteStreamClose @ firebase_firestore.js?v=d7400764:13375
+await in __PRIVATE_onWriteStreamClose
+close @ firebase_firestore.js?v=d7400764:12845
+z_ @ firebase_firestore.js?v=d7400764:12887
+(anonymous) @ firebase_firestore.js?v=d7400764:12875
+(anonymous) @ firebase_firestore.js?v=d7400764:12897
+(anonymous) @ firebase_firestore.js?v=d7400764:15988
+(anonymous) @ firebase_firestore.js?v=d7400764:16019
+Promise.then
+cc @ firebase_firestore.js?v=d7400764:16019
+enqueue @ firebase_firestore.js?v=d7400764:15988
+enqueueAndForget @ firebase_firestore.js?v=d7400764:15970
+(anonymous) @ firebase_firestore.js?v=d7400764:12897
+(anonymous) @ firebase_firestore.js?v=d7400764:12875
+a_ @ firebase_firestore.js?v=d7400764:12487
+(anonymous) @ firebase_firestore.js?v=d7400764:12606
+(anonymous) @ firebase_firestore.js?v=d7400764:12593
+Va @ firebase_firestore.js?v=d7400764:920
+D @ firebase_firestore.js?v=d7400764:888
+Z2.pa @ firebase_firestore.js?v=d7400764:2480
+R @ firebase_firestore.js?v=d7400764:2335
+Qb @ firebase_firestore.js?v=d7400764:2312
+Mb @ firebase_firestore.js?v=d7400764:1314
+N2.Y @ firebase_firestore.js?v=d7400764:1256
+N2.ba @ firebase_firestore.js?v=d7400764:1189
+Va @ firebase_firestore.js?v=d7400764:920
+D @ firebase_firestore.js?v=d7400764:888
+Qc @ firebase_firestore.js?v=d7400764:1885
+h.Xa @ firebase_firestore.js?v=d7400764:1880
+h.Ca @ firebase_firestore.js?v=d7400764:1877
+Gc @ firebase_firestore.js?v=d7400764:1778
+h.Ma @ firebase_firestore.js?v=d7400764:1745
+Promise.then
+Ic @ firebase_firestore.js?v=d7400764:1736
+h.Pa @ firebase_firestore.js?v=d7400764:1732
+injected.js:27 Erro ao atualizar status da conversa: FirebaseError: No document to update: projects/plataforma-enem-f3682/databases/(default)/documents/chat_conversations/Pwwuu7G5PGeYHGKPxIsGauvT5Dc2_eGFsvwpblCUfnh4Aw9A1XJi6w1H3
+(anonymous) @ injected.js:27
+updateConversationStatus @ useConversationStatusSync.ts:64
+firebase_firestore.js?v=d7400764:2073  POST https://firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Fplataforma-enem-f3682%2Fdatabases%2F(default)&gsessionid=I08LWnSF-BK97UiVmp9cUXPb87kAurrjpwmVCckSGRg&SID=1ArSJZX1WuRNpd0eb-sAfw&RID=3129&TYPE=terminate&zx=wx9aodbpx4g7 400 (Bad Request)
+cc @ firebase_firestore.js?v=d7400764:2073
+Y2.close @ firebase_firestore.js?v=d7400764:2428
+(anonymous) @ firebase_firestore.js?v=d7400764:12629
+(anonymous) @ firebase_firestore.js?v=d7400764:12593
+Va @ firebase_firestore.js?v=d7400764:920
+D @ firebase_firestore.js?v=d7400764:888
+Z2.qa @ firebase_firestore.js?v=d7400764:2477
+Lb @ firebase_firestore.js?v=d7400764:1387
+N2.Y @ firebase_firestore.js?v=d7400764:1238
+N2.ba @ firebase_firestore.js?v=d7400764:1189
+Va @ firebase_firestore.js?v=d7400764:920
+D @ firebase_firestore.js?v=d7400764:888
+Qc @ firebase_firestore.js?v=d7400764:1885
+h.Xa @ firebase_firestore.js?v=d7400764:1880
+h.Ca @ firebase_firestore.js?v=d7400764:1877
+Gc @ firebase_firestore.js?v=d7400764:1778
+h.Ma @ firebase_firestore.js?v=d7400764:1745
+Promise.then
+Ic @ firebase_firestore.js?v=d7400764:1736
+h.Ma @ firebase_firestore.js?v=d7400764:1746
+Promise.then
+Ic @ firebase_firestore.js?v=d7400764:1736
+h.Pa @ firebase_firestore.js?v=d7400764:1732
+Promise.then
+h.send @ firebase_firestore.js?v=d7400764:1712
+h.ea @ firebase_firestore.js?v=d7400764:1853
+Eb @ firebase_firestore.js?v=d7400764:1182
+$c @ firebase_firestore.js?v=d7400764:2278
+h.Da @ firebase_firestore.js?v=d7400764:2245
+sa @ firebase_firestore.js?v=d7400764:624
+Promise.then
+u @ firebase_firestore.js?v=d7400764:618
+bc @ firebase_firestore.js?v=d7400764:2098
+Y2.o @ firebase_firestore.js?v=d7400764:2438
+Yo @ firebase_firestore.js?v=d7400764:12587
+send @ firebase_firestore.js?v=d7400764:12478
+q_ @ firebase_firestore.js?v=d7400764:12795
+ea @ firebase_firestore.js?v=d7400764:13006
+__PRIVATE_onWriteHandshakeComplete @ firebase_firestore.js?v=d7400764:13354
+J_ @ firebase_firestore.js?v=d7400764:12981
+(anonymous) @ firebase_firestore.js?v=d7400764:12877
+(anonymous) @ firebase_firestore.js?v=d7400764:12897
+(anonymous) @ firebase_firestore.js?v=d7400764:15988
+(anonymous) @ firebase_firestore.js?v=d7400764:16019
+Promise.then
+cc @ firebase_firestore.js?v=d7400764:16019
+enqueue @ firebase_firestore.js?v=d7400764:15988
+enqueueAndForget @ firebase_firestore.js?v=d7400764:15970
+(anonymous) @ firebase_firestore.js?v=d7400764:12897
+(anonymous) @ firebase_firestore.js?v=d7400764:12877
+u_ @ firebase_firestore.js?v=d7400764:12490
+(anonymous) @ firebase_firestore.js?v=d7400764:12630
+(anonymous) @ firebase_firestore.js?v=d7400764:12593
+Va @ firebase_firestore.js?v=d7400764:920
+D @ firebase_firestore.js?v=d7400764:888
+Z2.qa @ firebase_firestore.js?v=d7400764:2477
+Lb @ firebase_firestore.js?v=d7400764:1387
+N2.Y @ firebase_firestore.js?v=d7400764:1238
+N2.ba @ firebase_firestore.js?v=d7400764:1189
+Va @ firebase_firestore.js?v=d7400764:920
+D @ firebase_firestore.js?v=d7400764:888
+Qc @ firebase_firestore.js?v=d7400764:1885
+h.Xa @ firebase_firestore.js?v=d7400764:1880
+h.Ca @ firebase_firestore.js?v=d7400764:1877
+Gc @ firebase_firestore.js?v=d7400764:1778
+h.Ma @ firebase_firestore.js?v=d7400764:1745
+Promise.then
+Ic @ firebase_firestore.js?v=d7400764:1736
+h.Pa @ firebase_firestore.js?v=d7400764:1732
+Promise.then
+h.send @ firebase_firestore.js?v=d7400764:1712
+h.ea @ firebase_firestore.js?v=d7400764:1853
+Eb @ firebase_firestore.js?v=d7400764:1182
+$c @ firebase_firestore.js?v=d7400764:2278
+h.Wa @ firebase_firestore.js?v=d7400764:2253
+(anonymous) @ firebase_firestore.js?v=d7400764:1032
+setTimeout
+ob @ firebase_firestore.js?v=d7400764:1031
+h.Da @ firebase_firestore.js?v=d7400764:2249
+sa @ firebase_firestore.js?v=d7400764:624
+Promise.then
+u @ firebase_firestore.js?v=d7400764:618
+ac @ firebase_firestore.js?v=d7400764:2231
+Lb @ firebase_firestore.js?v=d7400764:1384
+N2.Y @ firebase_firestore.js?v=d7400764:1238
+N2.ba @ firebase_firestore.js?v=d7400764:1189
+Va @ firebase_firestore.js?v=d7400764:920
+D @ firebase_firestore.js?v=d7400764:888
+Qc @ firebase_firestore.js?v=d7400764:1885
+h.Xa @ firebase_firestore.js?v=d7400764:1880
+h.Ca @ firebase_firestore.js?v=d7400764:1877
+Gc @ firebase_firestore.js?v=d7400764:1778
+h.Ma @ firebase_firestore.js?v=d7400764:1745
+Promise.then
+Ic @ firebase_firestore.js?v=d7400764:1736
+h.Pa @ firebase_firestore.js?v=d7400764:1732
+Promise.then
+h.send @ firebase_firestore.js?v=d7400764:1712
+h.ea @ firebase_firestore.js?v=d7400764:1853
+Eb @ firebase_firestore.js?v=d7400764:1177
+Cb @ firebase_firestore.js?v=d7400764:1152
+h.Ea @ firebase_firestore.js?v=d7400764:2154
+sa @ firebase_firestore.js?v=d7400764:624
+Promise.then
+u @ firebase_firestore.js?v=d7400764:618
+bc @ firebase_firestore.js?v=d7400764:2098
+h.connect @ firebase_firestore.js?v=d7400764:2058
+Y2.m @ firebase_firestore.js?v=d7400764:2425
+Yo @ firebase_firestore.js?v=d7400764:12587
+send @ firebase_firestore.js?v=d7400764:12478
+q_ @ firebase_firestore.js?v=d7400764:12795
+ra @ firebase_firestore.js?v=d7400764:12998
+__PRIVATE_onWriteStreamOpen @ firebase_firestore.js?v=d7400764:13350
+(anonymous) @ firebase_firestore.js?v=d7400764:12873
+(anonymous) @ firebase_firestore.js?v=d7400764:12897
+(anonymous) @ firebase_firestore.js?v=d7400764:15988
+(anonymous) @ firebase_firestore.js?v=d7400764:16019
+Promise.then
+cc @ firebase_firestore.js?v=d7400764:16019
+enqueue @ firebase_firestore.js?v=d7400764:15988
+enqueueAndForget @ firebase_firestore.js?v=d7400764:15970
+(anonymous) @ firebase_firestore.js?v=d7400764:12897
+(anonymous) @ firebase_firestore.js?v=d7400764:12873
+__ @ firebase_firestore.js?v=d7400764:12484
+(anonymous) @ firebase_firestore.js?v=d7400764:12635
+setTimeout
+T_ @ firebase_firestore.js?v=d7400764:12634
+j_ @ firebase_firestore.js?v=d7400764:12977
+G_ @ firebase_firestore.js?v=d7400764:12870
+(anonymous) @ firebase_firestore.js?v=d7400764:12860
+Promise.then
+auth @ firebase_firestore.js?v=d7400764:12856
+start @ firebase_firestore.js?v=d7400764:12755
+start @ firebase_firestore.js?v=d7400764:12971
+(anonymous) @ firebase_firestore.js?v=d7400764:12882
+(anonymous) @ firebase_firestore.js?v=d7400764:12702
+(anonymous) @ firebase_firestore.js?v=d7400764:13493
+(anonymous) @ firebase_firestore.js?v=d7400764:15988
+(anonymous) @ firebase_firestore.js?v=d7400764:16019
+Promise.then
+cc @ firebase_firestore.js?v=d7400764:16019
+enqueue @ firebase_firestore.js?v=d7400764:15988
+enqueueAndForget @ firebase_firestore.js?v=d7400764:15970
+handleDelayElapsed @ firebase_firestore.js?v=d7400764:13493
+(anonymous) @ firebase_firestore.js?v=d7400764:13473
+setTimeout
+start @ firebase_firestore.js?v=d7400764:13473
+createAndSchedule @ firebase_firestore.js?v=d7400764:13466
+enqueueAfterDelay @ firebase_firestore.js?v=d7400764:16028
+p_ @ firebase_firestore.js?v=d7400764:12702
+N_ @ firebase_firestore.js?v=d7400764:12881
+start @ firebase_firestore.js?v=d7400764:12755
+start @ firebase_firestore.js?v=d7400764:12971
+__PRIVATE_startWriteStream @ firebase_firestore.js?v=d7400764:13347
+__PRIVATE_onWriteStreamClose @ firebase_firestore.js?v=d7400764:13375
+await in __PRIVATE_onWriteStreamClose
+close @ firebase_firestore.js?v=d7400764:12845
+z_ @ firebase_firestore.js?v=d7400764:12887
+(anonymous) @ firebase_firestore.js?v=d7400764:12875
+(anonymous) @ firebase_firestore.js?v=d7400764:12897
+(anonymous) @ firebase_firestore.js?v=d7400764:15988
+(anonymous) @ firebase_firestore.js?v=d7400764:16019
+Promise.then
+cc @ firebase_firestore.js?v=d7400764:16019
+enqueue @ firebase_firestore.js?v=d7400764:15988
+enqueueAndForget @ firebase_firestore.js?v=d7400764:15970
+(anonymous) @ firebase_firestore.js?v=d7400764:12897
+(anonymous) @ firebase_firestore.js?v=d7400764:12875
+a_ @ firebase_firestore.js?v=d7400764:12487
+(anonymous) @ firebase_firestore.js?v=d7400764:12606
+(anonymous) @ firebase_firestore.js?v=d7400764:12593
+Va @ firebase_firestore.js?v=d7400764:920
+D @ firebase_firestore.js?v=d7400764:888
+Z2.pa @ firebase_firestore.js?v=d7400764:2480
+R @ firebase_firestore.js?v=d7400764:2335
+Qb @ firebase_firestore.js?v=d7400764:2312
+Mb @ firebase_firestore.js?v=d7400764:1314
+N2.Y @ firebase_firestore.js?v=d7400764:1256
+N2.ba @ firebase_firestore.js?v=d7400764:1189
+Va @ firebase_firestore.js?v=d7400764:920
+D @ firebase_firestore.js?v=d7400764:888
+Qc @ firebase_firestore.js?v=d7400764:1885
+h.Xa @ firebase_firestore.js?v=d7400764:1880
+h.Ca @ firebase_firestore.js?v=d7400764:1877
+Gc @ firebase_firestore.js?v=d7400764:1778
+h.Ma @ firebase_firestore.js?v=d7400764:1745
+Promise.then
+Ic @ firebase_firestore.js?v=d7400764:1736
+h.Pa @ firebase_firestore.js?v=d7400764:1732
+Promise.then
+h.send @ firebase_firestore.js?v=d7400764:1712
+h.ea @ firebase_firestore.js?v=d7400764:1853
+Eb @ firebase_firestore.js?v=d7400764:1182
+$c @ firebase_firestore.js?v=d7400764:2278
+h.Da @ firebase_firestore.js?v=d7400764:2245
+sa @ firebase_firestore.js?v=d7400764:624
+Promise.then
+u @ firebase_firestore.js?v=d7400764:618
+ac @ firebase_firestore.js?v=d7400764:2231
+Qb @ firebase_firestore.js?v=d7400764:2303
+N2.Y @ firebase_firestore.js?v=d7400764:1255
+N2.ba @ firebase_firestore.js?v=d7400764:1189
+Va @ firebase_firestore.js?v=d7400764:920
+D @ firebase_firestore.js?v=d7400764:888
+Qc @ firebase_firestore.js?v=d7400764:1885
+h.Xa @ firebase_firestore.js?v=d7400764:1880
+h.Ca @ firebase_firestore.js?v=d7400764:1877
+Gc @ firebase_firestore.js?v=d7400764:1778
+Hc @ firebase_firestore.js?v=d7400764:1763
+h.Ma @ firebase_firestore.js?v=d7400764:1745
+Promise.then
+Ic @ firebase_firestore.js?v=d7400764:1736
+h.Ma @ firebase_firestore.js?v=d7400764:1746
+Promise.then
+Ic @ firebase_firestore.js?v=d7400764:1736
+h.Ma @ firebase_firestore.js?v=d7400764:1746
+Promise.then
+Ic @ firebase_firestore.js?v=d7400764:1736
+h.Pa @ firebase_firestore.js?v=d7400764:1732
+Promise.then
+h.send @ firebase_firestore.js?v=d7400764:1712
+h.ea @ firebase_firestore.js?v=d7400764:1853
+Eb @ firebase_firestore.js?v=d7400764:1182
+$c @ firebase_firestore.js?v=d7400764:2278
+h.Da @ firebase_firestore.js?v=d7400764:2245
+sa @ firebase_firestore.js?v=d7400764:624
+Promise.then
+u @ firebase_firestore.js?v=d7400764:618
+bc @ firebase_firestore.js?v=d7400764:2098
+Y2.o @ firebase_firestore.js?v=d7400764:2438
+Yo @ firebase_firestore.js?v=d7400764:12587
+send @ firebase_firestore.js?v=d7400764:12478
+q_ @ firebase_firestore.js?v=d7400764:12795
+ea @ firebase_firestore.js?v=d7400764:13006
+__PRIVATE_onWriteHandshakeComplete @ firebase_firestore.js?v=d7400764:13354
+J_ @ firebase_firestore.js?v=d7400764:12981
+(anonymous) @ firebase_firestore.js?v=d7400764:12877
+(anonymous) @ firebase_firestore.js?v=d7400764:12897
+(anonymous) @ firebase_firestore.js?v=d7400764:15988
+(anonymous) @ firebase_firestore.js?v=d7400764:16019
+Promise.then
+cc @ firebase_firestore.js?v=d7400764:16019
+enqueue @ firebase_firestore.js?v=d7400764:15988
+enqueueAndForget @ firebase_firestore.js?v=d7400764:15970
+(anonymous) @ firebase_firestore.js?v=d7400764:12897
+(anonymous) @ firebase_firestore.js?v=d7400764:12877
+u_ @ firebase_firestore.js?v=d7400764:12490
+(anonymous) @ firebase_firestore.js?v=d7400764:12630
+(anonymous) @ firebase_firestore.js?v=d7400764:12593
+Va @ firebase_firestore.js?v=d7400764:920
+D @ firebase_firestore.js?v=d7400764:888
+Z2.qa @ firebase_firestore.js?v=d7400764:2477
+Lb @ firebase_firestore.js?v=d7400764:1387
+N2.Y @ firebase_firestore.js?v=d7400764:1238
+N2.ba @ firebase_firestore.js?v=d7400764:1189
+Va @ firebase_firestore.js?v=d7400764:920
+D @ firebase_firestore.js?v=d7400764:888
+Qc @ firebase_firestore.js?v=d7400764:1885
+h.Xa @ firebase_firestore.js?v=d7400764:1880
+h.Ca @ firebase_firestore.js?v=d7400764:1877
+Gc @ firebase_firestore.js?v=d7400764:1778
+h.Ma @ firebase_firestore.js?v=d7400764:1745
+Promise.then
+Ic @ firebase_firestore.js?v=d7400764:1736
+h.Pa @ firebase_firestore.js?v=d7400764:1732
+Promise.then
+h.send @ firebase_firestore.js?v=d7400764:1712
+h.ea @ firebase_firestore.js?v=d7400764:1853
+Eb @ firebase_firestore.js?v=d7400764:1182
+$c @ firebase_firestore.js?v=d7400764:2278
+h.Wa @ firebase_firestore.js?v=d7400764:2253
+(anonymous) @ firebase_firestore.js?v=d7400764:1032
+setTimeout
+ob @ firebase_firestore.js?v=d7400764:1031
+h.Da @ firebase_firestore.js?v=d7400764:2249
+sa @ firebase_firestore.js?v=d7400764:624
+Promise.then
+u @ firebase_firestore.js?v=d7400764:618
+ac @ firebase_firestore.js?v=d7400764:2231
+Lb @ firebase_firestore.js?v=d7400764:1384
+N2.Y @ firebase_firestore.js?v=d7400764:1238
+N2.ba @ firebase_firestore.js?v=d7400764:1189
+Va @ firebase_firestore.js?v=d7400764:920
+D @ firebase_firestore.js?v=d7400764:888
+Qc @ firebase_firestore.js?v=d7400764:1885
+h.Xa @ firebase_firestore.js?v=d7400764:1880
+h.Ca @ firebase_firestore.js?v=d7400764:1877
+Gc @ firebase_firestore.js?v=d7400764:1778
+h.Ma @ firebase_firestore.js?v=d7400764:1745

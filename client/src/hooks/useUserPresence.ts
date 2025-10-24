@@ -46,12 +46,6 @@ export function useUserPresence(userId: string | undefined): UserPresenceData {
       (snapshot) => {
         if (snapshot.exists()) {
           const data = snapshot.data();
-          console.log('📊 Dados de presença recebidos:', {
-            userId,
-            isOnline: data.isOnline,
-            lastSeen: data.lastSeen,
-            lastActivity: data.lastActivity,
-          });
           const presenceData = {
             isOnline: data.isOnline || false,
             lastSeen: data.lastSeen,
@@ -60,7 +54,6 @@ export function useUserPresence(userId: string | undefined): UserPresenceData {
           };
           setPresence(presenceData);
         } else {
-          console.log('⚠️ Documento de usuário não existe:', userId);
           setPresence({
             isOnline: false,
             lastSeen: undefined,
