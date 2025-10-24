@@ -624,7 +624,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
   const formatTimestamp = (timestamp: string) => {
     try {
       const date = new Date(timestamp);
-      return formatDistanceToNow(date, { addSuffix: true, locale: ptBR });
+      return format(date, "HH:mm", { locale: ptBR });
     } catch {
       return "";
     }
