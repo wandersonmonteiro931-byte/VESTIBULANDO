@@ -458,35 +458,17 @@
     color: #e9edef;
   }
 
-  /* Chat container with viewport-aware height */
-  .chat-message-container {
-    height: 100dvh;
-    height: var(--available-height, 100dvh);
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
-
   /* Chat-specific header behavior - sticky in all viewports */
   .chat-header-fixed {
     position: sticky;
     top: 0;
     top: env(safe-area-inset-top);
     z-index: 50;
-    flex-shrink: 0;
   }
 
-  /* Messages area with proper flex and scroll */
-  .chat-messages-area {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
-    overflow-x: hidden;
-  }
-
-  /* Mobile-specific optimizations */
+  /* Mobile-specific optimizations for keyboard handling */
   @media (max-width: 768px) {
-    /* Ensure container respects dynamic viewport */
+    /* Container adapts to viewport changes when keyboard opens */
     .chat-message-container {
       height: 100dvh;
       height: var(--available-height, 100dvh);
@@ -494,7 +476,7 @@
       max-height: var(--available-height, 100dvh);
     }
     
-    /* Keep header sticky, not fixed */
+    /* Keep header sticky at top */
     .chat-header-fixed {
       position: sticky;
       top: 0;
