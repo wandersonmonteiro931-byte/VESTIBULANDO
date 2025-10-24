@@ -906,7 +906,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden relative min-h-0">
       <div className="flex items-center gap-2 p-2 md:p-3 whatsapp-header shadow-sm flex-shrink-0">
         <Button
           size="icon"
@@ -1008,7 +1008,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
         </DropdownMenu>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2 md:p-4 space-y-1 md:space-y-2 whatsapp-bg" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
+      <div className="flex-1 min-h-0 overflow-y-auto p-2 md:p-4 space-y-1 md:space-y-2 whatsapp-bg whatsapp-messages-scroll" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
 
         {messages.filter(shouldShowMessage).map((msg) => {
           const isOwn = msg.remetenteId === userData?.uid;

@@ -609,7 +609,7 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
         </div>
 
         {/* Área de chat */}
-        <div className={`${showChatView ? 'flex' : 'hidden'} flex-1 flex-col bg-background md:overflow-hidden`}>
+        <div className={`${showChatView ? 'flex' : 'hidden'} flex-1 min-h-0 flex-col bg-background md:overflow-hidden`}>
           {selectedConversation ? (
             <ChatMessageArea
               conversation={selectedConversation}

@@ -554,6 +554,12 @@
       overscroll-behavior-y: contain;
     }
 
+    /* Ensure touch scroll works only in message area */
+    .whatsapp-messages-scroll {
+      touch-action: pan-y;
+      -webkit-overflow-scrolling: touch;
+    }
+
     /* Compact design for mobile */
     .message-sent,
     .message-received {
