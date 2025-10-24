@@ -369,4 +369,88 @@
   .blink-red {
     animation: blink-red 1.5s ease-in-out infinite;
   }
+
+  /* WhatsApp-style chat background */
+  .whatsapp-bg {
+    background-color: #e5ddd5;
+    background-image: 
+      repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 10px,
+        rgba(255, 255, 255, 0.03) 10px,
+        rgba(255, 255, 255, 0.03) 20px
+      ),
+      repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 10px,
+        rgba(0, 0, 0, 0.02) 10px,
+        rgba(0, 0, 0, 0.02) 20px
+      );
+  }
+
+  .dark .whatsapp-bg {
+    background-color: #0b141a;
+    background-image: 
+      repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 10px,
+        rgba(255, 255, 255, 0.01) 10px,
+        rgba(255, 255, 255, 0.01) 20px
+      ),
+      repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 10px,
+        rgba(0, 0, 0, 0.03) 10px,
+        rgba(0, 0, 0, 0.03) 20px
+      );
+  }
+
+  /* WhatsApp message bubbles */
+  .message-received {
+    background-color: #ffffff;
+    color: #000000;
+    border-radius: 8px;
+    box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.13);
+  }
+
+  .dark .message-received {
+    background-color: #202c33;
+    color: #e9edef;
+  }
+
+  .message-sent {
+    background-color: #dcf8c6;
+    color: #000000;
+    border-radius: 8px;
+    box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.13);
+  }
+
+  .dark .message-sent {
+    background-color: #005c4b;
+    color: #e9edef;
+  }
+
+  /* WhatsApp header */
+  .whatsapp-header {
+    background-color: #008069;
+    color: #ffffff;
+  }
+
+  .dark .whatsapp-header {
+    background-color: #202c33;
+    color: #e9edef;
+  }
+
+  /* WhatsApp input area */
+  .whatsapp-input-area {
+    background-color: #f0f2f5;
+  }
+
+  .dark .whatsapp-input-area {
+    background-color: #202c33;
+  }
 }

@@ -58,6 +58,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
   const [blockReason, setBlockReason] = useState("");
   const [showUserProfile, setShowUserProfile] = useState(false);
   const [contextMenuMessage, setContextMenuMessage] = useState<string | null>(null);
+  const [usersCache, setUsersCache] = useState<Map<string, User>>(new Map());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { userData } = useAuth();
@@ -646,17 +647,18 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center gap-3 p-4 border-b">
+      <div className="flex items-center gap-3 p-3 whatsapp-header shadow-sm">
         <Button
           size="icon"
           variant="ghost"
           onClick={onBack}
           data-testid="button-back"
+          className="text-white dark:text-white hover:bg-white/10"
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div 
-          className="relative cursor-pointer hover-elevate rounded-full p-1 -m-1"
+          className="relative cursor-pointer hover:bg-white/10 rounded-full p-1 -m-1"
           onClick={() => setShowUserProfile(true)}
           data-testid="button-open-user-profile"
         >
@@ -664,23 +666,19 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
             <AvatarFallback>{getInitials(otherParticipant.nome)}</AvatarFallback>
           </Avatar>
           <div
-            className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-background ${
+            className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 ${
               otherParticipant.isOnline ? "bg-green-500" : "bg-gray-400"
             }`}
           />
         </div>
         <div 
-          className="flex-1 cursor-pointer hover-elevate rounded p-2 -m-2"
+          className="flex-1 cursor-pointer hover:bg-white/10 rounded p-2 -m-2"
           onClick={() => setShowUserProfile(true)}
         >
-          <p className="font-medium">{otherParticipant.nome}</p>
-          <PresenceIndicator 
-            isOnline={otherParticipant.isOnline}
-            lastSeen={otherParticipant.lastSeen}
-            lastActivity={otherParticipant.lastActivity}
-            variant="text"
-            showLabel={true}
-          />
+          <p className="font-medium text-white">{otherParticipant.nome}</p>
+          <p className="text-xs text-white/80">
+            {otherParticipant.isOnline ? "online" : "offline"}
+          </p>
         </div>
         
         {!isOnline && (
@@ -691,7 +689,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-2 whatsapp-bg">
         <Alert className="bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800">
           <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
           <AlertDescription className="text-sm text-amber-900 dark:text-amber-100">
@@ -722,22 +720,16 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
           return (
             <div
               key={msg.id}
-              className={`flex gap-2 ${isOwn ? "flex-row-reverse" : ""}`}
+              className={`flex ${isOwn ? "justify-end" : "justify-start"}`}
               data-testid={`message-${msg.id}`}
             >
-              <Avatar className="h-8 w-8 flex-shrink-0">
-                <AvatarFallback className="text-xs">
-                  {getInitials(isOwn ? userData.nome : otherParticipant.nome)}
-                </AvatarFallback>
-              </Avatar>
-
-              <div className={`flex flex-col ${isOwn ? "items-end" : "items-start"} max-w-[70%] group`}>
+              <div className={`flex flex-col ${isOwn ? "items-end" : "items-start"} max-w-[85%] md:max-w-[70%] group`}>
                 <div className="relative">
                   <div
-                    className={`rounded-lg p-3 ${
+                    className={`p-2 px-3 ${
                       isOwn 
-                        ? "bg-primary text-primary-foreground" 
-                        : "bg-muted"
+                        ? "message-sent" 
+                        : "message-received"
                     }`}
                   >
                     {msg.arquivoUrl && msg.tipo === "imagem" && (
@@ -776,7 +768,19 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
                       </a>
                     )}
 
-                    <p className="text-sm">{msg.conteudo}</p>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm flex-1">{msg.conteudo}</p>
+                    </div>
+                    <div className={`flex items-center gap-1 justify-end text-xs mt-1 ${
+                      isOwn ? 'text-gray-600 dark:text-gray-300' : 'text-gray-500 dark:text-gray-400'
+                    }`}>
+                      <span>{formatTimestamp(msg.timestamp)}</span>
+                      <MessageStatusIndicator
+                        entregue={msg.entregue || false}
+                        lida={msg.lida || false}
+                        isSentByMe={isOwn}
+                      />
+                    </div>
                   </div>
 
                   <DropdownMenu>
@@ -811,15 +815,6 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                  <span>{formatTimestamp(msg.timestamp)}</span>
-                  <MessageStatusIndicator
-                    entregue={msg.entregue || false}
-                    lida={msg.lida || false}
-                    isSentByMe={isOwn}
-                  />
-                </div>
               </div>
             </div>
           );
@@ -833,22 +828,22 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="p-4 border-t">
+      <div className="p-2 whatsapp-input-area">
         {!isOnline && (
-          <Alert variant="destructive" className="mb-4">
+          <Alert variant="destructive" className="mb-2 mx-2">
             <WifiOff className="h-4 w-4" />
             <AlertDescription>Você está offline. Conecte-se à internet para enviar mensagens.</AlertDescription>
           </Alert>
         )}
         
         {blocked && (
-          <Alert variant="destructive" className="mb-4">
+          <Alert variant="destructive" className="mb-2 mx-2">
             <AlertDescription>{blockReason}</AlertDescription>
           </Alert>
         )}
 
         {selectedFile && (
-          <div className="mb-2 flex items-center gap-2 p-2 bg-muted rounded">
+          <div className="mb-2 mx-2 flex items-center gap-2 p-2 bg-white dark:bg-gray-700 rounded-lg shadow-sm">
             <File className="h-4 w-4" />
             <span className="text-sm flex-1 truncate">{selectedFile.name}</span>
             <Button
@@ -862,7 +857,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
           </div>
         )}
 
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2 px-2">
           <input
             type="file"
             ref={fileInputRef}
@@ -873,10 +868,11 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
           
           <Button
             size="icon"
-            variant="outline"
+            variant="ghost"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading || sending || blocked || !isOnline}
             data-testid="button-attach-file"
+            className="flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
           >
             <Paperclip className="h-5 w-5" />
           </Button>
@@ -889,7 +885,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
                 ? "Chat bloqueado" 
                 : uploading 
                 ? "Enviando arquivo..." 
-                : "Digite sua mensagem..."
+                : "Mensagem"
             }
             value={messageText}
             onChange={(e) => {
@@ -904,12 +900,15 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
             }}
             disabled={uploading || sending || blocked || !isOnline}
             data-testid="input-message"
+            className="flex-1 bg-white dark:bg-gray-700 border-0 rounded-full px-4"
           />
 
           <Button
             onClick={sendMessage}
             disabled={(!messageText.trim() && !selectedFile) || uploading || sending || blocked || !isOnline}
             data-testid="button-send-message"
+            size="icon"
+            className="flex-shrink-0 rounded-full bg-[#008069] hover:bg-[#006d56] dark:bg-[#005c4b] dark:hover:bg-[#004d3f] text-white"
           >
             {uploading ? "..." : <Send className="h-5 w-5" />}
           </Button>
