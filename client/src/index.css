@@ -458,9 +458,15 @@
     color: #e9edef;
   }
 
-  /* Chat-specific mobile optimizations */
+  /* Chat-specific header behavior */
+  .chat-header-fixed {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  /* Mobile-specific: keep header ALWAYS fixed even when keyboard opens */
   @media (max-width: 768px) {
-    /* CRITICAL: Keep header always visible and fixed at top, even when keyboard opens */
     .chat-header-fixed {
       position: fixed !important;
       top: 0 !important;
@@ -468,10 +474,15 @@
       right: 0 !important;
       width: 100% !important;
       z-index: 9999 !important;
-      -webkit-transform: translateZ(0);
-      transform: translateZ(0);
+      -webkit-transform: translate3d(0, 0, 0);
+      transform: translate3d(0, 0, 0);
       -webkit-backface-visibility: hidden;
       backface-visibility: hidden;
+    }
+
+    /* Add top padding to messages area to account for fixed header */
+    .chat-messages-area {
+      padding-top: 64px !important; /* Height of fixed header ~56px + some spacing */
     }
   }
 

@@ -945,7 +945,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
 
   return (
     <div className="flex flex-col h-full w-full overflow-hidden relative min-h-0 chat-message-container">
-      <div className="flex items-center gap-2 p-2 md:p-3 whatsapp-header shadow-sm flex-shrink-0 fixed md:sticky top-0 left-0 right-0 z-50 md:z-10 chat-header-fixed">
+      <div className="flex items-center gap-2 p-2 md:p-3 whatsapp-header shadow-sm flex-shrink-0 chat-header-fixed">
         <Button
           size="icon"
           variant="ghost"
@@ -1046,7 +1046,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
         </DropdownMenu>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto p-2 md:p-4 space-y-1 md:space-y-2 whatsapp-bg whatsapp-messages-scroll pt-16 md:pt-2" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
+      <div className="flex-1 min-h-0 overflow-y-auto p-2 md:p-4 space-y-1 md:space-y-2 whatsapp-bg whatsapp-messages-scroll chat-messages-area" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
         <Alert className="bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800 mb-2">
           <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
           <AlertDescription className="text-xs md:text-sm text-amber-900 dark:text-amber-100">
