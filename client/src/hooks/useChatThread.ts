@@ -83,6 +83,8 @@ export function useChatThread({
         ultimaMensagemRemetenteId: currentUserId,
         ultimaMensagemEntregue: false,
         ultimaMensagemLida: false,
+        deletadaPorParticipante1: false,
+        deletadaPorParticipante2: false,
       };
 
       await setDoc(conversationRef, conversationData);

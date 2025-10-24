@@ -64,6 +64,8 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
   const [blockReason, setBlockReason] = useState("");
   const [iBlockedOther, setIBlockedOther] = useState(false);
   const [otherBlockedMe, setOtherBlockedMe] = useState(false);
+  const [penaltyBlocked, setPenaltyBlocked] = useState(false);
+  const [penaltyBlockReason, setPenaltyBlockReason] = useState("");
   const [showUserProfile, setShowUserProfile] = useState(false);
   const [contextMenuMessage, setContextMenuMessage] = useState<string | null>(null);
   const [usersCache, setUsersCache] = useState<Map<string, User>>(new Map());
@@ -177,7 +179,10 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
   }, [userData?.uid, otherParticipantId]);
 
   useEffect(() => {
-    if (iBlockedOther) {
+    if (penaltyBlocked) {
+      setBlocked(true);
+      setBlockReason(penaltyBlockReason);
+    } else if (iBlockedOther) {
       setBlocked(true);
       setBlockReason(`Você bloqueou este usuário. Não é possível enviar mensagens.`);
     } else if (otherBlockedMe) {
@@ -187,7 +192,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
       setBlocked(false);
       setBlockReason("");
     }
-  }, [iBlockedOther, otherBlockedMe]);
+  }, [iBlockedOther, otherBlockedMe, penaltyBlocked, penaltyBlockReason]);
 
   const otherParticipant: OtherParticipant | null = otherParticipantId && otherParticipantNome && otherParticipantTipo
     ? {
@@ -290,7 +295,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
     }
   }, [messages, conversationId, resolvedConversation, userData]);
 
-  // Verificar se usuário está bloqueado
+  // Verificar se usuário está bloqueado por penalidades
   useEffect(() => {
     const checkBlockStatus = async () => {
       if (!userData?.uid) return;
@@ -309,21 +314,21 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
       if (bloqueio24h) {
         const expiracao = new Date(bloqueio24h.dataExpiracao);
         if (expiracao > new Date()) {
-          setBlocked(true);
-          setBlockReason("Você está bloqueado por 24 horas devido a violação das regras do chat.");
+          setPenaltyBlocked(true);
+          setPenaltyBlockReason("Você está bloqueado por 24 horas devido a violação das regras do chat.");
           return;
         }
       }
 
       const suspensao = activePenalties.find(p => p.tipo === "suspensao_conta");
       if (suspensao) {
-        setBlocked(true);
-        setBlockReason("Sua conta foi suspensa. Entre em contato com a Diretoria.");
+        setPenaltyBlocked(true);
+        setPenaltyBlockReason("Sua conta foi suspensa. Entre em contato com a Diretoria.");
         return;
       }
 
-      setBlocked(false);
-      setBlockReason("");
+      setPenaltyBlocked(false);
+      setPenaltyBlockReason("");
     };
 
     checkBlockStatus();
