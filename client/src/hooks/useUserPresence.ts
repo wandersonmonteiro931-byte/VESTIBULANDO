@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -6,6 +6,7 @@ interface UserPresenceData {
   isOnline: boolean;
   lastSeen?: string;
   lastActivity?: string;
+  isLoading?: boolean;
 }
 
 export function useUserPresence(userId: string | undefined): UserPresenceData {
@@ -13,7 +14,10 @@ export function useUserPresence(userId: string | undefined): UserPresenceData {
     isOnline: false,
     lastSeen: undefined,
     lastActivity: undefined,
+    isLoading: true,
   });
+  
+  const previousUserIdRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     if (!userId) {
@@ -21,8 +25,18 @@ export function useUserPresence(userId: string | undefined): UserPresenceData {
         isOnline: false,
         lastSeen: undefined,
         lastActivity: undefined,
+        isLoading: false,
       });
+      previousUserIdRef.current = undefined;
       return;
+    }
+
+    if (previousUserIdRef.current !== userId) {
+      setPresence((prev) => ({
+        ...prev,
+        isLoading: true,
+      }));
+      previousUserIdRef.current = userId;
     }
 
     const userRef = doc(db, 'usuarios', userId);
@@ -36,6 +50,7 @@ export function useUserPresence(userId: string | undefined): UserPresenceData {
             isOnline: data.isOnline || false,
             lastSeen: data.lastSeen,
             lastActivity: data.lastActivity,
+            isLoading: false,
           };
           setPresence(presenceData);
         } else {
@@ -43,6 +58,7 @@ export function useUserPresence(userId: string | undefined): UserPresenceData {
             isOnline: false,
             lastSeen: undefined,
             lastActivity: undefined,
+            isLoading: false,
           });
         }
       },
@@ -52,6 +68,7 @@ export function useUserPresence(userId: string | undefined): UserPresenceData {
           isOnline: false,
           lastSeen: undefined,
           lastActivity: undefined,
+          isLoading: false,
         });
       }
     );

@@ -10,6 +10,7 @@ interface PresenceIndicatorProps {
   lastActivity?: string;
   showLabel?: boolean;
   variant?: "badge" | "icon" | "text";
+  isLoading?: boolean;
 }
 
 export function PresenceIndicator({
@@ -18,8 +19,10 @@ export function PresenceIndicator({
   lastActivity,
   showLabel = true,
   variant = "badge",
+  isLoading = false,
 }: PresenceIndicatorProps) {
   const getFormattedLastSeen = () => {
+    if (isLoading) return "...";
     if (!lastSeen) return "Offline";
     
     try {
@@ -39,7 +42,7 @@ export function PresenceIndicator({
     }
   };
 
-  const statusText = isOnline ? "Online agora" : getFormattedLastSeen();
+  const statusText = isLoading ? "..." : (isOnline ? "Online agora" : getFormattedLastSeen());
 
   if (variant === "text") {
     return (

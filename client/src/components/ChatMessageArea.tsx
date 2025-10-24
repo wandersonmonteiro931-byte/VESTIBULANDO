@@ -111,7 +111,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
         nome: otherParticipantNome,
         tipo: otherParticipantTipo,
         isOnline: presenceData.isOnline,
-        lastSeen: presenceData.lastSeen,
+        lastSeen: presenceData.isLoading ? undefined : presenceData.lastSeen,
         lastActivity: presenceData.lastActivity,
       }
     : null;
@@ -642,6 +642,10 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
   };
 
   const getPresenceText = () => {
+    if (presenceData.isLoading) {
+      return "...";
+    }
+    
     if (otherParticipant?.isOnline) {
       return "Online agora";
     }
