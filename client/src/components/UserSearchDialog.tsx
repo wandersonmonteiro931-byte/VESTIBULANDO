@@ -80,22 +80,32 @@ export default function UserSearchDialog({ onClose, onSelectUser }: UserSearchDi
     }
 
     const term = searchTerm.toLowerCase();
-    const filtered = allUsers.filter((user) =>
-      user.nome.toLowerCase().includes(term) ||
-      user.email.toLowerCase().includes(term) ||
-      getTipoLabel(user.tipo).toLowerCase().includes(term) ||
-      (user.turma && turmas.get(user.turma)?.toLowerCase().includes(term))
-    );
+    const filtered = allUsers.filter((user) => {
+      const displayName = user.tipo === "diretor" ? "Diretoria" : user.nome;
+      return (
+        displayName.toLowerCase().includes(term) ||
+        user.nome.toLowerCase().includes(term) ||
+        user.email.toLowerCase().includes(term) ||
+        getTipoLabel(user.tipo).toLowerCase().includes(term) ||
+        (user.turma && turmas.get(user.turma)?.toLowerCase().includes(term)) ||
+        (user.tipo === "diretor" && (term.includes("diretor") || term.includes("diretoria")))
+      );
+    });
     
     setFilteredUsers(filtered);
   }, [searchTerm, allUsers, turmas]);
 
-  const getInitials = (nome: string) => {
+  const getInitials = (nome: string, tipo?: string) => {
+    if (tipo === "diretor" || nome === "Diretoria") return "DIR";
     const names = nome.split(" ");
     if (names.length >= 2) {
       return `${names[0][0]}${names[1][0]}`.toUpperCase();
     }
     return nome.substring(0, 2).toUpperCase();
+  };
+
+  const getDisplayName = (user: User) => {
+    return user.tipo === "diretor" ? "Diretoria" : user.nome;
   };
 
   const getTipoLabel = (tipo: string) => {
@@ -187,11 +197,11 @@ export default function UserSearchDialog({ onClose, onSelectUser }: UserSearchDi
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10 shrink-0">
                       <AvatarFallback className="text-xs">
-                        {getInitials(user.nome)}
+                        {getInitials(user.nome, user.tipo)}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{user.nome}</p>
+                      <p className="font-medium text-sm truncate">{getDisplayName(user)}</p>
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
                         <Badge 
                           variant={getBadgeVariant(user.tipo) as any} 

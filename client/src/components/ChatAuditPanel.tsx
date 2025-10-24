@@ -135,13 +135,20 @@ export default function ChatAuditPanel() {
     }
   };
 
-  const getInitials = (nome: string) => {
-    if (nome === "Diretoria") return "DIR";
+  const getInitials = (nome: string, tipo?: string) => {
+    if (tipo === "diretor" || nome === "Diretoria") return "DIR";
     const names = nome.split(" ");
     if (names.length >= 2) {
       return `${names[0][0]}${names[1][0]}`.toUpperCase();
     }
     return nome.substring(0, 2).toUpperCase();
+  };
+
+  const getDisplayName = (nome: string, tipo?: string) => {
+    if (tipo === "diretor") return "Diretoria";
+    if (nome === "Diretoria") return "Diretoria";
+    if (nome === "Wanderson Monteiro de Camargo") return "Diretoria";
+    return nome;
   };
 
   const getPenaltyLabel = (tipo: string) => {
@@ -153,22 +160,32 @@ export default function ChatAuditPanel() {
     }
   };
 
-  const filteredMessages = allMessages.filter(msg => 
-    msg.conteudo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    msg.remetenteNome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    msg.destinatarioNome.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredMessages = allMessages.filter(msg => {
+    const remetenteDisplay = getDisplayName(msg.remetenteNome, msg.remetenteTipo);
+    const destinatarioDisplay = getDisplayName(msg.destinatarioNome, msg.destinatarioTipo);
+    return (
+      msg.conteudo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      remetenteDisplay.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      destinatarioDisplay.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
 
-  const filteredPenalties = penalties.filter(pen =>
-    pen.usuarioNome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    pen.mensagemInfratora.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredPenalties = penalties.filter(pen => {
+    const usuarioDisplay = getDisplayName(pen.usuarioNome, pen.usuarioTipo);
+    return (
+      usuarioDisplay.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      pen.mensagemInfratora.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
 
-  const filteredLogs = logs.filter(log =>
-    log.usuarioNome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    log.detalhes.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    log.tipo.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredLogs = logs.filter(log => {
+    const usuarioDisplay = getDisplayName(log.usuarioNome);
+    return (
+      usuarioDisplay.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      log.detalhes.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      log.tipo.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
@@ -217,39 +234,42 @@ export default function ChatAuditPanel() {
   };
 
   const groupMessagesByStudent = (messages: ChatMessage[]) => {
-    const groups: Record<string, ChatMessage[]> = {};
+    const groups: Record<string, { messages: ChatMessage[], tipo?: string }> = {};
     
     messages.forEach(msg => {
       let studentName: string | null = null;
       let studentId: string | null = null;
+      let studentTipo: string | null = null;
 
       if (msg.remetenteTipo === "aluno") {
         studentName = msg.remetenteNome;
         studentId = msg.remetenteId || null;
+        studentTipo = msg.remetenteTipo;
       } else if (msg.destinatarioTipo === "aluno") {
         studentName = msg.destinatarioNome;
         studentId = msg.destinatarioId || null;
+        studentTipo = msg.destinatarioTipo;
       }
 
       if (studentName) {
         const key = studentId ? `${studentId}-${studentName}` : `unknown-${studentName}`;
         if (!groups[key]) {
-          groups[key] = [];
+          groups[key] = { messages: [], tipo: studentTipo || undefined };
         }
-        groups[key].push(msg);
+        groups[key].messages.push(msg);
       } else {
         if (!groups["outros-Outros"]) {
-          groups["outros-Outros"] = [];
+          groups["outros-Outros"] = { messages: [], tipo: undefined };
         }
-        groups["outros-Outros"].push(msg);
+        groups["outros-Outros"].messages.push(msg);
       }
     });
 
     return Object.entries(groups)
-      .map(([key, messages]) => {
+      .map(([key, data]) => {
         const parts = key.split('-');
         const name = parts.slice(1).join('-') || "Dados incompletos";
-        return [name, messages] as [string, ChatMessage[]];
+        return [name, data.messages, data.tipo] as [string, ChatMessage[], string | undefined];
       })
       .sort(([nameA], [nameB]) => {
         if (nameA === "Outros") return 1;
@@ -325,8 +345,9 @@ export default function ChatAuditPanel() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4 max-h-[600px] overflow-y-auto">
-                {groupMessagesByStudent(filteredMessages).map(([studentName, messages]) => {
+                {groupMessagesByStudent(filteredMessages).map(([studentName, messages, studentTipo]) => {
                   const isExpanded = expandedStudents.has(studentName);
+                  const displayName = getDisplayName(studentName, studentTipo);
                   
                   return (
                     <div key={studentName} className="space-y-3">
@@ -341,10 +362,10 @@ export default function ChatAuditPanel() {
                           <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                         )}
                         <Avatar className="h-10 w-10 flex-shrink-0">
-                          <AvatarFallback>{getInitials(studentName)}</AvatarFallback>
+                          <AvatarFallback>{getInitials(studentName, studentTipo)}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-lg">{studentName}</h3>
+                          <h3 className="font-semibold text-lg">{displayName}</h3>
                           <p className="text-sm text-muted-foreground">
                             {messages.length} {messages.length === 1 ? 'mensagem' : 'mensagens'}
                           </p>
@@ -355,7 +376,9 @@ export default function ChatAuditPanel() {
                         <div className="space-y-3 pl-4">
                           {messages.map(msg => {
                             const isStudentSender = msg.remetenteTipo === "aluno";
-                            const otherPartyName = isStudentSender ? msg.destinatarioNome : msg.remetenteNome;
+                            const otherPartyName = isStudentSender 
+                              ? getDisplayName(msg.destinatarioNome, msg.destinatarioTipo)
+                              : getDisplayName(msg.remetenteNome, msg.remetenteTipo);
                             const direction = isStudentSender ? "enviou para" : "recebeu de";
                             
                             return (
@@ -411,13 +434,13 @@ export default function ChatAuditPanel() {
                   return (
                     <div key={msg.id} className="flex gap-3 p-3 rounded border border-destructive/50" data-testid={`deleted-message-${msg.id}`}>
                       <Avatar className="h-10 w-10">
-                        <AvatarFallback>{getInitials(msg.remetenteNome)}</AvatarFallback>
+                        <AvatarFallback>{getInitials(msg.remetenteNome, msg.remetenteTipo)}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <p className="font-medium text-sm">{msg.remetenteNome}</p>
+                          <p className="font-medium text-sm">{getDisplayName(msg.remetenteNome, msg.remetenteTipo)}</p>
                           <span className="text-xs text-muted-foreground">→</span>
-                          <p className="font-medium text-sm">{msg.destinatarioNome}</p>
+                          <p className="font-medium text-sm">{getDisplayName(msg.destinatarioNome, msg.destinatarioTipo)}</p>
                           <Badge variant="destructive" className="ml-auto text-xs">
                             Deletada
                           </Badge>
@@ -473,7 +496,7 @@ export default function ChatAuditPanel() {
                   <div key={penalty.id} className="flex gap-3 p-3 rounded border" data-testid={`penalty-${penalty.id}`}>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <p className="font-medium">{penalty.usuarioNome}</p>
+                        <p className="font-medium">{getDisplayName(penalty.usuarioNome, penalty.usuarioTipo)}</p>
                         {penalty.usuarioMatricula && (
                           <span className="text-xs text-muted-foreground">
                             Mat. {penalty.usuarioMatricula}
@@ -539,9 +562,9 @@ export default function ChatAuditPanel() {
                   <div key={conv.id} className="flex gap-3 p-3 rounded border" data-testid={`conversation-${conv.id}`}>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <p className="font-medium text-sm">{conv.participante1Nome}</p>
+                        <p className="font-medium text-sm">{getDisplayName(conv.participante1Nome, conv.participante1Tipo)}</p>
                         <span className="text-xs text-muted-foreground">↔</span>
-                        <p className="font-medium text-sm">{conv.participante2Nome}</p>
+                        <p className="font-medium text-sm">{getDisplayName(conv.participante2Nome, conv.participante2Tipo)}</p>
                       </div>
                       <p className="text-sm text-muted-foreground truncate">
                         {conv.ultimaMensagem || "Nenhuma mensagem ainda"}
@@ -600,7 +623,7 @@ export default function ChatAuditPanel() {
                             </span>
                           </div>
                           <p className="text-sm text-muted-foreground mb-1">
-                            Usuário: <span className="font-medium text-foreground">{log.usuarioNome}</span>
+                            Usuário: <span className="font-medium text-foreground">{getDisplayName(log.usuarioNome)}</span>
                           </p>
                           {Object.keys(detalhes).length > 0 && (
                             <div className="text-xs bg-muted p-2 rounded mt-2">
@@ -636,7 +659,7 @@ export default function ChatAuditPanel() {
             <div className="space-y-4">
               <div>
                 <p className="text-sm font-medium mb-1">Usuário:</p>
-                <p className="text-sm">{selectedPenalty.usuarioNome}</p>
+                <p className="text-sm">{getDisplayName(selectedPenalty.usuarioNome, selectedPenalty.usuarioTipo)}</p>
               </div>
 
               <div>
