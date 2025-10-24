@@ -642,6 +642,13 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
   };
 
   const getPresenceText = () => {
+    console.log('🔍 getPresenceText chamado:', {
+      isLoading: presenceData.isLoading,
+      isOnline: otherParticipant?.isOnline,
+      lastSeen: otherParticipant?.lastSeen,
+      presenceData: presenceData
+    });
+    
     if (presenceData.isLoading) {
       return "...";
     }
@@ -651,6 +658,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
     }
     
     if (!otherParticipant?.lastSeen) {
+      console.log('⚠️ lastSeen não encontrado, mostrando Offline');
       return "Offline";
     }
     
@@ -667,6 +675,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
         return `Visto por último em ${dateStr} às ${time}`;
       }
     } catch (error) {
+      console.error('❌ Erro ao formatar data:', error);
       return "Offline";
     }
   };
