@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useUserPresence } from "@/hooks/useUserPresence";
+import { useTypingIndicator } from "@/hooks/useTypingIndicator";
 import type { ChatConversation, User } from "@shared/schema";
 import { MoreVertical, Trash2, Ban, UserPlus, Check, CheckCheck } from "lucide-react";
 import { format, formatDistanceToNow, isToday, isYesterday } from "date-fns";
@@ -53,7 +54,15 @@ export function ConversationItem({
     ? conversation.mensagensNaoLidas1 || 0
     : conversation.mensagensNaoLidas2 || 0;
 
+  const isParticipant1 = conversation.participante1Id === currentUserId;
+  
   const presenceData = useUserPresence(other.id);
+  
+  const { otherUserTyping } = useTypingIndicator({
+    conversationId: conversation.id,
+    currentUserId: currentUserId,
+    isParticipant1: isParticipant1,
+  });
 
   const getInitials = (nome: string) => {
     if (nome === "Diretoria") return "DIR";
@@ -123,8 +132,8 @@ export function ConversationItem({
                 <Check className="h-4 w-4 text-muted-foreground flex-shrink-0" data-testid="status-sent-conversation" />
               )
             )}
-            <p className="text-sm text-muted-foreground truncate">
-              {conversation.ultimaMensagem}
+            <p className={`text-sm truncate ${otherUserTyping ? 'text-[#25d366] dark:text-[#25d366] font-medium' : 'text-muted-foreground'}`}>
+              {otherUserTyping ? 'digitando...' : conversation.ultimaMensagem}
             </p>
           </div>
           
