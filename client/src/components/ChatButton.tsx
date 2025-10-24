@@ -1,14 +1,14 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { MessageCircle } from "lucide-react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import ChatWindow from "./ChatWindow";
 
 export default function ChatButton() {
-  const [isOpen, setIsOpen] = useState(false);
+  const [, setLocation] = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
   const { userData } = useAuth();
 
@@ -54,30 +54,24 @@ export default function ChatButton() {
   }, [userData?.uid]);
 
   return (
-    <>
-      <div className="relative">
-        <Button
-          size="icon"
-          variant="ghost"
-          onClick={() => setIsOpen(!isOpen)}
-          data-testid="button-chat"
+    <div className="relative">
+      <Button
+        size="icon"
+        variant="ghost"
+        onClick={() => setLocation("/chat")}
+        data-testid="button-chat"
+      >
+        <MessageCircle className="h-5 w-5" />
+      </Button>
+      {unreadCount > 0 && (
+        <Badge
+          variant="destructive"
+          className="absolute -top-1 -right-1 h-5 min-w-5 flex items-center justify-center p-1 text-xs"
+          data-testid="badge-unread-count"
         >
-          <MessageCircle className="h-5 w-5" />
-        </Button>
-        {unreadCount > 0 && (
-          <Badge
-            variant="destructive"
-            className="absolute -top-1 -right-1 h-5 min-w-5 flex items-center justify-center p-1 text-xs"
-            data-testid="badge-unread-count"
-          >
-            {unreadCount > 99 ? "99+" : unreadCount}
-          </Badge>
-        )}
-      </div>
-      
-      {isOpen && (
-        <ChatWindow onClose={() => setIsOpen(false)} />
+          {unreadCount > 99 ? "99+" : unreadCount}
+        </Badge>
       )}
-    </>
+    </div>
   );
 }
