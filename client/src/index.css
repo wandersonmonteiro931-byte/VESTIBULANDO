@@ -554,9 +554,17 @@
       overscroll-behavior-y: contain;
     }
 
-    /* Compact alerts on mobile */
-    .whatsapp-bg .alert {
-      padding: 0.5rem;
+    /* Compact design for mobile */
+    .message-sent,
+    .message-received {
+      border-radius: 6px;
+      box-shadow: 0 0.5px 0.5px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Smaller avatars on mobile */
+    .whatsapp-header .avatar {
+      height: 36px;
+      width: 36px;
     }
   }
 

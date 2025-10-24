@@ -907,7 +907,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="flex items-center gap-3 p-3 whatsapp-header shadow-sm flex-shrink-0">
+      <div className="flex items-center gap-2 p-2 md:p-3 whatsapp-header shadow-sm flex-shrink-0">
         <Button
           size="icon"
           variant="ghost"
@@ -922,7 +922,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
           onClick={() => setShowUserProfile(true)}
           data-testid="button-open-user-profile"
         >
-          <Avatar className="h-10 w-10">
+          <Avatar className="h-9 w-9 md:h-10 md:w-10">
             {otherParticipant.fotoBase64 && otherParticipant.fotoPublica ? (
               <AvatarImage src={otherParticipant.fotoBase64} alt={otherParticipant.nome} />
             ) : null}
@@ -935,10 +935,10 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
           />
         </div>
         <div 
-          className="flex-1 cursor-pointer hover:bg-white/10 rounded p-2 -m-2"
+          className="flex-1 cursor-pointer hover:bg-white/10 rounded p-1 md:p-2 -m-1 md:-m-2"
           onClick={() => setShowUserProfile(true)}
         >
-          <p className="font-medium text-white">{otherParticipant.nome}</p>
+          <p className="font-medium text-sm md:text-base text-white">{otherParticipant.nome}</p>
           <p className="text-xs text-white/80">
             {getPresenceText()}
           </p>
@@ -1008,27 +1008,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
         </DropdownMenu>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-2 whatsapp-bg" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
-        <Alert className="bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800 mb-2">
-          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
-          <AlertDescription className="text-xs md:text-sm text-amber-900 dark:text-amber-100">
-            <p className="font-bold mb-1">ATENÇÃO: Antes de iniciar sua conversa, leia:</p>
-            <ul className="space-y-0.5 list-none text-xs">
-              <li>💬 Chat exclusivo para assuntos acadêmicos.</li>
-              <li>🚫 Proibido: mensagens ofensivas, discriminatórias ou spam.</li>
-              <li>📜 Comunicação monitorada pela Diretoria (LGPD).</li>
-            </ul>
-            <p className="mt-2 text-xs">
-              <button
-                onClick={onOpenTerms}
-                className="underline font-semibold hover:text-amber-700 dark:hover:text-amber-300 transition-colors"
-                data-testid="link-open-terms"
-              >
-                Ver Termos de Uso completos
-              </button>
-            </p>
-          </AlertDescription>
-        </Alert>
+      <div className="flex-1 overflow-y-auto p-2 md:p-4 space-y-1 md:space-y-2 whatsapp-bg" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
 
         {messages.filter(shouldShowMessage).map((msg) => {
           const isOwn = msg.remetenteId === userData?.uid;
@@ -1039,10 +1019,10 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
               className={`flex ${isOwn ? "justify-end" : "justify-start"}`}
               data-testid={`message-${msg.id}`}
             >
-              <div className={`flex flex-col ${isOwn ? "items-end" : "items-start"} max-w-[80%] sm:max-w-[75%] md:max-w-[70%] group`}>
+              <div className={`flex flex-col ${isOwn ? "items-end" : "items-start"} max-w-[85%] sm:max-w-[80%] md:max-w-[70%] group`}>
                 <div className="relative">
                   <div
-                    className={`p-2 px-3 ${
+                    className={`p-1.5 px-2 md:p-2 md:px-3 ${
                       isOwn 
                         ? "message-sent" 
                         : "message-received"
@@ -1085,9 +1065,9 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
                     )}
 
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm flex-1">{msg.conteudo}</p>
+                      <p className="text-xs md:text-sm flex-1">{msg.conteudo}</p>
                     </div>
-                    <div className={`flex items-center gap-1 justify-end text-xs mt-1 ${
+                    <div className={`flex items-center gap-0.5 justify-end text-[11px] md:text-xs mt-0.5 ${
                       isOwn ? 'text-gray-600 dark:text-gray-300' : 'text-gray-500 dark:text-gray-400'
                     }`}>
                       <span>{formatTimestamp(msg.timestamp)}</span>
@@ -1145,18 +1125,18 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="p-2 whatsapp-input-area flex-shrink-0">
+      <div className="p-1.5 md:p-2 whatsapp-input-area flex-shrink-0">
         {!isOnline && (
-          <Alert variant="destructive" className="mb-2 mx-2 py-2">
-            <WifiOff className="h-4 w-4" />
-            <AlertDescription className="text-xs md:text-sm">Você está offline. Conecte-se à internet para enviar mensagens.</AlertDescription>
+          <Alert variant="destructive" className="mb-1 mx-1 md:mx-2 py-1 md:py-2">
+            <WifiOff className="h-3 w-3 md:h-4 md:w-4" />
+            <AlertDescription className="text-xs">Offline</AlertDescription>
           </Alert>
         )}
         
         {blocked && (
-          <Alert variant="destructive" className="mb-2 mx-2 py-2">
-            <UserX className="h-4 w-4" />
-            <AlertDescription className="text-xs md:text-sm font-medium">{blockReason}</AlertDescription>
+          <Alert variant="destructive" className="mb-1 mx-1 md:mx-2 py-1 md:py-2">
+            <UserX className="h-3 w-3 md:h-4 md:w-4" />
+            <AlertDescription className="text-xs font-medium">Bloqueado</AlertDescription>
           </Alert>
         )}
 
@@ -1175,7 +1155,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
           </div>
         )}
 
-        <div className="flex items-center gap-2 px-2">
+        <div className="flex items-center gap-1.5 md:gap-2 px-1 md:px-2">
           <input
             type="file"
             ref={fileInputRef}
