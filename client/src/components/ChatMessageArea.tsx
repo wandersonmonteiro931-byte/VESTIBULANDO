@@ -62,6 +62,8 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
   const [sending, setSending] = useState(false);
   const [blocked, setBlocked] = useState(false);
   const [blockReason, setBlockReason] = useState("");
+  const [iBlockedOther, setIBlockedOther] = useState(false);
+  const [otherBlockedMe, setOtherBlockedMe] = useState(false);
   const [showUserProfile, setShowUserProfile] = useState(false);
   const [contextMenuMessage, setContextMenuMessage] = useState<string | null>(null);
   const [usersCache, setUsersCache] = useState<Map<string, User>>(new Map());
@@ -143,48 +145,49 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
   }, [otherParticipantId, selectedUser]);
 
   useEffect(() => {
-    const checkForBlocks = async () => {
-      if (!userData?.uid || !otherParticipantId) return;
+    if (!userData?.uid || !otherParticipantId) return;
 
-      try {
-        const blocksRef = collection(db, "chat_user_blocks");
-        const q1 = query(
-          blocksRef,
-          where("bloqueadorId", "==", userData.uid),
-          where("bloqueadoId", "==", otherParticipantId),
-          where("ativo", "==", true)
-        );
-        const q2 = query(
-          blocksRef,
-          where("bloqueadorId", "==", otherParticipantId),
-          where("bloqueadoId", "==", userData.uid),
-          where("ativo", "==", true)
-        );
+    const blocksRef = collection(db, "chat_user_blocks");
+    
+    const q1 = query(
+      blocksRef,
+      where("bloqueadorId", "==", userData.uid),
+      where("bloqueadoId", "==", otherParticipantId),
+      where("ativo", "==", true)
+    );
+    const q2 = query(
+      blocksRef,
+      where("bloqueadorId", "==", otherParticipantId),
+      where("bloqueadoId", "==", userData.uid),
+      where("ativo", "==", true)
+    );
 
-        const [snapshot1, snapshot2] = await Promise.all([
-          getDocs(q1),
-          getDocs(q2),
-        ]);
+    const unsubscribe1 = onSnapshot(q1, (snapshot) => {
+      setIBlockedOther(!snapshot.empty);
+    });
 
-        if (!snapshot1.empty) {
-          const blockDoc = snapshot1.docs[0].data();
-          setBlocked(true);
-          setBlockReason(`Você bloqueou ${blockDoc.bloqueadoNome}. Não é possível enviar mensagens.`);
-        } else if (!snapshot2.empty) {
-          const blockDoc = snapshot2.docs[0].data();
-          setBlocked(true);
-          setBlockReason(`Você foi bloqueado por ${blockDoc.bloqueadorNome}. Não é possível enviar mensagens.`);
-        } else {
-          setBlocked(false);
-          setBlockReason("");
-        }
-      } catch (error) {
-        console.error("Erro ao verificar bloqueios:", error);
-      }
+    const unsubscribe2 = onSnapshot(q2, (snapshot) => {
+      setOtherBlockedMe(!snapshot.empty);
+    });
+
+    return () => {
+      unsubscribe1();
+      unsubscribe2();
     };
-
-    checkForBlocks();
   }, [userData?.uid, otherParticipantId]);
+
+  useEffect(() => {
+    if (iBlockedOther) {
+      setBlocked(true);
+      setBlockReason(`Você bloqueou este usuário. Não é possível enviar mensagens.`);
+    } else if (otherBlockedMe) {
+      setBlocked(true);
+      setBlockReason(`Você foi bloqueado. Não é possível enviar mensagens.`);
+    } else {
+      setBlocked(false);
+      setBlockReason("");
+    }
+  }, [iBlockedOther, otherBlockedMe]);
 
   const otherParticipant: OtherParticipant | null = otherParticipantId && otherParticipantNome && otherParticipantTipo
     ? {
