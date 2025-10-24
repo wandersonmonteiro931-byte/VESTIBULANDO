@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Send, Paperclip, X, File, Image as ImageIcon, Video, Music, FileText, Trash2, AlertTriangle, WifiOff, Wifi, User as UserIcon, MoreVertical } from "lucide-react";
+import { ArrowLeft, Send, Paperclip, X, File, Image as ImageIcon, Video, Music, FileText, Trash2, AlertTriangle, WifiOff, Wifi, User as UserIcon, MoreVertical, Flag, UserX } from "lucide-react";
 import { PresenceIndicator } from "@/components/PresenceIndicator";
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { MessageStatusIndicator } from "@/components/MessageStatusIndicator";
@@ -30,7 +30,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { ReportDialog, BlockDialog, DeleteDialog } from "@/components/ChatModerationDialogs";
 
 interface ChatMessageAreaProps {
   conversation?: ChatConversation;
@@ -64,6 +66,13 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
   const [contextMenuMessage, setContextMenuMessage] = useState<string | null>(null);
   const [usersCache, setUsersCache] = useState<Map<string, User>>(new Map());
   const [otherUserData, setOtherUserData] = useState<User | null>(null);
+  
+  const [showReportDialog, setShowReportDialog] = useState(false);
+  const [showBlockDialog, setShowBlockDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [blockLoading, setBlockLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { userData } = useAuth();
@@ -722,6 +731,112 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
     }
   };
 
+  const handleReportConversation = async (motivo: string) => {
+    if (!userData?.uid || !conversationId || !otherParticipant) return;
+
+    setReportLoading(true);
+    try {
+      await addDoc(collection(db, "chat_reports"), {
+        conversationId,
+        denuncianteId: userData.uid,
+        denuncianteNome: userData.nome,
+        denuncianteTipo: userData.tipo,
+        denunciadoId: otherParticipant.id,
+        denunciadoNome: otherParticipant.nome,
+        denunciadoTipo: otherParticipant.tipo,
+        motivo,
+        dataDenuncia: getNowBrasiliaISO(),
+        status: "pendente",
+      });
+
+      toast({
+        title: "Denúncia enviada",
+        description: "Sua denúncia foi enviada ao diretor para análise.",
+      });
+
+      setShowReportDialog(false);
+    } catch (error) {
+      console.error("Erro ao enviar denúncia:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível enviar a denúncia. Tente novamente.",
+      });
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
+  const handleBlockUser = async () => {
+    if (!userData?.uid || !otherParticipant) return;
+
+    setBlockLoading(true);
+    try {
+      await addDoc(collection(db, "user_blocks"), {
+        bloqueadorId: userData.uid,
+        bloqueadorNome: userData.nome,
+        bloqueadoId: otherParticipant.id,
+        bloqueadoNome: otherParticipant.nome,
+        dataBloqueio: getNowBrasiliaISO(),
+        ativo: true,
+      });
+
+      toast({
+        title: "Usuário bloqueado",
+        description: `Você bloqueou ${otherParticipant.nome}. Vocês não poderão mais trocar mensagens.`,
+      });
+
+      setShowBlockDialog(false);
+      
+      setBlocked(true);
+      setBlockReason(`Você bloqueou ${otherParticipant.nome}. Não é possível enviar mensagens.`);
+    } catch (error) {
+      console.error("Erro ao bloquear usuário:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível bloquear o usuário. Tente novamente.",
+      });
+    } finally {
+      setBlockLoading(false);
+    }
+  };
+
+  const handleDeleteConversation = async () => {
+    if (!userData?.uid || !conversationId || !resolvedConversation) return;
+
+    setDeleteLoading(true);
+    try {
+      const conversationRef = doc(db, "chat_conversations", conversationId);
+      const isParticipant1 = resolvedConversation.participante1Id === userData.uid;
+      
+      await updateDoc(conversationRef, {
+        [isParticipant1 ? "deletadaPorParticipante1" : "deletadaPorParticipante2"]: true,
+        [isParticipant1 ? "dataDelecaoParticipante1" : "dataDelecaoParticipante2"]: getNowBrasiliaISO(),
+      });
+
+      toast({
+        title: "Conversa excluída",
+        description: "O histórico da conversa foi removido da sua visualização.",
+      });
+
+      setShowDeleteDialog(false);
+      
+      setTimeout(() => {
+        onBack();
+      }, 500);
+    } catch (error) {
+      console.error("Erro ao excluir conversa:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível excluir a conversa. Tente novamente.",
+      });
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   if (!otherParticipant) {
     return (
       <div className="flex flex-col h-full items-center justify-center">
@@ -801,6 +916,31 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
             >
               <FileText className="h-4 w-4 mr-2" />
               Termos de uso
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => setShowReportDialog(true)}
+              className="text-destructive focus:text-destructive"
+              data-testid="menu-report-conversation"
+            >
+              <Flag className="h-4 w-4 mr-2" />
+              Denunciar conversa
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => setShowBlockDialog(true)}
+              className="text-destructive focus:text-destructive"
+              data-testid="menu-block-user"
+            >
+              <UserX className="h-4 w-4 mr-2" />
+              Bloquear
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => setShowDeleteDialog(true)}
+              className="text-destructive focus:text-destructive"
+              data-testid="menu-delete-conversation"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Excluir conversa
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -1037,6 +1177,32 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
           userId={otherParticipant.id}
           onClose={() => setShowUserProfile(false)}
         />
+      )}
+
+      {otherParticipant && (
+        <>
+          <ReportDialog
+            open={showReportDialog}
+            onOpenChange={setShowReportDialog}
+            otherUserName={otherParticipant.nome}
+            onConfirm={handleReportConversation}
+            isLoading={reportLoading}
+          />
+          <BlockDialog
+            open={showBlockDialog}
+            onOpenChange={setShowBlockDialog}
+            otherUserName={otherParticipant.nome}
+            onConfirm={handleBlockUser}
+            isLoading={blockLoading}
+          />
+          <DeleteDialog
+            open={showDeleteDialog}
+            onOpenChange={setShowDeleteDialog}
+            otherUserName={otherParticipant.nome}
+            onConfirm={handleDeleteConversation}
+            isLoading={deleteLoading}
+          />
+        </>
       )}
     </div>
   );
