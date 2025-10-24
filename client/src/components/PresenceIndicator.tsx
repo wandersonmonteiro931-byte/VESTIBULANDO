@@ -1,7 +1,7 @@
 import { Circle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { formatDistanceToNow } from "date-fns";
+import { format, isToday, isYesterday, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface PresenceIndicatorProps {
@@ -9,7 +9,7 @@ interface PresenceIndicatorProps {
   lastSeen?: string;
   lastActivity?: string;
   showLabel?: boolean;
-  variant?: "badge" | "icon";
+  variant?: "badge" | "icon" | "text";
 }
 
 export function PresenceIndicator({
@@ -19,20 +19,35 @@ export function PresenceIndicator({
   showLabel = true,
   variant = "badge",
 }: PresenceIndicatorProps) {
-  const getTimeAgo = () => {
-    const timestamp = isOnline ? lastActivity : lastSeen;
-    if (!timestamp) return "Nunca visto";
+  const getFormattedLastSeen = () => {
+    if (!lastSeen) return "Nunca visto";
     
     try {
-      const date = new Date(timestamp);
-      return formatDistanceToNow(date, { addSuffix: true, locale: ptBR });
+      const date = new Date(lastSeen);
+      const time = format(date, "HH:mm", { locale: ptBR });
+      
+      if (isToday(date)) {
+        return `Visto por último às ${time}`;
+      } else if (isYesterday(date)) {
+        return `Visto ontem às ${time}`;
+      } else {
+        const dateStr = format(date, "dd/MM", { locale: ptBR });
+        return `Visto em ${dateStr} às ${time}`;
+      }
     } catch (error) {
       return "Data inválida";
     }
   };
 
-  const timeAgo = getTimeAgo();
-  const statusText = isOnline ? "Online agora" : timeAgo;
+  const statusText = isOnline ? "Online agora" : getFormattedLastSeen();
+
+  if (variant === "text") {
+    return (
+      <span className={`text-xs ${isOnline ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}`}>
+        {statusText}
+      </span>
+    );
+  }
 
   if (variant === "icon") {
     return (
@@ -45,14 +60,14 @@ export function PresenceIndicator({
                 data-testid={`presence-icon-${isOnline ? "online" : "offline"}`}
               />
               {showLabel && (
-                <span className={`text-sm ${isOnline ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}`}>
-                  {isOnline ? "Online" : "Offline"}
+                <span className={`text-xs ${isOnline ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}`}>
+                  {statusText}
                 </span>
               )}
             </div>
           </TooltipTrigger>
           <TooltipContent>
-            <p>{statusText}</p>
+            <p className="text-sm">{statusText}</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -73,16 +88,11 @@ export function PresenceIndicator({
             data-testid={`presence-badge-${isOnline ? "online" : "offline"}`}
           >
             <Circle className={`h-2 w-2 ${isOnline ? "fill-green-500" : "fill-gray-400"}`} />
-            {isOnline ? "Online" : "Offline"}
+            {statusText}
           </Badge>
         </TooltipTrigger>
         <TooltipContent>
           <p className="text-sm font-medium">{statusText}</p>
-          {!isOnline && lastActivity && (
-            <p className="text-xs text-muted-foreground mt-1">
-              Última atividade: {formatDistanceToNow(new Date(lastActivity), { addSuffix: true, locale: ptBR })}
-            </p>
-          )}
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

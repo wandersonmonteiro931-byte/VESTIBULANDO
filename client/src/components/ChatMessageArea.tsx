@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { ArrowLeft, Send, Paperclip, X, File, Image as ImageIcon, Video, Music, FileText, Trash2, AlertTriangle, WifiOff, Wifi, User as UserIcon } from "lucide-react";
+import { PresenceIndicator } from "@/components/PresenceIndicator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -19,7 +20,6 @@ import { ChatLogger } from "@/lib/chatLogger";
 import { validateFile, getFileTypeCategory } from "@/lib/fileValidation";
 import { useNetworkStatus, retryWithBackoff } from "@/hooks/useNetworkStatus";
 import { useChatThread } from "@/hooks/useChatThread";
-import { PresenceIndicator } from "@/components/PresenceIndicator";
 import UserProfileDialog from "@/components/UserProfileDialog";
 import {
   DropdownMenu,
@@ -32,6 +32,15 @@ interface ChatMessageAreaProps {
   conversation?: ChatConversation;
   selectedUser?: User;
   onBack: () => void;
+}
+
+interface OtherParticipant {
+  id: string;
+  nome: string;
+  tipo: string;
+  isOnline?: boolean;
+  lastSeen?: string;
+  lastActivity?: string;
 }
 
 const INSTITUTIONAL_MESSAGE = `⚠️ Atenção: Este canal é exclusivo para assuntos acadêmicos e administrativos da plataforma Vestibulando.
@@ -64,7 +73,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack }: 
     currentUserType: userData?.tipo,
   });
 
-  const otherParticipant = resolvedConversation
+  const otherParticipant: OtherParticipant | null = resolvedConversation
     ? (resolvedConversation.participante1Id === userData?.uid
         ? {
             id: resolvedConversation.participante2Id,
@@ -81,6 +90,9 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack }: 
         id: selectedUser.uid,
         nome: selectedUser.tipo === "diretor" ? "Diretoria" : selectedUser.nome,
         tipo: selectedUser.tipo,
+        isOnline: selectedUser.isOnline,
+        lastSeen: selectedUser.lastSeen,
+        lastActivity: selectedUser.lastActivity,
       }
     : null;
 
@@ -559,25 +571,31 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack }: 
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <Avatar className="h-10 w-10">
-          <AvatarFallback>{getInitials(otherParticipant.nome)}</AvatarFallback>
-        </Avatar>
+        <div className="relative">
+          <Avatar className="h-10 w-10">
+            <AvatarFallback>{getInitials(otherParticipant.nome)}</AvatarFallback>
+          </Avatar>
+          <div
+            className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-background ${
+              otherParticipant.isOnline ? "bg-green-500" : "bg-gray-400"
+            }`}
+          />
+        </div>
         <div className="flex-1">
           <p className="font-medium">{otherParticipant.nome}</p>
-          <p className="text-sm text-muted-foreground capitalize">{otherParticipant.tipo}</p>
+          <PresenceIndicator 
+            isOnline={otherParticipant.isOnline}
+            lastSeen={otherParticipant.lastSeen}
+            lastActivity={otherParticipant.lastActivity}
+            variant="text"
+            showLabel={true}
+          />
         </div>
         
         {!isOnline && (
           <Badge variant="destructive" className="gap-1">
             <WifiOff className="h-3 w-3" />
-            Offline
-          </Badge>
-        )}
-        
-        {isOnline && (
-          <Badge variant="secondary" className="gap-1">
-            <Wifi className="h-3 w-3" />
-            Online
+            Sem conexão
           </Badge>
         )}
       </div>

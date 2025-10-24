@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MessageCircle, Send, Search, X, Paperclip, Image as ImageIcon, FileText, Video, Mic, Download, AlertTriangle, Phone, VideoIcon, MoreVertical, Trash2 } from "lucide-react";
 import { VideoCallDialog } from "@/components/VideoCallDialog";
+import { PresenceIndicator } from "@/components/PresenceIndicator";
 import { where, orderBy } from "firebase/firestore";
 import { db, storage } from "@/lib/firebase";
 import { collection, addDoc, query, getDocs, updateDoc, doc, writeBatch, getDoc, setDoc } from "firebase/firestore";
@@ -33,35 +34,6 @@ function getNowBrasiliaISO(): string {
   return brasiliaTime.toISOString();
 }
 
-function getStatusColor(status?: string): string {
-  switch (status) {
-    case "online":
-      return "bg-green-500";
-    case "ausente":
-      return "bg-yellow-500";
-    case "em_reuniao":
-      return "bg-red-500";
-    case "ocupado":
-      return "bg-orange-500";
-    default:
-      return "bg-gray-400";
-  }
-}
-
-function getStatusLabel(status?: string): string {
-  switch (status) {
-    case "online":
-      return "Online";
-    case "ausente":
-      return "Ausente";
-    case "em_reuniao":
-      return "Em reunião";
-    case "ocupado":
-      return "Ocupado";
-    default:
-      return "Offline";
-  }
-}
 
 function getConversationId(userId1: string, userId2: string): string {
   return [userId1, userId2].sort().join("_");
@@ -676,21 +648,27 @@ export function ChatPanel() {
                       <AvatarFallback>{getDisplayName(user).charAt(0).toUpperCase()}</AvatarFallback>
                     </Avatar>
                     <div
-                      className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-background ${getStatusColor(
-                        user.statusPresenca
-                      )}`}
+                      className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-background ${
+                        user.isOnline ? "bg-green-500" : "bg-gray-400"
+                      }`}
                     />
                   </div>
-                  <div className="flex-1 text-left">
-                    <div className="flex items-center justify-between">
+                  <div className="flex-1 text-left min-w-0">
+                    <div className="flex items-center justify-between gap-2">
                       <p className="font-medium text-sm truncate">{getDisplayName(user)}</p>
                       {unreadCount > 0 && (
-                        <Badge variant="destructive" className="ml-2">
+                        <Badge variant="destructive" className="ml-2 shrink-0">
                           {unreadCount}
                         </Badge>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground">{getStatusLabel(user.statusPresenca)}</p>
+                    <PresenceIndicator 
+                      isOnline={user.isOnline}
+                      lastSeen={user.lastSeen}
+                      lastActivity={user.lastActivity}
+                      variant="text"
+                      showLabel={true}
+                    />
                   </div>
                 </button>
               );
@@ -711,16 +689,22 @@ export function ChatPanel() {
                       <AvatarFallback>{getDisplayName(selectedUser).charAt(0).toUpperCase()}</AvatarFallback>
                     </Avatar>
                     <div
-                      className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-background ${getStatusColor(
-                        selectedUser.statusPresenca
-                      )}`}
+                      className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-background ${
+                        selectedUser.isOnline ? "bg-green-500" : "bg-gray-400"
+                      }`}
                     />
                   </div>
                   <div>
                     <CardTitle className="text-base">{getDisplayName(selectedUser)}</CardTitle>
-                    <p className="text-xs text-muted-foreground">{getStatusLabel(selectedUser.statusPresenca)}</p>
+                    <PresenceIndicator 
+                      isOnline={selectedUser.isOnline}
+                      lastSeen={selectedUser.lastSeen}
+                      lastActivity={selectedUser.lastActivity}
+                      variant="text"
+                      showLabel={true}
+                    />
                     {selectedUser.mensagemStatus && (
-                      <p className="text-xs text-muted-foreground italic">{selectedUser.mensagemStatus}</p>
+                      <p className="text-xs text-muted-foreground italic mt-1">{selectedUser.mensagemStatus}</p>
                     )}
                   </div>
                 </div>
