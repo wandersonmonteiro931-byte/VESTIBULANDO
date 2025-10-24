@@ -220,7 +220,12 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
       const conversationMap = new Map<string, ChatConversation>();
       
       allConversations.forEach((conv) => {
-        if (!conversationMap.has(conv.id) && conv.ultimaMensagem) {
+        const isParticipant1 = conv.participante1Id === userData.uid;
+        const isDeletedByUser = isParticipant1 
+          ? conv.deletadaPorParticipante1 === true
+          : conv.deletadaPorParticipante2 === true;
+        
+        if (!conversationMap.has(conv.id) && conv.ultimaMensagem && !isDeletedByUser) {
           conversationMap.set(conv.id, conv);
         }
       });
