@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { ArrowLeft, Send, Paperclip, X, File, Image as ImageIcon, Video, Music, FileText, Trash2, AlertTriangle, WifiOff, Wifi, User as UserIcon, MoreVertical, Flag, UserX } from "lucide-react";
 import { PresenceIndicator } from "@/components/PresenceIndicator";
 import { TypingIndicator } from "@/components/TypingIndicator";
@@ -60,8 +60,6 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [sending, setSending] = useState(false);
-  const [blocked, setBlocked] = useState(false);
-  const [blockReason, setBlockReason] = useState("");
   const [iBlockedOther, setIBlockedOther] = useState(false);
   const [otherBlockedMe, setOtherBlockedMe] = useState(false);
   const [penaltyBlocked, setPenaltyBlocked] = useState(false);
@@ -147,7 +145,11 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
   }, [otherParticipantId, selectedUser]);
 
   useEffect(() => {
-    if (!userData?.uid || !otherParticipantId) return;
+    if (!userData?.uid || !otherParticipantId) {
+      setIBlockedOther(false);
+      setOtherBlockedMe(false);
+      return;
+    }
 
     const blocksRef = collection(db, "chat_user_blocks");
     
@@ -164,13 +166,27 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
       where("ativo", "==", true)
     );
 
-    const unsubscribe1 = onSnapshot(q1, (snapshot) => {
-      setIBlockedOther(!snapshot.empty);
-    });
+    const unsubscribe1 = onSnapshot(
+      q1, 
+      (snapshot) => {
+        setIBlockedOther(!snapshot.empty);
+      },
+      (error) => {
+        console.error("Erro ao monitorar bloqueio (q1):", error);
+        setIBlockedOther(false);
+      }
+    );
 
-    const unsubscribe2 = onSnapshot(q2, (snapshot) => {
-      setOtherBlockedMe(!snapshot.empty);
-    });
+    const unsubscribe2 = onSnapshot(
+      q2, 
+      (snapshot) => {
+        setOtherBlockedMe(!snapshot.empty);
+      },
+      (error) => {
+        console.error("Erro ao monitorar bloqueio (q2):", error);
+        setOtherBlockedMe(false);
+      }
+    );
 
     return () => {
       unsubscribe1();
@@ -178,21 +194,16 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
     };
   }, [userData?.uid, otherParticipantId]);
 
-  useEffect(() => {
-    if (penaltyBlocked) {
-      setBlocked(true);
-      setBlockReason(penaltyBlockReason);
-    } else if (iBlockedOther) {
-      setBlocked(true);
-      setBlockReason(`Você bloqueou este usuário. Não é possível enviar mensagens.`);
-    } else if (otherBlockedMe) {
-      setBlocked(true);
-      setBlockReason(`Você foi bloqueado. Não é possível enviar mensagens.`);
-    } else {
-      setBlocked(false);
-      setBlockReason("");
-    }
-  }, [iBlockedOther, otherBlockedMe, penaltyBlocked, penaltyBlockReason]);
+  const blocked = useMemo(() => {
+    return penaltyBlocked || iBlockedOther || otherBlockedMe;
+  }, [penaltyBlocked, iBlockedOther, otherBlockedMe]);
+
+  const blockReason = useMemo(() => {
+    if (penaltyBlocked) return penaltyBlockReason;
+    if (iBlockedOther) return `Você bloqueou este usuário. Não é possível enviar mensagens.`;
+    if (otherBlockedMe) return `Você foi bloqueado. Não é possível enviar mensagens.`;
+    return "";
+  }, [penaltyBlocked, penaltyBlockReason, iBlockedOther, otherBlockedMe]);
 
   const otherParticipant: OtherParticipant | null = otherParticipantId && otherParticipantNome && otherParticipantTipo
     ? {
@@ -839,9 +850,6 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
       });
 
       setShowBlockDialog(false);
-      
-      setBlocked(true);
-      setBlockReason(`Você bloqueou ${otherParticipant.nome}. Não é possível enviar mensagens.`);
     } catch (error) {
       console.error("Erro ao bloquear usuário:", error);
       toast({
