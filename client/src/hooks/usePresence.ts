@@ -13,7 +13,7 @@ export function usePresence(currentUser: FirebaseUser | null) {
   const intervalRef = useRef<NodeJS.Timeout>();
   const lastSeenInitializedRef = useRef<boolean>(false);
 
-  const updatePresence = async (isOnline: boolean) => {
+  const updatePresence = async (isOnline: boolean, forceInitialize: boolean = false) => {
     if (!currentUser) return;
 
     try {
@@ -25,9 +25,10 @@ export function usePresence(currentUser: FirebaseUser | null) {
 
       if (!isOnline) {
         updateData.lastSeen = getNowBrasiliaISO();
-      } else if (!lastSeenInitializedRef.current) {
+      } else if (forceInitialize || !lastSeenInitializedRef.current) {
         const userDoc = await getDoc(userRef);
-        if (userDoc.exists() && !userDoc.data().lastSeen) {
+        const userData = userDoc.exists() ? userDoc.data() : null;
+        if (!userData || !userData.lastSeen || userData.lastSeen === undefined) {
           updateData.lastSeen = getNowBrasiliaISO();
         }
         lastSeenInitializedRef.current = true;
@@ -44,7 +45,7 @@ export function usePresence(currentUser: FirebaseUser | null) {
 
   const setUserOnline = async () => {
     if (!currentUser) return;
-    await updatePresence(true);
+    await updatePresence(true, true);
   };
 
   const setUserOffline = async () => {
