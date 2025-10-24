@@ -1009,6 +1009,27 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto p-2 md:p-4 space-y-1 md:space-y-2 whatsapp-bg whatsapp-messages-scroll" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
+        <Alert className="bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800 mb-2">
+          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+          <AlertDescription className="text-xs md:text-sm text-amber-900 dark:text-amber-100">
+            <p className="font-bold mb-1">ATENÇÃO: Antes de iniciar sua conversa, leia:</p>
+            <ul className="space-y-0.5 list-none text-xs">
+              <li>💬 Chat exclusivo para assuntos acadêmicos.</li>
+              <li>🚫 Proibido: mensagens ofensivas, discriminatórias ou spam.</li>
+              <li>📜 Comunicação monitorada pela Diretoria (LGPD).</li>
+              <li>⚠️ Violações podem resultar em suspensão da conta.</li>
+            </ul>
+            <p className="mt-1 text-xs">
+              <button 
+                onClick={onOpenTerms}
+                className="text-amber-700 dark:text-amber-300 underline hover:no-underline"
+                data-testid="link-open-terms"
+              >
+                Ver Termos de Uso completos
+              </button>
+            </p>
+          </AlertDescription>
+        </Alert>
 
         {messages.filter(shouldShowMessage).map((msg) => {
           const isOwn = msg.remetenteId === userData?.uid;
