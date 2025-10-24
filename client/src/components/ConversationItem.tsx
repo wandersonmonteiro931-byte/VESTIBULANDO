@@ -41,12 +41,12 @@ export function ConversationItem({
   const other = conversation.participante1Id === currentUserId
     ? {
         id: conversation.participante2Id,
-        nome: conversation.participante2Nome === "Diretoria" ? "Diretoria" : conversation.participante2Nome,
+        nome: conversation.participante2Tipo === "diretor" ? "Diretoria" : conversation.participante2Nome,
         tipo: conversation.participante2Tipo,
       }
     : {
         id: conversation.participante1Id,
-        nome: conversation.participante1Nome === "Diretoria" ? "Diretoria" : conversation.participante1Nome,
+        nome: conversation.participante1Tipo === "diretor" ? "Diretoria" : conversation.participante1Nome,
         tipo: conversation.participante1Tipo,
       };
 

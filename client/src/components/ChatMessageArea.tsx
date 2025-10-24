@@ -74,17 +74,17 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
         : resolvedConversation.participante1Id)
     : selectedUser?.uid;
 
-  const otherParticipantNome = resolvedConversation
-    ? (resolvedConversation.participante1Id === userData?.uid
-        ? resolvedConversation.participante2Nome
-        : resolvedConversation.participante1Nome)
-    : selectedUser?.tipo === "diretor" ? "Diretoria" : selectedUser?.nome;
-
   const otherParticipantTipo = resolvedConversation
     ? (resolvedConversation.participante1Id === userData?.uid
         ? resolvedConversation.participante2Tipo
         : resolvedConversation.participante1Tipo)
     : selectedUser?.tipo;
+
+  const otherParticipantNome = resolvedConversation
+    ? (resolvedConversation.participante1Id === userData?.uid
+        ? (resolvedConversation.participante2Tipo === "diretor" ? "Diretoria" : resolvedConversation.participante2Nome)
+        : (resolvedConversation.participante1Tipo === "diretor" ? "Diretoria" : resolvedConversation.participante1Nome))
+    : selectedUser?.tipo === "diretor" ? "Diretoria" : selectedUser?.nome;
 
   const presenceData = useUserPresence(otherParticipantId);
 

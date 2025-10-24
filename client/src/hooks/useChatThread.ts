@@ -67,10 +67,10 @@ export function useChatThread({
     if (!conversationSnap.exists()) {
       const conversationData = {
         participante1Id: currentUserId,
-        participante1Nome: currentUserName,
+        participante1Nome: currentUserType === "diretor" ? "Diretoria" : currentUserName,
         participante1Tipo: currentUserType,
         participante2Id: selectedUser.uid,
-        participante2Nome: selectedUser.nome,
+        participante2Nome: selectedUser.tipo === "diretor" ? "Diretoria" : selectedUser.nome,
         participante2Tipo: selectedUser.tipo,
         mensagensNaoLidas1: 0,
         mensagensNaoLidas2: 1,
