@@ -317,6 +317,10 @@ export const chatConversationSchema = z.object({
   participante2Digitando: z.boolean().default(false), // Se o participante 2 está digitando
   participante1UltimaDigitacao: z.string().optional(), // Timestamp da última vez que o participante 1 digitou
   participante2UltimaDigitacao: z.string().optional(), // Timestamp da última vez que o participante 2 digitou
+  deletadaPorParticipante1: z.boolean().default(false), // Se a conversa foi deletada pelo participante 1 (soft delete)
+  deletadaPorParticipante2: z.boolean().default(false), // Se a conversa foi deletada pelo participante 2 (soft delete)
+  dataDelecaoParticipante1: z.string().optional(), // Data/hora em que foi deletada pelo participante 1
+  dataDelecaoParticipante2: z.string().optional(), // Data/hora em que foi deletada pelo participante 2
   dataCriacao: z.string(), // Data de criação da conversa
   dataUltimaAtualizacao: z.string(), // Data da última atualização
 });
@@ -370,6 +374,31 @@ export const insertUserBlockSchema = userBlockSchema.omit({ id: true });
 
 export type UserBlock = z.infer<typeof userBlockSchema>;
 export type InsertUserBlock = z.infer<typeof insertUserBlockSchema>;
+
+// Chat Report schema - denúncias de conversas
+export const chatReportSchema = z.object({
+  id: z.string(),
+  conversationId: z.string(), // ID da conversa denunciada
+  denuncianteId: z.string(), // ID de quem denunciou
+  denuncianteNome: z.string(), // Nome de quem denunciou
+  denuncianteTipo: z.enum(["aluno", "professor", "diretor"]), // Tipo de quem denunciou
+  denunciadoId: z.string(), // ID de quem foi denunciado
+  denunciadoNome: z.string(), // Nome de quem foi denunciado
+  denunciadoTipo: z.enum(["aluno", "professor", "diretor"]), // Tipo de quem foi denunciado
+  motivo: z.string(), // Comentário/motivo da denúncia
+  dataDenuncia: z.string(), // Data/hora da denúncia
+  status: z.enum(["pendente", "analisada", "arquivada"]).default("pendente"), // Status da denúncia
+  analisadaPor: z.string().optional(), // ID do diretor que analisou
+  analisadaPorNome: z.string().optional(), // Nome do diretor que analisou
+  dataAnalise: z.string().optional(), // Data/hora da análise
+  comentarioDiretor: z.string().optional(), // Comentário do diretor após análise
+  acaoTomada: z.string().optional(), // Ação tomada pelo diretor
+});
+
+export const insertChatReportSchema = chatReportSchema.omit({ id: true });
+
+export type ChatReport = z.infer<typeof chatReportSchema>;
+export type InsertChatReport = z.infer<typeof insertChatReportSchema>;
 
 // Call Signal schema - sinais de chamada de vídeo/áudio
 export const callSignalSchema = z.object({
