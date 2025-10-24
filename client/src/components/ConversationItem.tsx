@@ -8,11 +8,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { PresenceIndicator } from "@/components/PresenceIndicator";
 import { useUserPresence } from "@/hooks/useUserPresence";
 import type { ChatConversation, User } from "@shared/schema";
-import { MoreVertical, Trash2, Ban, UserPlus } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { MoreVertical, Trash2, Ban, UserPlus, Check } from "lucide-react";
+import { format, formatDistanceToNow, isToday, isYesterday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface ConversationItemProps {
@@ -65,112 +64,126 @@ export function ConversationItem({
     return nome.substring(0, 2).toUpperCase();
   };
 
-  const formatTimestamp = (timestamp: string) => {
+  const formatTime = (timestamp: string) => {
     try {
       const date = new Date(timestamp);
-      return formatDistanceToNow(date, { addSuffix: true, locale: ptBR });
+      if (isToday(date)) {
+        return format(date, "HH:mm");
+      }
+      if (isYesterday(date)) {
+        return "Ontem";
+      }
+      return format(date, "dd/MM/yyyy");
     } catch {
       return "";
     }
   };
 
+  const isSentByMe = conversation.ultimaMensagemRemetenteId === currentUserId;
+
   return (
     <div
-      className={`p-3 hover-elevate cursor-pointer group flex items-center gap-2 ${
-        isSelected ? "bg-accent" : ""
+      className={`p-3 whatsapp-conversation-item cursor-pointer group flex items-center gap-3 border-b whatsapp-divider ${
+        isSelected ? "bg-[#f0f2f5] dark:bg-[#2a3942]" : ""
       }`}
+      onClick={() => onSelectConversation(conversation)}
       data-testid={`conversation-${conversation.id}`}
     >
-      <div className="flex-1 min-w-0" onClick={() => onSelectConversation(conversation)}>
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <Avatar className="h-10 w-10 shrink-0">
-              {otherUser?.fotoBase64 && otherUser.fotoPublica ? (
-                <AvatarImage src={otherUser.fotoBase64} alt={other.nome} />
-              ) : null}
-              <AvatarFallback>
-                {getInitials(other.nome)}
-              </AvatarFallback>
-            </Avatar>
-            <div
-              className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-background ${
-                presenceData.isOnline ? "bg-green-500" : "bg-gray-400"
-              }`}
-            />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-2">
-              <p className="font-medium text-sm truncate">{other.nome}</p>
-              {unreadCount > 0 && (
-                <Badge variant="destructive" className="text-xs shrink-0">
-                  {unreadCount}
-                </Badge>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground truncate">
+      <div className="relative flex-shrink-0">
+        <Avatar className="h-12 w-12">
+          {otherUser?.fotoBase64 && otherUser.fotoPublica ? (
+            <AvatarImage src={otherUser.fotoBase64} alt={other.nome} />
+          ) : null}
+          <AvatarFallback className="bg-[#6b7c85] text-white dark:bg-[#404b52] dark:text-white">
+            {getInitials(other.nome)}
+          </AvatarFallback>
+        </Avatar>
+      </div>
+
+      <div className="flex-1 min-w-0 py-1">
+        <div className="flex items-baseline justify-between gap-2 mb-1">
+          <p className="font-medium text-[15px] truncate text-foreground">
+            {other.nome}
+          </p>
+          {conversation.ultimaMensagemTimestamp && (
+            <span className="text-xs text-muted-foreground flex-shrink-0">
+              {formatTime(conversation.ultimaMensagemTimestamp)}
+            </span>
+          )}
+        </div>
+        
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1 flex-1 min-w-0">
+            {isSentByMe && (
+              <Check className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            )}
+            <p className="text-sm text-muted-foreground truncate">
               {conversation.ultimaMensagem}
             </p>
-            <div className="flex items-center gap-2 mt-0.5">
-              {conversation.ultimaMensagemTimestamp && (
-                <p className="text-xs text-muted-foreground">
-                  {formatTimestamp(conversation.ultimaMensagemTimestamp)}
-                </p>
-              )}
-              <span className="text-xs text-muted-foreground">•</span>
-              <PresenceIndicator
-                isOnline={presenceData.isOnline}
-                lastSeen={presenceData.lastSeen}
-                lastActivity={presenceData.lastActivity}
-                showLabel={false}
-                variant="icon"
-              />
-            </div>
+          </div>
+          
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {unreadCount > 0 && (
+              <Badge 
+                className="bg-[#25d366] hover:bg-[#20bd5a] text-white text-xs rounded-full h-5 min-w-5 flex items-center justify-center px-1.5"
+              >
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </Badge>
+            )}
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-6 w-6 opacity-0 group-hover:opacity-100 hover:bg-gray-200 dark:hover:bg-gray-700"
+                  data-testid={`button-conversation-menu-${conversation.id}`}
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteConversation(conversation);
+                  }}
+                  className="text-destructive"
+                  data-testid="button-delete-conversation"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Excluir conversa
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {isBlocked ? (
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onUnblockUser(other.id);
+                    }}
+                    data-testid="button-unblock-user"
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Desbloquear usuário
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onBlockUser(other.id, other.nome);
+                    }}
+                    className="text-destructive"
+                    data-testid="button-block-user"
+                  >
+                    <Ban className="h-4 w-4 mr-2" />
+                    Bloquear usuário
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
-      
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-8 w-8 opacity-0 group-hover:opacity-100"
-            onClick={(e) => e.stopPropagation()}
-            data-testid={`button-conversation-menu-${conversation.id}`}
-          >
-            <MoreVertical className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem
-            onClick={() => onDeleteConversation(conversation)}
-            className="text-destructive"
-            data-testid="button-delete-conversation"
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Excluir conversa
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          {isBlocked ? (
-            <DropdownMenuItem
-              onClick={() => onUnblockUser(other.id)}
-              data-testid="button-unblock-user"
-            >
-              <UserPlus className="h-4 w-4 mr-2" />
-              Desbloquear usuário
-            </DropdownMenuItem>
-          ) : (
-            <DropdownMenuItem
-              onClick={() => onBlockUser(other.id, other.nome)}
-              className="text-destructive"
-              data-testid="button-block-user"
-            >
-              <Ban className="h-4 w-4 mr-2" />
-              Bloquear usuário
-            </DropdownMenuItem>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
     </div>
   );
 }

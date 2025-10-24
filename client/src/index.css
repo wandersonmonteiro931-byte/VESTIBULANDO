@@ -370,6 +370,19 @@
     animation: blink-red 1.5s ease-in-out infinite;
   }
 
+  /* WhatsApp color tokens */
+  .whatsapp-green {
+    background-color: #008069;
+  }
+
+  .whatsapp-green-hover {
+    background-color: #006d56;
+  }
+
+  .dark .whatsapp-green-hover {
+    background-color: #005c4b;
+  }
+
   /* WhatsApp-style chat background */
   .whatsapp-bg {
     background-color: #e5ddd5;
@@ -452,5 +465,50 @@
 
   .dark .whatsapp-input-area {
     background-color: #202c33;
+  }
+
+  /* WhatsApp conversation list */
+  .whatsapp-conversation-list {
+    background-color: #ffffff;
+  }
+
+  .dark .whatsapp-conversation-list {
+    background-color: #111b21;
+  }
+
+  /* WhatsApp conversation item hover */
+  .whatsapp-conversation-item {
+    background-color: #ffffff;
+    transition: background-color 0.2s;
+  }
+
+  .whatsapp-conversation-item:hover {
+    background-color: #f5f6f6;
+  }
+
+  .dark .whatsapp-conversation-item {
+    background-color: #111b21;
+  }
+
+  .dark .whatsapp-conversation-item:hover {
+    background-color: #202c33;
+  }
+
+  /* WhatsApp search bar */
+  .whatsapp-search {
+    background-color: #f0f2f5;
+  }
+
+  .dark .whatsapp-search {
+    background-color: #202c33;
+  }
+
+  /* WhatsApp divider */
+  .whatsapp-divider {
+    border-color: #e9edef;
+  }
+
+  .dark .whatsapp-divider {
+    border-color: #2a3942;
   }
 }

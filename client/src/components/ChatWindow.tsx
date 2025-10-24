@@ -1,19 +1,10 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { X, Search, Plus, MoreVertical, Trash2, Ban, UserPlus } from "lucide-react";
+import { X, Search, ArrowLeft, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,13 +21,9 @@ import { db } from "@/lib/firebase";
 import { getNowBrasiliaISO } from "@/lib/brasiliaTime";
 import type { ChatConversation, User, UserBlock } from "@shared/schema";
 import ChatMessageArea from "./ChatMessageArea";
-import UserAccountMenu from "./UserAccountMenu";
-import { PresenceIndicator } from "./PresenceIndicator";
 import { ConversationItem } from "./ConversationItem";
 import { ChatTermsModal } from "./ChatTermsModal";
 import { useToast } from "@/hooks/use-toast";
-import { formatDistanceToNow } from "date-fns";
-import { ptBR } from "date-fns/locale";
 
 interface ChatWindowProps {
   onClose: () => void;
@@ -60,7 +47,8 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
   const { userData } = useAuth();
   const { toast } = useToast();
 
-  // Carregar usuários bloqueados
+  const showChatView = selectedConversation || selectedUser;
+
   useEffect(() => {
     if (!userData?.uid) return;
 
@@ -83,7 +71,6 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
     return () => unsubscribe();
   }, [userData?.uid]);
 
-  // Carregar todos os usuários ativos
   useEffect(() => {
     const loadUsers = async () => {
       if (!userData?.uid) return;
@@ -96,13 +83,10 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
         snapshot.forEach((doc) => {
           const user = { uid: doc.id, ...doc.data() } as User;
           if (user.uid !== userData.uid) {
-            // Aceitar ativo como string "true" ou boolean true para compatibilidade
             const isActive = user.ativo === true || (user.ativo as any) === "true";
-            // Aceitar status como boolean true ou string "aprovado" para compatibilidade
             const isApproved = user.status === "aprovado" || (user.status as any) === true;
             
             if (isActive) {
-              // Diretor sempre aparece se ativo, outros apenas se aprovados
               if (user.tipo === "diretor" || isApproved) {
                 users.push(user);
               }
@@ -125,7 +109,6 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
     loadUsers();
   }, [userData?.uid]);
 
-  // Filtrar usuários com base na busca
   useEffect(() => {
     if (!searchQuery.trim()) {
       setFilteredUsers([]);
@@ -138,7 +121,6 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
       
       const displayName = user.tipo === "diretor" ? "Diretoria" : user.nome;
       
-      // Se for diretor, verificar se o termo busca por "dir", "diretor" ou "diretoria"
       if (user.tipo === "diretor") {
         return (
           "diretoria".includes(term) ||
@@ -159,7 +141,6 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
     setFilteredUsers(filtered);
   }, [searchQuery, allUsers, blockedUsers]);
 
-  // Verificar se usuário aceitou os termos do chat
   useEffect(() => {
     const checkTermsAcceptance = async () => {
       if (!userData?.uid) return;
@@ -185,7 +166,6 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
     checkTermsAcceptance();
   }, [userData?.uid]);
 
-  // Carregar conversas existentes
   useEffect(() => {
     if (!userData?.uid) return;
 
@@ -249,10 +229,7 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
   }, [userData?.uid]);
 
   const handleSelectUser = (user: User) => {
-    console.log("🖱️ Clique em usuário:", user.nome, "| Tipo:", user.tipo, "| UID:", user.uid);
-    
     if (!hasAcceptedTerms) {
-      console.warn("⚠️ Usuário ainda não aceitou os termos do chat");
       toast({
         title: "Aceite os termos",
         description: "Você precisa aceitar os termos de uso do chat antes de conversar.",
@@ -271,7 +248,6 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
       return;
     }
 
-    console.log("✅ Selecionando usuário:", getDisplayName(user));
     setSelectedUser(user);
     setSelectedConversation(null);
     setSearchQuery("");
@@ -421,31 +397,6 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
     };
   };
 
-  const getUnreadCount = (conversation: ChatConversation) => {
-    if (conversation.participante1Id === userData?.uid) {
-      return conversation.mensagensNaoLidas1 || 0;
-    }
-    return conversation.mensagensNaoLidas2 || 0;
-  };
-
-  const getInitials = (nome: string) => {
-    if (nome === "Diretoria") return "DIR";
-    const names = nome.split(" ");
-    if (names.length >= 2) {
-      return `${names[0][0]}${names[1][0]}`.toUpperCase();
-    }
-    return nome.substring(0, 2).toUpperCase();
-  };
-
-  const formatTimestamp = (timestamp: string) => {
-    try {
-      const date = new Date(timestamp);
-      return formatDistanceToNow(date, { addSuffix: true, locale: ptBR });
-    } catch {
-      return "";
-    }
-  };
-
   const getUserFromId = (userId: string): User | undefined => {
     return allUsers.find(u => u.uid === userId);
   };
@@ -481,160 +432,156 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
     setTermsModalOpen(true);
   };
 
+  const handleBackToList = () => {
+    setSelectedConversation(null);
+    setSelectedUser(null);
+  };
+
+  const getInitials = (nome: string) => {
+    if (nome === "Diretoria") return "DIR";
+    const names = nome.split(" ");
+    if (names.length >= 2) {
+      return `${names[0][0]}${names[1][0]}`.toUpperCase();
+    }
+    return nome.substring(0, 2).toUpperCase();
+  };
+
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      <div 
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm" 
-        onClick={onClose}
-      />
-      
-      <div className="relative bg-card border rounded-lg shadow-2xl w-full max-w-5xl h-[80vh] flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b gap-4">
-          <h2 className="text-lg font-semibold" data-testid="text-chat-title">
-            Mensagens
-          </h2>
-          
-          <div className="flex items-center gap-2">
-            <UserAccountMenu />
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 md:p-4">
+      <div className="relative bg-card w-full h-full md:h-[90vh] md:max-w-6xl md:rounded-lg shadow-2xl flex flex-col overflow-hidden">
+        {/* Lista de conversas - esconde em mobile quando chat está aberto */}
+        <div className={`${showChatView ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-96 h-full whatsapp-conversation-list border-r whatsapp-divider`}>
+          {/* Header da lista */}
+          <div className="whatsapp-header p-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-white dark:text-foreground" data-testid="text-chat-title">
+              WhatsApp
+            </h2>
             <Button
               size="icon"
               variant="ghost"
               onClick={onClose}
+              className="text-white dark:text-foreground hover:bg-white/10"
               data-testid="button-close-chat"
             >
               <X className="h-5 w-5" />
             </Button>
           </div>
-        </div>
 
-        <div className="flex flex-1 overflow-hidden">
-          <div className="w-80 border-r flex flex-col">
-            <div className="p-3 border-b">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar pessoas..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                  data-testid="input-search-users"
-                />
-              </div>
+          {/* Barra de busca */}
+          <div className="p-2 whatsapp-search">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar ou começar uma conversa"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 bg-white dark:bg-[#2a3942] border-0"
+                data-testid="input-search-users"
+              />
             </div>
-
-            <ScrollArea className="flex-1">
-              {searchQuery.trim() && filteredUsers.length > 0 ? (
-                <div className="p-2">
-                  <p className="text-xs font-medium text-muted-foreground px-3 py-2">
-                    RESULTADOS DA BUSCA
-                  </p>
-                  <div className="space-y-1">
-                    {filteredUsers.map((user) => (
-                      <div
-                        key={user.uid}
-                        onClick={() => handleSelectUser(user)}
-                        className="p-3 rounded-md hover-elevate active-elevate-2 cursor-pointer"
-                        data-testid={`user-search-${user.uid}`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10">
-                            {user.fotoBase64 && user.fotoPublica ? (
-                              <AvatarImage src={user.fotoBase64} alt={getDisplayName(user)} />
-                            ) : null}
-                            <AvatarFallback>
-                              {getInitials(getDisplayName(user))}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm truncate">
-                              {getDisplayName(user)}
-                            </p>
-                            <PresenceIndicator
-                              isOnline={user.isOnline}
-                              lastSeen={user.lastSeen}
-                              lastActivity={user.lastActivity}
-                              showLabel={true}
-                              variant="icon"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : searchQuery.trim() ? (
-                <div className="p-4 text-center text-sm text-muted-foreground">
-                  Nenhum usuário encontrado
-                </div>
-              ) : loading ? (
-                <div className="p-4 text-center text-muted-foreground">
-                  Carregando conversas...
-                </div>
-              ) : conversations.length === 0 ? (
-                <div className="p-4 text-center text-muted-foreground">
-                  <p className="mb-2">Nenhuma conversa ainda</p>
-                  <p className="text-sm">Digite acima para buscar pessoas</p>
-                </div>
-              ) : (
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground px-5 py-3">
-                    CONVERSAS
-                  </p>
-                  <div className="divide-y">
-                    {conversations.map((conversation) => {
-                      const other = getOtherParticipant(conversation);
-                      const isSelected = selectedConversation?.id === conversation.id;
-                      const otherUser = getUserFromId(other.id);
-
-                      return (
-                        <ConversationItem
-                          key={conversation.id}
-                          conversation={conversation}
-                          currentUserId={userData?.uid || ""}
-                          otherUser={otherUser}
-                          isSelected={isSelected}
-                          isBlocked={blockedUsers.has(other.id)}
-                          onSelectConversation={handleSelectConversation}
-                          onDeleteConversation={(conv) => {
-                            setConversationToDelete(conv);
-                            setDeleteDialogOpen(true);
-                          }}
-                          onBlockUser={(userId, userName) => {
-                            setUserToBlock({ id: userId, nome: userName });
-                            setBlockDialogOpen(true);
-                          }}
-                          onUnblockUser={handleUnblockUser}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </ScrollArea>
           </div>
 
-          <div className="flex-1 flex flex-col bg-background">
-            {selectedConversation ? (
-              <ChatMessageArea
-                conversation={selectedConversation}
-                onBack={() => setSelectedConversation(null)}
-                onOpenTerms={handleOpenTerms}
-              />
-            ) : selectedUser ? (
-              <ChatMessageArea
-                selectedUser={selectedUser}
-                onBack={() => setSelectedUser(null)}
-                onOpenTerms={handleOpenTerms}
-              />
+          {/* Lista */}
+          <ScrollArea className="flex-1">
+            {searchQuery.trim() && filteredUsers.length > 0 ? (
+              <div>
+                {filteredUsers.map((user) => (
+                  <div
+                    key={user.uid}
+                    onClick={() => handleSelectUser(user)}
+                    className="p-3 whatsapp-conversation-item cursor-pointer border-b whatsapp-divider"
+                    data-testid={`user-search-${user.uid}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-12 w-12">
+                        {user.fotoBase64 && user.fotoPublica ? (
+                          <AvatarImage src={user.fotoBase64} alt={getDisplayName(user)} />
+                        ) : null}
+                        <AvatarFallback className="bg-[#6b7c85] text-white">
+                          {getInitials(getDisplayName(user))}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate text-foreground">
+                          {getDisplayName(user)}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {user.email}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : searchQuery.trim() ? (
+              <div className="p-4 text-center text-sm text-muted-foreground">
+                Nenhum usuário encontrado
+              </div>
+            ) : loading ? (
+              <div className="p-4 text-center text-muted-foreground">
+                Carregando conversas...
+              </div>
+            ) : conversations.length === 0 ? (
+              <div className="p-8 text-center text-muted-foreground">
+                <p className="mb-2">Nenhuma conversa ainda</p>
+                <p className="text-sm">Use a busca acima para encontrar pessoas</p>
+              </div>
             ) : (
-              <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                <div className="text-center">
-                  <p>Selecione uma conversa</p>
-                  <p className="text-sm mt-1">ou busque por uma pessoa</p>
-                </div>
+              <div>
+                {conversations.map((conversation) => {
+                  const other = getOtherParticipant(conversation);
+                  const isSelected = selectedConversation?.id === conversation.id;
+                  const otherUser = getUserFromId(other.id);
+
+                  return (
+                    <ConversationItem
+                      key={conversation.id}
+                      conversation={conversation}
+                      currentUserId={userData?.uid || ""}
+                      otherUser={otherUser}
+                      isSelected={isSelected}
+                      isBlocked={blockedUsers.has(other.id)}
+                      onSelectConversation={handleSelectConversation}
+                      onDeleteConversation={(conv) => {
+                        setConversationToDelete(conv);
+                        setDeleteDialogOpen(true);
+                      }}
+                      onBlockUser={(userId, userName) => {
+                        setUserToBlock({ id: userId, nome: userName });
+                        setBlockDialogOpen(true);
+                      }}
+                      onUnblockUser={handleUnblockUser}
+                    />
+                  );
+                })}
               </div>
             )}
-          </div>
+          </ScrollArea>
+        </div>
+
+        {/* Área de chat - sempre visível em desktop, só visível quando selecionado em mobile */}
+        <div className={`${showChatView ? 'flex' : 'hidden md:flex'} flex-1 flex-col bg-background overflow-hidden`}>
+          {selectedConversation ? (
+            <ChatMessageArea
+              conversation={selectedConversation}
+              onBack={handleBackToList}
+              onOpenTerms={handleOpenTerms}
+            />
+          ) : selectedUser ? (
+            <ChatMessageArea
+              selectedUser={selectedUser}
+              onBack={handleBackToList}
+              onOpenTerms={handleOpenTerms}
+            />
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-muted-foreground whatsapp-bg">
+              <div className="text-center p-8">
+                <div className="mb-4 text-6xl">💬</div>
+                <h3 className="text-xl font-semibold mb-2">WhatsApp Web</h3>
+                <p className="text-sm">Selecione uma conversa para começar</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
