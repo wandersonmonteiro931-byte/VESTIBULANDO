@@ -540,33 +540,6 @@
     z-index: 100000 !important;
   }
 
-  /* Desktop layout - normal flex */
-  @media (min-width: 769px) {
-    .chat-message-container {
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-      position: relative;
-    }
-
-    .chat-header-fixed {
-      flex-shrink: 0;
-      position: relative;
-    }
-
-    .chat-messages-area {
-      flex: 1;
-      min-height: 0;
-      overflow-y: auto;
-      position: relative;
-    }
-
-    .whatsapp-input-area {
-      flex-shrink: 0;
-      position: relative;
-    }
-  }
-
   /* Mobile touch optimizations */
   @media (max-width: 768px) {
     /* Prevent zoom on input focus in iOS */
@@ -601,8 +574,6 @@
     .whatsapp-messages-scroll {
       touch-action: pan-y;
       -webkit-overflow-scrolling: touch;
-      position: relative;
-      height: 100%;
     }
     
     /* Compact design for mobile */
@@ -618,76 +589,94 @@
       width: 36px;
     }
 
-    /* Critical: Mobile chat layout with fixed header/input */
+    /* Critical: Mobile chat flexbox layout with dynamic viewport */
     .chat-message-container {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      width: 100%;
-      height: 100vh;
-      height: 100dvh; /* Dynamic viewport - adjusts with keyboard */
       display: flex;
       flex-direction: column;
+      min-height: 100vh;
+      min-height: 100dvh; /* Dynamic viewport - adjusts with keyboard */
+      max-height: 100vh;
+      max-height: 100dvh;
+      height: 100vh;
+      height: 100dvh;
       overflow: hidden;
+      position: relative;
     }
 
-    /* Fixed header - always visible at top */
+    /* Sticky header - stays at top */
     .chat-header-fixed {
-      position: fixed;
+      position: sticky;
       top: 0;
-      left: 0;
-      right: 0;
       z-index: 100;
-      background-color: #008069;
       flex-shrink: 0;
+      background-color: #008069;
     }
 
     .dark .chat-header-fixed {
       background-color: #202c33;
     }
 
-    /* Messages area - scrollable between header and input */
+    /* Messages area - flex with scroll */
     .chat-messages-area {
-      position: fixed;
-      top: 60px; /* Height of header (p-2 + 44px button + p-2) */
-      left: 0;
-      right: 0;
-      bottom: 80px; /* Height of input area (p-1.5 + input/buttons + alerts + p-1.5) */
+      flex: 1 1 auto;
+      min-height: 0; /* Critical for flexbox scrolling */
       overflow-y: auto;
       overflow-x: hidden;
       -webkit-overflow-scrolling: touch;
       overscroll-behavior: contain;
-      padding-bottom: 8px;
+      position: relative;
     }
 
-    /* Input area - fixed at bottom, above keyboard */
+    /* Sticky input - stays at bottom */
     .whatsapp-input-area {
-      position: fixed;
+      position: sticky;
       bottom: 0;
-      left: 0;
-      right: 0;
       z-index: 100;
-      background-color: #f0f2f5;
       flex-shrink: 0;
+      background-color: #f0f2f5;
+      padding-bottom: env(safe-area-inset-bottom, 0); /* iOS safe area */
     }
 
     .dark .whatsapp-input-area {
       background-color: #202c33;
     }
 
-    /* Ensure chat window container uses full height */
+    /* Ensure chat window uses full viewport */
     .chat-window-mobile {
-      position: fixed !important;
-      top: 0 !important;
-      left: 0 !important;
-      right: 0 !important;
-      bottom: 0 !important;
-      width: 100% !important;
+      min-height: 100vh !important;
+      min-height: 100dvh !important;
+      max-height: 100vh !important;
+      max-height: 100dvh !important;
       height: 100vh !important;
       height: 100dvh !important;
       overflow: hidden !important;
+    }
+  }
+
+  /* Desktop layout - normal flex */
+  @media (min-width: 769px) {
+    .chat-message-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      position: relative;
+    }
+
+    .chat-header-fixed {
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .chat-messages-area {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    .whatsapp-input-area {
+      flex-shrink: 0;
+      position: relative;
     }
   }
 
