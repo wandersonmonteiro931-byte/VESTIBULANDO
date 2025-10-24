@@ -20,6 +20,17 @@ I prefer simple language and clear explanations. I want iterative development wi
 ### UI/UX Decisions
 The platform utilizes a consistent violet/purple color scheme across all dashboards (Login, Student, Teacher, Admin) to convey an educational trust theme. Status indicators use amber (pending), blue (submitted), green (graded), and red (late) for clarity. Dark mode is supported with persistent preference. Responsive layouts are prioritized (mobile-first), maintaining consistent spacing and using the Inter font family throughout. Shadcn UI components are used with custom theming.
 
+#### Chat Module - Mobile-First Development
+**CRITICAL: All chat features MUST work identically on both desktop and mobile devices, without exception.**
+
+Development Guidelines:
+- Every chat component and feature must be tested and optimized for mobile devices
+- Animations, transitions, and UI elements must render correctly on all screen sizes
+- Fixed heights should be used instead of max-heights for predictable mobile behavior
+- Sufficient padding must be added to scrollable areas to prevent content cutoff
+- Transform animations should be combined with height transitions for smooth mobile rendering
+- All future chat modifications must maintain desktop/mobile parity
+
 ### Feature Specifications
 
 #### Authentication
