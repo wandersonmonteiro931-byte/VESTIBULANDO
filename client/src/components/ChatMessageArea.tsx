@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { ArrowLeft, Send, Paperclip, X, File, Image as ImageIcon, Video, Music, FileText, Trash2, AlertTriangle, WifiOff, Wifi, User as UserIcon, MoreVertical } from "lucide-react";
 import { PresenceIndicator } from "@/components/PresenceIndicator";
+import { TypingIndicator } from "@/components/TypingIndicator";
+import { MessageStatusIndicator } from "@/components/MessageStatusIndicator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -21,6 +23,7 @@ import { validateFile, getFileTypeCategory } from "@/lib/fileValidation";
 import { useNetworkStatus, retryWithBackoff } from "@/hooks/useNetworkStatus";
 import { useChatThread } from "@/hooks/useChatThread";
 import { useUserPresence } from "@/hooks/useUserPresence";
+import { useTypingIndicator } from "@/hooks/useTypingIndicator";
 import UserProfileDialog from "@/components/UserProfileDialog";
 import {
   DropdownMenu,
@@ -89,6 +92,16 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
 
   const presenceData = useUserPresence(otherParticipantId);
 
+  const isParticipant1 = resolvedConversation 
+    ? resolvedConversation.participante1Id === userData?.uid
+    : false;
+
+  const { otherUserTyping, onTyping, stopTyping } = useTypingIndicator({
+    conversationId: conversationId || undefined,
+    currentUserId: userData?.uid,
+    isParticipant1: isParticipant1,
+  });
+
   const otherParticipant: OtherParticipant | null = otherParticipantId && otherParticipantNome && otherParticipantTipo
     ? {
         id: otherParticipantId,
@@ -107,10 +120,25 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
   useEffect(() => {
     if (!conversationId || !resolvedConversation) return;
     
-    const markMessagesAsRead = async () => {
-      const unreadMessages = messages.filter(
-        (msg) => msg.destinatarioId === userData?.uid && !msg.lida
+    const markMessagesAsDeliveredAndRead = async () => {
+      const myMessages = messages.filter(
+        (msg) => msg.destinatarioId === userData?.uid
       );
+
+      const undeliveredMessages = myMessages.filter((msg) => !msg.entregue);
+      const unreadMessages = myMessages.filter((msg) => !msg.lida);
+
+      for (const msg of undeliveredMessages) {
+        try {
+          const msgRef = doc(db, "chat_messages", msg.id);
+          await updateDoc(msgRef, {
+            entregue: true,
+            dataEntrega: getNowBrasiliaISO(),
+          });
+        } catch (error) {
+          console.error("Erro ao marcar mensagem como entregue:", error);
+        }
+      }
 
       for (const msg of unreadMessages) {
         try {
@@ -118,6 +146,8 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
           await updateDoc(msgRef, {
             lida: true,
             dataLeitura: getNowBrasiliaISO(),
+            entregue: true,
+            dataEntrega: msg.entregue ? msg.dataEntrega : getNowBrasiliaISO(),
           });
           
           if (userData) {
@@ -151,7 +181,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
     };
 
     if (messages.length > 0) {
-      setTimeout(markMessagesAsRead, 500);
+      setTimeout(markMessagesAsDeliveredAndRead, 500);
     }
   }, [messages, conversationId, resolvedConversation, userData]);
 
@@ -406,6 +436,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
         tipo: tipoMensagem,
         conteudo: finalContent,
         timestamp: getNowBrasiliaISO(),
+        entregue: false,
         lida: false,
         deletadaPorRemetente: false,
         deletadaPorDestinatario: false,
@@ -449,6 +480,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
 
       setMessageText("");
       setSelectedFile(null);
+      stopTyping();
     } catch (error) {
       console.error("Erro ao enviar mensagem:", error);
       
@@ -780,13 +812,23 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
                   </DropdownMenu>
                 </div>
 
-                <span className="text-xs text-muted-foreground mt-1">
-                  {formatTimestamp(msg.timestamp)}
-                </span>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                  <span>{formatTimestamp(msg.timestamp)}</span>
+                  <MessageStatusIndicator
+                    entregue={msg.entregue || false}
+                    lida={msg.lida || false}
+                    isSentByMe={isOwn}
+                  />
+                </div>
               </div>
             </div>
           );
         })}
+
+        <TypingIndicator 
+          userName={otherParticipantNome || "Usuário"}
+          show={otherUserTyping}
+        />
 
         <div ref={messagesEndRef} />
       </div>
@@ -850,7 +892,10 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
                 : "Digite sua mensagem..."
             }
             value={messageText}
-            onChange={(e) => setMessageText(e.target.value)}
+            onChange={(e) => {
+              setMessageText(e.target.value);
+              onTyping();
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();

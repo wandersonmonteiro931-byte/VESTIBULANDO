@@ -253,6 +253,8 @@ export const chatMessageSchema = z.object({
   arquivoTipo: z.string().optional(), // MIME type do arquivo
   arquivoTamanho: z.number().optional(), // Tamanho do arquivo em bytes
   timestamp: z.string(), // Data/hora de envio (ISO datetime)
+  entregue: z.boolean().default(false), // Se a mensagem foi entregue ao destinatário
+  dataEntrega: z.string().optional(), // Data/hora em que foi entregue
   lida: z.boolean().default(false), // Se a mensagem foi lida pelo destinatário
   dataLeitura: z.string().optional(), // Data/hora em que foi lida
   deletadaPorRemetente: z.boolean().default(false), // Se foi deletada pelo remetente (só some da visualização)
@@ -309,6 +311,10 @@ export const chatConversationSchema = z.object({
   ultimaMensagemRemetenteId: z.string().optional(), // Quem enviou a última mensagem
   mensagensNaoLidas1: z.number().default(0), // Mensagens não lidas pelo participante 1
   mensagensNaoLidas2: z.number().default(0), // Mensagens não lidas pelo participante 2
+  participante1Digitando: z.boolean().default(false), // Se o participante 1 está digitando
+  participante2Digitando: z.boolean().default(false), // Se o participante 2 está digitando
+  participante1UltimaDigitacao: z.string().optional(), // Timestamp da última vez que o participante 1 digitou
+  participante2UltimaDigitacao: z.string().optional(), // Timestamp da última vez que o participante 2 digitou
   dataCriacao: z.string(), // Data de criação da conversa
   dataUltimaAtualizacao: z.string(), // Data da última atualização
 });
