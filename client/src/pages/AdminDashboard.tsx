@@ -21,6 +21,7 @@ import { PresenceIndicator } from "@/components/PresenceIndicator";
 import { MonitoringTab } from "@/components/MonitoringTab";
 import { DocumentationTab } from "@/components/DocumentationTab";
 import { AnnouncementsTab } from "@/components/AnnouncementsTab";
+import { InternalDocumentsTab } from "@/components/InternalDocumentsTab";
 import { BrasiliaClock } from "@/components/BrasiliaClock";
 import ChatButton from "@/components/ChatButton";
 import ChatAuditPanel from "@/components/ChatAuditPanel";
@@ -2161,6 +2162,7 @@ export default function AdminDashboard() {
             <TabsTrigger value="disciplinares" data-testid="tab-disciplinares">Advertências e Suspensões</TabsTrigger>
             <TabsTrigger value="monitoramento" data-testid="tab-monitoramento">Frequência</TabsTrigger>
             <TabsTrigger value="auditoria-chat" data-testid="tab-auditoria-chat">Auditoria de Chat</TabsTrigger>
+            <TabsTrigger value="documentos-internos" data-testid="tab-documentos-internos">Documentos Internos</TabsTrigger>
             <TabsTrigger value="documentacao" data-testid="tab-documentacao">Documentação</TabsTrigger>
             <TabsTrigger value="avisos" data-testid="tab-avisos">Avisos</TabsTrigger>
             <TabsTrigger value="manutencao" data-testid="tab-manutencao">Manutenção</TabsTrigger>
@@ -2890,6 +2892,10 @@ export default function AdminDashboard() {
 
           <TabsContent value="auditoria-chat" className="space-y-4">
             <ChatAuditPanel />
+          </TabsContent>
+
+          <TabsContent value="documentos-internos" className="space-y-4">
+            <InternalDocumentsTab />
           </TabsContent>
 
           <TabsContent value="documentacao" className="space-y-4">
