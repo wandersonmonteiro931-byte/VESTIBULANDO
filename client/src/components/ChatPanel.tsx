@@ -246,6 +246,8 @@ export function ChatPanel() {
           ultimaMensagem: lastMessagePreview,
           ultimaMensagemTimestamp: timestamp,
           ultimaMensagemRemetenteId: userData.uid,
+          ultimaMensagemEntregue: false,
+          ultimaMensagemLida: false,
           mensagensNaoLidas1: 0,
           mensagensNaoLidas2: 1,
           dataCriacao: timestamp,
@@ -260,6 +262,8 @@ export function ChatPanel() {
           ultimaMensagem: lastMessagePreview,
           ultimaMensagemTimestamp: timestamp,
           ultimaMensagemRemetenteId: userData.uid,
+          ultimaMensagemEntregue: false,
+          ultimaMensagemLida: false,
           ...(isParticipant1
             ? { mensagensNaoLidas2: (conversation.mensagensNaoLidas2 || 0) + 1 }
             : { mensagensNaoLidas1: (conversation.mensagensNaoLidas1 || 0) + 1 }),
@@ -327,6 +331,8 @@ export function ChatPanel() {
           ultimaMensagem: messageInput,
           ultimaMensagemTimestamp: timestamp,
           ultimaMensagemRemetenteId: userData.uid,
+          ultimaMensagemEntregue: false,
+          ultimaMensagemLida: false,
           mensagensNaoLidas1: 0,
           mensagensNaoLidas2: 1,
           dataCriacao: timestamp,
@@ -341,6 +347,8 @@ export function ChatPanel() {
           ultimaMensagem: messageInput,
           ultimaMensagemTimestamp: timestamp,
           ultimaMensagemRemetenteId: userData.uid,
+          ultimaMensagemEntregue: false,
+          ultimaMensagemLida: false,
           ...(isParticipant1
             ? { mensagensNaoLidas2: (conversation.mensagensNaoLidas2 || 0) + 1 }
             : { mensagensNaoLidas1: (conversation.mensagensNaoLidas1 || 0) + 1 }),

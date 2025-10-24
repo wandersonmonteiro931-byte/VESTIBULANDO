@@ -1,8 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { collection, query, where, onSnapshot, doc, updateDoc, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export function useConversationStatusSync(currentUserId: string | undefined) {
+  const processingRef = useRef<Set<string>>(new Set());
+
   useEffect(() => {
     if (!currentUserId) return;
 
@@ -19,6 +21,14 @@ export function useConversationStatusSync(currentUserId: string | undefined) {
     );
 
     const updateConversationStatus = async (conversationId: string, senderId: string) => {
+      const key = `${conversationId}-${senderId}`;
+      
+      if (processingRef.current.has(key)) {
+        return;
+      }
+
+      processingRef.current.add(key);
+
       try {
         const messagesRef = collection(db, 'chat_messages');
         const lastMessageQuery = query(
@@ -47,6 +57,10 @@ export function useConversationStatusSync(currentUserId: string | undefined) {
         }
       } catch (error) {
         console.error('Erro ao atualizar status da conversa:', error);
+      } finally {
+        setTimeout(() => {
+          processingRef.current.delete(key);
+        }, 1000);
       }
     };
 
@@ -72,38 +86,20 @@ export function useConversationStatusSync(currentUserId: string | undefined) {
 
     syncAllConversations();
 
-    const unsubscribe1 = onSnapshot(q1, (snapshot) => {
-      snapshot.docs.forEach((conversationDoc) => {
-        const conversation = conversationDoc.data();
-        if (conversation.ultimaMensagemRemetenteId === currentUserId) {
-          updateConversationStatus(conversationDoc.id, currentUserId);
-        }
-      });
-    });
-
-    const unsubscribe2 = onSnapshot(q2, (snapshot) => {
-      snapshot.docs.forEach((conversationDoc) => {
-        const conversation = conversationDoc.data();
-        if (conversation.ultimaMensagemRemetenteId === currentUserId) {
-          updateConversationStatus(conversationDoc.id, currentUserId);
-        }
-      });
-    });
-
     const messagesRef = collection(db, 'chat_messages');
     const myMessagesQuery = query(
       messagesRef,
       where('remetenteId', '==', currentUserId)
     );
 
-    const unsubscribe3 = onSnapshot(myMessagesQuery, (snapshot) => {
-      snapshot.docChanges().forEach(async (change) => {
-        if (change.type === 'modified') {
+    const unsubscribe1 = onSnapshot(myMessagesQuery, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'modified' || change.type === 'added') {
           const message = change.doc.data();
           const conversationId = message.conversationId;
           
           if (conversationId) {
-            await updateConversationStatus(conversationId, currentUserId);
+            updateConversationStatus(conversationId, currentUserId);
           }
         }
       });
@@ -111,8 +107,6 @@ export function useConversationStatusSync(currentUserId: string | undefined) {
 
     return () => {
       unsubscribe1();
-      unsubscribe2();
-      unsubscribe3();
     };
   }, [currentUserId]);
 }
