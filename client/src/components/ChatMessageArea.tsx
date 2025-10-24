@@ -142,6 +142,50 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
     fetchOtherUserData();
   }, [otherParticipantId, selectedUser]);
 
+  useEffect(() => {
+    const checkForBlocks = async () => {
+      if (!userData?.uid || !otherParticipantId) return;
+
+      try {
+        const blocksRef = collection(db, "user_blocks");
+        const q1 = query(
+          blocksRef,
+          where("bloqueadorId", "==", userData.uid),
+          where("bloqueadoId", "==", otherParticipantId),
+          where("ativo", "==", true)
+        );
+        const q2 = query(
+          blocksRef,
+          where("bloqueadorId", "==", otherParticipantId),
+          where("bloqueadoId", "==", userData.uid),
+          where("ativo", "==", true)
+        );
+
+        const [snapshot1, snapshot2] = await Promise.all([
+          getDocs(q1),
+          getDocs(q2),
+        ]);
+
+        if (!snapshot1.empty) {
+          const blockDoc = snapshot1.docs[0].data();
+          setBlocked(true);
+          setBlockReason(`Você bloqueou ${blockDoc.bloqueadoNome}. Não é possível enviar mensagens.`);
+        } else if (!snapshot2.empty) {
+          const blockDoc = snapshot2.docs[0].data();
+          setBlocked(true);
+          setBlockReason(`Você foi bloqueado por ${blockDoc.bloqueadorNome}. Não é possível enviar mensagens.`);
+        } else {
+          setBlocked(false);
+          setBlockReason("");
+        }
+      } catch (error) {
+        console.error("Erro ao verificar bloqueios:", error);
+      }
+    };
+
+    checkForBlocks();
+  }, [userData?.uid, otherParticipantId]);
+
   const otherParticipant: OtherParticipant | null = otherParticipantId && otherParticipantNome && otherParticipantTipo
     ? {
         id: otherParticipantId,
