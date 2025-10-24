@@ -49,6 +49,7 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [userToBlock, setUserToBlock] = useState<{ id: string; nome: string } | null>(null);
   const [termsModalOpen, setTermsModalOpen] = useState(false);
+  const [termsViewOnly, setTermsViewOnly] = useState(false);
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
   const [callDialogOpen, setCallDialogOpen] = useState(false);
   const [isVideoCall, setIsVideoCall] = useState(true);
@@ -427,7 +428,13 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
   };
 
   const handleOpenTerms = () => {
+    setTermsViewOnly(true);
     setTermsModalOpen(true);
+  };
+
+  const handleCloseTerms = () => {
+    setTermsModalOpen(false);
+    setTermsViewOnly(false);
   };
 
   const handleBackToList = () => {
@@ -641,6 +648,8 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
       <ChatTermsModal
         open={termsModalOpen}
         onAccept={handleAcceptTerms}
+        viewOnly={termsViewOnly}
+        onClose={handleCloseTerms}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

@@ -65,9 +65,11 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
   const [penaltyBlocked, setPenaltyBlocked] = useState(false);
   const [penaltyBlockReason, setPenaltyBlockReason] = useState("");
   const [showUserProfile, setShowUserProfile] = useState(false);
-  const [contextMenuMessage, setContextMenuMessage] = useState<string | null>(null);
   const [usersCache, setUsersCache] = useState<Map<string, User>>(new Map());
   const [otherUserData, setOtherUserData] = useState<User | null>(null);
+  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
+  const [longPressMessageId, setLongPressMessageId] = useState<string | null>(null);
+  const [pressedMessageId, setPressedMessageId] = useState<string | null>(null);
   
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [showBlockDialog, setShowBlockDialog] = useState(false);
@@ -348,6 +350,13 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
     return () => clearInterval(interval);
   }, [userData?.uid]);
 
+  useEffect(() => {
+    return () => {
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+      }
+    };
+  }, [longPressTimer]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -725,6 +734,35 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
     }
   };
 
+  const handleLongPressStart = (messageId: string) => {
+    setPressedMessageId(messageId);
+    const timer = setTimeout(() => {
+      setLongPressMessageId(messageId);
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+    }, 500);
+    setLongPressTimer(timer);
+  };
+
+  const handleLongPressEnd = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+    setTimeout(() => {
+      setPressedMessageId(null);
+    }, 150);
+  };
+
+  const handleLongPressCancel = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+    setPressedMessageId(null);
+  };
+
   const getFileIcon = (tipo: ChatMessage["tipo"]) => {
     switch (tipo) {
       case "imagem": return <ImageIcon className="h-4 w-4" />;
@@ -1012,21 +1050,22 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
         <Alert className="bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800 mb-2">
           <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
           <AlertDescription className="text-xs md:text-sm text-amber-900 dark:text-amber-100">
-            <p className="font-bold mb-1">ATENÇÃO: Antes de iniciar sua conversa, leia:</p>
-            <ul className="space-y-0.5 list-none text-xs">
-              <li>💬 Chat exclusivo para assuntos acadêmicos.</li>
-              <li>🚫 Proibido: mensagens ofensivas, discriminatórias ou spam.</li>
-              <li>📜 Comunicação monitorada pela Diretoria (LGPD).</li>
-              <li>⚠️ Violações podem resultar em suspensão da conta.</li>
+            <p className="font-bold mb-2">Atenção: Antes de iniciar sua conversa, leia atentamente:</p>
+            <ul className="space-y-1 list-none text-xs leading-relaxed">
+              <li>💬 Este chat é exclusivo para assuntos acadêmicos e administrativos.</li>
+              <li>🚫 É proibido enviar mensagens ofensivas, discriminatórias, políticas, religiosas, propagandas, correntes ou qualquer conteúdo que desrespeite outros usuários.</li>
+              <li>📜 Toda a comunicação é monitorada e registrada pela Diretoria, conforme os Termos de Uso e a Lei nº 13.709/2018 (LGPD).</li>
+              <li>⚖️ Condutas inadequadas poderão resultar em advertência, suspensão ou outras medidas cabíveis, conforme o Código Civil (Lei nº 10.406/2002) e a Lei nº 9.394/1996 (LDB).</li>
             </ul>
-            <p className="mt-1 text-xs">
+            <p className="mt-2 text-xs">
+              Ao continuar, você declara estar ciente e de acordo com as Regras do Chat e Termos de Uso da Plataforma Vestibulando.{' '}
               <button 
                 onClick={onOpenTerms}
                 className="text-amber-700 dark:text-amber-300 underline hover:no-underline"
                 data-testid="link-open-terms"
               >
-                Ver Termos de Uso completos
-              </button>
+                Consulte os termos aqui
+              </button>.
             </p>
           </AlertDescription>
         </Alert>
@@ -1043,12 +1082,29 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
               <div className={`flex flex-col ${isOwn ? "items-end" : "items-start"} max-w-[85%] sm:max-w-[80%] md:max-w-[70%] group`}>
                 <div className="relative">
                   <div
-                    className={`p-1.5 px-2 md:p-2 md:px-3 ${
+                    className={`relative p-1.5 px-2 md:p-2 md:px-3 transition-all duration-100 select-none ${
                       isOwn 
                         ? "message-sent" 
                         : "message-received"
+                    } ${
+                      longPressMessageId === msg.id 
+                        ? "ring-2 ring-primary/30"
+                        : ""
                     }`}
+                    onTouchStart={() => handleLongPressStart(msg.id)}
+                    onTouchEnd={handleLongPressEnd}
+                    onTouchMove={handleLongPressCancel}
+                    onMouseDown={() => setPressedMessageId(msg.id)}
+                    onMouseUp={() => setTimeout(() => setPressedMessageId(null), 150)}
+                    onMouseLeave={() => setPressedMessageId(null)}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setLongPressMessageId(msg.id);
+                    }}
                   >
+                    {pressedMessageId === msg.id && (
+                      <div className="absolute inset-0 bg-black/5 dark:bg-white/5 rounded-md pointer-events-none" />
+                    )}
                     {msg.arquivoUrl && msg.tipo === "imagem" && (
                       <img
                         src={msg.arquivoUrl}
@@ -1100,18 +1156,32 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
                     </div>
                   </div>
 
-                  <DropdownMenu modal={false}>
+                  <DropdownMenu 
+                    modal={false}
+                    open={longPressMessageId === msg.id}
+                    onOpenChange={(open) => {
+                      if (!open) {
+                        setLongPressMessageId(null);
+                      }
+                    }}
+                  >
                     <DropdownMenuTrigger asChild>
                       <Button
                         size="icon"
                         variant="ghost"
-                        className={`absolute ${isOwn ? '-left-8' : '-right-8'} top-1 h-6 w-6 opacity-60 md:opacity-0 md:group-hover:opacity-100 active:opacity-100 transition-opacity`}
+                        className={`absolute ${isOwn ? '-left-8' : '-right-8'} top-1 h-6 w-6 hidden md:opacity-0 md:group-hover:opacity-100 md:flex transition-opacity`}
                         data-testid={`button-message-menu-${msg.id}`}
+                        onClick={() => setLongPressMessageId(msg.id)}
                       >
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align={isOwn ? "end" : "start"} className="min-w-[180px] z-[100000]" sideOffset={8}>
+                    <DropdownMenuContent 
+                      align="center" 
+                      side="top"
+                      className="min-w-[180px] z-[100000]" 
+                      sideOffset={4}
+                    >
                       <DropdownMenuItem
                         onClick={() => deleteMessage(msg.id)}
                         className="cursor-pointer"

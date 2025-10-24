@@ -15,9 +15,11 @@ import { AlertTriangle } from "lucide-react";
 interface ChatTermsModalProps {
   open: boolean;
   onAccept: () => void;
+  viewOnly?: boolean;
+  onClose?: () => void;
 }
 
-export function ChatTermsModal({ open, onAccept }: ChatTermsModalProps) {
+export function ChatTermsModal({ open, onAccept, viewOnly = false, onClose }: ChatTermsModalProps) {
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
@@ -35,9 +37,15 @@ export function ChatTermsModal({ open, onAccept }: ChatTermsModalProps) {
     }
   };
 
+  const handleDialogChange = (newOpen: boolean) => {
+    if (viewOnly && !newOpen && onClose) {
+      onClose();
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={() => {}}>
-      <DialogContent className="max-w-4xl max-h-[90vh]" onPointerDownOutside={(e) => e.preventDefault()}>
+    <Dialog open={open} onOpenChange={handleDialogChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh]" onPointerDownOutside={(e) => viewOnly ? undefined : e.preventDefault()}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
             <AlertTriangle className="h-6 w-6 text-amber-500" />
@@ -247,37 +255,49 @@ export function ChatTermsModal({ open, onAccept }: ChatTermsModalProps) {
         </ScrollArea>
 
         <DialogFooter className="flex-col sm:flex-col gap-3">
-          <div className="flex items-start gap-2">
-            <Checkbox
-              id="terms-agreement"
-              checked={agreedToTerms}
-              onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
-              disabled={!hasScrolledToBottom}
-              data-testid="checkbox-terms-agreement"
-            />
-            <label
-              htmlFor="terms-agreement"
-              className={`text-sm leading-relaxed ${!hasScrolledToBottom ? "text-muted-foreground" : "cursor-pointer"}`}
+          {viewOnly ? (
+            <Button
+              onClick={onClose}
+              className="w-full"
+              data-testid="button-close-terms"
             >
-              Li e concordo com os Termos de Uso e Regras do Chat da Plataforma Vestibulando. 
-              Estou ciente de que toda comunicação é monitorada e que condutas inadequadas podem resultar em penalidades.
-            </label>
-          </div>
-          
-          {!hasScrolledToBottom && (
-            <p className="text-xs text-amber-600 dark:text-amber-500">
-              ⚠️ Por favor, role até o final do documento para continuar
-            </p>
+              Fechar
+            </Button>
+          ) : (
+            <>
+              <div className="flex items-start gap-2">
+                <Checkbox
+                  id="terms-agreement"
+                  checked={agreedToTerms}
+                  onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
+                  disabled={!hasScrolledToBottom}
+                  data-testid="checkbox-terms-agreement"
+                />
+                <label
+                  htmlFor="terms-agreement"
+                  className={`text-sm leading-relaxed ${!hasScrolledToBottom ? "text-muted-foreground" : "cursor-pointer"}`}
+                >
+                  Li e concordo com os Termos de Uso e Regras do Chat da Plataforma Vestibulando. 
+                  Estou ciente de que toda comunicação é monitorada e que condutas inadequadas podem resultar em penalidades.
+                </label>
+              </div>
+              
+              {!hasScrolledToBottom && (
+                <p className="text-xs text-amber-600 dark:text-amber-500">
+                  ⚠️ Por favor, role até o final do documento para continuar
+                </p>
+              )}
+              
+              <Button
+                onClick={handleAccept}
+                disabled={!agreedToTerms || !hasScrolledToBottom}
+                className="w-full"
+                data-testid="button-accept-terms"
+              >
+                ACEITO OS TERMOS
+              </Button>
+            </>
           )}
-          
-          <Button
-            onClick={handleAccept}
-            disabled={!agreedToTerms || !hasScrolledToBottom}
-            className="w-full"
-            data-testid="button-accept-terms"
-          >
-            ACEITO OS TERMOS
-          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
