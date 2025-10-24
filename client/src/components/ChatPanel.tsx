@@ -146,9 +146,17 @@ export function ChatPanel() {
 
   const allConversations = [...(conversations || []), ...(conversations2 || [])];
 
-  const filteredUsers = users?.filter((user) =>
-    getDisplayName(user).toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredUsers = users?.filter((user) => {
+    const query = searchQuery.toLowerCase();
+    const displayName = getDisplayName(user);
+    
+    return (
+      displayName.toLowerCase().includes(query) ||
+      user.nome.toLowerCase().includes(query) ||
+      user.email.toLowerCase().includes(query) ||
+      (user.tipo === "diretor" && (query.includes("diretor") || query.includes("diretoria")))
+    );
+  });
 
   useEffect(() => {
     if (messagesEndRef.current) {

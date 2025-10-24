@@ -45,12 +45,17 @@ export default function UserProfileDialog({ userId, onClose }: UserProfileDialog
     loadUser();
   }, [userId]);
 
-  const getInitials = (nome: string) => {
+  const getInitials = (nome: string, tipo?: string) => {
+    if (tipo === "diretor" || nome === "Diretoria") return "DIR";
     const names = nome.split(" ");
     if (names.length >= 2) {
       return `${names[0][0]}${names[1][0]}`.toUpperCase();
     }
     return nome.substring(0, 2).toUpperCase();
+  };
+
+  const getDisplayName = (user: User) => {
+    return user.tipo === "diretor" ? "Diretoria" : user.nome;
   };
 
   const getTipoLabel = (tipo: string) => {
@@ -117,14 +122,14 @@ export default function UserProfileDialog({ userId, onClose }: UserProfileDialog
           <div className="flex flex-col items-center">
             <Avatar className="h-24 w-24 mb-3">
               {user.fotoBase64 && user.fotoPublica ? (
-                <AvatarImage src={user.fotoBase64} alt={user.nome} />
+                <AvatarImage src={user.fotoBase64} alt={getDisplayName(user)} />
               ) : null}
               <AvatarFallback className="text-2xl">
-                {getInitials(user.nome)}
+                {getInitials(user.nome, user.tipo)}
               </AvatarFallback>
             </Avatar>
             
-            <h3 className="text-xl font-semibold text-center">{user.nome}</h3>
+            <h3 className="text-xl font-semibold text-center">{getDisplayName(user)}</h3>
             
             <div className="flex items-center gap-2 mt-2">
               <Badge variant={getBadgeVariant(user.tipo) as any}>

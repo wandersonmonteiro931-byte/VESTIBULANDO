@@ -128,9 +128,13 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
     const filtered = allUsers.filter((user) => {
       if (blockedUsers.has(user.uid)) return false;
       
-      const nome = user.tipo === "diretor" ? "Diretoria" : user.nome;
-      return nome.toLowerCase().includes(term) ||
-             user.email.toLowerCase().includes(term);
+      const displayName = user.tipo === "diretor" ? "Diretoria" : user.nome;
+      return (
+        displayName.toLowerCase().includes(term) ||
+        user.nome.toLowerCase().includes(term) ||
+        user.email.toLowerCase().includes(term) ||
+        (user.tipo === "diretor" && (term.includes("diretor") || term.includes("diretoria")))
+      );
     });
     
     setFilteredUsers(filtered);
