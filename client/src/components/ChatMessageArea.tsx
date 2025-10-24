@@ -48,6 +48,8 @@ interface OtherParticipant {
   isOnline?: boolean;
   lastSeen?: string;
   lastActivity?: string;
+  fotoBase64?: string;
+  fotoPublica?: boolean;
 }
 
 
@@ -61,6 +63,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
   const [showUserProfile, setShowUserProfile] = useState(false);
   const [contextMenuMessage, setContextMenuMessage] = useState<string | null>(null);
   const [usersCache, setUsersCache] = useState<Map<string, User>>(new Map());
+  const [otherUserData, setOtherUserData] = useState<User | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { userData } = useAuth();
@@ -105,6 +108,31 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
     isParticipant1: isParticipant1,
   });
 
+  useEffect(() => {
+    const fetchOtherUserData = async () => {
+      if (!otherParticipantId) return;
+      
+      if (selectedUser && selectedUser.uid === otherParticipantId) {
+        setOtherUserData(selectedUser);
+        return;
+      }
+      
+      try {
+        const userRef = doc(db, "usuarios", otherParticipantId);
+        const userSnap = await getDoc(userRef);
+        
+        if (userSnap.exists()) {
+          const user = { uid: userSnap.id, ...userSnap.data() } as User;
+          setOtherUserData(user);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar dados do usuário:", error);
+      }
+    };
+    
+    fetchOtherUserData();
+  }, [otherParticipantId, selectedUser]);
+
   const otherParticipant: OtherParticipant | null = otherParticipantId && otherParticipantNome && otherParticipantTipo
     ? {
         id: otherParticipantId,
@@ -113,6 +141,8 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
         isOnline: presenceData.isOnline,
         lastSeen: presenceData.lastSeen,
         lastActivity: presenceData.lastActivity,
+        fotoBase64: otherUserData?.fotoBase64,
+        fotoPublica: otherUserData?.fotoPublica,
       }
     : null;
 
@@ -702,6 +732,9 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
           data-testid="button-open-user-profile"
         >
           <Avatar className="h-10 w-10">
+            {otherParticipant.fotoBase64 && otherParticipant.fotoPublica ? (
+              <AvatarImage src={otherParticipant.fotoBase64} alt={otherParticipant.nome} />
+            ) : null}
             <AvatarFallback>{getInitials(otherParticipant.nome)}</AvatarFallback>
           </Avatar>
           <div
