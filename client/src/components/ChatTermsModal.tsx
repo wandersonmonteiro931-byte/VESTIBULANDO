@@ -56,7 +56,7 @@ export function ChatTermsModal({ open, onAccept }: ChatTermsModalProps) {
             </div>
 
             <div>
-              <h4 className="font-bold mb-2">🔷 1️⃣ OBJETIVO DO CHAT</h4>
+              <h4 className="font-bold mb-2">🔷 1. OBJETIVO DO CHAT</h4>
               <p className="leading-relaxed">
                 O sistema de mensagens ("Chat Vestibulando") é um ambiente interno de comunicação disponibilizado pela plataforma Vestibulando, destinado a promover interação entre alunos, professores e a Diretoria.
               </p>
@@ -69,7 +69,7 @@ export function ChatTermsModal({ open, onAccept }: ChatTermsModalProps) {
             </div>
 
             <div>
-              <h4 className="font-bold mb-2">🔷 2️⃣ REGRAS GERAIS DE UTILIZAÇÃO</h4>
+              <h4 className="font-bold mb-2">🔷 2. REGRAS GERAIS DE UTILIZAÇÃO</h4>
               <p className="leading-relaxed mb-2">
                 Ao utilizar o chat, o usuário declara estar ciente e de acordo com as seguintes regras:
               </p>
@@ -91,7 +91,7 @@ export function ChatTermsModal({ open, onAccept }: ChatTermsModalProps) {
             </div>
 
             <div>
-              <h4 className="font-bold mb-2">🔷 3️⃣ TIPOS DE MENSAGENS E ARQUIVOS PERMITIDOS</h4>
+              <h4 className="font-bold mb-2">🔷 3. TIPOS DE MENSAGENS E ARQUIVOS PERMITIDOS</h4>
               <p className="leading-relaxed mb-2">
                 O chat permite o envio e recebimento dos seguintes tipos de conteúdo:
               </p>
@@ -108,7 +108,7 @@ export function ChatTermsModal({ open, onAccept }: ChatTermsModalProps) {
             </div>
 
             <div>
-              <h4 className="font-bold mb-2">🔷 4️⃣ HISTÓRICO E AUDITORIA</h4>
+              <h4 className="font-bold mb-2">🔷 4. HISTÓRICO E AUDITORIA</h4>
               <ul className="list-disc pl-6 space-y-2">
                 <li>Todo o histórico de mensagens é armazenado integralmente, sem limite de tempo.</li>
                 <li>Caso o usuário apague uma conversa ou mensagem, a exclusão será apenas local (visível apenas para ele).</li>
@@ -118,7 +118,7 @@ export function ChatTermsModal({ open, onAccept }: ChatTermsModalProps) {
             </div>
 
             <div>
-              <h4 className="font-bold mb-2">🔷 5️⃣ CHAT DA DIRETORIA</h4>
+              <h4 className="font-bold mb-2">🔷 5. CHAT DA DIRETORIA</h4>
               <ul className="list-disc pl-6 space-y-2">
                 <li>O chat institucional da Diretoria será exibido apenas como "Diretoria", sem identificação pessoal.</li>
                 <li>É um canal oficial de comunicação, orientações e acompanhamento disciplinar.</li>
@@ -127,7 +127,7 @@ export function ChatTermsModal({ open, onAccept }: ChatTermsModalProps) {
             </div>
 
             <div>
-              <h4 className="font-bold mb-2">🔷 6️⃣ BLOQUEIO DE CHAT PELA DIRETORIA</h4>
+              <h4 className="font-bold mb-2">🔷 6. BLOQUEIO DE CHAT PELA DIRETORIA</h4>
               <p className="leading-relaxed mb-2">
                 A Diretoria possui poder administrativo integral sobre o módulo de chat e poderá bloquear o acesso total ou parcial a qualquer momento, conforme necessidade institucional.
               </p>
@@ -167,7 +167,7 @@ export function ChatTermsModal({ open, onAccept }: ChatTermsModalProps) {
             </div>
 
             <div>
-              <h4 className="font-bold mb-2">🔷 7️⃣ RESPONSABILIDADE DO USUÁRIO</h4>
+              <h4 className="font-bold mb-2">🔷 7. RESPONSABILIDADE DO USUÁRIO</h4>
               <p className="leading-relaxed mb-2">Ao utilizar o chat, o usuário:</p>
               <ul className="list-disc pl-6 space-y-2">
                 <li>Assume responsabilidade total pelo conteúdo que envia;</li>
@@ -204,7 +204,7 @@ export function ChatTermsModal({ open, onAccept }: ChatTermsModalProps) {
             </div>
 
             <div>
-              <h4 className="font-bold mb-2">🔷 8️⃣ PENALIDADES</h4>
+              <h4 className="font-bold mb-2">🔷 8. PENALIDADES</h4>
               <p className="leading-relaxed mb-2">O descumprimento destes termos pode resultar em:</p>
               <ul className="list-disc pl-6 space-y-1">
                 <li>Advertência;</li>
@@ -215,7 +215,7 @@ export function ChatTermsModal({ open, onAccept }: ChatTermsModalProps) {
             </div>
 
             <div>
-              <h4 className="font-bold mb-2">🔷 9️⃣ SEGURANÇA E PRIVACIDADE</h4>
+              <h4 className="font-bold mb-2">🔷 9. SEGURANÇA E PRIVACIDADE</h4>
               <ul className="list-disc pl-6 space-y-2">
                 <li>Todas as comunicações são criptografadas e armazenadas de forma segura.</li>
                 <li>Nenhum dado é compartilhado com terceiros sem autorização.</li>
@@ -224,7 +224,7 @@ export function ChatTermsModal({ open, onAccept }: ChatTermsModalProps) {
             </div>
 
             <div>
-              <h4 className="font-bold mb-2">🔷 1️⃣0️⃣ DISPOSIÇÕES FINAIS</h4>
+              <h4 className="font-bold mb-2">🔷 10. DISPOSIÇÕES FINAIS</h4>
               <ul className="list-disc pl-6 space-y-2">
                 <li>O uso do chat implica aceitação plena e irrevogável destes termos.</li>
                 <li>A plataforma reserva-se o direito de atualizar este documento a qualquer momento, com aviso prévio aos usuários.</li>
