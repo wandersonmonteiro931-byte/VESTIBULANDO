@@ -258,15 +258,6 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
       setTermsModalOpen(true);
       return;
     }
-    
-    if (blockedUsers.has(user.uid)) {
-      toast({
-        title: "Usuário bloqueado",
-        description: "Você bloqueou este usuário. Desbloqueie-o para conversar.",
-        variant: "destructive",
-      });
-      return;
-    }
 
     setSelectedUser(user);
     setSelectedConversation(null);
@@ -274,19 +265,6 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
   };
 
   const handleSelectConversation = async (conversation: ChatConversation) => {
-    const otherId = conversation.participante1Id === userData?.uid 
-      ? conversation.participante2Id 
-      : conversation.participante1Id;
-
-    if (blockedUsers.has(otherId)) {
-      toast({
-        title: "Usuário bloqueado",
-        description: "Você bloqueou este usuário.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setSelectedConversation(conversation);
     setSelectedUser(null);
 
