@@ -148,7 +148,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, otherUserTyping]);
 
   useEffect(() => {
     if (!conversationId || !resolvedConversation) return;
