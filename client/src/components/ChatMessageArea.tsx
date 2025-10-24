@@ -20,6 +20,7 @@ import { ChatLogger } from "@/lib/chatLogger";
 import { validateFile, getFileTypeCategory } from "@/lib/fileValidation";
 import { useNetworkStatus, retryWithBackoff } from "@/hooks/useNetworkStatus";
 import { useChatThread } from "@/hooks/useChatThread";
+import { useUserPresence } from "@/hooks/useUserPresence";
 import UserProfileDialog from "@/components/UserProfileDialog";
 import {
   DropdownMenu,
@@ -73,26 +74,34 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack }: 
     currentUserType: userData?.tipo,
   });
 
-  const otherParticipant: OtherParticipant | null = resolvedConversation
+  const otherParticipantId = resolvedConversation
     ? (resolvedConversation.participante1Id === userData?.uid
-        ? {
-            id: resolvedConversation.participante2Id,
-            nome: resolvedConversation.participante2Nome,
-            tipo: resolvedConversation.participante2Tipo,
-          }
-        : {
-            id: resolvedConversation.participante1Id,
-            nome: resolvedConversation.participante1Nome,
-            tipo: resolvedConversation.participante1Tipo,
-          })
-    : selectedUser
+        ? resolvedConversation.participante2Id
+        : resolvedConversation.participante1Id)
+    : selectedUser?.uid;
+
+  const otherParticipantNome = resolvedConversation
+    ? (resolvedConversation.participante1Id === userData?.uid
+        ? resolvedConversation.participante2Nome
+        : resolvedConversation.participante1Nome)
+    : selectedUser?.tipo === "diretor" ? "Diretoria" : selectedUser?.nome;
+
+  const otherParticipantTipo = resolvedConversation
+    ? (resolvedConversation.participante1Id === userData?.uid
+        ? resolvedConversation.participante2Tipo
+        : resolvedConversation.participante1Tipo)
+    : selectedUser?.tipo;
+
+  const presenceData = useUserPresence(otherParticipantId);
+
+  const otherParticipant: OtherParticipant | null = otherParticipantId && otherParticipantNome && otherParticipantTipo
     ? {
-        id: selectedUser.uid,
-        nome: selectedUser.tipo === "diretor" ? "Diretoria" : selectedUser.nome,
-        tipo: selectedUser.tipo,
-        isOnline: selectedUser.isOnline,
-        lastSeen: selectedUser.lastSeen,
-        lastActivity: selectedUser.lastActivity,
+        id: otherParticipantId,
+        nome: otherParticipantNome,
+        tipo: otherParticipantTipo,
+        isOnline: presenceData.isOnline,
+        lastSeen: presenceData.lastSeen,
+        lastActivity: presenceData.lastActivity,
       }
     : null;
 
