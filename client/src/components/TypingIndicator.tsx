@@ -6,15 +6,19 @@ interface TypingIndicatorProps {
 export function TypingIndicator({ userName = "Usuário", show }: TypingIndicatorProps) {
   return (
     <div 
-      className="min-h-[48px] flex items-end pb-2"
+      className="transition-all duration-500 ease-in-out overflow-hidden"
+      style={{
+        maxHeight: show ? '60px' : '0px',
+        marginTop: show ? '8px' : '0px',
+        marginBottom: show ? '8px' : '0px',
+      }}
       data-testid="typing-indicator-container"
     >
       <div 
-        className="flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground transition-all duration-300 ease-out"
+        className="flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground transition-all duration-500 ease-in-out"
         style={{
           opacity: show ? 1 : 0,
-          transform: show ? 'translateY(0) scale(1)' : 'translateY(10px) scale(0.95)',
-          pointerEvents: show ? 'auto' : 'none',
+          transform: show ? 'translateY(0)' : 'translateY(-10px)',
         }}
         data-testid="typing-indicator"
       >
