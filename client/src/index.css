@@ -458,6 +458,17 @@
     color: #e9edef;
   }
 
+  /* Ensure fixed header on mobile stays in position when keyboard opens */
+  @media (max-width: 768px) {
+    .whatsapp-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      width: 100%;
+    }
+  }
+
   /* WhatsApp input area */
   .whatsapp-input-area {
     background-color: #f0f2f5;
@@ -539,6 +550,12 @@
     [data-testid*="button-message-menu"] {
       min-height: 44px;
       min-width: 44px;
+    }
+
+    /* Ensure chat container uses full viewport height and handles keyboard properly */
+    .flex.flex-col.h-full.w-full.overflow-hidden {
+      height: 100vh;
+      height: 100dvh; /* Use dynamic viewport height on supported browsers */
     }
 
     /* Smooth scrolling for touch devices */
