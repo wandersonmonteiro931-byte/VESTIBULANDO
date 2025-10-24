@@ -114,21 +114,23 @@ export function BlockDialog({ open, onOpenChange, otherUserName, onConfirm, isLo
             <UserX className="h-5 w-5 text-destructive" />
             Bloquear usuário
           </AlertDialogTitle>
-          <AlertDialogDescription className="space-y-2">
-            <p>
-              Você está prestes a bloquear <strong>{otherUserName}</strong>.
-            </p>
-            <p>
-              Após o bloqueio:
-            </p>
-            <ul className="list-disc list-inside space-y-1 text-sm">
-              <li>Você não poderá enviar mensagens para este usuário</li>
-              <li>Este usuário não poderá enviar mensagens para você</li>
-              <li>A conversa continuará visível no histórico</li>
-            </ul>
-            <p className="font-semibold text-foreground">
-              Tem certeza que deseja continuar?
-            </p>
+          <AlertDialogDescription asChild>
+            <div className="space-y-2">
+              <p>
+                Você está prestes a bloquear <strong>{otherUserName}</strong>.
+              </p>
+              <p>
+                Após o bloqueio:
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-sm">
+                <li>Você não poderá enviar mensagens para este usuário</li>
+                <li>Este usuário não poderá enviar mensagens para você</li>
+                <li>A conversa continuará visível no histórico</li>
+              </ul>
+              <p className="font-semibold text-foreground">
+                Tem certeza que deseja continuar?
+              </p>
+            </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -166,21 +168,23 @@ export function DeleteDialog({ open, onOpenChange, otherUserName, onConfirm, isL
             <Trash2 className="h-5 w-5 text-destructive" />
             Excluir conversa
           </AlertDialogTitle>
-          <AlertDialogDescription className="space-y-2">
-            <p>
-              Você está prestes a excluir a conversa com <strong>{otherUserName}</strong>.
-            </p>
-            <p>
-              Após a exclusão:
-            </p>
-            <ul className="list-disc list-inside space-y-1 text-sm">
-              <li>Todo o histórico de mensagens será removido da sua visualização</li>
-              <li>O outro usuário ainda terá acesso às mensagens</li>
-              <li>Esta ação não pode ser desfeita</li>
-            </ul>
-            <p className="font-semibold text-foreground">
-              Tem certeza que deseja excluir esta conversa?
-            </p>
+          <AlertDialogDescription asChild>
+            <div className="space-y-2">
+              <p>
+                Você está prestes a excluir a conversa com <strong>{otherUserName}</strong>.
+              </p>
+              <p>
+                Após a exclusão:
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-sm">
+                <li>Todo o histórico de mensagens será removido da sua visualização</li>
+                <li>O outro usuário ainda terá acesso às mensagens</li>
+                <li>Esta ação não pode ser desfeita</li>
+              </ul>
+              <p className="font-semibold text-foreground">
+                Tem certeza que deseja excluir esta conversa?
+              </p>
+            </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
