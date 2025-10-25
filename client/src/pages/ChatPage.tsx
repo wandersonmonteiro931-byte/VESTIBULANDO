@@ -11,6 +11,7 @@ import { ChatConversation, User } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import NewChatDialog from "../components/NewChatDialog";
+import { PresenceIndicator } from "../components/PresenceIndicator";
 import { cn } from "@/lib/utils";
 import { useChatConversations } from "@/hooks/useChatConversations";
 import { collection, getDocs, addDoc, query as firestoreQuery, where } from "firebase/firestore";
@@ -380,7 +381,6 @@ export default function ChatPage() {
               {filteredConversations.map((conversation) => {
                 const otherParticipant = getOtherParticipant(conversation);
                 const unreadCount = getUnreadCount(conversation);
-                const isOnline = false;
 
                 return (
                   <Link
@@ -396,9 +396,9 @@ export default function ChatPage() {
                           {otherParticipant.tipo === "diretor" ? "DIR" : otherParticipant.nome.charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
-                      {isOnline && (
-                        <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-white" />
-                      )}
+                      <div className="absolute bottom-0 right-0">
+                        <PresenceIndicator userId={otherParticipant.id} />
+                      </div>
                     </div>
 
                     <div className="flex-1 min-w-0">

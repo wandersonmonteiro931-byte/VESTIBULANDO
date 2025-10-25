@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { Check, CheckCheck } from "lucide-react";
 import { useChatMessages } from "@/hooks/useChatMessages";
 import { useSendMessage } from "@/hooks/useSendMessage";
+import { useUserPresence } from "@/hooks/useUserPresence";
 
 interface ChatWindowProps {
   conversation: ChatConversation;
@@ -39,6 +40,7 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
 
   const { messages = [], isLoading } = useChatMessages(conversation.id);
   const { sendMessage: sendMsg, isLoading: isSending } = useSendMessage();
+  const presenceStatus = useUserPresence(otherParticipant.id);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -144,9 +146,14 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
           <h2 className="font-semibold text-white truncate" data-testid="text-chat-participant-name">
             {otherParticipant.tipo === "diretor" ? "Diretoria" : otherParticipant.nome}
           </h2>
-          <p className="text-xs text-white/70" data-testid="text-participant-status">
-            {otherParticipant.tipo === "aluno" ? "Aluno" : otherParticipant.tipo === "professor" ? "Professor" : "Diretoria"}
-          </p>
+          <div className="flex items-center gap-1.5">
+            {presenceStatus.isOnline && (
+              <div className="w-2 h-2 rounded-full bg-green-400" data-testid="indicator-online" />
+            )}
+            <p className="text-xs text-white/90" data-testid="text-participant-status">
+              {presenceStatus.statusText}
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
