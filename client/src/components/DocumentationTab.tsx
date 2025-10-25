@@ -147,6 +147,12 @@ export function DocumentationTab() {
     const margin = 14;
     let yPos = 15;
 
+    // Quadrado para foto 3x4 do aluno no topo direito (ao lado do logo)
+    const fotoX = pageWidth - margin - 30;
+    const fotoY = 15; // Mesma altura do logo
+    const fotoWidth = 25;
+    const fotoHeight = 33;
+
     // Adicionar logo da escola no topo
     try {
       const logoImg = new Image();
@@ -167,12 +173,6 @@ export function DocumentationTab() {
     doc.setFont("helvetica", "bold");
     doc.text("DOCUMENTAÇÃO DO ALUNO", pageWidth / 2, yPos, { align: "center" });
     yPos += 10;
-
-    // Quadrado para foto 3x4 do aluno (sempre presente)
-    const fotoX = pageWidth - margin - 30;
-    const fotoY = yPos;
-    const fotoWidth = 25;
-    const fotoHeight = 33;
     
     // Desenhar borda do quadrado da foto
     doc.setDrawColor(100, 100, 100);

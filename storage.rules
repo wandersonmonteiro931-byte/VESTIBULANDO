@@ -80,7 +80,7 @@ service firebase.storage {
       allow read: if (isAuthenticated() && isUserActive()) || true;
       
       // Anyone can write during registration (unauthenticated) or authenticated users
-      allow write: if request.resource.size < 5 * 1024 * 1024; // 5MB limit
+      allow write: if request.resource.size < 50 * 1024 * 1024; // 50MB limit
       
       // Only admin can delete
       allow delete: if isAdmin() && isUserActive();
@@ -93,10 +93,30 @@ service firebase.storage {
       allow read: if (isAdmin() && isUserActive()) || true;
       
       // Anyone can write during registration (unauthenticated) or authenticated users
-      allow write: if request.resource.size < 5 * 1024 * 1024; // 5MB limit
+      allow write: if request.resource.size < 50 * 1024 * 1024; // 50MB limit
       
       // Only admin can delete
       allow delete: if isAdmin() && isUserActive();
+    }
+    
+    // Perfil de usuários - fotos de perfil
+    // Formato do nome do arquivo: profile_{userId}_{timestamp}.jpg
+    match /usuarios/fotos/{fileName} {
+      // Anyone authenticated can read profile photos
+      allow read: if isAuthenticated() && isUserActive();
+      
+      // Only the user uploading their own photo (UID in filename) or admin can write
+      // Filename format: profile_{uid}_timestamp.jpg
+      allow write: if isAuthenticated() && isUserActive() && (
+                      isAdmin() ||
+                      fileName.matches('profile_' + request.auth.uid + '_.*')
+                   ) && request.resource.size < 50 * 1024 * 1024; // 50MB limit
+      
+      // Only the photo owner (UID in filename) or admin can delete
+      allow delete: if isAuthenticated() && isUserActive() && (
+                      isAdmin() ||
+                      fileName.matches('profile_' + request.auth.uid + '_.*')
+                   );
     }
   }
 }

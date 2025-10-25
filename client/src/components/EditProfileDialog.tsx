@@ -111,7 +111,7 @@ export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfi
       const compressedFile = await compressImage(file);
       
       // Verificar tamanho após compressão
-      if (compressedFile.size > 5 * 1024 * 1024) {
+      if (compressedFile.size > 50 * 1024 * 1024) {
         toast({
           title: "Arquivo muito grande",
           description: "A foto ainda é muito grande após compressão. Tente uma imagem menor.",
