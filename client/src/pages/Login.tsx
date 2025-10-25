@@ -164,6 +164,7 @@ export default function Login() {
     turma: "",
     dataNascimento: "",
     cpf: "",
+    sexo: "",
     escolaridade: "",
     telefone: "",
     cep: "",
@@ -413,7 +414,7 @@ export default function Login() {
     try {
       if (mode === "register") {
         // Validações para registro
-        if (!formData.nome || !formData.dataNascimento || !formData.cpf || 
+        if (!formData.nome || !formData.dataNascimento || !formData.cpf || !formData.sexo ||
             !formData.escolaridade || !formData.telefone || !formData.turma || 
             !formData.cep || !formData.rua || !formData.bairro || 
             !formData.cidade || !formData.estado || !formData.email || disponibilidade.length === 0) {
@@ -466,6 +467,7 @@ export default function Login() {
                 dataSolicitacao: getNowBrasiliaISO(),
                 dataNascimento: formData.dataNascimento,
                 cpf: formData.cpf,
+                sexo: formData.sexo,
                 escolaridade: formData.escolaridade,
                 telefone: formData.telefone,
                 cep: formData.cep,
@@ -517,6 +519,7 @@ export default function Login() {
               dataSolicitacao: dataSolicitacao,
               dataNascimento: formData.dataNascimento,
               cpf: formData.cpf,
+              sexo: formData.sexo,
               escolaridade: formData.escolaridade,
               telefone: formData.telefone,
               cep: formData.cep,
@@ -550,6 +553,7 @@ export default function Login() {
           turma: "",
           dataNascimento: "",
           cpf: "",
+          sexo: "",
           escolaridade: "",
           telefone: "",
           cep: "",
@@ -753,6 +757,7 @@ export default function Login() {
                   turma: solicitacaoData.turma || "",
                   dataNascimento: solicitacaoData.dataNascimento || "",
                   cpf: solicitacaoData.cpf || "",
+                  sexo: solicitacaoData.sexo || "",
                   escolaridade: solicitacaoData.escolaridade || "",
                   telefone: solicitacaoData.telefone || "",
                   cep: solicitacaoData.cep || "",
@@ -1277,6 +1282,7 @@ export default function Login() {
       turma: pendingSolicitacao.turma || "",
       dataNascimento: pendingSolicitacao.dataNascimento || "",
       cpf: pendingSolicitacao.cpf || "",
+      sexo: pendingSolicitacao.sexo || "",
       escolaridade: pendingSolicitacao.escolaridade || "",
       telefone: pendingSolicitacao.telefone || "",
       cep: pendingSolicitacao.cep || "",
@@ -1569,6 +1575,25 @@ export default function Login() {
                         <p className="text-sm text-green-600 dark:text-green-400">CPF válido ✓</p>
                       )}
                     </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="sexo">Sexo *</Label>
+                    <Select
+                      value={formData.sexo}
+                      onValueChange={(value) => setFormData({ ...formData, sexo: value })}
+                      required
+                    >
+                      <SelectTrigger data-testid="select-sexo">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="masculino">Masculino</SelectItem>
+                        <SelectItem value="feminino">Feminino</SelectItem>
+                        <SelectItem value="nao-binario">Não binário</SelectItem>
+                        <SelectItem value="prefiro-nao-informar">Prefiro não informar</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
