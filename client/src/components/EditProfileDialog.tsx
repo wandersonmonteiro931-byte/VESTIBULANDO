@@ -37,9 +37,9 @@ export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfi
           let width = img.width;
           let height = img.height;
           
-          // Redimensionar se for muito grande (mantém proporção)
-          const MAX_WIDTH = 1200;
-          const MAX_HEIGHT = 1200;
+          // Redimensionar de forma mais agressiva para mobile (800x800 em vez de 1200x1200)
+          const MAX_WIDTH = 800;
+          const MAX_HEIGHT = 800;
           
           if (width > height) {
             if (width > MAX_WIDTH) {
@@ -64,7 +64,7 @@ export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfi
           
           ctx.drawImage(img, 0, 0, width, height);
           
-          // Converter para blob com compressão
+          // Converter para blob com compressão maior para mobile (60% em vez de 80%)
           canvas.toBlob(
             (blob) => {
               if (!blob) {
@@ -81,7 +81,7 @@ export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfi
               resolve(compressedFile);
             },
             'image/jpeg',
-            0.8 // 80% de qualidade
+            0.6 // 60% de qualidade para melhor compressão
           );
         };
         img.onerror = () => reject(new Error('Erro ao carregar imagem'));
@@ -106,32 +106,37 @@ export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfi
       return;
     }
 
+    // Validar tamanho ANTES da compressão para evitar problemas de memória
+    if (file.size > 50 * 1024 * 1024) {
+      toast({
+        title: "Arquivo muito grande",
+        description: "A foto deve ter no máximo 50MB. Por favor, tire uma foto com qualidade menor ou use outra imagem.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
+      // Mostrar loading durante compressão
+      setSaving(true);
+      
       // Comprimir a imagem antes de processar
       const compressedFile = await compressImage(file);
       
-      // Verificar tamanho após compressão
-      if (compressedFile.size > 50 * 1024 * 1024) {
-        toast({
-          title: "Arquivo muito grande",
-          description: "A foto ainda é muito grande após compressão. Tente uma imagem menor.",
-          variant: "destructive",
-        });
-        return;
-      }
-
       const reader = new FileReader();
       reader.onload = (e) => {
         const dataUrl = e.target?.result as string;
         setPhotoPreview(dataUrl);
         setPhotoFile(compressedFile);
+        setSaving(false);
       };
       reader.readAsDataURL(compressedFile);
     } catch (error) {
       console.error('Erro ao comprimir imagem:', error);
+      setSaving(false);
       toast({
         title: "Erro ao processar imagem",
-        description: "Não foi possível comprimir a imagem. Tente outra foto.",
+        description: "Não foi possível comprimir a imagem. Tente tirar uma foto com qualidade menor ou use outra imagem.",
         variant: "destructive",
       });
     }
