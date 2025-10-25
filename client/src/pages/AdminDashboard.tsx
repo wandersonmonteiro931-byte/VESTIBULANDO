@@ -4570,6 +4570,10 @@ export default function AdminDashboard() {
                       <p className="font-medium">{selectedStudentDetails.dataNascimento || "Não informada"}</p>
                     </div>
                     <div>
+                      <Label className="text-muted-foreground">Sexo</Label>
+                      <p className="font-medium">{selectedStudentDetails.sexo || "Não informado"}</p>
+                    </div>
+                    <div>
                       <Label className="text-muted-foreground">Telefone (WhatsApp)</Label>
                       <p className="font-medium">{selectedStudentDetails.telefone || "Não informado"}</p>
                     </div>
