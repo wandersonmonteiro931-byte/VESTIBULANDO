@@ -66,11 +66,28 @@ export default function ChatPage() {
   };
 
   const filteredUsers = searchTerm.trim()
-    ? allUsers.filter((user) =>
-        user.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (user.matricula && user.matricula.includes(searchTerm))
-      )
+    ? allUsers.filter((user) => {
+        const term = searchTerm.toLowerCase();
+        const displayName = user.tipo === "diretor" ? "Diretoria" : user.nome;
+        
+        // Se for diretor, verificar se o termo busca por "dir", "diretor" ou "diretoria"
+        if (user.tipo === "diretor") {
+          return (
+            "diretoria".includes(term) ||
+            "diretor".includes(term) ||
+            "dir".includes(term) ||
+            displayName.toLowerCase().includes(term) ||
+            user.email.toLowerCase().includes(term)
+          );
+        }
+        
+        return (
+          displayName.toLowerCase().includes(term) ||
+          user.nome.toLowerCase().includes(term) ||
+          user.email.toLowerCase().includes(term) ||
+          (user.matricula && user.matricula.includes(term))
+        );
+      })
     : [];
 
   const filteredConversations = !searchTerm.trim()
@@ -80,7 +97,24 @@ export default function ChatPage() {
           conv.participante1Id === userData?.uid
             ? conv.participante2Nome
             : conv.participante1Nome;
-        return otherParticipantName.toLowerCase().includes(searchTerm.toLowerCase());
+        const otherParticipantTipo =
+          conv.participante1Id === userData?.uid
+            ? conv.participante2Tipo
+            : conv.participante1Tipo;
+        const displayName = otherParticipantTipo === "diretor" ? "Diretoria" : otherParticipantName;
+        const term = searchTerm.toLowerCase();
+        
+        // Se for diretor, verificar se o termo busca por "dir", "diretor" ou "diretoria"
+        if (otherParticipantTipo === "diretor") {
+          return (
+            "diretoria".includes(term) ||
+            "diretor".includes(term) ||
+            "dir".includes(term) ||
+            displayName.toLowerCase().includes(term)
+          );
+        }
+        
+        return displayName.toLowerCase().includes(term);
       });
 
   const getOtherParticipant = (conversation: ChatConversation) => {
@@ -291,14 +325,14 @@ export default function ChatPage() {
                   <Avatar className="h-12 w-12">
                     <AvatarImage src={user.fotoBase64 || ""} />
                     <AvatarFallback className="bg-[#00a884] text-white">
-                      {user.nome.charAt(0).toUpperCase()}
+                      {user.tipo === "diretor" ? "DIR" : user.nome.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <h3 className="font-semibold text-foreground truncate" data-testid={`text-user-name-${user.uid}`}>
-                        {user.nome}
+                        {user.tipo === "diretor" ? "Diretoria" : user.nome}
                       </h3>
                       <Badge
                         variant="secondary"
@@ -349,7 +383,7 @@ export default function ChatPage() {
                       <Avatar className="h-12 w-12">
                         <AvatarImage src="" />
                         <AvatarFallback className="bg-[#00a884] text-white">
-                          {otherParticipant.nome.charAt(0).toUpperCase()}
+                          {otherParticipant.tipo === "diretor" ? "DIR" : otherParticipant.nome.charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       {isOnline && (
@@ -363,7 +397,7 @@ export default function ChatPage() {
                           className="font-semibold text-foreground truncate"
                           data-testid={`text-participant-name-${conversation.id}`}
                         >
-                          {otherParticipant.nome}
+                          {otherParticipant.tipo === "diretor" ? "Diretoria" : otherParticipant.nome}
                         </h3>
                         {conversation.ultimaMensagemTimestamp && (
                           <span className="text-xs text-muted-foreground whitespace-nowrap">

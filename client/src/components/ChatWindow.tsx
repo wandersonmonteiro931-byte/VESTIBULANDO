@@ -136,16 +136,16 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
         <Avatar className="h-10 w-10">
           <AvatarImage src="" />
           <AvatarFallback className="bg-white text-[#008069]">
-            {otherParticipant.nome.charAt(0).toUpperCase()}
+            {otherParticipant.tipo === "diretor" ? "DIR" : otherParticipant.nome.charAt(0).toUpperCase()}
           </AvatarFallback>
         </Avatar>
 
         <div className="flex-1 min-w-0">
           <h2 className="font-semibold text-white truncate" data-testid="text-chat-participant-name">
-            {otherParticipant.nome}
+            {otherParticipant.tipo === "diretor" ? "Diretoria" : otherParticipant.nome}
           </h2>
           <p className="text-xs text-white/70" data-testid="text-participant-status">
-            {otherParticipant.tipo === "aluno" ? "Aluno" : otherParticipant.tipo === "professor" ? "Professor" : "Diretor"}
+            {otherParticipant.tipo === "aluno" ? "Aluno" : otherParticipant.tipo === "professor" ? "Professor" : "Diretoria"}
           </p>
         </div>
 

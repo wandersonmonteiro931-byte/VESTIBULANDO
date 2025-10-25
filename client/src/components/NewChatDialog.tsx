@@ -52,11 +52,28 @@ export default function NewChatDialog({
         .map(doc => ({ uid: doc.id, ...doc.data() } as User))
         .filter(user => user.uid !== userData.uid);
 
-      const filtered = allUsers.filter(user =>
-        user.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (user.matricula && user.matricula.includes(searchTerm))
-      );
+      const filtered = allUsers.filter(user => {
+        const term = searchTerm.toLowerCase();
+        const displayName = user.tipo === "diretor" ? "Diretoria" : user.nome;
+        
+        // Se for diretor, verificar se o termo busca por "dir", "diretor" ou "diretoria"
+        if (user.tipo === "diretor") {
+          return (
+            "diretoria".includes(term) ||
+            "diretor".includes(term) ||
+            "dir".includes(term) ||
+            displayName.toLowerCase().includes(term) ||
+            user.email.toLowerCase().includes(term)
+          );
+        }
+        
+        return (
+          displayName.toLowerCase().includes(term) ||
+          user.nome.toLowerCase().includes(term) ||
+          user.email.toLowerCase().includes(term) ||
+          (user.matricula && user.matricula.includes(term))
+        );
+      });
 
       setUsers(filtered);
     } catch (error) {
@@ -204,14 +221,14 @@ export default function NewChatDialog({
                     <Avatar className="h-12 w-12">
                       <AvatarImage src={user.fotoBase64 || ""} />
                       <AvatarFallback className="bg-[#00a884] text-white">
-                        {user.nome.charAt(0).toUpperCase()}
+                        {user.tipo === "diretor" ? "DIR" : user.nome.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold truncate" data-testid={`text-user-name-${user.uid}`}>
-                          {user.nome}
+                          {user.tipo === "diretor" ? "Diretoria" : user.nome}
                         </h3>
                         <Badge
                           variant="secondary"
