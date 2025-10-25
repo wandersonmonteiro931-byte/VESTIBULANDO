@@ -2318,6 +2318,8 @@ export default function AdminDashboard() {
               <p className="text-sm font-semibold">{userData?.nome}</p>
               <p className="text-xs text-muted-foreground">Diretoria</p>
             </div>
+            <ThemeToggle />
+            <BrasiliaClock />
             <Link href="/chat">
               <Button 
                 variant="outline" 
@@ -2329,8 +2331,6 @@ export default function AdminDashboard() {
                 <span className="text-xs font-normal">Chat</span>
               </Button>
             </Link>
-            <BrasiliaClock />
-            <ThemeToggle />
             <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout">
               <LogOut className="h-5 w-5" />
             </Button>

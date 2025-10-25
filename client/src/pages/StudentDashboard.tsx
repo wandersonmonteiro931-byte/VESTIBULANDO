@@ -285,6 +285,8 @@ export default function StudentDashboard() {
               <Download className="h-4 w-4 mr-2" />
               Declaração
             </Button>
+            <ThemeToggle />
+            <BrasiliaClock />
             <Link href="/chat">
               <Button 
                 variant="outline" 
@@ -296,8 +298,6 @@ export default function StudentDashboard() {
                 <span className="text-xs font-normal">Chat</span>
               </Button>
             </Link>
-            <BrasiliaClock />
-            <ThemeToggle />
             <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout">
               <LogOut className="h-5 w-5" />
             </Button>
