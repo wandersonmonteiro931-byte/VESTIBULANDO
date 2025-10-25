@@ -2140,18 +2140,11 @@ export default function AdminDashboard() {
 
   const changePasswordMutation = useMutation({
     mutationFn: async ({ userId, novaSenha }: { userId: string; novaSenha: string }) => {
-      // Obter o email do usuário
-      const userDoc = await getDoc(doc(db, "usuarios", userId));
-      if (!userDoc.exists()) {
-        throw new Error("Usuário não encontrado");
-      }
-      const email = userDoc.data().email;
-
-      // Atualizar senha no Firebase Authentication via API
+      // Atualizar senha no Firebase Authentication via API usando o UID
       const response = await fetch("/api/update-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, newPassword: novaSenha }),
+        body: JSON.stringify({ userId, newPassword: novaSenha }),
       });
 
       const data = await response.json();

@@ -11,12 +11,12 @@ export async function registerRoutes(expressApp: Express): Promise<Server> {
   // Endpoint para atualizar senha no Firebase Authentication
   expressApp.post("/api/update-password", async (req, res) => {
     try {
-      const { email, newPassword } = req.body;
+      const { userId, newPassword } = req.body;
 
-      if (!email || !newPassword) {
+      if (!userId || !newPassword) {
         return res.status(400).json({ 
           success: false, 
-          message: "Email e nova senha são obrigatórios" 
+          message: "ID do usuário e nova senha são obrigatórios" 
         });
       }
 
@@ -36,98 +36,48 @@ export async function registerRoutes(expressApp: Express): Promise<Server> {
         });
       }
 
-      console.log(`🔧 Alterando senha para email: ${email}`);
+      console.log(`🔧 Alterando senha para UID: ${userId}`);
 
-      // Tentar fazer login com o email para obter o UID
-      // Usamos uma senha temporária que não importa - apenas queremos o erro
-      const signInResponse = await fetch(
-        `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`,
+      // Usar o UID diretamente para atualizar a senha
+      const updateResponse = await fetch(
+        `https://identitytoolkit.googleapis.com/v1/accounts:update?key=${apiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            email: email,
-            password: 'temp-password-for-lookup-only',
-            returnSecureToken: true
+            localId: userId,
+            password: newPassword,
+            returnSecureToken: false
           })
         }
       );
 
-      const signInData = await signInResponse.json();
+      const updateData = await updateResponse.json();
 
-      // Se obtivemos um userId do erro ou da resposta, o usuário existe
-      if (signInData.localId || (signInData.error && signInData.error.message !== 'EMAIL_NOT_FOUND')) {
-        // O usuário existe, então vamos resetar a senha
-        console.log(`✅ Usuário encontrado no Authentication`);
-        
-        const resetResponse = await fetch(
-          `https://identitytoolkit.googleapis.com/v1/accounts:update?key=${apiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email: email,
-              password: newPassword,
-              returnSecureToken: false
-            })
-          }
-        );
-
-        const resetData = await resetResponse.json();
-
-        if (resetData.error) {
-          console.error(`❌ Erro ao atualizar senha:`, resetData.error);
+      if (updateData.error) {
+        // Se o erro for USER_NOT_FOUND, tentar criar a conta
+        if (updateData.error.message === 'USER_NOT_FOUND') {
+          console.log(`🔧 Usuário ${userId} não existe no Authentication. Tentando criar...`);
+          
+          // Para criar precisamos do email, então vamos retornar erro
           return res.status(400).json({ 
             success: false, 
-            message: `Erro ao atualizar senha: ${resetData.error.message}` 
+            message: "Usuário não encontrado no Firebase Authentication. Não é possível criar sem o email." 
           });
         }
-
-        console.log(`✅ Senha atualizada com sucesso`);
-        return res.json({ 
-          success: true, 
-          message: "Senha atualizada com sucesso no Firebase Authentication" 
-        });
-      } else if (signInData.error && signInData.error.message === 'EMAIL_NOT_FOUND') {
-        // O usuário não existe, criar a conta
-        console.log(`🔧 Usuário ${email} não existe no Authentication. Criando conta...`);
         
-        const createResponse = await fetch(
-          `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${apiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email: email,
-              password: newPassword,
-              returnSecureToken: false
-            })
-          }
-        );
-
-        const createData = await createResponse.json();
-
-        if (createData.error) {
-          console.error(`❌ Erro ao criar conta:`, createData.error);
-          return res.status(400).json({ 
-            success: false, 
-            message: `Erro ao criar conta: ${createData.error.message}` 
-          });
-        }
-
-        console.log(`✅ Conta criada com sucesso no Authentication. UID: ${createData.localId}`);
-        return res.json({ 
-          success: true, 
-          message: "Conta criada e senha definida com sucesso no Firebase Authentication" 
-        });
-      } else {
-        // Erro inesperado
-        console.error(`❌ Erro inesperado:`, signInData.error);
+        console.error(`❌ Erro ao atualizar senha:`, updateData.error);
         return res.status(400).json({ 
           success: false, 
-          message: signInData.error?.message || "Erro ao verificar usuário" 
+          message: `Erro ao atualizar senha: ${updateData.error.message}` 
         });
       }
+
+      console.log(`✅ Senha atualizada com sucesso para UID: ${userId}`);
+      return res.json({ 
+        success: true, 
+        message: "Senha atualizada com sucesso no Firebase Authentication" 
+      });
 
     } catch (error: any) {
       console.error("❌ Erro ao atualizar senha:", error);
