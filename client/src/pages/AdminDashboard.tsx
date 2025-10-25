@@ -28,6 +28,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 import type { User, Turma, Maintenance } from "@shared/schema";
+import { HORARIOS_DISPONIVEIS } from "@shared/schema";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -94,6 +95,7 @@ const editStudentFormSchema = z.object({
   estado: z.string().optional(),
   turma: z.string().min(1, "Turma é obrigatória"),
   disponibilidade: z.array(z.string()).optional(),
+  horarioEspecialObservacao: z.string().optional(),
   fotoBase64: z.string().optional(),
 });
 
@@ -195,6 +197,7 @@ export default function AdminDashboard() {
   const [selectedStudentDetails, setSelectedStudentDetails] = useState<User | null>(null);
   const [isEditingStudent, setIsEditingStudent] = useState(false);
   const [editStudentDisponibilidade, setEditStudentDisponibilidade] = useState<string[]>([]);
+  const [editStudentHorarioEspecialObs, setEditStudentHorarioEspecialObs] = useState<string>("");
   const [editStudentFoto, setEditStudentFoto] = useState<string>("");
   const [disciplinarySearchTerm, setDisciplinarySearchTerm] = useState("");
   const [warningDialogOpen, setWarningDialogOpen] = useState(false);
@@ -4544,7 +4547,7 @@ export default function AdminDashboard() {
         }
         setStudentDetailsDialogOpen(open);
       }}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="dialog-student-details">
+        <DialogContent className="max-w-4xl max-h-[90vh]" data-testid="dialog-student-details">
           <DialogHeader>
             <DialogTitle>{isEditingStudent ? "Editar Cadastro do Aluno" : "Detalhes do Aluno"}</DialogTitle>
             <DialogDescription>
@@ -4553,7 +4556,7 @@ export default function AdminDashboard() {
           </DialogHeader>
           
           {selectedStudentDetails && !isEditingStudent && (
-            <div className="space-y-6">
+            <div className="space-y-6 overflow-y-auto max-h-[calc(90vh-200px)]">
               {selectedStudentDetails.fotoBase64 && (
                 <div className="flex justify-center">
                   <div className="space-y-2">
@@ -4669,13 +4672,24 @@ export default function AdminDashboard() {
           {selectedStudentDetails && isEditingStudent && (
             <Form {...editStudentForm}>
               <form onSubmit={editStudentForm.handleSubmit((data) => {
+                // Validar se "Horário especial" foi marcado e se a observação foi preenchida
+                if (editStudentDisponibilidade.includes("Horário especial") && !editStudentHorarioEspecialObs.trim()) {
+                  toast({
+                    title: "Observação obrigatória",
+                    description: "Por favor, descreva o horário especial selecionado",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                
                 updateStudentDataMutation.mutate({
                   ...data,
                   userId: selectedStudentDetails.uid,
                   disponibilidade: editStudentDisponibilidade,
+                  horarioEspecialObservacao: editStudentHorarioEspecialObs || undefined,
                   fotoBase64: editStudentFoto,
                 });
-              })} className="space-y-6">
+              })} className="space-y-6 overflow-y-auto max-h-[calc(90vh-200px)]">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Card>
                     <CardHeader>
@@ -5067,8 +5081,8 @@ export default function AdminDashboard() {
                     
                     <div className="space-y-2">
                       <Label>Disponibilidade de Horários</Label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {["Segunda de manhã", "Segunda à tarde", "Segunda à noite", "Terça de manhã", "Terça à tarde", "Terça à noite", "Quarta de manhã", "Quarta à tarde", "Quarta à noite", "Quinta de manhã", "Quinta à tarde", "Quinta à noite", "Sexta de manhã", "Sexta à tarde", "Sexta à noite", "Sábado de manhã", "Sábado à tarde", "Domingo de manhã", "Domingo à tarde"].map((horario) => (
+                      <div className="space-y-2 p-4 border rounded-lg">
+                        {HORARIOS_DISPONIVEIS.map((horario) => (
                           <div key={horario} className="flex items-center space-x-2">
                             <Checkbox
                               id={`edit-horario-${horario}`}
@@ -5082,12 +5096,28 @@ export default function AdminDashboard() {
                               }}
                               data-testid={`checkbox-edit-disponibilidade-${horario}`}
                             />
-                            <label htmlFor={`edit-horario-${horario}`} className="text-sm">
+                            <label htmlFor={`edit-horario-${horario}`} className="text-sm cursor-pointer">
                               {horario}
                             </label>
                           </div>
                         ))}
                       </div>
+                      
+                      {editStudentDisponibilidade.includes("Horário especial") && (
+                        <div className="space-y-2 mt-2">
+                          <Label htmlFor="edit-horario-especial-obs" className="text-sm font-medium">
+                            Descrição do Horário Especial *
+                          </Label>
+                          <Input
+                            id="edit-horario-especial-obs"
+                            type="text"
+                            placeholder="Descreva o horário especial (ex: Terças e quintas das 14h às 16h)"
+                            value={editStudentHorarioEspecialObs}
+                            onChange={(e) => setEditStudentHorarioEspecialObs(e.target.value)}
+                            data-testid="input-edit-horario-especial-observacao"
+                          />
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -5130,6 +5160,7 @@ export default function AdminDashboard() {
                         fotoBase64: selectedStudentDetails.fotoBase64 || "",
                       });
                       setEditStudentDisponibilidade(selectedStudentDetails.disponibilidade || []);
+                      setEditStudentHorarioEspecialObs(selectedStudentDetails.horarioEspecialObservacao || "");
                       setEditStudentFoto(selectedStudentDetails.fotoBase64 || "");
                     }
                     setIsEditingStudent(true);
@@ -5153,10 +5184,21 @@ export default function AdminDashboard() {
                 </Button>
                 <Button
                   onClick={editStudentForm.handleSubmit((data) => {
+                    // Validar se "Horário especial" foi marcado e se a observação foi preenchida
+                    if (editStudentDisponibilidade.includes("Horário especial") && !editStudentHorarioEspecialObs.trim()) {
+                      toast({
+                        title: "Observação obrigatória",
+                        description: "Por favor, descreva o horário especial selecionado",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    
                     updateStudentDataMutation.mutate({
                       ...data,
                       userId: selectedStudentDetails!.uid,
                       disponibilidade: editStudentDisponibilidade,
+                      horarioEspecialObservacao: editStudentHorarioEspecialObs || undefined,
                       fotoBase64: editStudentFoto,
                     });
                   })}

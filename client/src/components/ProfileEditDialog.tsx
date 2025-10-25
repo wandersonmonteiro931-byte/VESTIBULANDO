@@ -106,8 +106,8 @@ export default function ProfileEditDialog({ onClose }: ProfileEditDialogProps) {
     <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       
-      <Card className="relative w-full max-w-md z-10">
-        <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-4">
+      <Card className="relative w-full max-w-md max-h-[90vh] z-10 flex flex-col overflow-hidden">
+        <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-4 shrink-0">
           <CardTitle>Editar Perfil</CardTitle>
           <Button 
             size="icon" 
@@ -121,7 +121,7 @@ export default function ProfileEditDialog({ onClose }: ProfileEditDialogProps) {
         
         <Separator />
         
-        <CardContent className="pt-6 space-y-6">
+        <CardContent className="pt-6 space-y-6 overflow-y-auto">
           <div className="flex flex-col items-center">
             <div className="relative">
               <Avatar className="h-24 w-24">
@@ -182,28 +182,28 @@ export default function ProfileEditDialog({ onClose }: ProfileEditDialogProps) {
               </p>
             </div>
           </div>
-
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={onClose}
-              disabled={isLoading}
-              data-testid="button-cancel-edit"
-            >
-              Cancelar
-            </Button>
-            <Button
-              className="flex-1 gap-2"
-              onClick={handleSave}
-              disabled={isLoading}
-              data-testid="button-save-profile"
-            >
-              <Save className="h-4 w-4" />
-              {isLoading ? "Salvando..." : "Salvar"}
-            </Button>
-          </div>
         </CardContent>
+
+        <div className="flex gap-2 p-6 pt-4 border-t bg-background shrink-0">
+          <Button
+            variant="outline"
+            className="flex-1"
+            onClick={onClose}
+            disabled={isLoading}
+            data-testid="button-cancel-edit"
+          >
+            Cancelar
+          </Button>
+          <Button
+            className="flex-1 gap-2"
+            onClick={handleSave}
+            disabled={isLoading}
+            data-testid="button-save-profile"
+          >
+            <Save className="h-4 w-4" />
+            {isLoading ? "Salvando..." : "Salvar"}
+          </Button>
+        </div>
       </Card>
     </div>
   );

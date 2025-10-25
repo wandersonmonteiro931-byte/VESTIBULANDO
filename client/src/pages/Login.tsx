@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
@@ -19,6 +19,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { formatBrasiliaDateTime, getNowBrasiliaISO, brasiliaToUTC } from "@/lib/brasiliaTime";
+import { HORARIOS_DISPONIVEIS } from "@shared/schema";
 
 // Gera uma matrícula sequencial única usando transação atômica
 async function generateUniqueMatricula(db: any): Promise<string> {
@@ -186,10 +187,12 @@ export default function Login() {
   const [userDataForReset, setUserDataForReset] = useState<any>(null);
   
   const [disponibilidade, setDisponibilidade] = useState<string[]>([]);
+  const [horarioEspecialObservacao, setHorarioEspecialObservacao] = useState("");
   const [cpfValido, setCpfValido] = useState<boolean | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoBase64, setPhotoBase64] = useState<string | null>(null);
   const [photoPublic, setPhotoPublic] = useState(false);
+  const [emailFocused, setEmailFocused] = useState(false);
   
   // Estados para suspensão disciplinar
   const [showSuspensionOverlay, setShowSuspensionOverlay] = useState(false);
@@ -427,6 +430,17 @@ export default function Login() {
           return;
         }
         
+        // Validar se "Horário especial" foi marcado e se a observação foi preenchida
+        if (disponibilidade.includes("Horário especial") && !horarioEspecialObservacao.trim()) {
+          toast({
+            title: "Observação obrigatória",
+            description: "Por favor, descreva o horário especial selecionado",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+        
         // Validar CPF
         if (!validarCPF(formData.cpf)) {
           toast({
@@ -476,6 +490,7 @@ export default function Login() {
                 cidade: formData.cidade,
                 estado: formData.estado,
                 disponibilidade: disponibilidade,
+                horarioEspecialObservacao: horarioEspecialObservacao || null,
                 fotoBase64: photoBase64,
                 fotoPublica: photoPublic,
                 comentarioReprovacao: null, // Limpar comentário de reprovação
@@ -528,6 +543,7 @@ export default function Login() {
               cidade: formData.cidade,
               estado: formData.estado,
               disponibilidade: disponibilidade,
+              horarioEspecialObservacao: horarioEspecialObservacao || null,
               fotoBase64: photoBase64,
               fotoPublica: photoPublic,
             });
@@ -1647,9 +1663,16 @@ export default function Login() {
                       placeholder="seu@email.com"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      onFocus={() => setEmailFocused(true)}
+                      onBlur={() => setEmailFocused(false)}
                       required
                       data-testid="input-email"
                     />
+                    {emailFocused && (
+                      <p className="text-xs text-muted-foreground">
+                        O email não poderá ser alterado futuramente.
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -1818,16 +1841,7 @@ export default function Login() {
                   <div className="space-y-3">
                     <Label>Disponibilidade de Horário para Estudos *</Label>
                     <div className="space-y-2 p-4 border rounded-lg">
-                      {[
-                        "Manhã - Seg a Sex",
-                        "Manhã - Seg a Sáb",
-                        "Tarde - Seg a Sex",
-                        "Tarde - Seg a Sáb",
-                        "Noite - Seg a Sex",
-                        "Noite - Seg a Sáb",
-                        "Domingo",
-                        "Qualquer Horário"
-                      ].map((opcao) => (
+                      {HORARIOS_DISPONIVEIS.map((opcao) => (
                         <div key={opcao} className="flex items-center space-x-2">
                           <Checkbox
                             id={opcao}
@@ -1841,6 +1855,23 @@ export default function Login() {
                         </div>
                       ))}
                     </div>
+                    
+                    {disponibilidade.includes("Horário especial") && (
+                      <div className="space-y-2">
+                        <Label htmlFor="horario-especial-obs" className="text-sm font-medium">
+                          Descrição do Horário Especial *
+                        </Label>
+                        <Input
+                          id="horario-especial-obs"
+                          type="text"
+                          placeholder="Descreva o horário especial (ex: Terças e quintas das 14h às 16h)"
+                          value={horarioEspecialObservacao}
+                          onChange={(e) => setHorarioEspecialObservacao(e.target.value)}
+                          required
+                          data-testid="input-horario-especial-observacao"
+                        />
+                      </div>
+                    )}
                   </div>
 
                   <PhotoUpload
@@ -1849,9 +1880,7 @@ export default function Login() {
                       setPhotoBase64(base64 || null);
                     }}
                     onPublicChange={setPhotoPublic}
-                    initialPublic={false}
                     required={false}
-                    label="Foto 3x4"
                   />
 
                   <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">

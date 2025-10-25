@@ -1,7 +1,6 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Upload, X, Camera } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -9,7 +8,6 @@ import { useToast } from "@/hooks/use-toast";
 interface PhotoUploadProps {
   onPhotoChange: (file: File | null, base64?: string | null) => void;
   onPublicChange: (isPublic: boolean) => void;
-  initialPublic?: boolean;
   required?: boolean;
   label?: string;
 }
@@ -17,13 +15,11 @@ interface PhotoUploadProps {
 export function PhotoUpload({ 
   onPhotoChange, 
   onPublicChange, 
-  initialPublic = false,
   required = false,
-  label = "Foto 3x4"
+  label = "Foto (Opcional)"
 }: PhotoUploadProps) {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [isPublic, setIsPublic] = useState(initialPublic);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -60,6 +56,8 @@ export function PhotoUpload({
       setPhotoFile(file);
       // Passar tanto o file quanto o base64 para o componente pai
       onPhotoChange(file, base64);
+      // Automaticamente definir como pública quando uma foto é enviada
+      onPublicChange(true);
     };
     reader.readAsDataURL(file);
   };
@@ -68,14 +66,11 @@ export function PhotoUpload({
     setPhotoPreview(null);
     setPhotoFile(null);
     onPhotoChange(null, null);
+    // Definir como não pública quando a foto é removida
+    onPublicChange(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-  };
-
-  const handlePublicToggle = (checked: boolean) => {
-    setIsPublic(checked);
-    onPublicChange(checked);
   };
 
   return (
@@ -137,25 +132,6 @@ export function PhotoUpload({
             </p>
           </div>
         </div>
-      </div>
-
-      <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/30">
-        <div className="flex-1">
-          <Label htmlFor="photo-public" className="text-sm font-medium cursor-pointer">
-            Tornar foto pública
-          </Label>
-          <p className="text-xs text-muted-foreground mt-1">
-            {isPublic 
-              ? "Sua foto será visível para todos os usuários da plataforma"
-              : "Sua foto será visível apenas para a diretoria (para documentação)"}
-          </p>
-        </div>
-        <Switch
-          id="photo-public"
-          checked={isPublic}
-          onCheckedChange={handlePublicToggle}
-          data-testid="switch-photo-public"
-        />
       </div>
 
       {!photoFile && required && (

@@ -114,8 +114,8 @@ export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfi
     <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       
-      <Card className="relative w-full max-w-md z-10">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+      <Card className="relative w-full max-w-md max-h-[90vh] z-10 flex flex-col overflow-hidden">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 shrink-0">
           <CardTitle>Editar Perfil</CardTitle>
           <Button size="icon" variant="ghost" onClick={onClose} data-testid="button-close-edit-profile">
             <X className="h-5 w-5" />
@@ -124,7 +124,7 @@ export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfi
         
         <Separator />
         
-        <CardContent className="pt-6 space-y-6">
+        <CardContent className="pt-6 space-y-6 overflow-y-auto">
           <div className="space-y-4">
             <Label>Foto de Perfil</Label>
             
@@ -221,37 +221,37 @@ export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfi
               {statusText.length}/30 caracteres
             </p>
           </div>
-
-          <div className="flex gap-2 pt-4">
-            <Button
-              variant="outline"
-              onClick={onClose}
-              className="flex-1"
-              disabled={saving}
-              data-testid="button-cancel"
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleSave}
-              className="flex-1"
-              disabled={saving}
-              data-testid="button-save-profile"
-            >
-              {saving ? (
-                <>
-                  <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full mr-2" />
-                  Salvando...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Salvar
-                </>
-              )}
-            </Button>
-          </div>
         </CardContent>
+
+        <div className="flex gap-2 p-6 pt-4 border-t bg-background shrink-0">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="flex-1"
+            disabled={saving}
+            data-testid="button-cancel"
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleSave}
+            className="flex-1"
+            disabled={saving}
+            data-testid="button-save-profile"
+          >
+            {saving ? (
+              <>
+                <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full mr-2" />
+                Salvando...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Salvar
+              </>
+            )}
+          </Button>
+        </div>
       </Card>
     </div>
   );

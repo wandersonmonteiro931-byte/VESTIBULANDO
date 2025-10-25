@@ -1,5 +1,18 @@
 import { z } from "zod";
 
+// Lista padronizada de horários disponíveis para estudos
+export const HORARIOS_DISPONIVEIS = [
+  "Manhã - Seg a Sex",
+  "Manhã - Seg a Sáb",
+  "Tarde - Seg a Sex",
+  "Tarde - Seg a Sáb",
+  "Noite - Seg a Sex",
+  "Noite - Seg a Sáb",
+  "Domingo",
+  "Qualquer horário",
+  "Horário especial",
+] as const;
+
 // User schema - tipos: aluno, professor, diretor
 // status: pendente (aguardando aprovação), aprovado (pode logar), reprovado (não pode logar), devolvido (precisa fazer correções)
 export const userSchema = z.object({
@@ -40,6 +53,7 @@ export const userSchema = z.object({
   cidade: z.string().optional(),
   estado: z.string().optional(),
   disponibilidade: z.array(z.string()).optional(), // horários disponíveis para estudo
+  horarioEspecialObservacao: z.string().optional(), // observação obrigatória se "Horário especial (descrever)" estiver selecionado
 });
 
 // Schema para cadastro de aluno (todos os campos obrigatórios)
