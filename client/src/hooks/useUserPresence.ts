@@ -22,11 +22,14 @@ export function useUserPresence(userId: string): UserPresenceStatus {
 
     const userRef = doc(db, "usuarios", userId);
     
-    const unsubscribe = onSnapshot(userRef, (snapshot) => {
-      if (!snapshot.exists()) {
-        setStatus({ isOnline: false, statusText: "Nunca visto" });
-        return;
-      }
+    const unsubscribe = onSnapshot(
+      userRef, 
+      (snapshot) => {
+        if (!snapshot.exists()) {
+          console.log("User not found for presence:", userId);
+          setStatus({ isOnline: false, statusText: "Nunca visto" });
+          return;
+        }
 
       const userData = snapshot.data() as User;
       const isOnline = userData.isOnline || false;
@@ -76,7 +79,12 @@ export function useUserPresence(userId: string): UserPresenceStatus {
       }
 
       setStatus({ isOnline: false, statusText });
-    });
+      },
+      (error) => {
+        console.error("Error listening to user presence:", error);
+        setStatus({ isOnline: false, statusText: "Offline" });
+      }
+    );
 
     return () => unsubscribe();
   }, [userId]);
