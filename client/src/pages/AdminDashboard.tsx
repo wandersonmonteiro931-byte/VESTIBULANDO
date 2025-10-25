@@ -4974,6 +4974,7 @@ export default function AdminDashboard() {
                         matricula: selectedStudentDetails.matricula || "",
                         dataNascimento: selectedStudentDetails.dataNascimento || "",
                         cpf: selectedStudentDetails.cpf || "",
+                        sexo: selectedStudentDetails.sexo || "",
                         telefone: selectedStudentDetails.telefone || "",
                         escolaridade: selectedStudentDetails.escolaridade || "",
                         cep: selectedStudentDetails.cep || "",
