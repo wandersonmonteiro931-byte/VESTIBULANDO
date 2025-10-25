@@ -2481,15 +2481,33 @@ export default function Login() {
       )}
 
       {/* Dialog de Troca de Senha Obrigatória (Primeiro Acesso) */}
-      <Dialog open={showPasswordChangeDialog} onOpenChange={() => {
-        // Impedir fechamento do diálogo - senha deve ser alterada obrigatoriamente
-        toast({
-          title: "Atenção",
-          description: "Por segurança, você deve alterar sua senha no primeiro acesso.",
-          variant: "default",
-        });
+      <Dialog open={showPasswordChangeDialog} onOpenChange={async (open) => {
+        if (!open) {
+          // Fazer logout e voltar para tela inicial
+          if (auth.currentUser) {
+            try {
+              await auth.signOut();
+              console.log("🔓 Logout realizado - fechamento do diálogo de primeiro acesso");
+            } catch (error) {
+              console.error("Erro ao fazer logout:", error);
+            }
+          }
+          
+          // Limpar estados
+          setShowPasswordChangeDialog(false);
+          setUserData(null);
+          setNewPassword("");
+          setConfirmNewPassword("");
+          setPasswordChangeError("");
+          
+          toast({
+            title: "Acesso cancelado",
+            description: "Você precisará alterar sua senha no próximo login.",
+            variant: "default",
+          });
+        }
       }}>
-        <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Shield className="h-5 w-5 text-primary" />
