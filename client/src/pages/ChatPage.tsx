@@ -6,13 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ChatConversation } from "@shared/schema";
+import { ChatConversation, User } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import ChatWindow from "../components/ChatWindow";
 import NewChatDialog from "../components/NewChatDialog";
 import { cn } from "@/lib/utils";
 import { useChatConversations } from "@/hooks/useChatConversations";
+import { collection, getDocs, addDoc, query as firestoreQuery, where } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export default function ChatPage() {
   const { userData } = useAuth();
@@ -20,8 +22,44 @@ export default function ChatPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<"chats" | "groups" | "settings">("chats");
   const [showNewChatDialog, setShowNewChatDialog] = useState(false);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
 
   const { conversations, isLoading } = useChatConversations();
+
+  useEffect(() => {
+    const fetchAllUsers = async () => {
+      if (!userData?.uid) return;
+
+      setIsLoadingUsers(true);
+      try {
+        const usersRef = collection(db, "usuarios");
+        const snapshot = await getDocs(usersRef);
+        const results: User[] = [];
+        
+        snapshot.forEach((doc) => {
+          const user = { uid: doc.id, ...doc.data() } as User;
+          const isActive = user.ativo === true || (user.ativo as any) === "true";
+          const isApproved = user.status === "aprovado" || (user.status as any) === true;
+          
+          if (user.uid !== userData?.uid && isActive) {
+            if (user.tipo === "diretor" || isApproved) {
+              results.push(user);
+            }
+          }
+        });
+        
+        results.sort((a, b) => a.nome.localeCompare(b.nome));
+        setAllUsers(results);
+      } catch (error) {
+        console.error("Error fetching users:", error);
+      } finally {
+        setIsLoadingUsers(false);
+      }
+    };
+
+    fetchAllUsers();
+  }, [userData?.uid]);
 
   const handleConversationCreated = (conversationId: string) => {
     const conversation = conversations.find(c => c.id === conversationId);
@@ -30,13 +68,23 @@ export default function ChatPage() {
     }
   };
 
-  const filteredConversations = conversations?.filter((conv) => {
-    const otherParticipantName =
-      conv.participante1Id === userData?.uid
-        ? conv.participante2Nome
-        : conv.participante1Nome;
-    return otherParticipantName.toLowerCase().includes(searchTerm.toLowerCase());
-  });
+  const filteredUsers = searchTerm.trim()
+    ? allUsers.filter((user) =>
+        user.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (user.matricula && user.matricula.includes(searchTerm))
+      )
+    : [];
+
+  const filteredConversations = !searchTerm.trim()
+    ? conversations
+    : conversations?.filter((conv) => {
+        const otherParticipantName =
+          conv.participante1Id === userData?.uid
+            ? conv.participante2Nome
+            : conv.participante1Nome;
+        return otherParticipantName.toLowerCase().includes(searchTerm.toLowerCase());
+      });
 
   const getOtherParticipant = (conversation: ChatConversation) => {
     if (conversation.participante1Id === userData?.uid) {
@@ -68,6 +116,95 @@ export default function ChatPage() {
       });
     } catch {
       return "";
+    }
+  };
+
+  const getUserTypeLabel = (tipo: string) => {
+    switch (tipo) {
+      case "aluno":
+        return "Aluno";
+      case "professor":
+        return "Professor";
+      case "diretor":
+        return "Diretor";
+      default:
+        return tipo;
+    }
+  };
+
+  const handleUserClick = async (user: User) => {
+    if (!userData) return;
+
+    const existingConversation = conversations.find(
+      (conv) =>
+        (conv.participante1Id === userData.uid && conv.participante2Id === user.uid) ||
+        (conv.participante1Id === user.uid && conv.participante2Id === userData.uid)
+    );
+
+    if (existingConversation) {
+      setSelectedConversation(existingConversation);
+      setSearchTerm("");
+    } else {
+      try {
+        const conversationsRef = collection(db, "chatConversations");
+        
+        const q1 = firestoreQuery(
+          conversationsRef,
+          where("participante1Id", "==", userData.uid),
+          where("participante2Id", "==", user.uid)
+        );
+        const q2 = firestoreQuery(
+          conversationsRef,
+          where("participante1Id", "==", user.uid),
+          where("participante2Id", "==", userData.uid)
+        );
+
+        const [snapshot1, snapshot2] = await Promise.all([
+          getDocs(q1),
+          getDocs(q2)
+        ]);
+
+        if (!snapshot1.empty) {
+          const conversation = conversations.find(c => c.id === snapshot1.docs[0].id);
+          if (conversation) {
+            setSelectedConversation(conversation);
+            setSearchTerm("");
+          }
+          return;
+        }
+
+        if (!snapshot2.empty) {
+          const conversation = conversations.find(c => c.id === snapshot2.docs[0].id);
+          if (conversation) {
+            setSelectedConversation(conversation);
+            setSearchTerm("");
+          }
+          return;
+        }
+
+        const now = new Date().toISOString();
+        const conversationData = {
+          participante1Id: userData.uid,
+          participante1Nome: userData.nome,
+          participante1Tipo: userData.tipo,
+          participante2Id: user.uid,
+          participante2Nome: user.nome,
+          participante2Tipo: user.tipo,
+          mensagensNaoLidas1: 0,
+          mensagensNaoLidas2: 0,
+          participante1Digitando: false,
+          participante2Digitando: false,
+          deletadaPorParticipante1: false,
+          deletadaPorParticipante2: false,
+          dataCriacao: now,
+          dataUltimaAtualizacao: now,
+        };
+
+        await addDoc(conversationsRef, conversationData);
+        setSearchTerm("");
+      } catch (error) {
+        console.error("Error creating conversation:", error);
+      }
     }
   };
 
@@ -115,7 +252,7 @@ export default function ChatPage() {
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Buscar conversa..."
+              placeholder="Buscar pessoas..."
               className="pl-9 bg-white dark:bg-[#2a3942] border-none focus-visible:ring-1"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -154,16 +291,68 @@ export default function ChatPage() {
 
         {/* Conversation List */}
         <ScrollArea className="flex-1 whatsapp-conversation-list">
-          {isLoading ? (
+          {isLoading || isLoadingUsers ? (
             <div className="flex items-center justify-center p-8">
               <div className="text-muted-foreground">Carregando...</div>
+            </div>
+          ) : searchTerm.trim() && filteredUsers.length > 0 ? (
+            <div>
+              {filteredUsers.map((user) => (
+                <div
+                  key={user.uid}
+                  className="whatsapp-conversation-item flex items-center gap-3 p-3 cursor-pointer border-b border-border hover-elevate"
+                  onClick={() => handleUserClick(user)}
+                  data-testid={`user-item-${user.uid}`}
+                >
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage src={user.fotoBase64 || ""} />
+                    <AvatarFallback className="bg-[#00a884] text-white">
+                      {user.nome.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-foreground truncate" data-testid={`text-user-name-${user.uid}`}>
+                        {user.nome}
+                      </h3>
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          "text-xs",
+                          user.tipo === "professor" && "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
+                          user.tipo === "diretor" && "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300"
+                        )}
+                      >
+                        {getUserTypeLabel(user.tipo)}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground truncate">
+                      {user.email}
+                    </p>
+                    {user.turma && (
+                      <p className="text-xs text-muted-foreground">
+                        Turma: {user.turma}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : searchTerm.trim() && filteredUsers.length === 0 ? (
+            <div className="flex flex-col items-center justify-center p-8 text-center">
+              <Search className="h-12 w-12 text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">Nenhuma pessoa encontrada</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Tente buscar por outro nome, email ou matrícula
+              </p>
             </div>
           ) : filteredConversations && filteredConversations.length > 0 ? (
             <div>
               {filteredConversations.map((conversation) => {
                 const otherParticipant = getOtherParticipant(conversation);
                 const unreadCount = getUnreadCount(conversation);
-                const isOnline = false; // TODO: Implementar status online
+                const isOnline = false;
 
                 return (
                   <div
@@ -176,7 +365,6 @@ export default function ChatPage() {
                     onClick={() => setSelectedConversation(conversation)}
                     data-testid={`conversation-item-${conversation.id}`}
                   >
-                    {/* Avatar */}
                     <div className="relative">
                       <Avatar className="h-12 w-12">
                         <AvatarImage src="" />
@@ -189,7 +377,6 @@ export default function ChatPage() {
                       )}
                     </div>
 
-                    {/* Conversation Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
                         <h3
