@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation, Link } from "wouter";
-import { MessageSquare, Settings, Users, Search, ArrowLeft, Home } from "lucide-react";
+import { MessageSquare, Settings, Users, Search, ArrowLeft, Home, User as UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ChatConversation, User } from "@shared/schema";
 import NewChatDialog from "../components/NewChatDialog";
+import ProfileEditDialog from "../components/ProfileEditDialog";
 import { PresenceIndicator } from "../components/PresenceIndicator";
 import { cn } from "@/lib/utils";
 import { useChatConversations } from "@/hooks/useChatConversations";
@@ -22,6 +23,7 @@ export default function ChatPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<"chats" | "groups" | "settings">("chats");
   const [showNewChatDialog, setShowNewChatDialog] = useState(false);
+  const [showProfileEditDialog, setShowProfileEditDialog] = useState(false);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
 
@@ -233,9 +235,21 @@ export default function ChatPage() {
         {/* Header */}
         <div className="whatsapp-header flex items-center justify-between p-4">
           <h1 className="text-xl font-semibold text-white" data-testid="text-chat-title">
-            EduChat
+            Chat
           </h1>
           <div className="flex items-center gap-2">
+            <Avatar 
+              className="h-9 w-9 cursor-pointer hover:opacity-80 transition-opacity border-2 border-white/20"
+              onClick={() => setShowProfileEditDialog(true)}
+              data-testid="button-open-profile"
+            >
+              {userData?.fotoBase64 ? (
+                <AvatarImage src={userData.fotoBase64} alt={userData.nome} />
+              ) : null}
+              <AvatarFallback className="bg-white text-[#008069] text-sm">
+                {userData?.tipo === "diretor" ? "DIR" : userData?.nome?.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
             <Button
               size="icon"
               variant="ghost"
@@ -254,15 +268,6 @@ export default function ChatPage() {
               data-testid="button-new-chat"
             >
               <MessageSquare className="h-5 w-5" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="text-white hover:bg-white/10"
-              onClick={() => setActiveTab("settings")}
-              data-testid="button-settings"
-            >
-              <Settings className="h-5 w-5" />
             </Button>
           </div>
         </div>
@@ -442,6 +447,10 @@ export default function ChatPage() {
         onOpenChange={setShowNewChatDialog}
         onConversationCreated={handleConversationCreated}
       />
+
+      {showProfileEditDialog && (
+        <ProfileEditDialog onClose={() => setShowProfileEditDialog(false)} />
+      )}
     </div>
   );
 }
