@@ -393,7 +393,6 @@
   .whatsapp-bg {
     background-color: #e5ddd5;
     background-image: 
-      url('@assets/Blue and White Online School Logo (1)_1761376859857.png'),
       repeating-linear-gradient(
         45deg,
         transparent,
@@ -408,23 +407,21 @@
         rgba(0, 0, 0, 0.02) 10px,
         rgba(0, 0, 0, 0.02) 20px
       );
-    background-position: center center;
-    background-repeat: no-repeat;
-    background-size: 40%, auto, auto;
-    background-blend-mode: normal, normal, normal;
   }
 
   .whatsapp-bg::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80%;
+    max-width: 600px;
+    aspect-ratio: 1024 / 341;
     background-image: url('@assets/Blue and White Online School Logo (1)_1761376859857.png');
     background-position: center center;
     background-repeat: no-repeat;
-    background-size: 40%;
+    background-size: contain;
     opacity: 0.08;
     pointer-events: none;
     z-index: 0;
