@@ -12,7 +12,7 @@ import NewChatDialog from "../components/NewChatDialog";
 import ProfileEditDialog from "../components/ProfileEditDialog";
 import ConversationItem from "../components/ConversationItem";
 import { PresenceIndicator } from "../components/PresenceIndicator";
-import { cn } from "@/lib/utils";
+import { cn, getTipoAlunoGenero } from "@/lib/utils";
 import { useChatConversations } from "@/hooks/useChatConversations";
 import { collection, getDocs, addDoc, query as firestoreQuery, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -158,10 +158,10 @@ export default function ChatPage() {
     return formatBrasiliaTime(timestamp);
   };
 
-  const getUserTypeLabel = (tipo: string) => {
+  const getUserTypeLabel = (tipo: string, user?: User) => {
     switch (tipo) {
       case "aluno":
-        return "Aluno";
+        return getTipoAlunoGenero(user?.sexo);
       case "professor":
         return "Professor";
       case "diretor":
@@ -363,7 +363,7 @@ export default function ChatPage() {
                           user.tipo === "diretor" && "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300"
                         )}
                       >
-                        {getUserTypeLabel(user.tipo)}
+                        {getUserTypeLabel(user.tipo, user)}
                       </Badge>
                     </div>
                     {user.tipo === "aluno" && user.turma && (

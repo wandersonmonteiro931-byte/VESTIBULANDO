@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { User } from "@shared/schema";
+import { getTipoAlunoGenero } from "@/lib/utils";
 
 interface UserSearchDialogProps {
   onClose: () => void;
@@ -99,7 +100,7 @@ export default function UserSearchDialog({ onClose, onSelectUser }: UserSearchDi
         displayName.toLowerCase().includes(term) ||
         user.nome.toLowerCase().includes(term) ||
         user.email.toLowerCase().includes(term) ||
-        getTipoLabel(user.tipo).toLowerCase().includes(term) ||
+        getTipoLabel(user.tipo, user).toLowerCase().includes(term) ||
         (user.turma && turmas.get(user.turma)?.toLowerCase().includes(term))
       );
     });
@@ -120,9 +121,9 @@ export default function UserSearchDialog({ onClose, onSelectUser }: UserSearchDi
     return user.tipo === "diretor" ? "Diretoria" : user.nome;
   };
 
-  const getTipoLabel = (tipo: string) => {
+  const getTipoLabel = (tipo: string, user?: User) => {
     switch (tipo) {
-      case "aluno": return "Aluno";
+      case "aluno": return getTipoAlunoGenero(user?.sexo);
       case "professor": return "Professor(a)";
       case "diretor": return "Diretor(a)";
       default: return tipo;
@@ -219,7 +220,7 @@ export default function UserSearchDialog({ onClose, onSelectUser }: UserSearchDi
                           variant={getBadgeVariant(user.tipo) as any} 
                           className="text-xs"
                         >
-                          {getTipoLabel(user.tipo)}
+                          {getTipoLabel(user.tipo, user)}
                         </Badge>
                         {getUserDetails(user) && (
                           <span className="text-xs text-muted-foreground truncate">
