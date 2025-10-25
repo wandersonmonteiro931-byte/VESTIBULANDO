@@ -38,7 +38,7 @@ export function useSendMessage() {
     try {
       const now = new Date().toISOString();
 
-      const messageData = {
+      const messageData: any = {
         conversationId: params.conversationId,
         remetenteId: userData.uid,
         remetenteNome: userData.nome,
@@ -48,10 +48,6 @@ export function useSendMessage() {
         destinatarioTipo: params.destinatarioTipo,
         tipo: params.tipo || "texto",
         conteudo: params.conteudo,
-        arquivoUrl: params.arquivoUrl,
-        arquivoNome: params.arquivoNome,
-        arquivoTipo: params.arquivoTipo,
-        arquivoTamanho: params.arquivoTamanho,
         timestamp: now,
         entregue: true,
         dataEntrega: now,
@@ -59,6 +55,11 @@ export function useSendMessage() {
         deletadaPorRemetente: false,
         deletadaPorDestinatario: false,
       };
+
+      if (params.arquivoUrl) messageData.arquivoUrl = params.arquivoUrl;
+      if (params.arquivoNome) messageData.arquivoNome = params.arquivoNome;
+      if (params.arquivoTipo) messageData.arquivoTipo = params.arquivoTipo;
+      if (params.arquivoTamanho !== undefined) messageData.arquivoTamanho = params.arquivoTamanho;
 
       const messagesRef = collection(db, "chatMessages");
       const messageDoc = await addDoc(messagesRef, messageData);
