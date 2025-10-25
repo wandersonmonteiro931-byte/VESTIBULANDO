@@ -19,8 +19,7 @@ import { BrasiliaClock } from "@/components/BrasiliaClock";
 import { StatusBadge } from "@/components/StatusBadge";
 import { FileUploadZone } from "@/components/FileUploadZone";
 import { AnnouncementsCarousel } from "@/components/AnnouncementsCarousel";
-import ChatButton from "@/components/ChatButton";
-import { LogOut, Plus, FileText, Users, Download, Edit, Calendar, Award } from "lucide-react";
+import { LogOut, Plus, FileText, Users, Download, Edit, Calendar, Award, MessageCircle } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 import { useDeliveryOnPresence } from "@/hooks/useDeliveryOnPresence";
@@ -210,7 +209,9 @@ export default function TeacherDashboard() {
               <p className="text-xs text-muted-foreground">Professor</p>
             </div>
             <BrasiliaClock />
-            <ChatButton />
+            <Button variant="ghost" size="icon" onClick={() => window.location.href = '/chat'} data-testid="button-chat">
+              <MessageCircle className="h-5 w-5" />
+            </Button>
             <ThemeToggle />
             <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout">
               <LogOut className="h-5 w-5" />

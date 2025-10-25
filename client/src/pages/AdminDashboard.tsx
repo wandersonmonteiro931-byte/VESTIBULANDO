@@ -23,9 +23,6 @@ import { DocumentationTab } from "@/components/DocumentationTab";
 import { AnnouncementsTab } from "@/components/AnnouncementsTab";
 import { InternalDocumentsTab } from "@/components/InternalDocumentsTab";
 import { BrasiliaClock } from "@/components/BrasiliaClock";
-import ChatButton from "@/components/ChatButton";
-import ChatAuditPanel from "@/components/ChatAuditPanel";
-import { ChatReportsPanel } from "@/components/ChatReportsPanel";
 import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, MessageCircle, ArrowRightLeft, Clock, Search, Eye, AlertTriangle, Settings, Power, PowerOff, Archive, Download, ChevronDown, ChevronUp } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { queryClient } from "@/lib/queryClient";
@@ -2095,7 +2092,9 @@ export default function AdminDashboard() {
               <p className="text-xs text-muted-foreground">Diretoria</p>
             </div>
             <BrasiliaClock />
-            <ChatButton />
+            <Button variant="ghost" size="icon" onClick={() => window.location.href = '/chat'} data-testid="button-chat">
+              <MessageCircle className="h-5 w-5" />
+            </Button>
             <ThemeToggle />
             <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout">
               <LogOut className="h-5 w-5" />
@@ -2898,11 +2897,21 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="auditoria-chat" className="space-y-4">
-            <ChatAuditPanel />
+            <Card>
+              <CardHeader>
+                <CardTitle>Auditoria do Chat</CardTitle>
+                <CardDescription>Funcionalidade em reconstrução</CardDescription>
+              </CardHeader>
+            </Card>
           </TabsContent>
 
           <TabsContent value="denuncias" className="space-y-4">
-            <ChatReportsPanel />
+            <Card>
+              <CardHeader>
+                <CardTitle>Denúncias</CardTitle>
+                <CardDescription>Funcionalidade em reconstrução</CardDescription>
+              </CardHeader>
+            </Card>
           </TabsContent>
 
           <TabsContent value="documentos-internos" className="space-y-4">
