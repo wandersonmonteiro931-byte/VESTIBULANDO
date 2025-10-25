@@ -13,6 +13,7 @@ import { useUserPresence } from "@/hooks/useUserPresence";
 import { useTypingIndicator } from "@/hooks/useTypingIndicator";
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { formatBrasiliaTime, formatBrasiliaDate } from "@/lib/brasiliaTime";
+import UserProfileDialog from "@/components/UserProfileDialog";
 
 interface ChatWindowProps {
   conversation: ChatConversation;
@@ -23,6 +24,7 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
   const { userData } = useAuth();
   const [message, setMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [showUserProfile, setShowUserProfile] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
@@ -125,24 +127,30 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
           <ArrowLeft className="h-5 w-5" />
         </Button>
 
-        <Avatar className="h-10 w-10">
-          <AvatarImage src="" />
-          <AvatarFallback className="bg-white text-[#008069]">
-            {otherParticipant.tipo === "diretor" ? "DIR" : otherParticipant.nome.charAt(0).toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
+        <div 
+          className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:bg-white/5 rounded-lg p-2 -ml-2 transition-colors"
+          onClick={() => setShowUserProfile(true)}
+          data-testid="button-open-user-profile"
+        >
+          <Avatar className="h-10 w-10">
+            <AvatarImage src="" />
+            <AvatarFallback className="bg-white text-[#008069]">
+              {otherParticipant.tipo === "diretor" ? "DIR" : otherParticipant.nome.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
 
-        <div className="flex-1 min-w-0">
-          <h2 className="font-semibold text-white truncate" data-testid="text-chat-participant-name">
-            {otherParticipant.tipo === "diretor" ? "Diretoria" : otherParticipant.nome}
-          </h2>
-          <div className="flex items-center gap-1.5">
-            {presenceStatus.isOnline && (
-              <div className="w-2 h-2 rounded-full bg-green-400" data-testid="indicator-online" />
-            )}
-            <p className="text-xs text-white/90" data-testid="text-participant-status">
-              {presenceStatus.statusText}
-            </p>
+          <div className="flex-1 min-w-0">
+            <h2 className="font-semibold text-white truncate" data-testid="text-chat-participant-name">
+              {otherParticipant.tipo === "diretor" ? "Diretoria" : otherParticipant.nome}
+            </h2>
+            <div className="flex items-center gap-1.5">
+              {presenceStatus.isOnline && (
+                <div className="w-2 h-2 rounded-full bg-green-400" data-testid="indicator-online" />
+              )}
+              <p className="text-xs text-white/90" data-testid="text-participant-status">
+                {presenceStatus.statusText}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -301,6 +309,13 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
           </Button>
         )}
       </div>
+
+      {showUserProfile && (
+        <UserProfileDialog 
+          userId={otherParticipant.id} 
+          onClose={() => setShowUserProfile(false)} 
+        />
+      )}
     </div>
   );
 }
