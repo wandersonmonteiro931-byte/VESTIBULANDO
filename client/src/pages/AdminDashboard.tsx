@@ -214,6 +214,14 @@ export default function AdminDashboard() {
   const [expandedJustificativas, setExpandedJustificativas] = useState<Set<string>>(new Set());
   const [confirmEndMaintenanceDialogOpen, setConfirmEndMaintenanceDialogOpen] = useState(false);
   const [maintenanceToEnd, setMaintenanceToEnd] = useState<string | null>(null);
+  const [viewPasswordDialogOpen, setViewPasswordDialogOpen] = useState(false);
+  const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false);
+  const [changePasswordDialogOpen, setChangePasswordDialogOpen] = useState(false);
+  const [formatAccountDialogOpen, setFormatAccountDialogOpen] = useState(false);
+  const [selectedUserForPassword, setSelectedUserForPassword] = useState<any | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordSearchTerm, setPasswordSearchTerm] = useState("");
 
   const turmaForm = useForm<z.infer<typeof turmaFormSchema>>({
     resolver: zodResolver(turmaFormSchema),
@@ -2039,6 +2047,111 @@ export default function AdminDashboard() {
     });
   };
 
+  const resetPasswordMutation = useMutation({
+    mutationFn: async ({ userId, novaSenha }: { userId: string; novaSenha: string }) => {
+      const userRef = doc(db, "usuarios", userId);
+      await updateDoc(userRef, {
+        senhaAtual: novaSenha,
+        primeiroAcesso: true,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/usuarios/all"] });
+      toast({
+        title: "Senha resetada",
+        description: "A senha foi resetada. O usuário será forçado a alterá-la no próximo acesso.",
+      });
+      setResetPasswordDialogOpen(false);
+      setSelectedUserForPassword(null);
+      setNewPassword("");
+      setConfirmPassword("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao resetar senha",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const changePasswordMutation = useMutation({
+    mutationFn: async ({ userId, novaSenha }: { userId: string; novaSenha: string }) => {
+      const userRef = doc(db, "usuarios", userId);
+      await updateDoc(userRef, {
+        senhaAtual: novaSenha,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/usuarios/all"] });
+      toast({
+        title: "Senha alterada",
+        description: "A senha foi alterada com sucesso.",
+      });
+      setChangePasswordDialogOpen(false);
+      setSelectedUserForPassword(null);
+      setNewPassword("");
+      setConfirmPassword("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao alterar senha",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const formatAccountMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const userRef = doc(db, "usuarios", userId);
+      const userDoc = await getDoc(userRef);
+      
+      if (!userDoc.exists()) {
+        throw new Error("Usuário não encontrado");
+      }
+      
+      const currentData = userDoc.data();
+      
+      await updateDoc(userRef, {
+        dataNascimento: "",
+        cpf: "",
+        sexo: "",
+        telefone: "",
+        cep: "",
+        rua: "",
+        bairro: "",
+        cidade: "",
+        estado: "",
+        escolaridade: "",
+        disponibilidade: [],
+        horarioEspecialObservacao: "",
+        fotoBase64: "",
+        fotoPublica: false,
+        matricula: currentData.matricula || "",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/usuarios/all"] });
+      toast({
+        title: "Conta formatada",
+        description: "Todos os dados pessoais foram removidos, mantendo apenas informações básicas e senha.",
+      });
+      setFormatAccountDialogOpen(false);
+      setSelectedUserForPassword(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao formatar conta",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const downloadAuditHistory = () => {
     if (!maintenanceData || maintenanceData.filter(m => m.arquivada).length === 0) {
       toast({
@@ -2235,6 +2348,7 @@ export default function AdminDashboard() {
               )}
             </TabsTrigger>
             <TabsTrigger value="usuarios" data-testid="tab-usuarios">Alunos</TabsTrigger>
+            <TabsTrigger value="senhas-logins" data-testid="tab-senhas-logins">Senhas e Logins</TabsTrigger>
             <TabsTrigger value="turmas" data-testid="tab-turmas">Turmas</TabsTrigger>
             <TabsTrigger value="disciplinares" data-testid="tab-disciplinares">Advertências e Suspensões</TabsTrigger>
             <TabsTrigger value="monitoramento" data-testid="tab-monitoramento">Frequência</TabsTrigger>
@@ -2600,6 +2714,117 @@ export default function AdminDashboard() {
                     <p className="text-sm text-muted-foreground">Novos alunos devem se cadastrar na tela de login e aguardar aprovação</p>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="senhas-logins" className="space-y-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold">Gerenciamento de Senhas e Logins</h3>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Usuários do Sistema</CardTitle>
+                <CardDescription>Gerencie senhas e logins de todos os usuários</CardDescription>
+                <div className="mt-4">
+                  <Input
+                    placeholder="Buscar por nome, email ou matrícula..."
+                    value={passwordSearchTerm}
+                    onChange={(e) => setPasswordSearchTerm(e.target.value)}
+                    className="max-w-md"
+                    data-testid="input-search-passwords"
+                  />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Matrícula</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Senha Atual</TableHead>
+                      <TableHead>Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {users
+                      ?.filter((user: User) => {
+                        if (!passwordSearchTerm) return true;
+                        const term = passwordSearchTerm.toLowerCase();
+                        return (
+                          user.nome?.toLowerCase().includes(term) ||
+                          user.email?.toLowerCase().includes(term) ||
+                          user.matricula?.toLowerCase().includes(term)
+                        );
+                      })
+                      .map((user: User) => (
+                        <TableRow key={user.uid}>
+                          <TableCell className="font-medium">{user.nome}</TableCell>
+                          <TableCell>{user.email}</TableCell>
+                          <TableCell>{user.matricula || "-"}</TableCell>
+                          <TableCell>
+                            <Badge variant={user.tipo === "diretor" ? "default" : user.tipo === "professor" ? "secondary" : "outline"}>
+                              {user.tipo}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-mono text-xs">{user.senhaAtual ? "●●●●●●●●" : "Não definida"}</span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setSelectedUserForPassword(user);
+                                  setViewPasswordDialogOpen(true);
+                                }}
+                                data-testid={`button-view-password-${user.uid}`}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setSelectedUserForPassword(user);
+                                  setResetPasswordDialogOpen(true);
+                                }}
+                                data-testid={`button-reset-password-${user.uid}`}
+                              >
+                                <RefreshCw className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setSelectedUserForPassword(user);
+                                  setChangePasswordDialogOpen(true);
+                                }}
+                                data-testid={`button-change-password-${user.uid}`}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setSelectedUserForPassword(user);
+                                  setFormatAccountDialogOpen(true);
+                                }}
+                                data-testid={`button-format-account-${user.uid}`}
+                              >
+                                <Archive className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
               </CardContent>
             </Card>
           </TabsContent>
@@ -7261,6 +7486,232 @@ export default function AdminDashboard() {
               </div>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={viewPasswordDialogOpen} onOpenChange={setViewPasswordDialogOpen}>
+        <DialogContent data-testid="dialog-view-password">
+          <DialogHeader>
+            <DialogTitle>Ver Senha Atual</DialogTitle>
+            <DialogDescription>
+              Senha atual de {selectedUserForPassword?.nome}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 border rounded-lg">
+              <Label>Email</Label>
+              <p className="text-sm font-medium mt-1">{selectedUserForPassword?.email}</p>
+            </div>
+            <div className="p-4 border rounded-lg">
+              <Label>Senha Atual</Label>
+              <p className="text-lg font-mono font-bold mt-1">{selectedUserForPassword?.senhaAtual || "Não definida"}</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setViewPasswordDialogOpen(false)} data-testid="button-close-view-password">
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={resetPasswordDialogOpen} onOpenChange={setResetPasswordDialogOpen}>
+        <DialogContent data-testid="dialog-reset-password">
+          <DialogHeader>
+            <DialogTitle>Resetar Senha</DialogTitle>
+            <DialogDescription>
+              Resetar senha de {selectedUserForPassword?.nome}. O usuário será forçado a alterar a senha no próximo login.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="reset-new-password">Nova Senha</Label>
+              <Input
+                id="reset-new-password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Digite a nova senha"
+                data-testid="input-reset-new-password"
+              />
+            </div>
+            <div>
+              <Label htmlFor="reset-confirm-password">Confirmar Nova Senha</Label>
+              <Input
+                id="reset-confirm-password"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirme a nova senha"
+                data-testid="input-reset-confirm-password"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setResetPasswordDialogOpen(false);
+                setNewPassword("");
+                setConfirmPassword("");
+              }}
+              data-testid="button-cancel-reset-password"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => {
+                if (!newPassword || newPassword.length < 6) {
+                  toast({
+                    title: "Senha inválida",
+                    description: "A senha deve ter pelo menos 6 caracteres",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                if (newPassword !== confirmPassword) {
+                  toast({
+                    title: "Senhas não coincidem",
+                    description: "A senha e a confirmação devem ser iguais",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                resetPasswordMutation.mutate({
+                  userId: selectedUserForPassword.uid,
+                  novaSenha: newPassword,
+                });
+              }}
+              disabled={resetPasswordMutation.isPending}
+              data-testid="button-confirm-reset-password"
+            >
+              {resetPasswordMutation.isPending ? "Resetando..." : "Resetar Senha"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={changePasswordDialogOpen} onOpenChange={setChangePasswordDialogOpen}>
+        <DialogContent data-testid="dialog-change-password">
+          <DialogHeader>
+            <DialogTitle>Mudar Senha</DialogTitle>
+            <DialogDescription>
+              Alterar senha de {selectedUserForPassword?.nome}. O usuário NÃO será forçado a alterar a senha.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="change-new-password">Nova Senha</Label>
+              <Input
+                id="change-new-password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Digite a nova senha"
+                data-testid="input-change-new-password"
+              />
+            </div>
+            <div>
+              <Label htmlFor="change-confirm-password">Confirmar Nova Senha</Label>
+              <Input
+                id="change-confirm-password"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirme a nova senha"
+                data-testid="input-change-confirm-password"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setChangePasswordDialogOpen(false);
+                setNewPassword("");
+                setConfirmPassword("");
+              }}
+              data-testid="button-cancel-change-password"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => {
+                if (!newPassword || newPassword.length < 6) {
+                  toast({
+                    title: "Senha inválida",
+                    description: "A senha deve ter pelo menos 6 caracteres",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                if (newPassword !== confirmPassword) {
+                  toast({
+                    title: "Senhas não coincidem",
+                    description: "A senha e a confirmação devem ser iguais",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                changePasswordMutation.mutate({
+                  userId: selectedUserForPassword.uid,
+                  novaSenha: newPassword,
+                });
+              }}
+              disabled={changePasswordMutation.isPending}
+              data-testid="button-confirm-change-password"
+            >
+              {changePasswordMutation.isPending ? "Alterando..." : "Mudar Senha"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={formatAccountDialogOpen} onOpenChange={setFormatAccountDialogOpen}>
+        <DialogContent data-testid="dialog-format-account">
+          <DialogHeader>
+            <DialogTitle>Formatar Conta</DialogTitle>
+            <DialogDescription>
+              Apagar todos os dados pessoais de {selectedUserForPassword?.nome}, mantendo apenas informações básicas e senha.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg">
+              <p className="text-sm font-medium text-destructive">
+                ⚠️ Atenção: Esta ação irá remover permanentemente:
+              </p>
+              <ul className="mt-2 text-sm text-destructive/90 list-disc list-inside space-y-1">
+                <li>Dados pessoais (CPF, telefone, endereço, etc.)</li>
+                <li>Foto de perfil</li>
+                <li>Disponibilidade de horários</li>
+                <li>Outros dados opcionais</li>
+              </ul>
+              <p className="mt-2 text-sm font-medium text-destructive">
+                Serão mantidos: Nome, Email, Matrícula, Turma e Senha
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setFormatAccountDialogOpen(false)}
+              data-testid="button-cancel-format-account"
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (confirm(`Tem certeza que deseja formatar a conta de ${selectedUserForPassword?.nome}? Esta ação não pode ser desfeita.`)) {
+                  formatAccountMutation.mutate(selectedUserForPassword.uid);
+                }
+              }}
+              disabled={formatAccountMutation.isPending}
+              data-testid="button-confirm-format-account"
+            >
+              {formatAccountMutation.isPending ? "Formatando..." : "Formatar Conta"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
