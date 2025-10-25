@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation, Link } from "wouter";
-import { MessageSquare, Settings, Users, Search, ArrowLeft } from "lucide-react";
+import { MessageSquare, Settings, Users, Search, ArrowLeft, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -243,6 +243,16 @@ export default function ChatPage() {
             EduChat
           </h1>
           <div className="flex items-center gap-2">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="text-white hover:bg-white/10"
+              onClick={() => navigate("/")}
+              data-testid="button-back-home"
+              title="Voltar para Sala de Aula"
+            >
+              <Home className="h-5 w-5" />
+            </Button>
             <Button
               size="icon"
               variant="ghost"

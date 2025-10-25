@@ -48,7 +48,12 @@ export function useChatConversations() {
 
     const updateConversations = () => {
       if (loaded.q1 && loaded.q2) {
-        const sorted = allConversations.sort((a, b) => {
+        // Filtrar apenas conversas que têm mensagens reais
+        const conversationsWithMessages = allConversations.filter(
+          conv => conv.ultimaMensagem && conv.ultimaMensagem.trim() !== ""
+        );
+        
+        const sorted = conversationsWithMessages.sort((a, b) => {
           const aTime = a.ultimaMensagemTimestamp || a.dataUltimaAtualizacao || "";
           const bTime = b.ultimaMensagemTimestamp || b.dataUltimaAtualizacao || "";
           return bTime.localeCompare(aTime);
