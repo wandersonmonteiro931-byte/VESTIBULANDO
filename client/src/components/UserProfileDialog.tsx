@@ -4,7 +4,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { PresenceIndicator } from "@/components/PresenceIndicator";
 import type { User } from "@shared/schema";
 import { useEffect, useState } from "react";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
@@ -135,16 +134,6 @@ export default function UserProfileDialog({ userId, onClose }: UserProfileDialog
               <Badge variant={getBadgeVariant(user.tipo) as any}>
                 {getTipoLabel(user.tipo)}
               </Badge>
-            </div>
-
-            <div className="mt-3">
-              <PresenceIndicator
-                isOnline={user.isOnline}
-                lastSeen={user.lastSeen}
-                lastActivity={user.lastActivity}
-                showLabel={true}
-                variant="badge"
-              />
             </div>
           </div>
 

@@ -4,8 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PresenceIndicator } from "@/components/PresenceIndicator";
-import { Search, Users, GraduationCap, BookOpen, Clock } from "lucide-react";
+import { Search, Users, GraduationCap, BookOpen, Clock, Circle } from "lucide-react";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 import type { User, LoginHistory } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -120,7 +119,10 @@ export function MonitoringTab() {
               return (
                 <TableRow key={user.uid} data-testid={`row-user-${user.uid}`}>
                   <TableCell>
-                    <PresenceIndicator isOnline={user.isOnline} />
+                    <Badge variant={user.isOnline ? "default" : "outline"} className="gap-1">
+                      <Circle className={`h-2 w-2 ${user.isOnline ? 'fill-current' : ''}`} />
+                      {user.isOnline ? 'Online' : 'Offline'}
+                    </Badge>
                   </TableCell>
                   <TableCell className="font-medium" data-testid={`text-username-${user.uid}`}>
                     {user.nome}

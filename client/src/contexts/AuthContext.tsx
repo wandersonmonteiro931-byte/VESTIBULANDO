@@ -2,8 +2,6 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, signOut as firebaseSignOut, User as FirebaseUser } from "firebase/auth";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { auth, db, firebaseError } from "@/lib/firebase";
-import { usePresence } from "@/hooks/usePresence";
-import { useAutoDelivery } from "@/hooks/useAutoDelivery";
 import type { User } from "@shared/schema";
 
 interface AuthContextType {
@@ -21,12 +19,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [userData, setUserData] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  
-  // Rastrear presença online/offline
-  const { setUserOffline } = usePresence(currentUser);
-  
-  // Marcar mensagens como entregues automaticamente quando usuário está online
-  useAutoDelivery(currentUser?.uid);
 
   const fetchUserData = async (uid: string): Promise<boolean> => {
     try {
@@ -133,10 +125,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     if (!auth) return;
-    // Marcar como offline antes de fazer logout
-    if (currentUser) {
-      await setUserOffline();
-    }
     await firebaseSignOut(auth);
     setUserData(null);
   };

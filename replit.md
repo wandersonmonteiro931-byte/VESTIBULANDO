@@ -20,34 +20,6 @@ I prefer simple language and clear explanations. I want iterative development wi
 ### UI/UX Decisions
 The platform utilizes a consistent violet/purple color scheme across all dashboards (Login, Student, Teacher, Admin) to convey an educational trust theme. Status indicators use amber (pending), blue (submitted), green (graded), and red (late) for clarity. Dark mode is supported with persistent preference. Responsive layouts are prioritized (mobile-first), maintaining consistent spacing and using the Inter font family throughout. Shadcn UI components are used with custom theming.
 
-#### Chat Module - Mobile-First Development
-**CRITICAL: All chat features MUST work identically on both desktop and mobile devices, without exception.**
-
-Development Guidelines:
-- Every chat component and feature must be tested and optimized for mobile devices
-- Animations, transitions, and UI elements must render correctly on all screen sizes
-- Fixed heights should be used instead of max-heights for predictable mobile behavior
-- Sufficient padding must be added to scrollable areas to prevent content cutoff
-- Transform animations should be combined with height transitions for smooth mobile rendering
-- All future chat modifications must maintain desktop/mobile parity
-
-**Recent Mobile Optimizations (Oct 2024):**
-- Implemented safe-area-inset support for notched devices (iOS)
-- Fixed scroll behavior with touch optimization and overscroll containment
-- Optimized dropdown z-index and visibility on mobile
-- Compact alert messages to save vertical space
-- Touch targets (44px) applied only to chat control buttons
-- Prevented zoom on input focus in iOS (16px font minimum)
-- Fixed layout overflow issues in ChatWindow and ChatMessageArea
-- **Lightweight Mobile Interface (Oct 24, 2024):**
-  - Removed large warning alert from chat area for cleaner interface
-  - Reduced padding and spacing throughout (p-2 → p-1.5 on mobile)
-  - Optimized message bubble width (85% on mobile, 80% on tablets)
-  - Compact header and input areas with smaller avatars (36px on mobile)
-  - Reduced font sizes while maintaining accessibility (text-xs/12px minimum for readable text, 11px for timestamps)
-  - Streamlined alert messages to single-word status indicators on mobile
-  - Maintained 44px touch targets for all interactive elements
-
 ### Feature Specifications
 
 #### Authentication
