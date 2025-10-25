@@ -309,7 +309,8 @@ export default function Chat() {
       const conversationRef = doc(db, "chat_conversations", conversationToDelete.id);
       
       await updateDoc(conversationRef, {
-        [isParticipant1 ? "deletadoPor1" : "deletadoPor2"]: true,
+        [isParticipant1 ? "deletadaPorParticipante1" : "deletadaPorParticipante2"]: true,
+        [isParticipant1 ? "dataDelecaoParticipante1" : "dataDelecaoParticipante2"]: getNowBrasiliaISO(),
       });
 
       if (selectedConversation?.id === conversationToDelete.id) {
