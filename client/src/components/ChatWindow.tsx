@@ -5,8 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ChatConversation, ChatMessage } from "@shared/schema";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Check, CheckCheck } from "lucide-react";
 import { useChatMessages } from "@/hooks/useChatMessages";
@@ -14,6 +12,7 @@ import { useSendMessage } from "@/hooks/useSendMessage";
 import { useUserPresence } from "@/hooks/useUserPresence";
 import { useTypingIndicator } from "@/hooks/useTypingIndicator";
 import { TypingIndicator } from "@/components/TypingIndicator";
+import { formatBrasiliaTime, formatBrasiliaDate } from "@/lib/brasiliaTime";
 
 interface ChatWindowProps {
   conversation: ChatConversation;
@@ -87,30 +86,11 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
   };
 
   const formatMessageTime = (timestamp: string) => {
-    try {
-      return format(new Date(timestamp), "HH:mm", { locale: ptBR });
-    } catch {
-      return "";
-    }
+    return formatBrasiliaTime(timestamp);
   };
 
   const formatMessageDate = (timestamp: string) => {
-    try {
-      const date = new Date(timestamp);
-      const today = new Date();
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-
-      if (date.toDateString() === today.toDateString()) {
-        return "Hoje";
-      } else if (date.toDateString() === yesterday.toDateString()) {
-        return "Ontem";
-      } else {
-        return format(date, "dd/MM/yyyy", { locale: ptBR });
-      }
-    } catch {
-      return "";
-    }
+    return formatBrasiliaDate(timestamp);
   };
 
   const groupMessagesByDate = (messages: ChatMessage[]) => {
