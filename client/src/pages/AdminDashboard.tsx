@@ -2091,6 +2091,26 @@ export default function AdminDashboard() {
 
   const resetPasswordMutation = useMutation({
     mutationFn: async ({ userId, novaSenha }: { userId: string; novaSenha: string }) => {
+      // Obter o email do usuário
+      const userDoc = await getDoc(doc(db, "usuarios", userId));
+      if (!userDoc.exists()) {
+        throw new Error("Usuário não encontrado");
+      }
+      const email = userDoc.data().email;
+
+      // Atualizar senha no Firebase Authentication via API
+      const response = await fetch("/api/update-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, newPassword: novaSenha }),
+      });
+
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.message || "Erro ao atualizar senha no Authentication");
+      }
+
+      // Atualizar no Firestore
       const userRef = doc(db, "usuarios", userId);
       await updateDoc(userRef, {
         senhaAtual: novaSenha,
@@ -2102,7 +2122,7 @@ export default function AdminDashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/usuarios/all"] });
       toast({
         title: "Senha resetada",
-        description: "A senha foi resetada. O usuário será forçado a alterá-la no próximo acesso.",
+        description: "A senha foi resetada no Firebase Authentication e Firestore. O usuário será forçado a alterá-la no próximo acesso.",
       });
       setResetPasswordDialogOpen(false);
       setSelectedUserForPassword(null);
@@ -2120,6 +2140,26 @@ export default function AdminDashboard() {
 
   const changePasswordMutation = useMutation({
     mutationFn: async ({ userId, novaSenha }: { userId: string; novaSenha: string }) => {
+      // Obter o email do usuário
+      const userDoc = await getDoc(doc(db, "usuarios", userId));
+      if (!userDoc.exists()) {
+        throw new Error("Usuário não encontrado");
+      }
+      const email = userDoc.data().email;
+
+      // Atualizar senha no Firebase Authentication via API
+      const response = await fetch("/api/update-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, newPassword: novaSenha }),
+      });
+
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.message || "Erro ao atualizar senha no Authentication");
+      }
+
+      // Atualizar no Firestore
       const userRef = doc(db, "usuarios", userId);
       await updateDoc(userRef, {
         senhaAtual: novaSenha,
@@ -2130,7 +2170,7 @@ export default function AdminDashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/usuarios/all"] });
       toast({
         title: "Senha alterada",
-        description: "A senha foi alterada com sucesso.",
+        description: "A senha foi alterada com sucesso no Firebase Authentication e Firestore.",
       });
       setChangePasswordDialogOpen(false);
       setSelectedUserForPassword(null);
