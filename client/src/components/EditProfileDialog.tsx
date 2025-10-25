@@ -27,7 +27,72 @@ export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfi
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const compressImage = (file: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          // Redimensionar se for muito grande (mantém proporção)
+          const MAX_WIDTH = 1200;
+          const MAX_HEIGHT = 1200;
+          
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            reject(new Error('Não foi possível criar contexto do canvas'));
+            return;
+          }
+          
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Converter para blob com compressão
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                reject(new Error('Não foi possível comprimir a imagem'));
+                return;
+              }
+              
+              // Criar novo File a partir do Blob
+              const compressedFile = new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+              });
+              
+              resolve(compressedFile);
+            },
+            'image/jpeg',
+            0.8 // 80% de qualidade
+          );
+        };
+        img.onerror = () => reject(new Error('Erro ao carregar imagem'));
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => reject(new Error('Erro ao ler arquivo'));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     
     if (!file) return;
@@ -41,22 +106,35 @@ export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfi
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
+    try {
+      // Comprimir a imagem antes de processar
+      const compressedFile = await compressImage(file);
+      
+      // Verificar tamanho após compressão
+      if (compressedFile.size > 5 * 1024 * 1024) {
+        toast({
+          title: "Arquivo muito grande",
+          description: "A foto ainda é muito grande após compressão. Tente uma imagem menor.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        setPhotoPreview(dataUrl);
+        setPhotoFile(compressedFile);
+      };
+      reader.readAsDataURL(compressedFile);
+    } catch (error) {
+      console.error('Erro ao comprimir imagem:', error);
       toast({
-        title: "Arquivo muito grande",
-        description: "A foto deve ter no máximo 5MB",
+        title: "Erro ao processar imagem",
+        description: "Não foi possível comprimir a imagem. Tente outra foto.",
         variant: "destructive",
       });
-      return;
     }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target?.result as string;
-      setPhotoPreview(dataUrl);
-      setPhotoFile(file);
-    };
-    reader.readAsDataURL(file);
   };
 
   const handleRemovePhoto = () => {
@@ -82,9 +160,9 @@ export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfi
       // Se há uma nova foto para fazer upload
       if (photoFile) {
         // Criar referência no Firebase Storage
+        // Sempre usar .jpg pois a compressão converte para JPEG
         const timestamp = Date.now();
-        const fileExtension = photoFile.name.split('.').pop() || 'jpg';
-        const fileName = `profile_${user.uid}_${timestamp}.${fileExtension}`;
+        const fileName = `profile_${user.uid}_${timestamp}.jpg`;
         const storageRef = ref(storage, `usuarios/fotos/${fileName}`);
 
         // Fazer upload da imagem
@@ -241,7 +319,7 @@ export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfi
                 </Button>
                 
                 <p className="text-xs text-muted-foreground">
-                  Formato: JPG, PNG. Máximo: 5MB
+                  Formato: JPG, PNG. A imagem será automaticamente otimizada.
                 </p>
               </div>
             </div>
