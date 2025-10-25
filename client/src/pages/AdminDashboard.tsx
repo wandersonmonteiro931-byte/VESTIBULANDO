@@ -22,7 +22,6 @@ import { DocumentationTab } from "@/components/DocumentationTab";
 import { AnnouncementsTab } from "@/components/AnnouncementsTab";
 import { InternalDocumentsTab } from "@/components/InternalDocumentsTab";
 import { BrasiliaClock } from "@/components/BrasiliaClock";
-import ChatFloatingButton from "@/components/ChatFloatingButton";
 import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, ArrowRightLeft, Clock, Search, Eye, AlertTriangle, Settings, Power, PowerOff, Archive, Download, ChevronDown, ChevronUp, MessageCircle, Camera, Upload, X } from "lucide-react";
 import { Link } from "wouter";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -7765,8 +7764,6 @@ export default function AdminDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <ChatFloatingButton />
     </div>
   );
 }
