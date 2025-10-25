@@ -8,6 +8,7 @@ import {
   getDoc
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { getNowBrasiliaISO } from "@/lib/brasiliaTime";
 
 interface SendMessageParams {
   conversationId: string;
@@ -36,7 +37,7 @@ export function useSendMessage() {
     setError(null);
 
     try {
-      const now = new Date().toISOString();
+      const now = getNowBrasiliaISO();
 
       const messageData: any = {
         conversationId: params.conversationId,
