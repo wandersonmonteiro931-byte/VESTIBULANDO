@@ -396,6 +396,7 @@ export default function AdminDashboard() {
           matricula: solicitacao.matricula,
           dataSolicitacao: solicitacao.dataSolicitacao,
           dataAprovacao: getNowBrasiliaISO(),
+          senhaAtual: senha,
           // Campos adicionais do cadastro
           dataNascimento: solicitacao.dataNascimento,
           cpf: solicitacao.cpf,
@@ -454,6 +455,7 @@ export default function AdminDashboard() {
               matricula: solicitacao.matricula,
               dataSolicitacao: solicitacao.dataSolicitacao,
               dataAprovacao: getNowBrasiliaISO(),
+              senhaAtual: senha,
               // Campos adicionais do cadastro
               dataNascimento: solicitacao.dataNascimento,
               cpf: solicitacao.cpf,
@@ -970,6 +972,7 @@ export default function AdminDashboard() {
         dataNascimento: data.dataNascimento,
         escolaridade: data.escolaridade,
         disponibilidade: disponibilidadeHorario,
+        senhaAtual: data.senha,
         ativo: true,
         status: "aprovado",
         dataCriacao: getNowBrasiliaISO(),
@@ -2794,8 +2797,8 @@ export default function AdminDashboard() {
                       <TableHead>Nome</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Matrícula</TableHead>
+                      <TableHead>CPF</TableHead>
                       <TableHead>Tipo</TableHead>
-                      <TableHead>Senha Atual</TableHead>
                       <TableHead>Ações</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -2815,13 +2818,11 @@ export default function AdminDashboard() {
                           <TableCell className="font-medium">{user.nome}</TableCell>
                           <TableCell>{user.email}</TableCell>
                           <TableCell>{user.matricula || "-"}</TableCell>
+                          <TableCell>{user.cpf || "-"}</TableCell>
                           <TableCell>
                             <Badge variant={user.tipo === "diretor" ? "default" : user.tipo === "professor" ? "secondary" : "outline"}>
                               {user.tipo}
                             </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <span className="font-mono text-xs">{user.senhaAtual ? "●●●●●●●●" : "Não definida"}</span>
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-2">
