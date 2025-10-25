@@ -677,6 +677,20 @@ export default function AdminDashboard() {
       }
       
       const currentUserData = userDoc.data();
+      
+      // Verificar se a matrícula está sendo alterada e se já existe para outro usuário
+      if (updateData.matricula && updateData.matricula !== currentUserData.matricula) {
+        const usuariosRef = collection(db, "usuarios");
+        const q = query(usuariosRef, where("matricula", "==", updateData.matricula));
+        const snapshot = await getDocs(q);
+        
+        // Verificar se existe outro usuário com esta matrícula
+        const outroUsuarioComMatricula = snapshot.docs.find(doc => doc.id !== userId);
+        if (outroUsuarioComMatricula) {
+          throw new Error(`A matrícula ${updateData.matricula} já está em uso por outro aluno.`);
+        }
+      }
+      
       const oldTurma = currentUserData.turma;
       const newTurma = updateData.turma;
       
@@ -757,6 +771,14 @@ export default function AdminDashboard() {
 
   const quickAddAlunoMutation = useMutation({
     mutationFn: async (data: z.infer<typeof quickAddAlunoFormSchema>) => {
+      // Função auxiliar para verificar se matrícula já existe
+      const matriculaJaExiste = async (matricula: string): Promise<boolean> => {
+        const usuariosRef = collection(db, "usuarios");
+        const q = query(usuariosRef, where("matricula", "==", matricula));
+        const snapshot = await getDocs(q);
+        return !snapshot.empty;
+      };
+      
       const counterRef = doc(db, "system", "matriculaCounter");
       const novaMatricula = await runTransaction(db, async (transaction) => {
         const counterDoc = await transaction.get(counterRef);
@@ -770,7 +792,24 @@ export default function AdminDashboard() {
           transaction.update(counterRef, { ultimaMatricula: ultimaMatricula + 1 });
         }
         
-        return String(ultimaMatricula + 1).padStart(4, '0');
+        let matriculaGerada = String(ultimaMatricula + 1).padStart(4, '0');
+        
+        // Verificar se a matrícula já existe (proteção extra contra duplicatas)
+        let tentativas = 0;
+        const maxTentativas = 1000;
+        
+        while (await matriculaJaExiste(matriculaGerada) && tentativas < maxTentativas) {
+          ultimaMatricula++;
+          matriculaGerada = String(ultimaMatricula + 1).padStart(4, '0');
+          tentativas++;
+          transaction.update(counterRef, { ultimaMatricula: ultimaMatricula + 1 });
+        }
+        
+        if (tentativas >= maxTentativas) {
+          throw new Error("Não foi possível gerar uma matrícula única. Contate o administrador.");
+        }
+        
+        return matriculaGerada;
       });
 
       const userCredential = await createUserWithEmailAndPassword(firebaseAuth, data.email, data.senha);

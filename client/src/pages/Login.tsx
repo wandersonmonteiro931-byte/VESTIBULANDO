@@ -21,11 +21,20 @@ import { ptBR } from "date-fns/locale";
 import { formatBrasiliaDateTime, getNowBrasiliaISO, brasiliaToUTC } from "@/lib/brasiliaTime";
 import { HORARIOS_DISPONIVEIS } from "@shared/schema";
 
+// Verifica se uma matrícula já existe no banco de dados
+async function matriculaJaExiste(db: any, matricula: string): Promise<boolean> {
+  const { collection, query, where, getDocs } = await import("firebase/firestore");
+  const usuariosRef = collection(db, "usuarios");
+  const q = query(usuariosRef, where("matricula", "==", matricula));
+  const snapshot = await getDocs(q);
+  return !snapshot.empty;
+}
+
 // Gera uma matrícula sequencial única usando transação atômica
 async function generateUniqueMatricula(db: any): Promise<string> {
   const { doc, runTransaction, getDoc } = await import("firebase/firestore");
   
-  // Usar transação para garantir atomicidade
+  // Usar transação para garantir atomicidade e verificar duplicatas
   const matricula = await runTransaction(db, async (transaction) => {
     const contadorRef = doc(db, "system", "matriculaCounter");
     const contadorDoc = await transaction.get(contadorRef);
@@ -37,14 +46,31 @@ async function generateUniqueMatricula(db: any): Promise<string> {
       proximaMatricula = (data.ultimaMatricula || 99) + 1;
     }
     
-    // Atualizar o contador atomicamente
+    // Garantir que a matrícula tenha 4 dígitos
+    let matriculaGerada = proximaMatricula.toString().padStart(4, '0');
+    
+    // Verificar se a matrícula já existe (proteção extra contra duplicatas)
+    // Se existir, incrementar até encontrar uma disponível
+    let tentativas = 0;
+    const maxTentativas = 1000; // Proteção contra loop infinito
+    
+    while (await matriculaJaExiste(db, matriculaGerada) && tentativas < maxTentativas) {
+      proximaMatricula++;
+      matriculaGerada = proximaMatricula.toString().padStart(4, '0');
+      tentativas++;
+    }
+    
+    if (tentativas >= maxTentativas) {
+      throw new Error("Não foi possível gerar uma matrícula única. Contate o administrador.");
+    }
+    
+    // Atualizar o contador atomicamente com a matrícula que será usada
     transaction.set(contadorRef, { 
       ultimaMatricula: proximaMatricula,
       ultimaAtualizacao: getNowBrasiliaISO()
     });
     
-    // Garantir que a matrícula tenha 4 dígitos
-    return proximaMatricula.toString().padStart(4, '0');
+    return matriculaGerada;
   });
   
   return matricula;
