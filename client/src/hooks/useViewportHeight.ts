@@ -2,12 +2,14 @@ import { useEffect } from 'react';
 
 /**
  * Hook para gerenciar a altura real da viewport em dispositivos móveis
- * Resolve problemas com teclado virtual (100vh vs altura real)
+ * Resolve problemas com teclado virtual usando visualViewport API
  * 
- * Estratégia:
- * 1. Define variável CSS --app-height com window.innerHeight (valor real)
- * 2. Atualiza quando teclado abre/fecha usando visualViewport API
- * 3. Fallback para eventos resize em navegadores antigos
+ * Estratégia (baseada em solução robusta):
+ * 1. Define --app-height com visualViewport.height (área visível)
+ * 2. Calcula altura do teclado (window.innerHeight - visualViewport.height)
+ * 3. Aplica transform no input wrapper para mover acima do teclado
+ * 4. Ajusta paddingBottom das mensagens dinamicamente
+ * 5. Usa scrollIntoView no último elemento
  */
 export function useViewportHeight() {
   useEffect(() => {
@@ -21,43 +23,64 @@ export function useViewportHeight() {
     // Altura inicial
     setAppHeight();
 
-    // 1) Ajusta quando a janela redimensiona (Chrome Android, desktop)
-    const handleResize = () => {
-      setTimeout(() => setAppHeight(window.innerHeight), 50);
-    };
-    window.addEventListener('resize', handleResize);
-
-    // 2) Use visualViewport quando disponível - mais preciso no mobile
-    let visualViewportResize: (() => void) | undefined;
-    let visualViewportScroll: (() => void) | undefined;
-
+    // Use visualViewport quando disponível - mais preciso no mobile
     if (window.visualViewport) {
-      const onVVResize = () => {
-        // Altura visível da viewport (exclui teclado)
-        const vvHeight = window.visualViewport!.height;
-        root.style.setProperty('--app-height', `${vvHeight}px`);
+      const vv = window.visualViewport;
+
+      const onViewportChange = () => {
+        // vv.height é a área visível - exclui teclado
+        const visibleH = Math.round(vv.height);
+        
+        // Calcular teclado aproximado
+        const keyboardH = Math.round(window.innerHeight - visibleH);
+
+        // Se teclado está aberto (diferença significativa), use visibleH
+        // Senão, use window.innerHeight para evitar problemas em desktop
+        if (keyboardH > 50) {
+          setAppHeight(visibleH);
+        } else {
+          setAppHeight(window.innerHeight);
+        }
+
+        // Disparar evento customizado com a altura do teclado
+        // Componentes podem ouvir isso para ajustar layout
+        const event = new CustomEvent('viewport-keyboard-change', {
+          detail: { keyboardHeight: keyboardH > 50 ? keyboardH : 0, visibleHeight: visibleH }
+        });
+        window.dispatchEvent(event);
       };
 
-      visualViewportResize = onVVResize;
-      visualViewportScroll = onVVResize;
-
-      window.visualViewport.addEventListener('resize', onVVResize);
-      window.visualViewport.addEventListener('scroll', onVVResize);
-    }
-
-    // 3) Definir altura inicial quando página carrega
-    const handleLoad = () => setAppHeight(window.innerHeight);
-    window.addEventListener('load', handleLoad);
-
-    // Cleanup
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('load', handleLoad);
+      vv.addEventListener('resize', onViewportChange);
+      vv.addEventListener('scroll', onViewportChange);
       
-      if (window.visualViewport && visualViewportResize && visualViewportScroll) {
-        window.visualViewport.removeEventListener('resize', visualViewportResize);
-        window.visualViewport.removeEventListener('scroll', visualViewportScroll);
-      }
-    };
+      // Inicializar
+      onViewportChange();
+
+      // Orientação
+      const handleOrientation = () => {
+        setTimeout(() => setAppHeight(window.innerHeight), 300);
+      };
+      window.addEventListener('orientationchange', handleOrientation);
+
+      return () => {
+        vv.removeEventListener('resize', onViewportChange);
+        vv.removeEventListener('scroll', onViewportChange);
+        window.removeEventListener('orientationchange', handleOrientation);
+      };
+    } else {
+      // Fallback: resize
+      const handleResize = () => {
+        setTimeout(() => setAppHeight(window.innerHeight), 50);
+      };
+      window.addEventListener('resize', handleResize);
+
+      const handleLoad = () => setAppHeight(window.innerHeight);
+      window.addEventListener('load', handleLoad);
+
+      return () => {
+        window.removeEventListener('resize', handleResize);
+        window.removeEventListener('load', handleLoad);
+      };
+    }
   }, []);
 }

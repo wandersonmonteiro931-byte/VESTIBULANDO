@@ -481,6 +481,8 @@
   .whatsapp-input-area {
     background-color: #f0f2f5;
     flex-shrink: 0;
+    transition: transform 160ms ease;
+    will-change: transform;
   }
 
   .dark .whatsapp-input-area {

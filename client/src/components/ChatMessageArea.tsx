@@ -81,6 +81,8 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
   const [blockLoading, setBlockLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const inputWrapperRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messageInputRef = useRef<HTMLInputElement>(null);
   const { userData } = useAuth();
@@ -88,6 +90,47 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
   const { isOnline } = useNetworkStatus();
   
   useViewportHeight();
+
+  // Listener para ajustar layout quando teclado abre/fecha
+  useEffect(() => {
+    // Armazenar padding original
+    const messagesContainer = messagesContainerRef.current;
+    let originalPadding = 0;
+    
+    if (messagesContainer) {
+      const computed = window.getComputedStyle(messagesContainer);
+      originalPadding = parseFloat(computed.paddingBottom) || 0;
+    }
+
+    const handleKeyboardChange = (e: Event) => {
+      const customEvent = e as CustomEvent<{ keyboardHeight: number; visibleHeight: number }>;
+      const { keyboardHeight } = customEvent.detail;
+
+      const inputWrapper = inputWrapperRef.current;
+      const messagesContainer = messagesContainerRef.current;
+
+      if (!inputWrapper || !messagesContainer) return;
+
+      if (keyboardHeight > 0) {
+        // Teclado aberto: mover input para cima e ajustar padding das mensagens
+        inputWrapper.style.transform = `translateY(-${keyboardHeight}px)`;
+        // Adicionar padding extra SEM remover o original
+        const extraPadding = originalPadding + keyboardHeight + inputWrapper.offsetHeight + 12;
+        messagesContainer.style.paddingBottom = `${extraPadding}px`;
+      } else {
+        // Teclado fechado: remover transformações mas manter padding original
+        inputWrapper.style.transform = '';
+        // Restaurar padding original em vez de limpar
+        messagesContainer.style.paddingBottom = originalPadding > 0 ? `${originalPadding}px` : '';
+      }
+    };
+
+    window.addEventListener('viewport-keyboard-change', handleKeyboardChange);
+
+    return () => {
+      window.removeEventListener('viewport-keyboard-change', handleKeyboardChange);
+    };
+  }, []);
 
   const { messages, conversationId, resolvedConversation, createConversationAndSendMessage } = useChatThread({
     conversation,
@@ -226,18 +269,28 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
       }
     : null;
 
+  // Função para rolar até o final usando scrollIntoView (mais confiável em mobile)
+  const scrollToBottomSmooth = (immediate = false) => {
+    const last = messagesEndRef.current;
+    if (last) {
+      last.scrollIntoView({ behavior: immediate ? 'auto' : 'smooth', block: 'end' });
+    }
+  };
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    scrollToBottomSmooth();
   }, [messages, otherUserTyping]);
 
   const scrollToBottom = () => {
     setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      scrollToBottomSmooth();
     }, 250);
   };
 
   const handleInputFocus = () => {
-    scrollToBottom();
+    setTimeout(() => {
+      scrollToBottomSmooth();
+    }, 300);
   };
 
   useEffect(() => {
@@ -1114,7 +1167,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
         </DropdownMenu>
       </div>
 
-      <div className="p-2 md:p-4 space-y-1 md:space-y-2 whatsapp-bg whatsapp-messages-scroll chat-messages-area" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
+      <div ref={messagesContainerRef} className="p-2 md:p-4 space-y-1 md:space-y-2 whatsapp-bg whatsapp-messages-scroll chat-messages-area" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
         <Alert className="bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800 mb-2">
           <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
           <AlertDescription className="text-xs md:text-sm text-amber-900 dark:text-amber-100">
@@ -1303,7 +1356,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
         </>
       )}
 
-      <div className="p-1.5 md:p-2 whatsapp-input-area flex-shrink-0">
+      <div ref={inputWrapperRef} className="p-1.5 md:p-2 whatsapp-input-area flex-shrink-0">
         {!isOnline && (
           <Alert variant="destructive" className="mb-1 mx-1 md:mx-2 py-1 md:py-2">
             <WifiOff className="h-3 w-3 md:h-4 md:w-4" />
