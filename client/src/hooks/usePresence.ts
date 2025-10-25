@@ -5,8 +5,14 @@ import { db } from "@/lib/firebase";
 
 export function usePresence() {
   const { userData } = useAuth();
-  const updateIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const lastUpdateRef = useRef<number>(0);
+  const intervalsRef = useRef<{
+    update: NodeJS.Timeout | null;
+    heartbeat: NodeJS.Timeout | null;
+  }>({ update: null, heartbeat: null });
+  const stateRef = useRef<{
+    lastActivity: number;
+    isOnline: boolean;
+  }>({ lastActivity: Date.now(), isOnline: true });
 
   useEffect(() => {
     if (!userData?.uid) return;
@@ -22,13 +28,15 @@ export function usePresence() {
           lastActivity: now,
           statusPresenca: "online"
         });
-        lastUpdateRef.current = Date.now();
+        stateRef.current.isOnline = true;
       } catch (error) {
         console.error("Error setting user online:", error);
       }
     };
 
     const setOffline = async () => {
+      if (!stateRef.current.isOnline) return;
+      
       try {
         const now = new Date().toISOString();
         await updateDoc(userRef, {
@@ -37,6 +45,7 @@ export function usePresence() {
           lastActivity: now,
           statusPresenca: "offline"
         });
+        stateRef.current.isOnline = false;
       } catch (error) {
         console.error("Error setting user offline:", error);
       }
@@ -51,15 +60,17 @@ export function usePresence() {
           lastActivity: now,
           statusPresenca: "offline"
         }).catch(() => {});
+        stateRef.current.isOnline = false;
       } catch (error) {
         console.error("Error setting user offline synchronously:", error);
       }
     };
 
     const updateActivity = async () => {
-      const now = Date.now();
-      if (now - lastUpdateRef.current < 30000) {
-        return;
+      stateRef.current.lastActivity = Date.now();
+      
+      if (!stateRef.current.isOnline) {
+        await setOnline();
       }
 
       try {
@@ -69,55 +80,78 @@ export function usePresence() {
           lastActivity: timestamp,
           lastSeen: timestamp
         });
-        lastUpdateRef.current = now;
       } catch (error) {
         console.error("Error updating activity:", error);
       }
     };
 
     setOnline();
+    stateRef.current.lastActivity = Date.now();
 
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        setOffline();
+        setOfflineSync();
       } else {
+        stateRef.current.lastActivity = Date.now();
         setOnline();
       }
     };
 
     const handleActivity = () => {
-      updateActivity();
+      stateRef.current.lastActivity = Date.now();
+      if (!stateRef.current.isOnline) {
+        setOnline();
+      }
+    };
+
+    const checkHeartbeat = () => {
+      if (document.hidden && stateRef.current.isOnline) {
+        setOfflineSync();
+      } else if (!document.hidden && !stateRef.current.isOnline) {
+        setOnline();
+      }
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("mousemove", handleActivity);
+    window.addEventListener("focus", handleActivity);
+    window.addEventListener("blur", setOfflineSync);
+    window.addEventListener("mousemove", handleActivity, { passive: true });
     window.addEventListener("keydown", handleActivity);
     window.addEventListener("click", handleActivity);
-    window.addEventListener("scroll", handleActivity);
-    window.addEventListener("touchstart", handleActivity);
-    window.addEventListener("touchmove", handleActivity);
+    window.addEventListener("scroll", handleActivity, { passive: true });
+    window.addEventListener("touchstart", handleActivity, { passive: true });
+    window.addEventListener("touchmove", handleActivity, { passive: true });
+    window.addEventListener("touchend", handleActivity, { passive: true });
 
-    updateIntervalRef.current = setInterval(() => {
+    intervalsRef.current.update = setInterval(() => {
       if (!document.hidden) {
         updateActivity();
       }
-    }, 60000);
+    }, 10000);
+
+    intervalsRef.current.heartbeat = setInterval(checkHeartbeat, 3000);
 
     window.addEventListener("beforeunload", setOfflineSync);
     window.addEventListener("pagehide", setOfflineSync);
     window.addEventListener("unload", setOfflineSync);
 
     return () => {
-      if (updateIntervalRef.current) {
-        clearInterval(updateIntervalRef.current);
+      if (intervalsRef.current.update) {
+        clearInterval(intervalsRef.current.update);
+      }
+      if (intervalsRef.current.heartbeat) {
+        clearInterval(intervalsRef.current.heartbeat);
       }
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleActivity);
+      window.removeEventListener("blur", setOfflineSync);
       window.removeEventListener("mousemove", handleActivity);
       window.removeEventListener("keydown", handleActivity);
       window.removeEventListener("click", handleActivity);
       window.removeEventListener("scroll", handleActivity);
       window.removeEventListener("touchstart", handleActivity);
       window.removeEventListener("touchmove", handleActivity);
+      window.removeEventListener("touchend", handleActivity);
       window.removeEventListener("beforeunload", setOfflineSync);
       window.removeEventListener("pagehide", setOfflineSync);
       window.removeEventListener("unload", setOfflineSync);
