@@ -391,6 +391,7 @@
 
   /* WhatsApp-style chat background */
   .whatsapp-bg {
+    position: relative;
     background-color: #e5ddd5;
     background-image: 
       repeating-linear-gradient(
@@ -415,14 +416,15 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 80%;
-    max-width: 600px;
-    aspect-ratio: 1024 / 341;
+    width: 85%;
+    max-width: 700px;
+    height: auto;
+    aspect-ratio: 3;
     background-image: url('@assets/Blue and White Online School Logo (1)_1761376859857.png');
     background-position: center center;
     background-repeat: no-repeat;
     background-size: contain;
-    opacity: 0.08;
+    opacity: 0.1;
     pointer-events: none;
     z-index: 0;
   }
