@@ -163,3 +163,78 @@ export function getNowBrasiliaISO(): string {
   // Converter horário de Brasília para UTC ISO string
   return brasiliaToUTC(`${year}-${month}-${day}`, `${hour}:${minute}:${second}`);
 }
+
+/**
+ * Formata uma ISO string para exibir apenas o horário no formato XX:XX (horário de Brasília)
+ * 
+ * @param isoString - ISO string em UTC
+ * @returns String formatada "HH:mm" em horário de Brasília
+ */
+export function formatBrasiliaTime(isoString: string): string {
+  try {
+    const date = new Date(isoString);
+    const formatter = new Intl.DateTimeFormat('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+    return formatter.format(date);
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Formata uma ISO string para exibir data e hora de forma amigável
+ * Retorna "Hoje", "Ontem" ou a data completa
+ * 
+ * @param isoString - ISO string em UTC
+ * @returns String formatada como "Hoje", "Ontem" ou "dd/MM/yyyy"
+ */
+export function formatBrasiliaDate(isoString: string): string {
+  try {
+    const date = new Date(isoString);
+    
+    // Obter data no timezone de Brasília
+    const brasiliaFormatter = new Intl.DateTimeFormat('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    
+    const dateParts = brasiliaFormatter.formatToParts(date);
+    const day = dateParts.find(p => p.type === 'day')?.value || '01';
+    const month = dateParts.find(p => p.type === 'month')?.value || '01';
+    const year = dateParts.find(p => p.type === 'year')?.value || '2025';
+    
+    // Obter data atual de Brasília
+    const nowParts = brasiliaFormatter.formatToParts(new Date());
+    const nowDay = nowParts.find(p => p.type === 'day')?.value || '01';
+    const nowMonth = nowParts.find(p => p.type === 'month')?.value || '01';
+    const nowYear = nowParts.find(p => p.type === 'year')?.value || '2025';
+    
+    // Verificar se é hoje
+    if (day === nowDay && month === nowMonth && year === nowYear) {
+      return "Hoje";
+    }
+    
+    // Verificar se é ontem
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayParts = brasiliaFormatter.formatToParts(yesterday);
+    const yesterdayDay = yesterdayParts.find(p => p.type === 'day')?.value || '01';
+    const yesterdayMonth = yesterdayParts.find(p => p.type === 'month')?.value || '01';
+    const yesterdayYear = yesterdayParts.find(p => p.type === 'year')?.value || '2025';
+    
+    if (day === yesterdayDay && month === yesterdayMonth && year === yesterdayYear) {
+      return "Ontem";
+    }
+    
+    // Retornar data formatada
+    return `${day}/${month}/${year}`;
+  } catch {
+    return "";
+  }
+}
