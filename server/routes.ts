@@ -48,36 +48,61 @@ export async function registerRoutes(expressApp: Express): Promise<Server> {
 
       const lookupData = await lookupResponse.json();
 
+      let userId: string;
+
+      // Se o usuário não existe no Authentication, criar a conta
       if (!lookupData.users || lookupData.users.length === 0) {
-        return res.status(404).json({ 
-          success: false, 
-          message: "Usuário não encontrado no Firebase Authentication" 
-        });
-      }
+        console.log(`🔧 Usuário ${email} não existe no Authentication. Criando conta...`);
+        
+        const createResponse = await fetch(
+          `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: email,
+              password: newPassword,
+              returnSecureToken: false
+            })
+          }
+        );
 
-      const userId = lookupData.users[0].localId;
+        const createData = await createResponse.json();
 
-      // Atualizar a senha usando a API REST do Firebase
-      const updateResponse = await fetch(
-        `https://identitytoolkit.googleapis.com/v1/accounts:update?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            localId: userId,
-            password: newPassword,
-            returnSecureToken: false
-          })
+        if (createData.error) {
+          return res.status(400).json({ 
+            success: false, 
+            message: `Erro ao criar conta no Authentication: ${createData.error.message}` 
+          });
         }
-      );
 
-      const updateData = await updateResponse.json();
+        userId = createData.localId;
+        console.log(`✅ Conta criada com sucesso no Authentication. UID: ${userId}`);
+      } else {
+        userId = lookupData.users[0].localId;
+        
+        // Atualizar a senha usando a API REST do Firebase
+        const updateResponse = await fetch(
+          `https://identitytoolkit.googleapis.com/v1/accounts:update?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              localId: userId,
+              password: newPassword,
+              returnSecureToken: false
+            })
+          }
+        );
 
-      if (updateData.error) {
-        return res.status(400).json({ 
-          success: false, 
-          message: updateData.error.message || "Erro ao atualizar senha" 
-        });
+        const updateData = await updateResponse.json();
+
+        if (updateData.error) {
+          return res.status(400).json({ 
+            success: false, 
+            message: updateData.error.message || "Erro ao atualizar senha" 
+          });
+        }
       }
 
       res.json({ 
