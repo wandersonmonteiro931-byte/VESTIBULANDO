@@ -22,35 +22,25 @@ export function useUserPresence(userId: string): UserPresenceStatus {
 
     const userRef = doc(db, "usuarios", userId);
     
-    const unsubscribe = onSnapshot(
-      userRef, 
-      (snapshot) => {
-        if (!snapshot.exists()) {
-          setStatus({ isOnline: false, statusText: "Nunca visto" });
-          return;
-        }
-
-      const userData = snapshot.data() as User;
-      const isOnline = userData.isOnline || false;
-      const lastSeen = userData.lastSeen;
-
-      if (isOnline) {
-        const lastActivity = userData.lastActivity || userData.lastSeen;
-        if (lastActivity) {
-          const lastActivityTime = new Date(lastActivity).getTime();
-          const now = Date.now();
-          const diffMinutes = (now - lastActivityTime) / 1000 / 60;
-          
-          if (diffMinutes < 5) {
-            setStatus({ isOnline: true, statusText: "Online agora" });
-            return;
-          }
+    const calculateStatus = (userData: any) => {
+      const lastActivity = userData.lastActivity || userData.lastSeen;
+      
+      // Verificar se o usuário está realmente online baseado na última atividade
+      if (lastActivity) {
+        const lastActivityTime = new Date(lastActivity).getTime();
+        const now = Date.now();
+        const diffMinutes = (now - lastActivityTime) / 1000 / 60;
+        
+        // Considera online se a última atividade foi há menos de 2 minutos
+        if (diffMinutes < 2) {
+          return { isOnline: true, statusText: "Online agora" };
         }
       }
+      
+      const lastSeen = userData.lastSeen;
 
       if (!lastSeen) {
-        setStatus({ isOnline: false, statusText: "Nunca visto" });
-        return;
+        return { isOnline: false, statusText: "Nunca visto" };
       }
 
       const lastSeenDate = new Date(lastSeen);
@@ -77,14 +67,40 @@ export function useUserPresence(userId: string): UserPresenceStatus {
         statusText = `Visto por último em ${dateStr} às ${timeStr}`;
       }
 
-      setStatus({ isOnline: false, statusText });
+      return { isOnline: false, statusText };
+    };
+    
+    let latestUserData: any = null;
+    
+    const unsubscribe = onSnapshot(
+      userRef, 
+      (snapshot) => {
+        if (!snapshot.exists()) {
+          setStatus({ isOnline: false, statusText: "Nunca visto" });
+          return;
+        }
+
+        latestUserData = snapshot.data() as User;
+        const newStatus = calculateStatus(latestUserData);
+        setStatus(newStatus);
       },
       (error) => {
         setStatus({ isOnline: false, statusText: "Offline" });
       }
     );
 
-    return () => unsubscribe();
+    // Recalcular status a cada 30 segundos para detectar quando usuário fica offline
+    const interval = setInterval(() => {
+      if (latestUserData) {
+        const newStatus = calculateStatus(latestUserData);
+        setStatus(newStatus);
+      }
+    }, 30000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(interval);
+    };
   }, [userId]);
 
   return status;
