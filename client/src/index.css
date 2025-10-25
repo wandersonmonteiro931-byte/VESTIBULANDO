@@ -412,21 +412,21 @@
 
   .whatsapp-bg::before {
     content: '';
-    position: absolute;
+    position: fixed;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 85%;
-    max-width: 700px;
+    width: 95%;
+    max-width: 900px;
     height: auto;
     aspect-ratio: 3;
-    background-image: url('@assets/Blue and White Online School Logo (1)_1761376859857.png');
+    background-image: var(--chat-watermark);
     background-position: center center;
     background-repeat: no-repeat;
     background-size: contain;
-    opacity: 0.1;
+    opacity: 0.18;
     pointer-events: none;
-    z-index: 0;
+    z-index: 1;
   }
 
   .dark .whatsapp-bg {
@@ -640,7 +640,7 @@
 
   .chat-messages-area > * {
     position: relative;
-    z-index: 1;
+    z-index: 10;
   }
 
   .whatsapp-input-area {

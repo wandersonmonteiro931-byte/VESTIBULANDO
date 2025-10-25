@@ -15,6 +15,7 @@ import { TypingIndicator } from "@/components/TypingIndicator";
 import { formatBrasiliaTime, formatBrasiliaDate } from "@/lib/brasiliaTime";
 import UserProfileDialog from "@/components/UserProfileDialog";
 import { useUserData } from "@/hooks/useUserData";
+import watermarkLogo from "@/assets/watermark-logo.png";
 
 interface ChatWindowProps {
   conversation: ChatConversation;
@@ -175,7 +176,7 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
       </div>
 
       {/* Messages Area */}
-      <div className="chat-messages-area whatsapp-bg p-4">
+      <div className="chat-messages-area whatsapp-bg p-4" style={{"--chat-watermark": `url(${watermarkLogo})`} as React.CSSProperties}>
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-muted-foreground">Carregando mensagens...</div>
