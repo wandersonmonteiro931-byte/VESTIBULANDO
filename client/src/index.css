@@ -91,6 +91,11 @@
   --tracking-normal: 0em;
   --spacing: 0.25rem;
 
+  /* Mobile viewport height variables - managed by useViewportHeight hook */
+  --app-height: 100vh; /* fallback, updated dynamically by JS */
+  --header-height: 56px;
+  --input-height: 64px;
+
   /* Automatically computed borders - intensity can be controlled by the user by the --opaque-button-border-intensity setting */
 
   /* Fallback for older browsers */
@@ -468,8 +473,7 @@
   /* Mobile-specific: Container fills viewport, letting content flow naturally */
   @media (max-width: 768px) {
     .chat-message-container {
-      min-height: 100vh;
-      min-height: 100dvh;
+      min-height: var(--app-height);
     }
   }
 
@@ -612,10 +616,10 @@
       position: relative !important;
       position: -webkit-relative !important;
       position: -moz-relative !important;
-      /* Fallback para navegadores sem dvh */
+      /* Fallback para navegadores sem suporte a variáveis CSS */
       min-height: 100vh !important;
       min-height: -webkit-fill-available !important;
-      min-height: 100dvh !important;
+      min-height: var(--app-height) !important;
       display: flex !important;
       display: -webkit-flex !important;
       display: -moz-flex !important;
@@ -630,10 +634,10 @@
     /* Wrapper para área de chat - todos navegadores */
     .chat-window-mobile {
       width: 100% !important;
-      /* Fallback para navegadores sem dvh */
+      /* Fallback para navegadores sem suporte a variáveis CSS */
       height: 100vh !important;
       height: -webkit-fill-available !important;
-      height: 100dvh !important;
+      height: var(--app-height) !important;
       display: flex !important;
       display: -webkit-flex !important;
       display: -moz-flex !important;
@@ -651,7 +655,7 @@
     /* Container de mensagens */
     .chat-message-container {
       width: 100% !important;
-      height: 100dvh !important;
+      height: var(--app-height) !important;
       position: relative !important;
       overflow: hidden !important;
     }
@@ -682,7 +686,7 @@
       margin-bottom: 60px !important;
       overflow-y: auto !important;
       overflow-x: hidden !important;
-      height: calc(100dvh - 116px) !important;
+      height: calc(var(--app-height) - 116px) !important;
       -webkit-overflow-scrolling: touch !important;
       overscroll-behavior: contain !important;
       position: relative !important;

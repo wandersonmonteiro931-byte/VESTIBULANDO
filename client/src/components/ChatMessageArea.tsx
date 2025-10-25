@@ -24,6 +24,7 @@ import { useNetworkStatus, retryWithBackoff } from "@/hooks/useNetworkStatus";
 import { useChatThread } from "@/hooks/useChatThread";
 import { useUserPresence } from "@/hooks/useUserPresence";
 import { useTypingIndicator } from "@/hooks/useTypingIndicator";
+import { useViewportHeight } from "@/hooks/useViewportHeight";
 import UserProfileDialog from "@/components/UserProfileDialog";
 import {
   DropdownMenu,
@@ -81,9 +82,12 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
   const [deleteLoading, setDeleteLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const messageInputRef = useRef<HTMLInputElement>(null);
   const { userData } = useAuth();
   const { toast } = useToast();
   const { isOnline } = useNetworkStatus();
+  
+  useViewportHeight();
 
   const { messages, conversationId, resolvedConversation, createConversationAndSendMessage } = useChatThread({
     conversation,
@@ -225,6 +229,16 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, otherUserTyping]);
+
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 250);
+  };
+
+  const handleInputFocus = () => {
+    scrollToBottom();
+  };
 
   useEffect(() => {
     if (!conversationId || !resolvedConversation) return;
@@ -1340,6 +1354,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
           </Button>
 
           <Input
+            ref={messageInputRef}
             placeholder={
               !isOnline 
                 ? "Sem conexão..." 
@@ -1360,6 +1375,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
                 sendMessage();
               }
             }}
+            onFocus={handleInputFocus}
             disabled={uploading || sending || blocked || !isOnline}
             data-testid="input-message"
             className="flex-1 bg-white dark:bg-gray-700 border-0 rounded-full px-4"

@@ -30,6 +30,7 @@ import { useIncomingCalls } from "@/hooks/useIncomingCalls";
 import { useToast } from "@/hooks/use-toast";
 import { useDeliveryOnPresence } from "@/hooks/useDeliveryOnPresence";
 import { useConversationStatusSync } from "@/hooks/useConversationStatusSync";
+import { useViewportHeight } from "@/hooks/useViewportHeight";
 
 export default function Chat() {
   const [, setLocation] = useLocation();
@@ -55,6 +56,7 @@ export default function Chat() {
   const { userData, refreshUserData } = useAuth();
   const { toast } = useToast();
 
+  useViewportHeight();
   useDeliveryOnPresence(userData?.uid);
   useConversationStatusSync(userData?.uid);
 

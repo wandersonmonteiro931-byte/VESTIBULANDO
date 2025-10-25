@@ -30,6 +30,7 @@ import { useIncomingCalls } from "@/hooks/useIncomingCalls";
 import { useToast } from "@/hooks/use-toast";
 import { useDeliveryOnPresence } from "@/hooks/useDeliveryOnPresence";
 import { useConversationStatusSync } from "@/hooks/useConversationStatusSync";
+import { useViewportHeight } from "@/hooks/useViewportHeight";
 
 interface ChatWindowProps {
   onClose: () => void;
@@ -58,6 +59,7 @@ function ChatWindowContent({ onClose }: ChatWindowProps) {
   const { userData, refreshUserData } = useAuth();
   const { toast } = useToast();
 
+  useViewportHeight();
   useDeliveryOnPresence(userData?.uid);
   useConversationStatusSync(userData?.uid);
 
