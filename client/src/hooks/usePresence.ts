@@ -8,11 +8,13 @@ export function usePresence() {
   const intervalsRef = useRef<{
     update: NodeJS.Timeout | null;
     heartbeat: NodeJS.Timeout | null;
-  }>({ update: null, heartbeat: null });
+    offlineCheck: NodeJS.Timeout | null;
+  }>({ update: null, heartbeat: null, offlineCheck: null });
   const stateRef = useRef<{
     lastActivity: number;
     isOnline: boolean;
-  }>({ lastActivity: Date.now(), isOnline: true });
+    offlineAttempts: number;
+  }>({ lastActivity: Date.now(), isOnline: true, offlineAttempts: 0 });
 
   useEffect(() => {
     if (!userData?.uid) return;
@@ -29,6 +31,7 @@ export function usePresence() {
           statusPresenca: "online"
         });
         stateRef.current.isOnline = true;
+        stateRef.current.offlineAttempts = 0;
       } catch (error) {
         console.error("Error setting user online:", error);
       }
@@ -46,24 +49,66 @@ export function usePresence() {
           statusPresenca: "offline"
         });
         stateRef.current.isOnline = false;
+        stateRef.current.offlineAttempts = 0;
       } catch (error) {
         console.error("Error setting user offline:", error);
       }
     };
 
-    const setOfflineSync = () => {
+    // Versão agressiva de marcar offline - tenta múltiplas vezes
+    const setOfflineImmediate = async () => {
+      const now = new Date().toISOString();
+      stateRef.current.isOnline = false;
+      
+      // Primeira tentativa imediata
       try {
-        const now = new Date().toISOString();
-        updateDoc(userRef, {
+        await updateDoc(userRef, {
           isOnline: false,
           lastSeen: now,
           lastActivity: now,
           statusPresenca: "offline"
-        }).catch(() => {});
-        stateRef.current.isOnline = false;
+        });
+        stateRef.current.offlineAttempts = 0;
+        return;
       } catch (error) {
-        console.error("Error setting user offline synchronously:", error);
+        console.warn("Tentativa 1 de marcar offline falhou:", error);
       }
+
+      // Tentar novamente após 1 segundo
+      setTimeout(async () => {
+        if (stateRef.current.isOnline) return; // Já está online novamente
+        try {
+          await updateDoc(userRef, {
+            isOnline: false,
+            lastSeen: new Date().toISOString(),
+            lastActivity: new Date().toISOString(),
+            statusPresenca: "offline"
+          });
+          stateRef.current.offlineAttempts = 0;
+        } catch (error) {
+          console.warn("Tentativa 2 de marcar offline falhou:", error);
+        }
+      }, 1000);
+
+      // Última tentativa após 2 segundos
+      setTimeout(async () => {
+        if (stateRef.current.isOnline) return; // Já está online novamente
+        try {
+          await updateDoc(userRef, {
+            isOnline: false,
+            lastSeen: new Date().toISOString(),
+            lastActivity: new Date().toISOString(),
+            statusPresenca: "offline"
+          });
+          stateRef.current.offlineAttempts = 0;
+        } catch (error) {
+          console.warn("Tentativa 3 de marcar offline falhou:", error);
+        }
+      }, 2000);
+    };
+
+    const setOfflineSync = () => {
+      setOfflineImmediate();
     };
 
     const updateActivity = async () => {
@@ -90,20 +135,36 @@ export function usePresence() {
 
     const handleVisibilityChange = () => {
       if (document.hidden) {
+        console.log("📱 Página ficou oculta - marcando offline imediatamente");
         setOfflineSync();
       } else {
+        console.log("📱 Página voltou a ficar visível - marcando online");
         stateRef.current.lastActivity = Date.now();
         setOnline();
       }
     };
 
-    const handleActivity = () => {
+    const handleBlur = () => {
+      console.log("🔄 Janela perdeu foco - marcando offline");
+      setOfflineSync();
+    };
+
+    const handleFocus = () => {
+      console.log("🔄 Janela ganhou foco - marcando online");
       stateRef.current.lastActivity = Date.now();
       if (!stateRef.current.isOnline) {
         setOnline();
       }
     };
 
+    const handleActivity = () => {
+      stateRef.current.lastActivity = Date.now();
+      if (!stateRef.current.isOnline && !document.hidden) {
+        setOnline();
+      }
+    };
+
+    // Heartbeat verificando a cada 1 segundo para detecção rápida
     const checkHeartbeat = () => {
       if (document.hidden && stateRef.current.isOnline) {
         setOfflineSync();
@@ -113,8 +174,8 @@ export function usePresence() {
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("focus", handleActivity);
-    window.addEventListener("blur", setOfflineSync);
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("blur", handleBlur);
     window.addEventListener("mousemove", handleActivity, { passive: true });
     window.addEventListener("keydown", handleActivity);
     window.addEventListener("click", handleActivity);
@@ -123,13 +184,15 @@ export function usePresence() {
     window.addEventListener("touchmove", handleActivity, { passive: true });
     window.addEventListener("touchend", handleActivity, { passive: true });
 
+    // Atualizar atividade a cada 10 segundos quando visível
     intervalsRef.current.update = setInterval(() => {
       if (!document.hidden) {
         updateActivity();
       }
     }, 10000);
 
-    intervalsRef.current.heartbeat = setInterval(checkHeartbeat, 3000);
+    // Heartbeat a cada 1 segundo para detecção rápida de mudança de estado
+    intervalsRef.current.heartbeat = setInterval(checkHeartbeat, 1000);
 
     window.addEventListener("beforeunload", setOfflineSync);
     window.addEventListener("pagehide", setOfflineSync);
@@ -142,9 +205,12 @@ export function usePresence() {
       if (intervalsRef.current.heartbeat) {
         clearInterval(intervalsRef.current.heartbeat);
       }
+      if (intervalsRef.current.offlineCheck) {
+        clearInterval(intervalsRef.current.offlineCheck);
+      }
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("focus", handleActivity);
-      window.removeEventListener("blur", setOfflineSync);
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("blur", handleBlur);
       window.removeEventListener("mousemove", handleActivity);
       window.removeEventListener("keydown", handleActivity);
       window.removeEventListener("click", handleActivity);
