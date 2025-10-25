@@ -126,7 +126,7 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
         <Button
           size="icon"
           variant="ghost"
-          className="text-white hover:bg-white/10 md:hidden"
+          className="text-white hover:bg-white/10"
           onClick={onBack}
           data-testid="button-back"
         >
