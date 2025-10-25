@@ -124,7 +124,7 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
   return (
     <div className="flex flex-col h-full w-full">
       {/* Header */}
-      <div className="chat-header-fixed whatsapp-header flex items-center gap-1 px-3 py-2.5 md:px-4 md:py-3 border-b border-border/30">
+      <div className="chat-header-fixed whatsapp-header flex items-center gap-1 px-3 py-2.5 md:px-4 md:py-3">
         <Button
           size="icon"
           variant="ghost"
@@ -246,7 +246,7 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
       </div>
 
       {/* Input Area */}
-      <div className="whatsapp-input-area flex items-center gap-1.5 px-3 py-2.5 md:px-4 md:py-3 border-t border-border/30">
+      <div className="whatsapp-input-area flex items-center gap-1.5 px-3 py-2.5 md:px-4 md:py-3">
         <Button
           size="icon"
           variant="ghost"
