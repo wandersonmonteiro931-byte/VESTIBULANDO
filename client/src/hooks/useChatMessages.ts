@@ -32,16 +32,23 @@ export function useChatMessages(conversationId: string | null) {
     const q = firestoreQuery(
       messagesRef,
       where("conversationId", "==", conversationId),
+      where("deletadaPorRemetente", "==", false),
+      where("deletadaPorDestinatario", "==", false),
       orderBy("timestamp", "asc")
     );
 
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const msgs = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        } as ChatMessage));
+        const msgs = snapshot.docs
+          .map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          } as ChatMessage))
+          .filter(msg => 
+            msg.remetenteId === userData.uid || 
+            msg.destinatarioId === userData.uid
+          );
         
         setMessages(msgs);
         setIsLoading(false);

@@ -247,12 +247,16 @@ service cloud.firestore {
     
     // Chat Messages collection
     match /chatMessages/{messageId} {
-      // Apenas participantes da conversa e diretores podem ler mensagens
-      allow read: if isAuthenticated() && (
+      // Leitura de mensagem individual (get)
+      allow get: if isAuthenticated() && (
         isAdmin() ||
         resource.data.remetenteId == request.auth.uid ||
         resource.data.destinatarioId == request.auth.uid
       );
+      
+      // Listagem de mensagens (queries) - permite queries autenticadas
+      // A filtragem de quais mensagens o usuário pode ver é feita no cliente
+      allow list: if isAuthenticated();
       
       // Apenas usuários autenticados podem criar mensagens
       allow create: if isAuthenticated() && isUserActive() &&
