@@ -455,9 +455,9 @@
   /* Mobile watermark size */
   @media (max-width: 768px) {
     .whatsapp-bg::before {
-      width: 140% !important;
-      max-width: 1500px !important;
-      min-width: 500px !important;
+      width: 300% !important;
+      max-width: none !important;
+      min-width: 800px !important;
     }
   }
 
