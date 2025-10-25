@@ -124,11 +124,11 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
   return (
     <div className="flex flex-col h-full w-full">
       {/* Header */}
-      <div className="chat-header-fixed whatsapp-header flex items-center gap-2 px-2 py-2 border-b border-border">
+      <div className="chat-header-fixed whatsapp-header flex items-center gap-1 px-3 py-2.5 md:px-4 md:py-3 border-b border-border/30">
         <Button
           size="icon"
           variant="ghost"
-          className="text-white hover:bg-white/10 shrink-0"
+          className="text-white hover:bg-white/10 shrink-0 h-9 w-9"
           onClick={onBack}
           data-testid="button-back"
         >
@@ -136,7 +136,7 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
         </Button>
 
         <div 
-          className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer hover:bg-white/5 rounded-lg p-1.5 transition-colors"
+          className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer hover:bg-white/5 rounded-lg p-1 transition-colors"
           onClick={() => setShowUserProfile(true)}
           data-testid="button-open-user-profile"
         >
@@ -150,14 +150,14 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
           </Avatar>
 
           <div className="flex-1 min-w-0">
-            <h2 className="font-semibold text-white truncate text-sm" data-testid="text-chat-participant-name">
+            <h2 className="font-semibold text-white truncate text-sm leading-tight" data-testid="text-chat-participant-name">
               {otherParticipant.tipo === "diretor" ? "Diretoria" : otherParticipant.nome}
             </h2>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 mt-0.5">
               {presenceStatus.isOnline && (
                 <div className="w-1.5 h-1.5 rounded-full bg-green-400" data-testid="indicator-online" />
               )}
-              <p className="text-[11px] text-white/90 truncate" data-testid="text-participant-status">
+              <p className="text-[11px] text-white/80 truncate leading-tight" data-testid="text-participant-status">
                 {presenceStatus.statusText}
               </p>
             </div>
@@ -167,7 +167,7 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
         <Button
           size="icon"
           variant="ghost"
-          className="text-white hover:bg-white/10 shrink-0"
+          className="text-white hover:bg-white/10 shrink-0 h-9 w-9"
           data-testid="button-more-options"
         >
           <MoreVertical className="h-5 w-5" />
@@ -246,7 +246,7 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
       </div>
 
       {/* Input Area */}
-      <div className="whatsapp-input-area flex items-center gap-1.5 px-2 py-2">
+      <div className="whatsapp-input-area flex items-center gap-1.5 px-3 py-2.5 md:px-4 md:py-3 border-t border-border/30">
         <Button
           size="icon"
           variant="ghost"
@@ -268,7 +268,7 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
         <Input
           type="text"
           placeholder="Digite uma mensagem"
-          className="flex-1 bg-white dark:bg-[#2a3942] border-none focus-visible:ring-1 h-9 text-sm"
+          className="flex-1 bg-white dark:bg-[#2a3942] border-none focus-visible:ring-1 h-9 text-sm rounded-full px-3"
           value={message}
           onChange={(e) => {
             setMessage(e.target.value);
