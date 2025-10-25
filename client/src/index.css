@@ -416,8 +416,8 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 180%;
-    max-width: 1900px;
+    width: 140%;
+    max-width: 1500px;
     height: auto;
     aspect-ratio: 3;
     background-image: var(--chat-watermark);
@@ -455,8 +455,9 @@
   /* Mobile watermark size */
   @media (max-width: 768px) {
     .whatsapp-bg::before {
-      width: 180% !important;
-      max-width: 1900px !important;
+      width: 140% !important;
+      max-width: 1500px !important;
+      min-width: 500px !important;
     }
   }
 
