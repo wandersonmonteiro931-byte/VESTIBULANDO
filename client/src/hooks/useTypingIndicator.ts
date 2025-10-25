@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from "react";
 import { doc, updateDoc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useState } from "react";
+import { getNowBrasiliaISO } from "@/lib/brasiliaTime";
 
 interface UseTypingIndicatorProps {
   conversationId: string;
@@ -48,7 +49,7 @@ export function useTypingIndicator({ conversationId, userId, isParticipant1 }: U
       
       await updateDoc(conversationRef, {
         [fieldName]: typing,
-        [timestampField]: new Date().toISOString()
+        [timestampField]: getNowBrasiliaISO()
       });
 
       if (typing) {

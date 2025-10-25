@@ -11,6 +11,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { ChatMessage } from "@shared/schema";
+import { getNowBrasiliaISO } from "@/lib/brasiliaTime";
 
 export function useChatMessages(conversationId: string | null) {
   const { userData } = useAuth();
@@ -72,7 +73,7 @@ async function markMessagesAsRead(
   messages: ChatMessage[]
 ) {
   try {
-    const now = new Date().toISOString();
+    const now = getNowBrasiliaISO();
     
     const unreadMessages = messages.filter(
       msg => msg.destinatarioId === userId && !msg.lida

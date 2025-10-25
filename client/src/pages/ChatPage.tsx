@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 import { useChatConversations } from "@/hooks/useChatConversations";
 import { collection, getDocs, addDoc, query as firestoreQuery, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { formatBrasiliaTime } from "@/lib/brasiliaTime";
+import { formatBrasiliaTime, getNowBrasiliaISO } from "@/lib/brasiliaTime";
 
 export default function ChatPage() {
   const { userData } = useAuth();
@@ -199,7 +199,7 @@ export default function ChatPage() {
         return;
       }
 
-      const now = new Date().toISOString();
+      const now = getNowBrasiliaISO();
       const conversationData = {
         participante1Id: userData.uid,
         participante1Nome: userData.nome,
