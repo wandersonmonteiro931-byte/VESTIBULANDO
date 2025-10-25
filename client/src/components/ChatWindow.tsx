@@ -117,9 +117,9 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
   if (!userData) return null;
 
   return (
-    <div className="flex flex-col h-full w-full overflow-hidden">
+    <div className="flex flex-col h-full w-full overflow-hidden md:flex md:flex-col">
       {/* Header */}
-      <div className="chat-header-fixed whatsapp-header flex items-center gap-3 border-b border-border flex-shrink-0">
+      <div className="chat-header-fixed whatsapp-header flex items-center gap-3 border-b border-border p-3 md:flex-shrink-0 md:static">
         <Button
           size="icon"
           variant="ghost"
@@ -188,7 +188,7 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
       </div>
 
       {/* Messages Area */}
-      <div className="chat-messages-area flex-1 whatsapp-bg p-4 overflow-y-auto">
+      <div className="chat-messages-area whatsapp-bg p-4 md:flex-1 md:overflow-y-auto">
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-muted-foreground">Carregando mensagens...</div>
@@ -259,7 +259,7 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
       </div>
 
       {/* Input Area */}
-      <div className="whatsapp-input-area flex items-center gap-2 border-t border-border flex-shrink-0">
+      <div className="whatsapp-input-area flex items-center gap-2 p-3 border-t border-border md:flex-shrink-0 md:static">
         <Button
           size="icon"
           variant="ghost"
