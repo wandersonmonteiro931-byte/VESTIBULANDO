@@ -93,7 +93,7 @@ export default function ChatConversationPage() {
   }
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background">
+    <div className="fixed inset-0 md:relative md:flex md:h-screen w-full overflow-hidden bg-background">
       <ChatWindow conversation={conversation} onBack={handleBack} />
     </div>
   );

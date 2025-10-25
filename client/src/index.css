@@ -547,6 +547,14 @@
     z-index: 100000 !important;
   }
 
+  /* Mobile chat layout fix - prevent entire page scroll */
+  @media (max-width: 768px) {
+    /* Container principal do chat deve usar todo o viewport */
+    body, html {
+      overflow: hidden !important;
+    }
+  }
+
   /* Mobile touch optimizations - Compatível com todos navegadores */
   @media (max-width: 768px) {
     /* Prevent zoom on input focus - iOS, Android, todos navegadores */
@@ -671,8 +679,9 @@
       border-bottom: 1px solid hsl(var(--border)) !important;
       padding-top: env(safe-area-inset-top, 0) !important;
       min-height: 64px !important;
-      z-index: 50 !important;
+      z-index: 100 !important;
       flex-shrink: 0 !important;
+      width: 100% !important;
     }
 
     .dark .chat-header-fixed {
@@ -697,8 +706,9 @@
       border-top: 1px solid hsl(var(--border)) !important;
       padding-bottom: env(safe-area-inset-bottom, 0) !important;
       min-height: 68px !important;
-      z-index: 50 !important;
+      z-index: 100 !important;
       flex-shrink: 0 !important;
+      width: 100% !important;
     }
 
     .dark .whatsapp-input-area {
