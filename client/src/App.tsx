@@ -12,6 +12,7 @@ import StudentDashboard from "@/pages/StudentDashboard";
 import TeacherDashboard from "@/pages/TeacherDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
 import ChatPage from "@/pages/ChatPage";
+import ChatConversationPage from "@/pages/ChatConversationPage";
 import NotFound from "@/pages/not-found";
 
 function RootRedirect() {
@@ -70,6 +71,12 @@ function Router() {
       <Route path="/chat">
         <ProtectedRoute allowedTypes={["aluno", "professor", "diretor"]}>
           <ChatPage />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/chat/:conversationId">
+        <ProtectedRoute allowedTypes={["aluno", "professor", "diretor"]}>
+          <ChatConversationPage />
         </ProtectedRoute>
       </Route>
       

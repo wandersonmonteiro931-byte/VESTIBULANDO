@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLocation, Link } from "wouter";
 import { MessageSquare, Settings, Users, Search, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +10,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ChatConversation, User } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import ChatWindow from "../components/ChatWindow";
 import NewChatDialog from "../components/NewChatDialog";
 import { cn } from "@/lib/utils";
 import { useChatConversations } from "@/hooks/useChatConversations";
@@ -18,7 +18,7 @@ import { db } from "@/lib/firebase";
 
 export default function ChatPage() {
   const { userData } = useAuth();
-  const [selectedConversation, setSelectedConversation] = useState<ChatConversation | null>(null);
+  const [, navigate] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<"chats" | "groups" | "settings">("chats");
   const [showNewChatDialog, setShowNewChatDialog] = useState(false);
@@ -62,10 +62,7 @@ export default function ChatPage() {
   }, [userData?.uid]);
 
   const handleConversationCreated = (conversationId: string) => {
-    const conversation = conversations.find(c => c.id === conversationId);
-    if (conversation) {
-      setSelectedConversation(conversation);
-    }
+    navigate(`/chat/${conversationId}`);
   };
 
   const filteredUsers = searchTerm.trim()
@@ -142,69 +139,61 @@ export default function ChatPage() {
     );
 
     if (existingConversation) {
-      setSelectedConversation(existingConversation);
-      setSearchTerm("");
-    } else {
-      try {
-        const conversationsRef = collection(db, "chatConversations");
-        
-        const q1 = firestoreQuery(
-          conversationsRef,
-          where("participante1Id", "==", userData.uid),
-          where("participante2Id", "==", user.uid)
-        );
-        const q2 = firestoreQuery(
-          conversationsRef,
-          where("participante1Id", "==", user.uid),
-          where("participante2Id", "==", userData.uid)
-        );
+      navigate(`/chat/${existingConversation.id}`);
+      return;
+    }
 
-        const [snapshot1, snapshot2] = await Promise.all([
-          getDocs(q1),
-          getDocs(q2)
-        ]);
+    try {
+      const conversationsRef = collection(db, "chatConversations");
+      
+      const q1 = firestoreQuery(
+        conversationsRef,
+        where("participante1Id", "==", userData.uid),
+        where("participante2Id", "==", user.uid)
+      );
+      const q2 = firestoreQuery(
+        conversationsRef,
+        where("participante1Id", "==", user.uid),
+        where("participante2Id", "==", userData.uid)
+      );
 
-        if (!snapshot1.empty) {
-          const conversation = conversations.find(c => c.id === snapshot1.docs[0].id);
-          if (conversation) {
-            setSelectedConversation(conversation);
-            setSearchTerm("");
-          }
-          return;
-        }
+      const [snapshot1, snapshot2] = await Promise.all([
+        getDocs(q1),
+        getDocs(q2)
+      ]);
 
-        if (!snapshot2.empty) {
-          const conversation = conversations.find(c => c.id === snapshot2.docs[0].id);
-          if (conversation) {
-            setSelectedConversation(conversation);
-            setSearchTerm("");
-          }
-          return;
-        }
-
-        const now = new Date().toISOString();
-        const conversationData = {
-          participante1Id: userData.uid,
-          participante1Nome: userData.nome,
-          participante1Tipo: userData.tipo,
-          participante2Id: user.uid,
-          participante2Nome: user.nome,
-          participante2Tipo: user.tipo,
-          mensagensNaoLidas1: 0,
-          mensagensNaoLidas2: 0,
-          participante1Digitando: false,
-          participante2Digitando: false,
-          deletadaPorParticipante1: false,
-          deletadaPorParticipante2: false,
-          dataCriacao: now,
-          dataUltimaAtualizacao: now,
-        };
-
-        await addDoc(conversationsRef, conversationData);
-        setSearchTerm("");
-      } catch (error) {
-        console.error("Error creating conversation:", error);
+      if (!snapshot1.empty) {
+        navigate(`/chat/${snapshot1.docs[0].id}`);
+        return;
       }
+
+      if (!snapshot2.empty) {
+        navigate(`/chat/${snapshot2.docs[0].id}`);
+        return;
+      }
+
+      const now = new Date().toISOString();
+      const conversationData = {
+        participante1Id: userData.uid,
+        participante1Nome: userData.nome,
+        participante1Tipo: userData.tipo,
+        participante2Id: user.uid,
+        participante2Nome: user.nome,
+        participante2Tipo: user.tipo,
+        mensagensNaoLidas1: 0,
+        mensagensNaoLidas2: 0,
+        participante1Digitando: false,
+        participante2Digitando: false,
+        deletadaPorParticipante1: false,
+        deletadaPorParticipante2: false,
+        dataCriacao: now,
+        dataUltimaAtualizacao: now,
+      };
+
+      const newConversation = await addDoc(conversationsRef, conversationData);
+      navigate(`/chat/${newConversation.id}`);
+    } catch (error) {
+      console.error("Error creating conversation:", error);
     }
   };
 
@@ -213,12 +202,7 @@ export default function ChatPage() {
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background">
       {/* Sidebar - Lista de Conversas */}
-      <div
-        className={cn(
-          "flex flex-col border-r border-border bg-background transition-all",
-          selectedConversation ? "hidden md:flex md:w-[400px]" : "w-full md:w-[400px]"
-        )}
-      >
+      <div className="flex flex-col w-full max-w-[500px] mx-auto border-x border-border bg-background">
         {/* Header */}
         <div className="whatsapp-header flex items-center justify-between p-4">
           <h1 className="text-xl font-semibold text-white" data-testid="text-chat-title">
@@ -355,14 +339,10 @@ export default function ChatPage() {
                 const isOnline = false;
 
                 return (
-                  <div
+                  <Link
                     key={conversation.id}
-                    className={cn(
-                      "whatsapp-conversation-item flex items-center gap-3 p-3 cursor-pointer border-b border-border",
-                      selectedConversation?.id === conversation.id &&
-                        "bg-[#f0f2f5] dark:bg-[#2a3942]"
-                    )}
-                    onClick={() => setSelectedConversation(conversation)}
+                    href={`/chat/${conversation.id}`}
+                    className="whatsapp-conversation-item flex items-center gap-3 p-3 cursor-pointer border-b border-border hover-elevate"
                     data-testid={`conversation-item-${conversation.id}`}
                   >
                     <div className="relative">
@@ -405,7 +385,7 @@ export default function ChatPage() {
                         )}
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 );
               })}
             </div>
@@ -419,30 +399,6 @@ export default function ChatPage() {
             </div>
           )}
         </ScrollArea>
-      </div>
-
-      {/* Chat Window */}
-      <div className="flex-1 flex flex-col">
-        {selectedConversation ? (
-          <ChatWindow
-            conversation={selectedConversation}
-            onBack={() => setSelectedConversation(null)}
-          />
-        ) : (
-          <div className="flex-1 flex items-center justify-center bg-[#f0f2f5] dark:bg-[#0b141a]">
-            <div className="text-center">
-              <MessageSquare className="h-24 w-24 text-muted-foreground mx-auto mb-4" />
-              <h2 className="text-2xl font-semibold text-foreground mb-2">
-                EduChat Web
-              </h2>
-              <p className="text-muted-foreground max-w-md">
-                Conecte-se com seus colegas, professores e diretores.
-                <br />
-                Selecione uma conversa para começar.
-              </p>
-            </div>
-          </div>
-        )}
       </div>
 
       <NewChatDialog
