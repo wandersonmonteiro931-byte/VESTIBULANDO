@@ -119,7 +119,7 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
   return (
     <div className="flex flex-col h-full w-full">
       {/* Header */}
-      <div className="chat-header-fixed whatsapp-header flex items-center gap-3 p-3">
+      <div className="chat-header-fixed whatsapp-header flex items-center gap-3 p-3 border-b border-border">
         <Button
           size="icon"
           variant="ghost"
