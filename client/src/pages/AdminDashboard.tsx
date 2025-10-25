@@ -7541,21 +7541,40 @@ export default function AdminDashboard() {
       </Dialog>
 
       <Dialog open={viewPasswordDialogOpen} onOpenChange={setViewPasswordDialogOpen}>
-        <DialogContent data-testid="dialog-view-password">
+        <DialogContent data-testid="dialog-view-password" className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Ver Senha Atual</DialogTitle>
+            <DialogTitle className="text-xl">DADOS PARA LOGIN DE ALUNO/PROFESSOR/DIRETOR</DialogTitle>
             <DialogDescription>
-              Senha atual de {selectedUserForPassword?.nome}
+              Informações de acesso de {selectedUserForPassword?.nome}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="p-4 border rounded-lg">
-              <Label>Email</Label>
-              <p className="text-sm font-medium mt-1">{selectedUserForPassword?.email}</p>
+            <div className="p-4 border rounded-lg bg-muted/30">
+              <Label className="text-sm text-muted-foreground">CPF</Label>
+              <p className="text-base font-semibold mt-1" data-testid="text-user-cpf">
+                {selectedUserForPassword?.cpf || "Não informado"}
+              </p>
             </div>
-            <div className="p-4 border rounded-lg">
-              <Label>Senha Atual</Label>
-              <p className="text-lg font-mono font-bold mt-1">{selectedUserForPassword?.senhaAtual || "Não definida"}</p>
+            <div className="p-4 border rounded-lg bg-muted/30">
+              <Label className="text-sm text-muted-foreground">Matrícula</Label>
+              <p className="text-base font-semibold mt-1" data-testid="text-user-matricula">
+                {selectedUserForPassword?.matricula || "Não informada"}
+              </p>
+            </div>
+            <div className="p-4 border rounded-lg bg-muted/30">
+              <Label className="text-sm text-muted-foreground">Senha Atual</Label>
+              <p className="text-lg font-mono font-bold mt-1" data-testid="text-user-password">
+                {selectedUserForPassword?.senhaAtual || "Não definida"}
+              </p>
+            </div>
+            <div className="flex items-start gap-3 p-4 border-2 border-destructive/50 rounded-lg bg-destructive/5">
+              <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-destructive text-sm">NÃO COMPARTILHE</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Essas informações são confidenciais e de uso exclusivo do usuário.
+                </p>
+              </div>
             </div>
           </div>
           <DialogFooter>
