@@ -27,8 +27,8 @@ import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, C
 import { Checkbox } from "@/components/ui/checkbox";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
-import type { User, Turma, Maintenance } from "@shared/schema";
-import { HORARIOS_DISPONIVEIS } from "@shared/schema";
+import type { User, Turma, Maintenance, DiretorQuickAddAluno } from "@shared/schema";
+import { HORARIOS_DISPONIVEIS, diretorQuickAddAlunoSchema } from "@shared/schema";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -46,21 +46,7 @@ const turmaFormSchema = z.object({
   linkWhatsApp: z.string().optional(),
 });
 
-const alunoFormSchema = z.object({
-  nome: z.string().min(1, "Nome é obrigatório"),
-  email: z.string().email("Email inválido"),
-  senha: z.string().min(6, "A senha deve ter pelo menos 6 caracteres"),
-  turma: z.string().optional(),
-  tipo: z.enum(["aluno", "professor", "diretor"]).default("aluno"),
-}).refine((data) => {
-  if (data.tipo === "aluno" && !data.turma) {
-    return false;
-  }
-  return true;
-}, {
-  message: "Turma é obrigatória para alunos",
-  path: ["turma"],
-});
+const quickAddAlunoFormSchema = diretorQuickAddAlunoSchema;
 
 const professorDiretorFormSchema = z.object({
   nome: z.string().min(1, "Nome completo é obrigatório"),
@@ -241,16 +227,35 @@ export default function AdminDashboard() {
     },
   });
 
-  const alunoForm = useForm<z.infer<typeof alunoFormSchema>>({
-    resolver: zodResolver(alunoFormSchema),
+  const quickAddAlunoForm = useForm<z.infer<typeof quickAddAlunoFormSchema>>({
+    resolver: zodResolver(quickAddAlunoFormSchema),
     defaultValues: {
       nome: "",
       email: "",
       senha: "",
+      dataNascimento: "",
+      cpf: "",
+      sexo: "",
+      escolaridade: "",
+      telefone: "",
       turma: "",
-      tipo: "aluno",
+      cep: "",
+      rua: "",
+      bairro: "",
+      cidade: "",
+      estado: "",
+      disponibilidade: [],
+      horarioEspecialObservacao: "",
+      fotoBase64: "",
+      fotoPublica: false,
     },
   });
+  
+  const [quickAddDisponibilidade, setQuickAddDisponibilidade] = useState<string[]>([]);
+  const [quickAddHorarioEspecialObs, setQuickAddHorarioEspecialObs] = useState("");
+  const [quickAddFotoBase64, setQuickAddFotoBase64] = useState("");
+  const [quickAddFotoPublica, setQuickAddFotoPublica] = useState(false);
+  const [buscandoCepQuickAdd, setBuscandoCepQuickAdd] = useState(false);
 
   const professorDiretorForm = useForm<z.infer<typeof professorDiretorFormSchema>>({
     resolver: zodResolver(professorDiretorFormSchema),
@@ -742,21 +747,55 @@ export default function AdminDashboard() {
     },
   });
 
-  const createAlunoMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof alunoFormSchema>) => {
+  const quickAddAlunoMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof quickAddAlunoFormSchema>) => {
+      const counterRef = doc(db, "system", "matriculaCounter");
+      const novaMatricula = await runTransaction(db, async (transaction) => {
+        const counterDoc = await transaction.get(counterRef);
+        
+        let ultimaMatricula: number;
+        if (!counterDoc.exists()) {
+          ultimaMatricula = 99;
+          transaction.set(counterRef, { ultimaMatricula: 100 });
+        } else {
+          ultimaMatricula = counterDoc.data().ultimaMatricula || 99;
+          transaction.update(counterRef, { ultimaMatricula: ultimaMatricula + 1 });
+        }
+        
+        return String(ultimaMatricula + 1).padStart(4, '0');
+      });
+
       const userCredential = await createUserWithEmailAndPassword(firebaseAuth, data.email, data.senha);
       
       await setDoc(doc(db, "usuarios", userCredential.user.uid), {
         uid: userCredential.user.uid,
         nome: data.nome,
         email: data.email,
-        tipo: data.tipo,
+        tipo: "aluno",
         turma: data.turma || "",
+        matricula: novaMatricula,
         ativo: true,
         status: "aprovado",
+        dataNascimento: data.dataNascimento || "",
+        cpf: data.cpf || "",
+        sexo: data.sexo || "",
+        escolaridade: data.escolaridade || "",
+        telefone: data.telefone || "",
+        cep: data.cep || "",
+        rua: data.rua || "",
+        bairro: data.bairro || "",
+        cidade: data.cidade || "",
+        estado: data.estado || "",
+        disponibilidade: data.disponibilidade || [],
+        horarioEspecialObservacao: data.horarioEspecialObservacao || "",
+        fotoBase64: data.fotoBase64 || "",
+        fotoPublica: data.fotoPublica || false,
+        senhaAtual: data.senha,
+        primeiroAcesso: true,
+        dataCriacao: getNowBrasiliaISO(),
       });
       
-      if (data.tipo === "aluno" && data.turma) {
+      if (data.turma) {
         const turmaRef = doc(db, "turmas", data.turma);
         const turmaDoc = await getDoc(turmaRef);
         if (turmaDoc.exists()) {
@@ -766,18 +805,22 @@ export default function AdminDashboard() {
         }
       }
       
-      return userCredential.user;
+      return { user: userCredential.user, matricula: novaMatricula };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
       queryClient.invalidateQueries({ queryKey: ["/api/usuarios/all"] });
       queryClient.invalidateQueries({ queryKey: ["/api/turmas"] });
       toast({
         title: "Aluno criado com sucesso!",
-        description: "O aluno pode acessar a plataforma.",
+        description: `Matrícula gerada: ${data.matricula}. O aluno pode acessar a plataforma.`,
       });
       setCreateAlunoDialogOpen(false);
-      alunoForm.reset();
+      quickAddAlunoForm.reset();
+      setQuickAddDisponibilidade([]);
+      setQuickAddHorarioEspecialObs("");
+      setQuickAddFotoBase64("");
+      setQuickAddFotoPublica(false);
     },
     onError: (error: any) => {
       let message = error.message;
@@ -1933,6 +1976,27 @@ export default function AdminDashboard() {
         }
       } catch (error) {
         console.error('Erro ao buscar CEP:', error);
+      }
+    }
+  };
+
+  const buscarCEPQuickAdd = async (cep: string) => {
+    const cepLimpo = cep.replace(/\D/g, '');
+    if (cepLimpo.length === 8) {
+      setBuscandoCepQuickAdd(true);
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+        const data = await response.json();
+        if (!data.erro) {
+          quickAddAlunoForm.setValue('rua', data.logradouro || '');
+          quickAddAlunoForm.setValue('bairro', data.bairro || '');
+          quickAddAlunoForm.setValue('cidade', data.localidade || '');
+          quickAddAlunoForm.setValue('estado', data.uf || '');
+        }
+      } catch (error) {
+        console.error('Erro ao buscar CEP:', error);
+      } finally {
+        setBuscandoCepQuickAdd(false);
       }
     }
   };
@@ -3992,94 +4056,332 @@ export default function AdminDashboard() {
       </Dialog>
 
       <Dialog open={createAlunoDialogOpen} onOpenChange={setCreateAlunoDialogOpen}>
-        <DialogContent data-testid="dialog-create-user">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="dialog-create-user">
           <DialogHeader>
             <DialogTitle>Adicionar Aluno</DialogTitle>
             <DialogDescription>
-              Crie um novo aluno com acesso imediato à plataforma
+              Cadastro rápido de aluno. Apenas Nome, Email e Senha são obrigatórios. A matrícula será gerada automaticamente.
             </DialogDescription>
           </DialogHeader>
 
-          <Form {...alunoForm}>
-            <form onSubmit={alunoForm.handleSubmit((data) => createAlunoMutation.mutate(data))} className="space-y-4">
-              <FormField
-                control={alunoForm.control}
-                name="nome"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome Completo</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Nome do aluno" {...field} data-testid="input-user-nome" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <Form {...quickAddAlunoForm}>
+            <form onSubmit={quickAddAlunoForm.handleSubmit((data) => {
+              const formData = {
+                ...data,
+                disponibilidade: quickAddDisponibilidade,
+                horarioEspecialObservacao: quickAddHorarioEspecialObs,
+                fotoBase64: quickAddFotoBase64,
+                fotoPublica: quickAddFotoPublica,
+              };
+              quickAddAlunoMutation.mutate(formData);
+            })} className="space-y-4">
+              
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-muted-foreground">Informações Básicas (Obrigatórias)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={quickAddAlunoForm.control}
+                    name="nome"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nome Completo *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Nome do aluno" {...field} data-testid="input-user-nome" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-              <FormField
-                control={alunoForm.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input type="email" placeholder="email@exemplo.com" {...field} data-testid="input-user-email" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  <FormField
+                    control={quickAddAlunoForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email *</FormLabel>
+                        <FormControl>
+                          <Input type="email" placeholder="email@exemplo.com" {...field} data-testid="input-user-email" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
-              <FormField
-                control={alunoForm.control}
-                name="senha"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Senha</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="Mínimo 6 caracteres" {...field} data-testid="input-user-senha" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={alunoForm.control}
-                name="tipo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tipo</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormField
+                  control={quickAddAlunoForm.control}
+                  name="senha"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Senha *</FormLabel>
                       <FormControl>
-                        <SelectTrigger data-testid="select-user-tipo">
-                          <SelectValue placeholder="Selecione o tipo" />
-                        </SelectTrigger>
+                        <Input type="password" placeholder="Mínimo 6 caracteres" {...field} data-testid="input-user-senha" />
                       </FormControl>
-                      <SelectContent>
-                        <SelectItem value="aluno">Aluno</SelectItem>
-                        <SelectItem value="professor">Professor</SelectItem>
-                        <SelectItem value="diretor">Diretor</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-              <FormField
-                control={alunoForm.control}
-                name="turma"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Turma</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: 3A, 2B" {...field} data-testid="input-user-turma" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+              <div className="space-y-4 pt-4 border-t">
+                <h3 className="text-sm font-semibold text-muted-foreground">Dados Pessoais (Opcional)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={quickAddAlunoForm.control}
+                    name="dataNascimento"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Data de Nascimento</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} data-testid="input-data-nasc" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={quickAddAlunoForm.control}
+                    name="cpf"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>CPF</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="000.000.000-00" 
+                            {...field}
+                            onChange={(e) => {
+                              const formatted = formatarCPF(e.target.value);
+                              field.onChange(formatted);
+                            }}
+                            maxLength={14}
+                            data-testid="input-cpf" 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={quickAddAlunoForm.control}
+                    name="sexo"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Sexo</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-sexo">
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="masculino">Masculino</SelectItem>
+                            <SelectItem value="feminino">Feminino</SelectItem>
+                            <SelectItem value="nao-binario">Não binário</SelectItem>
+                            <SelectItem value="prefiro-nao-informar">Prefiro não informar</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={quickAddAlunoForm.control}
+                    name="escolaridade"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Escolaridade</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-escolaridade">
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="ensino-fundamental">Ensino Fundamental</SelectItem>
+                            <SelectItem value="ensino-medio">Ensino Médio</SelectItem>
+                            <SelectItem value="ensino-superior">Ensino Superior</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={quickAddAlunoForm.control}
+                    name="telefone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Telefone (WhatsApp)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="(00)00000-0000" 
+                            {...field}
+                            onChange={(e) => {
+                              const formatted = formatarTelefone(e.target.value);
+                              field.onChange(formatted);
+                            }}
+                            data-testid="input-telefone" 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={quickAddAlunoForm.control}
+                    name="turma"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Turma</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-turma">
+                              <SelectValue placeholder="Selecione a turma" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {turmas?.map((turma: Turma) => (
+                              <SelectItem key={turma.id} value={turma.id}>
+                                {turma.nome}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-4 pt-4 border-t">
+                <h3 className="text-sm font-semibold text-muted-foreground">Endereço (Opcional)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={quickAddAlunoForm.control}
+                    name="cep"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>CEP</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="00000-000" 
+                            {...field}
+                            onChange={(e) => {
+                              const formatted = formatarCEP(e.target.value);
+                              field.onChange(formatted);
+                              if (formatted.replace(/\D/g, '').length === 8) {
+                                buscarCEPQuickAdd(formatted);
+                              }
+                            }}
+                            maxLength={9}
+                            data-testid="input-cep" 
+                          />
+                        </FormControl>
+                        {buscandoCepQuickAdd && <p className="text-xs text-muted-foreground">Buscando CEP...</p>}
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={quickAddAlunoForm.control}
+                    name="rua"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Rua</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Nome da rua" {...field} data-testid="input-rua" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={quickAddAlunoForm.control}
+                    name="bairro"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Bairro</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Nome do bairro" {...field} data-testid="input-bairro" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={quickAddAlunoForm.control}
+                    name="cidade"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Cidade</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Nome da cidade" {...field} data-testid="input-cidade" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={quickAddAlunoForm.control}
+                    name="estado"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Estado</FormLabel>
+                        <FormControl>
+                          <Input placeholder="UF" {...field} maxLength={2} data-testid="input-estado" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-4 pt-4 border-t">
+                <h3 className="text-sm font-semibold text-muted-foreground">Disponibilidade (Opcional)</h3>
+                <div className="space-y-2">
+                  {HORARIOS_DISPONIVEIS.map((horario) => (
+                    <div key={horario} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`quick-${horario}`}
+                        checked={quickAddDisponibilidade.includes(horario)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setQuickAddDisponibilidade([...quickAddDisponibilidade, horario]);
+                          } else {
+                            setQuickAddDisponibilidade(quickAddDisponibilidade.filter(h => h !== horario));
+                          }
+                        }}
+                        data-testid={`checkbox-${horario.toLowerCase().replace(/\s/g, '-')}`}
+                      />
+                      <Label htmlFor={`quick-${horario}`} className="text-sm cursor-pointer">{horario}</Label>
+                    </div>
+                  ))}
+                </div>
+
+                {quickAddDisponibilidade.includes("Horário especial") && (
+                  <div className="mt-4">
+                    <Label>Descreva o horário especial</Label>
+                    <Textarea
+                      placeholder="Ex: Disponível apenas aos sábados das 14h às 18h"
+                      value={quickAddHorarioEspecialObs}
+                      onChange={(e) => setQuickAddHorarioEspecialObs(e.target.value)}
+                      className="mt-2"
+                      data-testid="textarea-horario-especial"
+                    />
+                  </div>
                 )}
-              />
+              </div>
 
               <DialogFooter>
                 <Button
@@ -4087,14 +4389,18 @@ export default function AdminDashboard() {
                   variant="outline"
                   onClick={() => {
                     setCreateAlunoDialogOpen(false);
-                    alunoForm.reset();
+                    quickAddAlunoForm.reset();
+                    setQuickAddDisponibilidade([]);
+                    setQuickAddHorarioEspecialObs("");
+                    setQuickAddFotoBase64("");
+                    setQuickAddFotoPublica(false);
                   }}
                   data-testid="button-cancel-create-user"
                 >
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={createAlunoMutation.isPending} data-testid="button-save-user">
-                  {createAlunoMutation.isPending ? "Criando..." : "Criar Aluno"}
+                <Button type="submit" disabled={quickAddAlunoMutation.isPending} data-testid="button-save-user">
+                  {quickAddAlunoMutation.isPending ? "Criando..." : "Criar Aluno"}
                 </Button>
               </DialogFooter>
             </form>
