@@ -23,7 +23,7 @@ import { AnnouncementsTab } from "@/components/AnnouncementsTab";
 import { InternalDocumentsTab } from "@/components/InternalDocumentsTab";
 import { BrasiliaClock } from "@/components/BrasiliaClock";
 import ChatFloatingButton from "@/components/ChatFloatingButton";
-import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, ArrowRightLeft, Clock, Search, Eye, AlertTriangle, Settings, Power, PowerOff, Archive, Download, ChevronDown, ChevronUp, MessageCircle } from "lucide-react";
+import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, ArrowRightLeft, Clock, Search, Eye, AlertTriangle, Settings, Power, PowerOff, Archive, Download, ChevronDown, ChevronUp, MessageCircle, Camera, Upload, X } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
@@ -82,18 +82,19 @@ const editStudentFormSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
   email: z.string().email("Email inválido"),
   matricula: z.string().optional(),
-  dataNascimento: z.string().min(1, "Data de nascimento é obrigatória"),
-  cpf: z.string().min(1, "CPF é obrigatório"),
-  sexo: z.string().min(1, "Sexo é obrigatório"),
-  telefone: z.string().min(1, "Telefone é obrigatório"),
-  escolaridade: z.string().min(1, "Escolaridade é obrigatória"),
-  cep: z.string().min(1, "CEP é obrigatório"),
-  rua: z.string().min(1, "Rua é obrigatória"),
-  bairro: z.string().min(1, "Bairro é obrigatório"),
-  cidade: z.string().min(1, "Cidade é obrigatória"),
-  estado: z.string().min(1, "Estado é obrigatório"),
+  dataNascimento: z.string().optional(),
+  cpf: z.string().optional(),
+  sexo: z.string().optional(),
+  telefone: z.string().optional(),
+  escolaridade: z.string().optional(),
+  cep: z.string().optional(),
+  rua: z.string().optional(),
+  bairro: z.string().optional(),
+  cidade: z.string().optional(),
+  estado: z.string().optional(),
   turma: z.string().min(1, "Turma é obrigatória"),
-  disponibilidade: z.array(z.string()).min(1, "Selecione pelo menos uma disponibilidade"),
+  disponibilidade: z.array(z.string()).optional(),
+  fotoBase64: z.string().optional(),
 });
 
 // Componente para mostrar tempo decorrido da manutenção
@@ -194,6 +195,7 @@ export default function AdminDashboard() {
   const [selectedStudentDetails, setSelectedStudentDetails] = useState<User | null>(null);
   const [isEditingStudent, setIsEditingStudent] = useState(false);
   const [editStudentDisponibilidade, setEditStudentDisponibilidade] = useState<string[]>([]);
+  const [editStudentFoto, setEditStudentFoto] = useState<string>("");
   const [disciplinarySearchTerm, setDisciplinarySearchTerm] = useState("");
   const [warningDialogOpen, setWarningDialogOpen] = useState(false);
   const [suspensionDialogOpen, setSuspensionDialogOpen] = useState(false);
@@ -285,6 +287,7 @@ export default function AdminDashboard() {
       estado: "",
       turma: "",
       disponibilidade: [],
+      fotoBase64: "",
     },
   });
 
@@ -331,6 +334,14 @@ export default function AdminDashboard() {
   }));
   
   const loadingPendingUsers = loadingSolicitacoes;
+
+  // Sincronizar editStudentDisponibilidade quando entrar no modo de edição
+  useEffect(() => {
+    if (isEditingStudent && selectedStudentDetails) {
+      setEditStudentDisponibilidade(selectedStudentDetails.disponibilidade || []);
+      setEditStudentFoto(selectedStudentDetails.fotoBase64 || "");
+    }
+  }, [isEditingStudent, selectedStudentDetails]);
 
   // Nota: O fechamento automático foi removido para dar controle total ao diretor.
   // Turmas fora do período são sinalizadas visualmente com cor laranja,
@@ -4543,6 +4554,22 @@ export default function AdminDashboard() {
           
           {selectedStudentDetails && !isEditingStudent && (
             <div className="space-y-6">
+              {selectedStudentDetails.fotoBase64 && (
+                <div className="flex justify-center">
+                  <div className="space-y-2">
+                    <Label>Foto 3x4</Label>
+                    <div className="border-2 rounded-lg p-2 bg-muted/30">
+                      <img 
+                        src={selectedStudentDetails.fotoBase64} 
+                        alt="Foto do aluno" 
+                        className="w-32 h-40 object-cover rounded"
+                        data-testid="img-student-photo"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Card>
                   <CardHeader>
@@ -4646,6 +4673,7 @@ export default function AdminDashboard() {
                   ...data,
                   userId: selectedStudentDetails.uid,
                   disponibilidade: editStudentDisponibilidade,
+                  fotoBase64: editStudentFoto,
                 });
               })} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -4922,6 +4950,90 @@ export default function AdminDashboard() {
 
                 <Card>
                   <CardHeader>
+                    <CardTitle className="text-lg">Foto 3x4</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="w-32 h-40 border-2 border-dashed border-muted-foreground/25 rounded-lg flex items-center justify-center bg-muted/30 overflow-hidden">
+                        {editStudentFoto ? (
+                          <img 
+                            src={editStudentFoto} 
+                            alt="Preview da foto" 
+                            className="w-full h-full object-cover"
+                            data-testid="img-edit-photo-preview"
+                          />
+                        ) : (
+                          <Camera className="h-12 w-12 text-muted-foreground/50" />
+                        )}
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const input = document.createElement('input');
+                            input.type = 'file';
+                            input.accept = 'image/*';
+                            input.onchange = (e) => {
+                              const file = (e.target as HTMLInputElement).files?.[0];
+                              if (file) {
+                                if (!file.type.startsWith('image/')) {
+                                  toast({
+                                    title: "Arquivo inválido",
+                                    description: "Por favor, selecione uma imagem",
+                                    variant: "destructive",
+                                  });
+                                  return;
+                                }
+                                if (file.size > 5 * 1024 * 1024) {
+                                  toast({
+                                    title: "Arquivo muito grande",
+                                    description: "A foto deve ter no máximo 5MB",
+                                    variant: "destructive",
+                                  });
+                                  return;
+                                }
+                                const reader = new FileReader();
+                                reader.onload = (e) => {
+                                  const base64 = e.target?.result as string;
+                                  setEditStudentFoto(base64);
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            };
+                            input.click();
+                          }}
+                          data-testid="button-upload-photo"
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          {editStudentFoto ? "Alterar Foto" : "Adicionar Foto"}
+                        </Button>
+                        
+                        {editStudentFoto && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditStudentFoto("")}
+                            data-testid="button-remove-photo"
+                          >
+                            <X className="h-4 w-4 mr-2" />
+                            Remover
+                          </Button>
+                        )}
+                      </div>
+                      
+                      <p className="text-xs text-muted-foreground text-center">
+                        Formato 3x4 • Máximo 5MB • JPG, PNG
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
                     <CardTitle className="text-lg">Informações Acadêmicas</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -5015,8 +5127,10 @@ export default function AdminDashboard() {
                         estado: selectedStudentDetails.estado || "",
                         turma: selectedStudentDetails.turma || "",
                         disponibilidade: selectedStudentDetails.disponibilidade || [],
+                        fotoBase64: selectedStudentDetails.fotoBase64 || "",
                       });
                       setEditStudentDisponibilidade(selectedStudentDetails.disponibilidade || []);
+                      setEditStudentFoto(selectedStudentDetails.fotoBase64 || "");
                     }
                     setIsEditingStudent(true);
                   }}
@@ -5043,6 +5157,7 @@ export default function AdminDashboard() {
                       ...data,
                       userId: selectedStudentDetails!.uid,
                       disponibilidade: editStudentDisponibilidade,
+                      fotoBase64: editStudentFoto,
                     });
                   })}
                   disabled={updateStudentDataMutation.isPending}
