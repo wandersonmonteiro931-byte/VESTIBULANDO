@@ -648,55 +648,59 @@
       position: -moz-relative !important;
     }
 
-    /* Container de mensagens - estrutura flex simples */
+    /* Container de mensagens */
     .chat-message-container {
-      display: flex !important;
-      flex-direction: column !important;
-      height: 100vh !important;
-      height: 100dvh !important;
       width: 100% !important;
+      height: 100dvh !important;
+      position: relative !important;
+      overflow: hidden !important;
+    }
+
+    /* CABEÇALHO - FIXO NO TOPO (não mexe nunca) */
+    .chat-header-fixed {
       position: fixed !important;
       top: 0 !important;
       left: 0 !important;
       right: 0 !important;
-      bottom: 0 !important;
-      overflow: hidden !important;
-    }
-
-    /* CABEÇALHO - fixo no topo sem position fixed */
-    .chat-header-fixed {
-      flex-shrink: 0 !important;
-      position: sticky !important;
-      top: 0 !important;
-      z-index: 100 !important;
+      height: 56px !important;
       background-color: #008069 !important;
-      width: 100% !important;
+      border-bottom: 1px solid hsl(var(--border)) !important;
+      display: flex !important;
+      align-items: center !important;
+      padding: 0 12px !important;
       padding-top: env(safe-area-inset-top, 0) !important;
+      z-index: 9999 !important;
     }
 
     .dark .chat-header-fixed {
       background-color: #202c33 !important;
     }
 
-    /* Área de mensagens - cresce e tem scroll próprio */
+    /* Área de mensagens - SOMENTE ESTA PARTE ROLA */
     .chat-messages-area {
-      flex: 1 1 0% !important;
-      min-height: 0 !important;
+      margin-top: 56px !important;
+      margin-bottom: 60px !important;
       overflow-y: auto !important;
       overflow-x: hidden !important;
+      height: calc(100dvh - 116px) !important;
       -webkit-overflow-scrolling: touch !important;
       overscroll-behavior: contain !important;
       position: relative !important;
     }
 
-    /* Input - fixo na parte inferior */
+    /* Input - FIXO NO RODAPÉ (sempre acima do teclado) */
     .whatsapp-input-area {
-      flex-shrink: 0 !important;
-      width: 100% !important;
+      position: fixed !important;
+      bottom: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
       background-color: #f0f2f5 !important;
-      padding-bottom: env(safe-area-inset-bottom, 0) !important;
-      position: relative !important;
-      z-index: 10 !important;
+      border-top: 1px solid hsl(var(--border)) !important;
+      padding: 8px !important;
+      padding-bottom: calc(8px + env(safe-area-inset-bottom, 0)) !important;
+      display: flex !important;
+      gap: 10px !important;
+      z-index: 9999 !important;
     }
 
     .dark .whatsapp-input-area {
