@@ -1,11 +1,15 @@
 import { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Send, Paperclip, X, Search, MoreVertical, Image as ImageIcon, Video, File, FileText, Music, Trash2 } from "lucide-react";
+import { ArrowLeft, Send, Paperclip, X, Search, MoreVertical, Image as ImageIcon, Video, File, FileText, Music, Trash2, Ban, Flag, ShieldAlert } from "lucide-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -44,6 +48,12 @@ export default function Chat() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [sending, setSending] = useState(false);
+
+  // Estados de bloqueio e denúncia
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockDialogOpen, setBlockDialogOpen] = useState(false);
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [reportReason, setReportReason] = useState("");
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
