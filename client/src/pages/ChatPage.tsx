@@ -256,8 +256,8 @@ export default function ChatPage() {
               onClick={() => setShowProfileEditDialog(true)}
               data-testid="button-open-profile"
             >
-              {userData?.fotoBase64 ? (
-                <AvatarImage src={userData.fotoBase64} alt={userData.nome} />
+              {(userData?.fotoUrl || userData?.fotoBase64) ? (
+                <AvatarImage src={userData.fotoUrl || userData.fotoBase64} alt={userData.nome} />
               ) : null}
               <AvatarFallback className="bg-white text-[#008069] text-sm">
                 {userData?.tipo === "diretor" ? "DIR" : userData?.nome?.charAt(0).toUpperCase()}
@@ -344,7 +344,7 @@ export default function ChatPage() {
                   data-testid={`user-item-${user.uid}`}
                 >
                   <Avatar className="h-12 w-12">
-                    <AvatarImage src={user.fotoBase64 || ""} />
+                    <AvatarImage src={user.fotoUrl || user.fotoBase64 || ""} />
                     <AvatarFallback className="bg-[#00a884] text-white">
                       {user.tipo === "diretor" ? "DIR" : user.nome.charAt(0).toUpperCase()}
                     </AvatarFallback>

@@ -219,7 +219,7 @@ export default function NewChatDialog({
                     data-testid={`user-item-${user.uid}`}
                   >
                     <Avatar className="h-12 w-12">
-                      <AvatarImage src={user.fotoBase64 || ""} />
+                      <AvatarImage src={user.fotoUrl || user.fotoBase64 || ""} />
                       <AvatarFallback className="bg-[#00a884] text-white">
                         {user.tipo === "diretor" ? "DIR" : user.nome.charAt(0).toUpperCase()}
                       </AvatarFallback>

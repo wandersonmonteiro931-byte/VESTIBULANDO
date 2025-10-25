@@ -107,9 +107,34 @@ export function DocumentationTab() {
 
   // Verificar se pode ver a foto
   const canViewPhoto = (user: User) => {
-    if (!user.fotoBase64) return false;
+    if (!user.fotoUrl && !user.fotoBase64) return false;
     if (user.fotoPublica) return true;
     return currentUser?.tipo === "diretor";
+  };
+
+  // Converter URL para base64 para uso em PDF
+  const getPhotoBase64 = async (user: User): Promise<string | null> => {
+    if (user.fotoBase64) {
+      return user.fotoBase64;
+    }
+    
+    if (user.fotoUrl) {
+      try {
+        const response = await fetch(user.fotoUrl);
+        const blob = await response.blob();
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = () => resolve(null);
+          reader.readAsDataURL(blob);
+        });
+      } catch (error) {
+        console.error("Erro ao converter foto URL para base64:", error);
+        return null;
+      }
+    }
+    
+    return null;
   };
 
   // Gerar PDF
@@ -155,26 +180,36 @@ export function DocumentationTab() {
     doc.rect(fotoX, fotoY, fotoWidth, fotoHeight);
     
     // Adicionar foto se existir
-    if (selectedUser.fotoBase64 && canViewPhoto(selectedUser)) {
-      try {
-        // Detectar formato da imagem (PNG ou JPEG)
-        let imageFormat = "JPEG";
-        if (selectedUser.fotoBase64.startsWith("data:image/png")) {
-          imageFormat = "PNG";
-        } else if (selectedUser.fotoBase64.startsWith("data:image/jpeg") || selectedUser.fotoBase64.startsWith("data:image/jpg")) {
-          imageFormat = "JPEG";
+    if (canViewPhoto(selectedUser)) {
+      const photoBase64 = await getPhotoBase64(selectedUser);
+      if (photoBase64) {
+        try {
+          // Detectar formato da imagem (PNG ou JPEG)
+          let imageFormat = "JPEG";
+          if (photoBase64.startsWith("data:image/png")) {
+            imageFormat = "PNG";
+          } else if (photoBase64.startsWith("data:image/jpeg") || photoBase64.startsWith("data:image/jpg")) {
+            imageFormat = "JPEG";
+          }
+          doc.addImage(photoBase64, imageFormat, fotoX, fotoY, fotoWidth, fotoHeight);
+        } catch (error) {
+          console.error("Erro ao adicionar foto:", error);
+          // Mostrar texto "SEM FOTO" dentro do quadrado se houver erro
+          doc.setFontSize(8);
+          doc.setTextColor(150, 150, 150);
+          doc.text("SEM FOTO", fotoX + fotoWidth / 2, fotoY + fotoHeight / 2, { align: "center" });
+          doc.setTextColor(0, 0, 0);
         }
-        doc.addImage(selectedUser.fotoBase64, imageFormat, fotoX, fotoY, fotoWidth, fotoHeight);
-      } catch (error) {
-        console.error("Erro ao adicionar foto:", error);
-        // Mostrar texto "SEM FOTO" dentro do quadrado se houver erro
-        doc.setFontSize(8);
+      } else {
+        // Mostrar texto "3x4" dentro do quadrado quando não há foto
+        doc.setFontSize(10);
         doc.setTextColor(150, 150, 150);
-        doc.text("SEM FOTO", fotoX + fotoWidth / 2, fotoY + fotoHeight / 2, { align: "center" });
+        doc.text("FOTO", fotoX + fotoWidth / 2, fotoY + fotoHeight / 2 - 2, { align: "center" });
+        doc.text("3x4", fotoX + fotoWidth / 2, fotoY + fotoHeight / 2 + 4, { align: "center" });
         doc.setTextColor(0, 0, 0);
       }
     } else {
-      // Mostrar texto "3x4" dentro do quadrado quando não há foto
+      // Mostrar texto "3x4" dentro do quadrado quando não pode ver foto
       doc.setFontSize(10);
       doc.setTextColor(150, 150, 150);
       doc.text("FOTO", fotoX + fotoWidth / 2, fotoY + fotoHeight / 2 - 2, { align: "center" });
@@ -583,7 +618,7 @@ export function DocumentationTab() {
                       <TableCell>
                         <Avatar className="h-10 w-10">
                           {canViewPhoto(user) && (
-                            <AvatarImage src={user.fotoBase64} alt={user.nome} />
+                            <AvatarImage src={user.fotoUrl || user.fotoBase64} alt={user.nome} />
                           )}
                           <AvatarFallback>
                             {user.nome.substring(0, 2).toUpperCase()}
@@ -637,7 +672,7 @@ export function DocumentationTab() {
                 <DialogTitle className="flex items-center gap-3">
                   <Avatar className="h-12 w-12">
                     {canViewPhoto(selectedUser) && (
-                      <AvatarImage src={selectedUser.fotoBase64} alt={selectedUser.nome} />
+                      <AvatarImage src={selectedUser.fotoUrl || selectedUser.fotoBase64} alt={selectedUser.nome} />
                     )}
                     <AvatarFallback>
                       {selectedUser.nome.substring(0, 2).toUpperCase()}

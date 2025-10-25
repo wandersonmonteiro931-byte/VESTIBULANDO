@@ -120,8 +120,8 @@ export default function UserProfileDialog({ userId, onClose }: UserProfileDialog
         <CardContent className="pt-6 space-y-6">
           <div className="flex flex-col items-center">
             <Avatar className="h-24 w-24 mb-3">
-              {user.fotoBase64 && user.fotoPublica ? (
-                <AvatarImage src={user.fotoBase64} alt={getDisplayName(user)} />
+              {(user.fotoUrl || user.fotoBase64) && user.fotoPublica ? (
+                <AvatarImage src={user.fotoUrl || user.fotoBase64} alt={getDisplayName(user)} />
               ) : null}
               <AvatarFallback className="text-2xl">
                 {getInitials(user.nome, user.tipo)}

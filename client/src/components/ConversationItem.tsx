@@ -35,8 +35,8 @@ export default function ConversationItem({ conversation, otherParticipant, unrea
     >
       <div className="relative">
         <Avatar className="h-12 w-12">
-          {otherUserData?.fotoBase64 && otherUserData.fotoPublica ? (
-            <AvatarImage src={otherUserData.fotoBase64} alt={otherParticipant.nome} />
+          {(otherUserData?.fotoUrl || otherUserData?.fotoBase64) && otherUserData?.fotoPublica ? (
+            <AvatarImage src={otherUserData.fotoUrl || otherUserData.fotoBase64} alt={otherParticipant.nome} />
           ) : null}
           <AvatarFallback className="bg-[#00a884] text-white">
             {otherParticipant.tipo === "diretor" ? "DIR" : otherParticipant.nome.charAt(0).toUpperCase()}

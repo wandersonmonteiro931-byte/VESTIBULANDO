@@ -142,8 +142,8 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
           data-testid="button-open-user-profile"
         >
           <Avatar className="h-9 w-9 shrink-0">
-            {otherUserData?.fotoBase64 && otherUserData.fotoPublica ? (
-              <AvatarImage src={otherUserData.fotoBase64} alt={otherParticipant.nome} />
+            {(otherUserData?.fotoUrl || otherUserData?.fotoBase64) && otherUserData?.fotoPublica ? (
+              <AvatarImage src={otherUserData.fotoUrl || otherUserData.fotoBase64} alt={otherParticipant.nome} />
             ) : null}
             <AvatarFallback className="bg-white text-[#008069] text-sm">
               {otherParticipant.tipo === "diretor" ? "DIR" : otherParticipant.nome.charAt(0).toUpperCase()}

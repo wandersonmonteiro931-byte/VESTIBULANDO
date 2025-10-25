@@ -41,7 +41,8 @@ export const userSchema = z.object({
   chatTermsAccepted: z.boolean().optional().default(false), // true se aceitou os termos do chat
   chatTermsAcceptedDate: z.string().optional(), // data e hora da aceitação dos termos do chat
   // Campos de foto
-  fotoBase64: z.string().optional(), // Foto 3x4 em Base64
+  fotoUrl: z.string().optional(), // URL da foto no Firebase Storage
+  fotoBase64: z.string().optional(), // Foto 3x4 em Base64 (deprecated - usar fotoUrl)
   fotoPublica: z.boolean().optional().default(false), // se true, foto visível para todos; se false, apenas para diretor
   // Campos obrigatórios para alunos
   dataNascimento: z.string().optional(),
@@ -94,6 +95,7 @@ export const diretorQuickAddAlunoSchema = z.object({
   estado: z.string().optional(),
   disponibilidade: z.array(z.string()).optional(),
   horarioEspecialObservacao: z.string().optional(),
+  fotoUrl: z.string().optional(),
   fotoBase64: z.string().optional(),
   fotoPublica: z.boolean().optional(),
 });

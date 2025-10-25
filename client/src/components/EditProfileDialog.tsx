@@ -8,8 +8,9 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { X, Upload, Camera, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { doc, updateDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { doc, updateDoc, deleteField } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import { db, storage } from "@/lib/firebase";
 import type { User } from "@shared/schema";
 
 interface EditProfileDialogProps {
@@ -19,8 +20,8 @@ interface EditProfileDialogProps {
 }
 
 export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfileDialogProps) {
-  const [photoPreview, setPhotoPreview] = useState<string | null>(user.fotoBase64 || null);
-  const [photoBase64, setPhotoBase64] = useState<string | null>(user.fotoBase64 || null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(user.fotoUrl || user.fotoBase64 || null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [isPublic, setIsPublic] = useState(user.fotoPublica || false);
   const [statusText, setStatusText] = useState(user.mensagemStatus || "");
   const [saving, setSaving] = useState(false);
@@ -51,16 +52,16 @@ export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfi
 
     const reader = new FileReader();
     reader.onload = (e) => {
-      const base64 = e.target?.result as string;
-      setPhotoPreview(base64);
-      setPhotoBase64(base64);
+      const dataUrl = e.target?.result as string;
+      setPhotoPreview(dataUrl);
+      setPhotoFile(file);
     };
     reader.readAsDataURL(file);
   };
 
   const handleRemovePhoto = () => {
     setPhotoPreview(null);
-    setPhotoBase64(null);
+    setPhotoFile(null);
   };
 
   const handleSave = async () => {
@@ -76,12 +77,76 @@ export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfi
     setSaving(true);
 
     try {
+      let fotoUrl: string | null = user.fotoUrl || null;
+
+      // Se há uma nova foto para fazer upload
+      if (photoFile) {
+        // Criar referência no Firebase Storage
+        const timestamp = Date.now();
+        const fileExtension = photoFile.name.split('.').pop() || 'jpg';
+        const fileName = `profile_${user.uid}_${timestamp}.${fileExtension}`;
+        const storageRef = ref(storage, `usuarios/fotos/${fileName}`);
+
+        // Fazer upload da imagem
+        await uploadBytes(storageRef, photoFile);
+
+        // Obter URL de download
+        fotoUrl = await getDownloadURL(storageRef);
+
+        // Se havia uma foto antiga com URL do Storage, tentar deletar
+        if (user.fotoUrl && user.fotoUrl.includes('firebasestorage.googleapis.com')) {
+          try {
+            // Criar referência a partir da URL completa do Storage
+            const urlParts = user.fotoUrl.split('/o/')[1]?.split('?')[0];
+            if (urlParts) {
+              const filePath = decodeURIComponent(urlParts);
+              const oldPhotoRef = ref(storage, filePath);
+              await deleteObject(oldPhotoRef);
+            }
+          } catch (deleteError) {
+            console.warn("Não foi possível deletar foto antiga:", deleteError);
+          }
+        }
+      }
+
       const userRef = doc(db, "usuarios", user.uid);
-      await updateDoc(userRef, {
-        fotoBase64: photoBase64 || null,
-        fotoPublica: photoBase64 ? isPublic : false,
+      const updateData: any = {
         mensagemStatus: statusText || null,
-      });
+      };
+      
+      // Se o usuário removeu a foto (não há preview)
+      if (!photoPreview && (user.fotoUrl || user.fotoBase64)) {
+        // Deletar foto do Storage se existir
+        if (user.fotoUrl && user.fotoUrl.includes('firebasestorage.googleapis.com')) {
+          try {
+            const urlParts = user.fotoUrl.split('/o/')[1]?.split('?')[0];
+            if (urlParts) {
+              const filePath = decodeURIComponent(urlParts);
+              const oldPhotoRef = ref(storage, filePath);
+              await deleteObject(oldPhotoRef);
+            }
+          } catch (deleteError) {
+            console.warn("Não foi possível deletar foto antiga:", deleteError);
+          }
+        }
+        
+        // Remover ambos os campos de foto
+        updateData.fotoUrl = deleteField();
+        updateData.fotoBase64 = deleteField();
+        updateData.fotoPublica = false;
+      }
+      // Se fez upload de nova foto
+      else if (photoFile) {
+        updateData.fotoUrl = fotoUrl;
+        updateData.fotoBase64 = deleteField(); // Remove base64 legado
+        updateData.fotoPublica = isPublic;
+      }
+      // Se apenas mudou a visibilidade da foto existente
+      else if (photoPreview) {
+        updateData.fotoPublica = isPublic;
+      }
+      
+      await updateDoc(userRef, updateData);
 
       toast({
         title: "Perfil atualizado",
@@ -172,7 +237,7 @@ export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfi
                   data-testid="button-upload-photo"
                 >
                   <Upload className="h-4 w-4 mr-2" />
-                  {photoBase64 ? "Trocar foto" : "Selecionar foto"}
+                  {photoPreview ? "Trocar foto" : "Selecionar foto"}
                 </Button>
                 
                 <p className="text-xs text-muted-foreground">
@@ -181,7 +246,7 @@ export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfi
               </div>
             </div>
 
-            {photoBase64 && (
+            {photoPreview && (
               <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/30">
                 <div className="flex-1">
                   <Label htmlFor="photo-public" className="text-sm font-medium cursor-pointer">

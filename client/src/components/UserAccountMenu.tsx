@@ -27,10 +27,8 @@ export default function UserAccountMenu({ onClose }: UserAccountMenuProps) {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [mensagemStatus, setMensagemStatus] = useState(userData?.mensagemStatus || "");
-  const [fotoBase64, setFotoBase64] = useState(userData?.fotoBase64 || "");
   const [fotoPublica, setFotoPublica] = useState(userData?.fotoPublica || false);
   const [saving, setSaving] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const getInitials = (nome: string) => {
     const names = nome.split(" ");
@@ -40,27 +38,6 @@ export default function UserAccountMenu({ onClose }: UserAccountMenuProps) {
     return nome.substring(0, 2).toUpperCase();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 2 * 1024 * 1024) {
-      toast({
-        title: "Erro",
-        description: "A imagem deve ter no máximo 2MB",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target?.result as string;
-      setFotoBase64(base64);
-    };
-    reader.readAsDataURL(file);
-  };
-
   const handleSave = async () => {
     if (!userData?.uid) return;
 
@@ -68,7 +45,6 @@ export default function UserAccountMenu({ onClose }: UserAccountMenuProps) {
     try {
       await updateDoc(doc(db, "usuarios", userData.uid), {
         mensagemStatus: mensagemStatus.trim() || null,
-        fotoBase64: fotoBase64 || null,
         fotoPublica: fotoPublica,
       });
 
@@ -104,8 +80,8 @@ export default function UserAccountMenu({ onClose }: UserAccountMenuProps) {
             data-testid="button-user-account"
           >
             <Avatar className="h-8 w-8">
-              {userData?.fotoBase64 && userData.fotoPublica ? (
-                <AvatarImage src={userData.fotoBase64} alt={userData.nome} />
+              {(userData?.fotoUrl || userData?.fotoBase64) && userData?.fotoPublica ? (
+                <AvatarImage src={userData.fotoUrl || userData.fotoBase64} alt={userData.nome} />
               ) : null}
               <AvatarFallback className="text-xs">
                 {userData ? getInitials(userData.nome) : "?"}
@@ -145,34 +121,16 @@ export default function UserAccountMenu({ onClose }: UserAccountMenuProps) {
             
             <CardContent className="pt-6 space-y-6">
               <div className="flex flex-col items-center">
-                <div className="relative">
-                  <Avatar className="h-24 w-24">
-                    {fotoBase64 ? (
-                      <AvatarImage src={fotoBase64} alt={userData?.nome} />
-                    ) : null}
-                    <AvatarFallback className="text-2xl">
-                      {userData ? getInitials(userData.nome) : "?"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <Button
-                    size="icon"
-                    variant="secondary"
-                    className="absolute bottom-0 right-0 rounded-full h-8 w-8"
-                    onClick={() => fileInputRef.current?.click()}
-                    data-testid="button-change-photo"
-                  >
-                    <Camera className="h-4 w-4" />
-                  </Button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                </div>
+                <Avatar className="h-24 w-24">
+                  {(userData?.fotoUrl || userData?.fotoBase64) ? (
+                    <AvatarImage src={userData.fotoUrl || userData.fotoBase64} alt={userData?.nome} />
+                  ) : null}
+                  <AvatarFallback className="text-2xl">
+                    {userData ? getInitials(userData.nome) : "?"}
+                  </AvatarFallback>
+                </Avatar>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Clique no ícone para alterar sua foto (máx. 2MB)
+                  Use o botão "Editar Perfil" no chat para alterar sua foto
                 </p>
 
                 <div className="flex items-center gap-2 mt-3">
