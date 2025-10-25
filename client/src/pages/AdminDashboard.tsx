@@ -24,6 +24,7 @@ import { InternalDocumentsTab } from "@/components/InternalDocumentsTab";
 import { BrasiliaClock } from "@/components/BrasiliaClock";
 import ChatFloatingButton from "@/components/ChatFloatingButton";
 import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, ArrowRightLeft, Clock, Search, Eye, AlertTriangle, Settings, Power, PowerOff, Archive, Download, ChevronDown, ChevronUp, MessageCircle, Camera, Upload, X } from "lucide-react";
+import { Link } from "wouter";
 import { Checkbox } from "@/components/ui/checkbox";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
@@ -2318,6 +2319,17 @@ export default function AdminDashboard() {
               <p className="text-sm font-semibold">{userData?.nome}</p>
               <p className="text-xs text-muted-foreground">Diretoria</p>
             </div>
+            <Link href="/chat">
+              <Button 
+                variant="outline" 
+                size="icon"
+                className="flex flex-col h-auto py-2 px-3 gap-1"
+                data-testid="button-chat-header"
+              >
+                <MessageCircle className="h-4 w-4" />
+                <span className="text-xs font-normal">Chat</span>
+              </Button>
+            </Link>
             <BrasiliaClock />
             <ThemeToggle />
             <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout">

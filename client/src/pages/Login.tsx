@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { PhotoUpload } from "@/components/PhotoUpload";
 import { Badge } from "@/components/ui/badge";
-import { GraduationCap, Loader2, Copy, Check, Search, AlertCircle, Shield, Users, CheckCircle, XCircle, Clock, Calendar, FileText, AlertTriangle, Wrench, MessageCircle } from "lucide-react";
+import { GraduationCap, Loader2, Copy, Check, Search, AlertCircle, Shield, Users, CheckCircle, XCircle, Clock, Calendar, FileText, AlertTriangle, Wrench } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -1429,19 +1429,7 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-accent/10 p-4 relative overflow-hidden">
       <div className="absolute inset-0 bg-grid-pattern opacity-[0.02]"></div>
-      <div className="absolute top-4 right-4 z-10 flex items-start gap-4">
-        <Button
-          variant="outline"
-          size="icon"
-          className="flex flex-col h-auto py-2 px-3 gap-1"
-          onClick={() => {
-            window.open('https://wa.me/5562981824959', '_blank');
-          }}
-          data-testid="button-chat"
-        >
-          <MessageCircle className="h-5 w-5" />
-          <span className="text-xs font-normal">Chat</span>
-        </Button>
+      <div className="absolute top-4 right-4 z-10">
         <ThemeToggle />
       </div>
       

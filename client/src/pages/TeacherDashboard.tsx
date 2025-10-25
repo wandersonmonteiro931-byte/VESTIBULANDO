@@ -20,7 +20,8 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { FileUploadZone } from "@/components/FileUploadZone";
 import { AnnouncementsCarousel } from "@/components/AnnouncementsCarousel";
 import ChatFloatingButton from "@/components/ChatFloatingButton";
-import { LogOut, Plus, FileText, Users, Download, Edit, Calendar, Award } from "lucide-react";
+import { LogOut, Plus, FileText, Users, Download, Edit, Calendar, Award, MessageCircle } from "lucide-react";
+import { Link } from "wouter";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 import type { Tarefa, Entrega } from "@shared/schema";
@@ -204,6 +205,17 @@ export default function TeacherDashboard() {
               <p className="text-sm font-semibold">{userData?.nome}</p>
               <p className="text-xs text-muted-foreground">Professor</p>
             </div>
+            <Link href="/chat">
+              <Button 
+                variant="outline" 
+                size="icon"
+                className="flex flex-col h-auto py-2 px-3 gap-1"
+                data-testid="button-chat-header"
+              >
+                <MessageCircle className="h-4 w-4" />
+                <span className="text-xs font-normal">Chat</span>
+              </Button>
+            </Link>
             <BrasiliaClock />
             <ThemeToggle />
             <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout">

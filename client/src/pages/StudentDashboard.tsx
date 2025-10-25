@@ -17,7 +17,8 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { FileUploadZone } from "@/components/FileUploadZone";
 import { AnnouncementsCarousel } from "@/components/AnnouncementsCarousel";
 import ChatFloatingButton from "@/components/ChatFloatingButton";
-import { LogOut, FileText, Upload, Download, Calendar, Award, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
+import { LogOut, FileText, Upload, Download, Calendar, Award, CheckCircle2, Clock, AlertTriangle, MessageCircle } from "lucide-react";
+import { Link } from "wouter";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 import type { Tarefa, Entrega } from "@shared/schema";
@@ -285,6 +286,17 @@ export default function StudentDashboard() {
               <Download className="h-4 w-4 mr-2" />
               Declaração
             </Button>
+            <Link href="/chat">
+              <Button 
+                variant="outline" 
+                size="icon"
+                className="flex flex-col h-auto py-2 px-3 gap-1"
+                data-testid="button-chat-header"
+              >
+                <MessageCircle className="h-4 w-4" />
+                <span className="text-xs font-normal">Chat</span>
+              </Button>
+            </Link>
             <BrasiliaClock />
             <ThemeToggle />
             <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout">
