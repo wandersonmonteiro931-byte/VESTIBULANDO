@@ -38,11 +38,11 @@ export function PhotoUpload({
       return;
     }
 
-    // Validar tamanho (máximo 5MB)
-    if (file.size > 5 * 1024 * 1024) {
+    // Validar tamanho (máximo 10MB)
+    if (file.size > 10 * 1024 * 1024) {
       toast({
         title: "Arquivo muito grande",
-        description: "A foto deve ter no máximo 5MB",
+        description: "A foto deve ter no máximo 10MB",
         variant: "destructive",
       });
       return;
@@ -128,7 +128,7 @@ export function PhotoUpload({
             </Button>
             
             <p className="text-xs text-muted-foreground">
-              Formato: JPG, PNG, etc. Tamanho máximo: 5MB
+              Formato: JPG, PNG, etc. Tamanho máximo: 10MB
             </p>
           </div>
         </div>

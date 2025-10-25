@@ -156,12 +156,12 @@ export default function UserAccountMenu({ onClose }: UserAccountMenuProps) {
                   placeholder="Ex: Estudando para o ENEM..."
                   value={mensagemStatus}
                   onChange={(e) => setMensagemStatus(e.target.value)}
-                  maxLength={100}
-                  rows={3}
+                  maxLength={30}
+                  rows={2}
                   data-testid="input-status-message"
                 />
                 <p className="text-xs text-muted-foreground">
-                  {mensagemStatus.length}/100 caracteres
+                  {mensagemStatus.length}/30 caracteres
                 </p>
               </div>
 

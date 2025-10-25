@@ -51,10 +51,10 @@ export default function ProfileEditDialog({ onClose }: ProfileEditDialogProps) {
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > 10 * 1024 * 1024) {
       toast({
         title: "Erro",
-        description: "A imagem deve ter no máximo 5MB",
+        description: "A imagem deve ter no máximo 10MB",
         variant: "destructive",
       });
       return;
@@ -166,13 +166,13 @@ export default function ProfileEditDialog({ onClose }: ProfileEditDialogProps) {
                 placeholder="Digite seu recado ou mensagem de status..."
                 value={mensagemStatus}
                 onChange={(e) => setMensagemStatus(e.target.value)}
-                maxLength={200}
+                maxLength={30}
                 className="resize-none"
-                rows={3}
+                rows={2}
                 data-testid="textarea-status-message"
               />
               <p className="text-xs text-muted-foreground">
-                {mensagemStatus.length}/200 caracteres
+                {mensagemStatus.length}/30 caracteres
               </p>
             </div>
 
