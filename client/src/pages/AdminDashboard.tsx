@@ -275,6 +275,7 @@ export default function AdminDashboard() {
       matricula: "",
       dataNascimento: "",
       cpf: "",
+      sexo: "",
       telefone: "",
       escolaridade: "",
       cep: "",
