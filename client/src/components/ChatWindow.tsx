@@ -67,8 +67,34 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
     // Prevenir scroll do body no mobile quando estiver no chat
     if (typeof window !== 'undefined') {
       document.body.classList.add('chat-active');
+      
+      // Detectar mudanças no viewport causadas pelo teclado
+      const handleViewportChange = () => {
+        if (window.visualViewport) {
+          const viewport = window.visualViewport;
+          const viewportHeight = viewport.height;
+          
+          // Ajustar a área de mensagens baseado na altura real do viewport
+          const messagesArea = document.querySelector('.chat-messages-area') as HTMLElement;
+          if (messagesArea) {
+            messagesArea.style.bottom = `${68}px`;
+            messagesArea.style.height = `${viewportHeight - 64 - 68}px`;
+          }
+        }
+      };
+      
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', handleViewportChange);
+        window.visualViewport.addEventListener('scroll', handleViewportChange);
+        handleViewportChange();
+      }
+      
       return () => {
         document.body.classList.remove('chat-active');
+        if (window.visualViewport) {
+          window.visualViewport.removeEventListener('resize', handleViewportChange);
+          window.visualViewport.removeEventListener('scroll', handleViewportChange);
+        }
       };
     }
   }, []);
@@ -300,6 +326,11 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
           onKeyPress={handleKeyPress}
           onBlur={stopTyping}
           disabled={isSending}
+          onFocus={(e) => {
+            // Prevenir scroll automático quando focar no input
+            e.preventDefault();
+            window.scrollTo(0, 0);
+          }}
           data-testid="input-message"
         />
 
