@@ -1,5 +1,32 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import * as admin from "firebase-admin";
+
+let firebaseAdmin: admin.app.App | null = null;
+
+function getFirebaseAdmin() {
+  if (!firebaseAdmin) {
+    const projectId = process.env.VITE_FIREBASE_PROJECT_ID;
+    
+    if (!projectId) {
+      throw new Error("Firebase Project ID não configurado");
+    }
+
+    try {
+      firebaseAdmin = admin.initializeApp({
+        projectId: projectId,
+      });
+      console.log("✅ Firebase Admin inicializado");
+    } catch (error: any) {
+      if (error.code === 'app/duplicate-app') {
+        firebaseAdmin = admin.app();
+      } else {
+        throw error;
+      }
+    }
+  }
+  return firebaseAdmin;
+}
 
 export async function registerRoutes(expressApp: Express): Promise<Server> {
   
@@ -27,57 +54,36 @@ export async function registerRoutes(expressApp: Express): Promise<Server> {
         });
       }
 
-      const apiKey = process.env.VITE_FIREBASE_API_KEY;
-      
-      if (!apiKey) {
-        return res.status(500).json({ 
-          success: false, 
-          message: "Configuração do Firebase não encontrada" 
-        });
-      }
-
       console.log(`🔧 Alterando senha para UID: ${userId}`);
 
-      // Usar o UID diretamente para atualizar a senha
-      const updateResponse = await fetch(
-        `https://identitytoolkit.googleapis.com/v1/accounts:update?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            localId: userId,
-            password: newPassword,
-            returnSecureToken: false
-          })
-        }
-      );
+      try {
+        const app = getFirebaseAdmin();
+        const auth = admin.auth(app);
+        
+        await auth.updateUser(userId, {
+          password: newPassword,
+        });
 
-      const updateData = await updateResponse.json();
-
-      if (updateData.error) {
-        // Se o erro for USER_NOT_FOUND, tentar criar a conta
-        if (updateData.error.message === 'USER_NOT_FOUND') {
-          console.log(`🔧 Usuário ${userId} não existe no Authentication. Tentando criar...`);
-          
-          // Para criar precisamos do email, então vamos retornar erro
-          return res.status(400).json({ 
+        console.log(`✅ Senha atualizada com sucesso para UID: ${userId}`);
+        return res.json({ 
+          success: true, 
+          message: "Senha atualizada com sucesso no Firebase Authentication" 
+        });
+      } catch (adminError: any) {
+        console.error(`❌ Erro ao atualizar senha com Admin SDK:`, adminError.message);
+        
+        if (adminError.code === 'auth/user-not-found') {
+          return res.status(404).json({ 
             success: false, 
-            message: "Usuário não encontrado no Firebase Authentication. Não é possível criar sem o email." 
+            message: "Usuário não encontrado no Firebase Authentication" 
           });
         }
         
-        console.error(`❌ Erro ao atualizar senha:`, updateData.error);
         return res.status(400).json({ 
           success: false, 
-          message: `Erro ao atualizar senha: ${updateData.error.message}` 
+          message: `Erro ao atualizar senha: ${adminError.message}` 
         });
       }
-
-      console.log(`✅ Senha atualizada com sucesso para UID: ${userId}`);
-      return res.json({ 
-        success: true, 
-        message: "Senha atualizada com sucesso no Firebase Authentication" 
-      });
 
     } catch (error: any) {
       console.error("❌ Erro ao atualizar senha:", error);
