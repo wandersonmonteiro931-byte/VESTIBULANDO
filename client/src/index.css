@@ -416,8 +416,8 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 180%;
-    max-width: 1900px;
+    width: 250%;
+    max-width: 2500px;
     height: auto;
     aspect-ratio: 3;
     background-image: var(--chat-watermark);
