@@ -4729,6 +4729,33 @@ export default function AdminDashboard() {
                       
                       <FormField
                         control={editStudentForm.control}
+                        name="sexo"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Sexo</FormLabel>
+                            <Select 
+                              onValueChange={field.onChange} 
+                              value={field.value || undefined}
+                            >
+                              <FormControl>
+                                <SelectTrigger data-testid="select-edit-sexo">
+                                  <SelectValue placeholder="Selecione o sexo" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="masculino">Masculino</SelectItem>
+                                <SelectItem value="feminino">Feminino</SelectItem>
+                                <SelectItem value="nao-binario">Não binário</SelectItem>
+                                <SelectItem value="prefiro-nao-informar">Prefiro não informar</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={editStudentForm.control}
                         name="telefone"
                         render={({ field }) => (
                           <FormItem>
