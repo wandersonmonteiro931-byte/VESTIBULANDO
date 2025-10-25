@@ -32,8 +32,6 @@ export function useChatMessages(conversationId: string | null) {
     const q = firestoreQuery(
       messagesRef,
       where("conversationId", "==", conversationId),
-      where("deletadaPorRemetente", "==", false),
-      where("deletadaPorDestinatario", "==", false),
       orderBy("timestamp", "asc")
     );
 
