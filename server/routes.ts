@@ -38,62 +38,58 @@ export async function registerRoutes(expressApp: Express): Promise<Server> {
 
       console.log(`🔧 Alterando senha para email: ${email}`);
 
-      // Primeiro, tentar atualizar a senha (assumindo que o usuário já existe)
-      const lookupResponse = await fetch(
-        `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
+      // Tentar fazer login com o email para obter o UID
+      // Usamos uma senha temporária que não importa - apenas queremos o erro
+      const signInResponse = await fetch(
+        `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: [email] })
+          body: JSON.stringify({
+            email: email,
+            password: 'temp-password-for-lookup-only',
+            returnSecureToken: true
+          })
         }
       );
 
-      const lookupData = await lookupResponse.json();
+      const signInData = await signInResponse.json();
 
-      if (lookupData.error) {
-        console.error(`❌ Erro ao buscar usuário:`, lookupData.error);
-        return res.status(400).json({ 
-          success: false, 
-          message: `Erro ao buscar usuário: ${lookupData.error.message}` 
-        });
-      }
-
-      // Se o usuário existe
-      if (lookupData.users && lookupData.users.length > 0) {
-        const userId = lookupData.users[0].localId;
-        console.log(`✅ Usuário encontrado no Authentication. UID: ${userId}`);
+      // Se obtivemos um userId do erro ou da resposta, o usuário existe
+      if (signInData.localId || (signInData.error && signInData.error.message !== 'EMAIL_NOT_FOUND')) {
+        // O usuário existe, então vamos resetar a senha
+        console.log(`✅ Usuário encontrado no Authentication`);
         
-        // Atualizar a senha
-        const updateResponse = await fetch(
+        const resetResponse = await fetch(
           `https://identitytoolkit.googleapis.com/v1/accounts:update?key=${apiKey}`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              localId: userId,
+              email: email,
               password: newPassword,
               returnSecureToken: false
             })
           }
         );
 
-        const updateData = await updateResponse.json();
+        const resetData = await resetResponse.json();
 
-        if (updateData.error) {
-          console.error(`❌ Erro ao atualizar senha:`, updateData.error);
+        if (resetData.error) {
+          console.error(`❌ Erro ao atualizar senha:`, resetData.error);
           return res.status(400).json({ 
             success: false, 
-            message: `Erro ao atualizar senha: ${updateData.error.message}` 
+            message: `Erro ao atualizar senha: ${resetData.error.message}` 
           });
         }
 
-        console.log(`✅ Senha atualizada com sucesso para UID: ${userId}`);
+        console.log(`✅ Senha atualizada com sucesso`);
         return res.json({ 
           success: true, 
           message: "Senha atualizada com sucesso no Firebase Authentication" 
         });
-      } else {
-        // Se o usuário não existe, criar a conta
+      } else if (signInData.error && signInData.error.message === 'EMAIL_NOT_FOUND') {
+        // O usuário não existe, criar a conta
         console.log(`🔧 Usuário ${email} não existe no Authentication. Criando conta...`);
         
         const createResponse = await fetch(
@@ -123,6 +119,13 @@ export async function registerRoutes(expressApp: Express): Promise<Server> {
         return res.json({ 
           success: true, 
           message: "Conta criada e senha definida com sucesso no Firebase Authentication" 
+        });
+      } else {
+        // Erro inesperado
+        console.error(`❌ Erro inesperado:`, signInData.error);
+        return res.status(400).json({ 
+          success: false, 
+          message: signInData.error?.message || "Erro ao verificar usuário" 
         });
       }
 
