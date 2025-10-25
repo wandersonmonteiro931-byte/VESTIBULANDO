@@ -5,6 +5,8 @@ import { ChatConversation } from "@shared/schema";
 import { PresenceIndicator } from "./PresenceIndicator";
 import { useUserData } from "@/hooks/useUserData";
 import { formatBrasiliaTime } from "@/lib/brasiliaTime";
+import { useAuth } from "@/contexts/AuthContext";
+import { motion } from "framer-motion";
 
 interface ConversationItemProps {
   conversation: ChatConversation;
@@ -18,6 +20,12 @@ interface ConversationItemProps {
 
 export default function ConversationItem({ conversation, otherParticipant, unreadCount }: ConversationItemProps) {
   const { userData: otherUserData } = useUserData(otherParticipant.id);
+  const { userData } = useAuth();
+  
+  const isParticipant1 = conversation.participante1Id === userData?.uid;
+  const otherUserTyping = isParticipant1 
+    ? conversation.participante2Digitando 
+    : conversation.participante1Digitando;
 
   return (
     <Link
@@ -54,9 +62,47 @@ export default function ConversationItem({ conversation, otherParticipant, unrea
           )}
         </div>
         <div className="flex items-center justify-between gap-2 mt-1">
-          <p className="text-sm text-muted-foreground truncate">
-            {conversation.ultimaMensagem || "Sem mensagens"}
-          </p>
+          {otherUserTyping ? (
+            <div className="flex items-center gap-1" data-testid={`typing-indicator-${conversation.id}`}>
+              <span className="text-sm text-[#25d366] font-medium">digitando</span>
+              <div className="flex gap-0.5 items-center">
+                <motion.div
+                  className="w-1 h-1 rounded-full bg-[#25d366]"
+                  animate={{ opacity: [0.3, 1, 0.3] }}
+                  transition={{
+                    duration: 1.4,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                    delay: 0
+                  }}
+                />
+                <motion.div
+                  className="w-1 h-1 rounded-full bg-[#25d366]"
+                  animate={{ opacity: [0.3, 1, 0.3] }}
+                  transition={{
+                    duration: 1.4,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                    delay: 0.2
+                  }}
+                />
+                <motion.div
+                  className="w-1 h-1 rounded-full bg-[#25d366]"
+                  animate={{ opacity: [0.3, 1, 0.3] }}
+                  transition={{
+                    duration: 1.4,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                    delay: 0.4
+                  }}
+                />
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground truncate">
+              {conversation.ultimaMensagem || "Sem mensagens"}
+            </p>
+          )}
           {unreadCount > 0 && (
             <Badge
               className="bg-[#25d366] text-white hover:bg-[#25d366] min-w-[20px] h-5 flex items-center justify-center rounded-full px-1.5"

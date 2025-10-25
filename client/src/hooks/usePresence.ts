@@ -42,6 +42,20 @@ export function usePresence() {
       }
     };
 
+    const setOfflineSync = () => {
+      try {
+        const now = new Date().toISOString();
+        updateDoc(userRef, {
+          isOnline: false,
+          lastSeen: now,
+          lastActivity: now,
+          statusPresenca: "offline"
+        }).catch(() => {});
+      } catch (error) {
+        console.error("Error setting user offline synchronously:", error);
+      }
+    };
+
     const updateActivity = async () => {
       const now = Date.now();
       if (now - lastUpdateRef.current < 30000) {
@@ -80,6 +94,8 @@ export function usePresence() {
     window.addEventListener("keydown", handleActivity);
     window.addEventListener("click", handleActivity);
     window.addEventListener("scroll", handleActivity);
+    window.addEventListener("touchstart", handleActivity);
+    window.addEventListener("touchmove", handleActivity);
 
     updateIntervalRef.current = setInterval(() => {
       if (!document.hidden) {
@@ -87,7 +103,9 @@ export function usePresence() {
       }
     }, 60000);
 
-    window.addEventListener("beforeunload", setOffline);
+    window.addEventListener("beforeunload", setOfflineSync);
+    window.addEventListener("pagehide", setOfflineSync);
+    window.addEventListener("unload", setOfflineSync);
 
     return () => {
       if (updateIntervalRef.current) {
@@ -98,7 +116,11 @@ export function usePresence() {
       window.removeEventListener("keydown", handleActivity);
       window.removeEventListener("click", handleActivity);
       window.removeEventListener("scroll", handleActivity);
-      window.removeEventListener("beforeunload", setOffline);
+      window.removeEventListener("touchstart", handleActivity);
+      window.removeEventListener("touchmove", handleActivity);
+      window.removeEventListener("beforeunload", setOfflineSync);
+      window.removeEventListener("pagehide", setOfflineSync);
+      window.removeEventListener("unload", setOfflineSync);
       setOffline();
     };
   }, [userData?.uid]);
