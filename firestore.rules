@@ -63,7 +63,12 @@ service cloud.firestore {
          request.resource.data.keys().hasAll(['uid', 'nome', 'email', 'tipo', 'ativo']))
       );
       
-      // Users can update their own basic info, admins can update all
+      // Users can update their own presence fields (isOnline, lastSeen, lastActivity, statusPresenca)
+      // This is separated to avoid expensive checks during frequent presence updates
+      allow update: if isAuthenticated() && request.auth.uid == userId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isOnline', 'lastSeen', 'lastActivity', 'statusPresenca']);
+      
+      // Users can update their own basic info (but not uid, tipo, ativo), admins can update all
       allow update: if isAuthenticated() && (
         (request.auth.uid == userId && 
          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['uid', 'tipo', 'ativo'])) ||
