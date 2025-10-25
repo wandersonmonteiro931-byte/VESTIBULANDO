@@ -393,6 +393,7 @@
   .whatsapp-bg {
     background-color: #e5ddd5;
     background-image: 
+      url('@assets/Blue and White Online School Logo (1)_1761376859857.png'),
       repeating-linear-gradient(
         45deg,
         transparent,
@@ -407,6 +408,26 @@
         rgba(0, 0, 0, 0.02) 10px,
         rgba(0, 0, 0, 0.02) 20px
       );
+    background-position: center center;
+    background-repeat: no-repeat;
+    background-size: 40%, auto, auto;
+    background-blend-mode: normal, normal, normal;
+  }
+
+  .whatsapp-bg::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url('@assets/Blue and White Online School Logo (1)_1761376859857.png');
+    background-position: center center;
+    background-repeat: no-repeat;
+    background-size: 40%;
+    opacity: 0.08;
+    pointer-events: none;
+    z-index: 0;
   }
 
   .dark .whatsapp-bg {
@@ -426,6 +447,10 @@
         rgba(0, 0, 0, 0.03) 10px,
         rgba(0, 0, 0, 0.03) 20px
       );
+  }
+
+  .dark .whatsapp-bg::before {
+    opacity: 0.06;
   }
 
   /* WhatsApp message bubbles */
@@ -612,6 +637,11 @@
     min-height: 0;
     overflow-y: auto;
     position: relative;
+  }
+
+  .chat-messages-area > * {
+    position: relative;
+    z-index: 1;
   }
 
   .whatsapp-input-area {
