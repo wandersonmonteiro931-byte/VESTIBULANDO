@@ -1,0 +1,221 @@
+Crie um aplicativo de chat completo, com aparência, design e funcionalidades idênticas ao WhatsApp, mas voltado exclusivamente para alunos de uma plataforma de cursos online.
+
+O app será acessado somente pelo celular (Android e iOS) e deve ser 100% responsivo e adaptável a qualquer modelo ou tamanho de tela.
+
+🎨 1. Aparência e Design (Interface idêntica ao WhatsApp)
+
+Layout igual ao WhatsApp original:
+
+Fundo da tela principal branco com acento em verde (#075E54) e detalhes em verde claro (#25D366).
+
+Ícones, cores, bolhas de mensagem, espaçamentos e sombras iguais aos originais.
+
+Tipografia igual ao WhatsApp (fonte “Helvetica Neue” ou similar).
+
+Ícones de envio, microfone, câmera, emoji e anexo idênticos aos originais.
+
+Tela inicial com lista de conversas, foto de perfil, nome do contato, última mensagem, hora da última interação, e indicador de mensagens não lidas (com bolha verde e número branco).
+
+Fundo de conversa com padrão de bolinhas cinza claro, igual ao fundo padrão do WhatsApp.
+
+Bolhas de mensagem:
+
+Mensagens enviadas: verde claro.
+
+Mensagens recebidas: branco.
+
+Bordas arredondadas, estilo WhatsApp.
+
+🗨️ 2. Funcionalidades principais
+
+O chat deve conter todas as funções básicas e visuais do WhatsApp, adaptadas para uso educacional:
+
+🔹 Sistema de autenticação:
+
+Login com número de matrícula ou e-mail.
+
+Cadastro com nome completo, curso e foto de perfil.
+
+Status “online”, “digitando...” e “visto por último” exatamente como no WhatsApp.
+
+Possibilidade de alterar nome, status e foto.
+
+🔹 Tela de conversas:
+
+Lista de chats individuais e em grupo (por turma ou disciplina).
+
+Campo de pesquisa para encontrar alunos ou grupos.
+
+Opção de fixar conversas no topo.
+
+Indicação visual de mensagem nova e status (online / visto por último).
+
+Scroll infinito nas mensagens (carregar mais ao rolar).
+
+🔹 Tela de chat:
+
+Campo inferior com:
+
+Ícone de emoji, anexo, microfone e câmera.
+
+Caixa de digitação expansiva.
+
+Botão de envio (avião de papel) que muda para microfone quando o campo está vazio.
+
+Mensagens enviadas, entregues e lidas com ícones idênticos:
+
+✓ (enviada)
+
+✓✓ (entregue)
+
+✓✓ azul (lida)
+
+Status “digitando...” abaixo do nome quando o outro usuário está escrevendo.
+
+Exibição de hora abaixo de cada mensagem.
+
+Envio de: texto, emojis, áudios, fotos, PDFs e vídeos curtos.
+
+Possibilidade de gravar áudio segurando o ícone do microfone.
+
+Notificação de gravação com barra lateral vermelha (como no WhatsApp).
+
+Opção de reagir à mensagem (👍❤️😂😮😢🙏).
+
+🔹 Grupos:
+
+Criação de grupos por curso, disciplina ou turma.
+
+Ícone de grupo igual ao do WhatsApp.
+
+Nome do grupo, descrição e foto personalizados.
+
+Menções com “@nome”.
+
+Envio de arquivos e mídias dentro dos grupos.
+
+Sistema de administrador (pode adicionar/remover membros).
+
+🔹 Mídia e documentos:
+
+Suporte a envio e visualização de imagens, áudios, vídeos, PDFs.
+
+Pré-visualização de imagem e nome do arquivo antes de enviar.
+
+Baixar ou visualizar dentro do chat.
+
+🔔 3. Notificações e alertas
+
+Notificações push idênticas às do WhatsApp:
+
+Mostram nome, mensagem e ícone.
+
+Vibração e som característico do WhatsApp.
+
+Quando o app está aberto, notificações aparecem como banner no topo.
+
+Quando fechado, aparecem como notificação nativa do sistema (Android/iOS).
+
+🧩 4. Status / Stories (iguais ao WhatsApp Status)
+
+Aba “Status” separada.
+
+Cada aluno pode postar fotos, vídeos ou textos curtos.
+
+Visualização com círculo verde em volta da foto de perfil.
+
+Contador de visualizações e quem viu.
+
+Duração de 24h.
+
+📞 5. Chamadas (somente texto e voz interna opcional)
+
+Implementar botão de chamada de voz e vídeo (placeholders), mas no momento apenas exibir uma mensagem: “Função disponível apenas para turmas premium”.
+
+Mantém aparência idêntica aos botões originais.
+
+🔧 6. Configurações
+
+Tela de configurações com:
+
+Perfil (nome, status, foto).
+
+Notificações (som, vibração, toques).
+
+Privacidade (quem pode ver o “visto por último”, foto, status).
+
+Armazenamento e dados (quantidade de mídia).
+
+Sobre o app.
+
+🧠 7. Funções adicionais (para ambiente educacional)
+
+Grupos automáticos por curso, disciplina e professor.
+
+Botão “Material de Aula” dentro de cada grupo (abre PDF ou link).
+
+Modo “somente administrador pode enviar mensagens” para professores.
+
+Mensagens fixadas com conteúdos importantes.
+
+Filtro de mensagens por tipo: texto, mídia, documento.
+
+💾 8. Banco de dados e sincronização
+
+Usar Firebase ou Firestore para:
+
+Armazenar mensagens, mídias, status e perfis.
+
+Sincronização em tempo real.
+
+Autenticação e controle de status “online/offline”.
+
+🔒 9. Segurança e privacidade
+
+Criptografia ponta a ponta (simulada ou real, conforme limite da IA).
+
+Nenhum dado pessoal exposto.
+
+Possibilidade de bloquear e denunciar contatos.
+
+📱 10. Adaptação mobile
+
+Interface feita exclusivamente para celular, com botões e espaçamento otimizados para toque.
+
+Totalmente responsivo e compatível com todos os tamanhos de tela (de 4" a 7").
+
+Compatível com modo escuro do sistema.
+
+🚀 11. Experiência e desempenho
+
+Design fluido, animações suaves (ex: transição entre abas, envio de mensagens).
+
+Rolagem natural e carregamento rápido.
+
+Feedback visual em todas as ações (toques, carregamento, upload).
+
+📦 12. Estrutura do app
+
+Tela inicial: conversas
+
+Aba 2: status
+
+Aba 3: grupos / comunidade
+
+Aba 4: configurações
+
+Barra inferior de navegação igual à do WhatsApp.
+
+🧭 13. Nome e identidade
+
+Nome do app: EduChat
+
+Ícone principal: balão verde com livro aberto no centro.
+
+Frase de boas-vindas:
+
+“Conecte-se com sua turma. Converse, compartilhe e aprenda juntos.”
+
+⚙️ 14. Objetivo geral
+
+Criar uma plataforma de chat educacional com aparência e experiência idêntica ao WhatsApp, oferecendo todas as interações familiares e intuitivas, mas com função exclusiva para comunicação entre alunos, professores e turmas.
