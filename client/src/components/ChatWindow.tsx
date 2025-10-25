@@ -117,9 +117,9 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
   if (!userData) return null;
 
   return (
-    <div className="flex flex-col h-full w-full">
+    <div className="flex flex-col h-full w-full overflow-hidden">
       {/* Header */}
-      <div className="chat-header-fixed whatsapp-header flex items-center gap-3 p-3 border-b border-border">
+      <div className="chat-header-fixed whatsapp-header flex items-center gap-3 border-b border-border flex-shrink-0">
         <Button
           size="icon"
           variant="ghost"
@@ -259,7 +259,7 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
       </div>
 
       {/* Input Area */}
-      <div className="whatsapp-input-area flex items-center gap-2 p-3 border-t border-border">
+      <div className="whatsapp-input-area flex items-center gap-2 border-t border-border flex-shrink-0">
         <Button
           size="icon"
           variant="ghost"
