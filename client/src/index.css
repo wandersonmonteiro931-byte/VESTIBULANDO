@@ -452,6 +452,14 @@
     opacity: 0.06;
   }
 
+  /* Mobile watermark size */
+  @media (max-width: 768px) {
+    .whatsapp-bg::before {
+      width: 250% !important;
+      max-width: 2500px !important;
+    }
+  }
+
   /* WhatsApp message bubbles */
   .message-received {
     background-color: #ffffff;
