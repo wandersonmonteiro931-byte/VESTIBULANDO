@@ -281,6 +281,21 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
     scrollToBottomSmooth();
   }, [messages, otherUserTyping]);
 
+  // ResizeObserver para auto-scroll quando teclado abrir (correção mobile)
+  useEffect(() => {
+    const messagesDiv = messagesContainerRef.current;
+    if (!messagesDiv) return;
+
+    const observer = new ResizeObserver(() => {
+      // Quando a div de mensagens redimensiona (teclado abre/fecha), rola até o final
+      scrollToBottomSmooth(true);
+    });
+
+    observer.observe(messagesDiv);
+
+    return () => observer.disconnect();
+  }, []);
+
   const scrollToBottom = () => {
     setTimeout(() => {
       scrollToBottomSmooth();
@@ -1167,7 +1182,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
         </DropdownMenu>
       </div>
 
-      <div ref={messagesContainerRef} className="p-2 md:p-4 space-y-1 md:space-y-2 whatsapp-bg whatsapp-messages-scroll chat-messages-area" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
+      <div ref={messagesContainerRef} className="p-2 md:p-4 space-y-1 md:space-y-2 whatsapp-bg whatsapp-messages-scroll chat-messages-area chat-messages" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
         <Alert className="bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800 mb-2">
           <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
           <AlertDescription className="text-xs md:text-sm text-amber-900 dark:text-amber-100">
@@ -1356,7 +1371,7 @@ export default function ChatMessageArea({ conversation, selectedUser, onBack, on
         </>
       )}
 
-      <div ref={inputWrapperRef} className="p-1.5 md:p-2 whatsapp-input-area flex-shrink-0">
+      <div ref={inputWrapperRef} className="p-1.5 md:p-2 whatsapp-input-area chat-input-area flex-shrink-0">
         {!isOnline && (
           <Alert variant="destructive" className="mb-1 mx-1 md:mx-2 py-1 md:py-2">
             <WifiOff className="h-3 w-3 md:h-4 md:w-4" />

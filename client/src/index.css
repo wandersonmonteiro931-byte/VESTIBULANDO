@@ -93,6 +93,7 @@
 
   /* Mobile viewport height variables - managed by useViewportHeight hook */
   --app-height: 100vh; /* fallback, updated dynamically by JS */
+  --app-height-dvh: 100dvh; /* Dynamic viewport height for mobile */
   --header-height: 56px;
   --input-height: 64px;
 
@@ -756,6 +757,58 @@
 
     .whatsapp-input-area {
       padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+    }
+  }
+
+  /* ===== MOBILE CHAT FIX - Correção do header que desaparece quando teclado abre ===== */
+  @media (max-width: 768px) {
+    /* Container principal do chat - uso de 100dvh e position fixed */
+    .chat-container-mobile {
+      display: flex;
+      flex-direction: column;
+      height: 100dvh; /* ESSENCIAL PARA CELULAR - usa altura dinâmica do viewport */
+      overflow: hidden;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+    }
+
+    /* Header - fixo no topo */
+    .chat-header {
+      flex-shrink: 0;
+      position: sticky;
+      top: 0;
+      background: white;
+      z-index: 9999;
+    }
+
+    .dark .chat-header {
+      background: hsl(var(--card));
+    }
+
+    /* Lista de mensagens - rolagem independente */
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding-bottom: 60px; /* espaço pro input */
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Área de envio de mensagem - fixa acima do teclado */
+    .chat-input-area {
+      flex-shrink: 0;
+      padding: 8px;
+      background: white;
+      border-top: 1px solid hsl(var(--border));
+      position: sticky;
+      bottom: 0;
+      z-index: 10000;
+    }
+
+    .dark .chat-input-area {
+      background: hsl(var(--card));
     }
   }
 }

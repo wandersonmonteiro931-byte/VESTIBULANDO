@@ -489,8 +489,8 @@ export default function Chat() {
   };
 
   return (
-    <div className="flex h-screen w-full flex-col bg-background">
-      <header className="flex items-center gap-4 border-b px-4 py-3 bg-card">
+    <div className="flex w-full flex-col bg-background chat-container-mobile md:h-screen">
+      <header className="flex items-center gap-4 border-b px-4 py-3 bg-card chat-header">
         <Button
           size="icon"
           variant="ghost"
