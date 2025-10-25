@@ -4,16 +4,13 @@ import { ArrowLeft, Phone, Video, MoreVertical, Send, Mic, Paperclip, Smile } fr
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { useQuery, useMutation } from "@tanstack/react-query";
 import { ChatConversation, ChatMessage } from "@shared/schema";
-import { collection, query as firestoreQuery, where, orderBy, onSnapshot, addDoc, updateDoc, doc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { formatDistanceToNow, format } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Check, CheckCheck } from "lucide-react";
+import { useChatMessages } from "@/hooks/useChatMessages";
+import { useSendMessage } from "@/hooks/useSendMessage";
 
 interface ChatWindowProps {
   conversation: ChatConversation;
@@ -40,30 +37,8 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
           tipo: conversation.participante1Tipo,
         };
 
-  const { data: messages = [], isLoading } = useQuery<ChatMessage[]>({
-    queryKey: ["/api/chat/messages", conversation.id],
-    enabled: !!conversation.id,
-    refetchInterval: 1000,
-  });
-
-  const sendMessageMutation = useMutation({
-    mutationFn: async (content: string) => {
-      return apiRequest("POST", "/api/chat/send", {
-        conversationId: conversation.id,
-        destinatarioId: otherParticipant.id,
-        destinatarioNome: otherParticipant.nome,
-        destinatarioTipo: otherParticipant.tipo,
-        conteudo: content,
-        tipo: "texto",
-      });
-    },
-    onSuccess: () => {
-      setMessage("");
-      queryClient.invalidateQueries({ queryKey: ["/api/chat/messages", conversation.id] });
-      queryClient.invalidateQueries({ queryKey: ["/api/chat/conversations"] });
-      scrollToBottom();
-    },
-  });
+  const { messages = [], isLoading } = useChatMessages(conversation.id);
+  const { sendMessage: sendMsg, isLoading: isSending } = useSendMessage();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -73,9 +48,22 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
     scrollToBottom();
   }, [messages]);
 
-  const handleSendMessage = () => {
-    if (message.trim() && !sendMessageMutation.isPending) {
-      sendMessageMutation.mutate(message.trim());
+  const handleSendMessage = async () => {
+    if (message.trim() && !isSending) {
+      try {
+        await sendMsg({
+          conversationId: conversation.id,
+          destinatarioId: otherParticipant.id,
+          destinatarioNome: otherParticipant.nome,
+          destinatarioTipo: otherParticipant.tipo,
+          conteudo: message.trim(),
+          tipo: "texto",
+        });
+        setMessage("");
+        scrollToBottom();
+      } catch (error) {
+        console.error("Error sending message:", error);
+      }
     }
   };
 
@@ -284,7 +272,7 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyPress={handleKeyPress}
-          disabled={sendMessageMutation.isPending}
+          disabled={isSending}
           data-testid="input-message"
         />
 
@@ -293,7 +281,7 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
             size="icon"
             className="bg-[#00a884] hover:bg-[#008069] text-white"
             onClick={handleSendMessage}
-            disabled={sendMessageMutation.isPending}
+            disabled={isSending}
             data-testid="button-send"
           >
             <Send className="h-5 w-5" />

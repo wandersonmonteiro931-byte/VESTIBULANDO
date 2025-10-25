@@ -19,6 +19,7 @@ import { BrasiliaClock } from "@/components/BrasiliaClock";
 import { StatusBadge } from "@/components/StatusBadge";
 import { FileUploadZone } from "@/components/FileUploadZone";
 import { AnnouncementsCarousel } from "@/components/AnnouncementsCarousel";
+import ChatFloatingButton from "@/components/ChatFloatingButton";
 import { LogOut, Plus, FileText, Users, Download, Edit, Calendar, Award } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
@@ -603,6 +604,8 @@ export default function TeacherDashboard() {
           </Form>
         </DialogContent>
       </Dialog>
+
+      <ChatFloatingButton />
     </div>
   );
 }

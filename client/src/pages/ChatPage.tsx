@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { MessageSquare, Settings, Users, Search, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,26 +6,29 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useQuery } from "@tanstack/react-query";
-import { collection, query as firestoreQuery, where, onSnapshot } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { ChatConversation, ChatMessage } from "@shared/schema";
+import { ChatConversation } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import ChatWindow from "../components/ChatWindow";
+import NewChatDialog from "../components/NewChatDialog";
 import { cn } from "@/lib/utils";
+import { useChatConversations } from "@/hooks/useChatConversations";
 
 export default function ChatPage() {
   const { userData } = useAuth();
   const [selectedConversation, setSelectedConversation] = useState<ChatConversation | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<"chats" | "groups" | "settings">("chats");
+  const [showNewChatDialog, setShowNewChatDialog] = useState(false);
 
-  const { data: conversations, isLoading } = useQuery<ChatConversation[]>({
-    queryKey: ["/api/chat/conversations", userData?.uid],
-    enabled: !!userData?.uid,
-    refetchInterval: 2000,
-  });
+  const { conversations, isLoading } = useChatConversations();
+
+  const handleConversationCreated = (conversationId: string) => {
+    const conversation = conversations.find(c => c.id === conversationId);
+    if (conversation) {
+      setSelectedConversation(conversation);
+    }
+  };
 
   const filteredConversations = conversations?.filter((conv) => {
     const otherParticipantName =
@@ -89,6 +92,7 @@ export default function ChatPage() {
               size="icon"
               variant="ghost"
               className="text-white hover:bg-white/10"
+              onClick={() => setShowNewChatDialog(true)}
               data-testid="button-new-chat"
             >
               <MessageSquare className="h-5 w-5" />
@@ -253,6 +257,12 @@ export default function ChatPage() {
           </div>
         )}
       </div>
+
+      <NewChatDialog
+        open={showNewChatDialog}
+        onOpenChange={setShowNewChatDialog}
+        onConversationCreated={handleConversationCreated}
+      />
     </div>
   );
 }
