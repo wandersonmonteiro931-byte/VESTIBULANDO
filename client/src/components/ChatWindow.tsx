@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { ArrowLeft, Phone, Video, MoreVertical, Send, Mic, Paperclip, Smile } from "lucide-react";
+import { ArrowLeft, MoreVertical, Send, Mic, Paperclip, Smile } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -124,11 +124,11 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
   return (
     <div className="flex flex-col h-full w-full">
       {/* Header */}
-      <div className="chat-header-fixed whatsapp-header flex items-center gap-3 p-3 border-b border-border">
+      <div className="chat-header-fixed whatsapp-header flex items-center gap-2 px-2 py-2 border-b border-border">
         <Button
           size="icon"
           variant="ghost"
-          className="text-white hover:bg-white/10"
+          className="text-white hover:bg-white/10 shrink-0"
           onClick={onBack}
           data-testid="button-back"
         >
@@ -136,60 +136,42 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
         </Button>
 
         <div 
-          className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:bg-white/5 rounded-lg p-2 -ml-2 transition-colors"
+          className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer hover:bg-white/5 rounded-lg p-1.5 transition-colors"
           onClick={() => setShowUserProfile(true)}
           data-testid="button-open-user-profile"
         >
-          <Avatar className="h-10 w-10">
+          <Avatar className="h-9 w-9 shrink-0">
             {otherUserData?.fotoBase64 && otherUserData.fotoPublica ? (
               <AvatarImage src={otherUserData.fotoBase64} alt={otherParticipant.nome} />
             ) : null}
-            <AvatarFallback className="bg-white text-[#008069]">
+            <AvatarFallback className="bg-white text-[#008069] text-sm">
               {otherParticipant.tipo === "diretor" ? "DIR" : otherParticipant.nome.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
 
           <div className="flex-1 min-w-0">
-            <h2 className="font-semibold text-white truncate" data-testid="text-chat-participant-name">
+            <h2 className="font-semibold text-white truncate text-sm" data-testid="text-chat-participant-name">
               {otherParticipant.tipo === "diretor" ? "Diretoria" : otherParticipant.nome}
             </h2>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
               {presenceStatus.isOnline && (
-                <div className="w-2 h-2 rounded-full bg-green-400" data-testid="indicator-online" />
+                <div className="w-1.5 h-1.5 rounded-full bg-green-400" data-testid="indicator-online" />
               )}
-              <p className="text-xs text-white/90" data-testid="text-participant-status">
+              <p className="text-[11px] text-white/90 truncate" data-testid="text-participant-status">
                 {presenceStatus.statusText}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button
-            size="icon"
-            variant="ghost"
-            className="text-white hover:bg-white/10"
-            data-testid="button-voice-call"
-          >
-            <Phone className="h-5 w-5" />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="text-white hover:bg-white/10"
-            data-testid="button-video-call"
-          >
-            <Video className="h-5 w-5" />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="text-white hover:bg-white/10"
-            data-testid="button-more-options"
-          >
-            <MoreVertical className="h-5 w-5" />
-          </Button>
-        </div>
+        <Button
+          size="icon"
+          variant="ghost"
+          className="text-white hover:bg-white/10 shrink-0"
+          data-testid="button-more-options"
+        >
+          <MoreVertical className="h-5 w-5" />
+        </Button>
       </div>
 
       {/* Messages Area */}
@@ -264,11 +246,11 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
       </div>
 
       {/* Input Area */}
-      <div className="whatsapp-input-area flex items-center gap-2 p-3">
+      <div className="whatsapp-input-area flex items-center gap-1.5 px-2 py-2">
         <Button
           size="icon"
           variant="ghost"
-          className="text-muted-foreground hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground shrink-0 h-9 w-9"
           data-testid="button-emoji"
         >
           <Smile className="h-5 w-5" />
@@ -277,7 +259,7 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
         <Button
           size="icon"
           variant="ghost"
-          className="text-muted-foreground hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground shrink-0 h-9 w-9"
           data-testid="button-attach"
         >
           <Paperclip className="h-5 w-5" />
@@ -286,7 +268,7 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
         <Input
           type="text"
           placeholder="Digite uma mensagem"
-          className="flex-1 bg-white dark:bg-[#2a3942] border-none focus-visible:ring-1"
+          className="flex-1 bg-white dark:bg-[#2a3942] border-none focus-visible:ring-1 h-9 text-sm"
           value={message}
           onChange={(e) => {
             setMessage(e.target.value);
@@ -301,18 +283,18 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
         {message.trim() ? (
           <Button
             size="icon"
-            className="bg-[#00a884] hover:bg-[#008069] text-white"
+            className="bg-[#00a884] hover:bg-[#008069] text-white shrink-0 h-9 w-9"
             onClick={handleSendMessage}
             disabled={isSending}
             data-testid="button-send"
           >
-            <Send className="h-5 w-5" />
+            <Send className="h-4 w-4" />
           </Button>
         ) : (
           <Button
             size="icon"
             variant="ghost"
-            className="text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground shrink-0 h-9 w-9"
             data-testid="button-voice"
           >
             <Mic className="h-5 w-5" />
