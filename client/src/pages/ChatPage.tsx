@@ -8,14 +8,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ChatConversation, User } from "@shared/schema";
-import { formatDistanceToNow } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import NewChatDialog from "../components/NewChatDialog";
 import { PresenceIndicator } from "../components/PresenceIndicator";
 import { cn } from "@/lib/utils";
 import { useChatConversations } from "@/hooks/useChatConversations";
 import { collection, getDocs, addDoc, query as firestoreQuery, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { formatBrasiliaTime } from "@/lib/brasiliaTime";
 
 export default function ChatPage() {
   const { userData } = useAuth();
@@ -141,14 +140,7 @@ export default function ChatPage() {
   };
 
   const formatTimestamp = (timestamp: string) => {
-    try {
-      return formatDistanceToNow(new Date(timestamp), {
-        addSuffix: false,
-        locale: ptBR,
-      });
-    } catch {
-      return "";
-    }
+    return formatBrasiliaTime(timestamp);
   };
 
   const getUserTypeLabel = (tipo: string) => {
