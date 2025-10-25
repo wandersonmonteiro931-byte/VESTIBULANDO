@@ -5217,7 +5217,7 @@ export default function AdminDashboard() {
                   ...data,
                   userId: selectedStudentDetails.uid,
                   disponibilidade: editStudentDisponibilidade,
-                  horarioEspecialObservacao: editStudentHorarioEspecialObs || undefined,
+                  horarioEspecialObservacao: editStudentHorarioEspecialObs || "",
                   fotoBase64: editStudentFoto,
                 });
               })} className="space-y-6 overflow-y-auto max-h-[calc(90vh-200px)]">
@@ -5729,7 +5729,7 @@ export default function AdminDashboard() {
                       ...data,
                       userId: selectedStudentDetails!.uid,
                       disponibilidade: editStudentDisponibilidade,
-                      horarioEspecialObservacao: editStudentHorarioEspecialObs || undefined,
+                      horarioEspecialObservacao: editStudentHorarioEspecialObs || "",
                       fotoBase64: editStudentFoto,
                     });
                   })}
