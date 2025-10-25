@@ -27,6 +27,7 @@ export default function ChatPage() {
   const [showProfileEditDialog, setShowProfileEditDialog] = useState(false);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [turmas, setTurmas] = useState<Map<string, string>>(new Map());
 
   const { conversations, isLoading } = useChatConversations();
 
@@ -36,6 +37,17 @@ export default function ChatPage() {
 
       setIsLoadingUsers(true);
       try {
+        // Carregar turmas para mapear IDs para nomes
+        const turmasRef = collection(db, "turmas");
+        const turmasSnapshot = await getDocs(turmasRef);
+        const turmasMap = new Map<string, string>();
+        
+        turmasSnapshot.forEach((doc) => {
+          const turmaData = doc.data();
+          turmasMap.set(doc.id, turmaData.nome);
+        });
+        setTurmas(turmasMap);
+
         const usersRef = collection(db, "usuarios");
         const snapshot = await getDocs(usersRef);
         const results: User[] = [];
@@ -354,12 +366,9 @@ export default function ChatPage() {
                         {getUserTypeLabel(user.tipo)}
                       </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground truncate">
-                      {user.email}
-                    </p>
-                    {user.turma && (
-                      <p className="text-xs text-muted-foreground">
-                        Turma: {user.turma}
+                    {user.tipo === "aluno" && user.turma && (
+                      <p className="text-sm text-muted-foreground truncate">
+                        Turma {turmas.get(user.turma) || user.turma}
                       </p>
                     )}
                   </div>
