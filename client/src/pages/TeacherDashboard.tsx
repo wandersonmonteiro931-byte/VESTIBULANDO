@@ -22,8 +22,6 @@ import { AnnouncementsCarousel } from "@/components/AnnouncementsCarousel";
 import { LogOut, Plus, FileText, Users, Download, Edit, Calendar, Award, MessageCircle } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
-import { useDeliveryOnPresence } from "@/hooks/useDeliveryOnPresence";
-import { useConversationStatusSync } from "@/hooks/useConversationStatusSync";
 import type { Tarefa, Entrega } from "@shared/schema";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -52,9 +50,6 @@ export default function TeacherDashboard() {
   const [gradeDialogOpen, setGradeDialogOpen] = useState(false);
   const [selectedEntrega, setSelectedEntrega] = useState<Entrega | null>(null);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
-
-  useDeliveryOnPresence(userData?.uid);
-  useConversationStatusSync(userData?.uid);
 
   useEffect(() => {
     const handleFileError = (event: any) => {
@@ -209,9 +204,6 @@ export default function TeacherDashboard() {
               <p className="text-xs text-muted-foreground">Professor</p>
             </div>
             <BrasiliaClock />
-            <Button variant="ghost" size="icon" onClick={() => window.location.href = '/chat'} data-testid="button-chat">
-              <MessageCircle className="h-5 w-5" />
-            </Button>
             <ThemeToggle />
             <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout">
               <LogOut className="h-5 w-5" />

@@ -19,8 +19,6 @@ import { AnnouncementsCarousel } from "@/components/AnnouncementsCarousel";
 import { LogOut, FileText, Upload, Download, Calendar, Award, CheckCircle2, Clock, AlertTriangle, MessageCircle } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
-import { useDeliveryOnPresence } from "@/hooks/useDeliveryOnPresence";
-import { useConversationStatusSync } from "@/hooks/useConversationStatusSync";
 import type { Tarefa, Entrega } from "@shared/schema";
 import { format, formatDistanceToNow, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -33,9 +31,6 @@ export default function StudentDashboard() {
   const [selectedTarefa, setSelectedTarefa] = useState<Tarefa | null>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [submissionDialogOpen, setSubmissionDialogOpen] = useState(false);
-
-  useDeliveryOnPresence(userData?.uid);
-  useConversationStatusSync(userData?.uid);
 
   useEffect(() => {
     const handleFileError = (event: any) => {
@@ -290,9 +285,6 @@ export default function StudentDashboard() {
               Declaração
             </Button>
             <BrasiliaClock />
-            <Button variant="ghost" size="icon" onClick={() => window.location.href = '/chat'} data-testid="button-chat">
-              <MessageCircle className="h-5 w-5" />
-            </Button>
             <ThemeToggle />
             <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout">
               <LogOut className="h-5 w-5" />

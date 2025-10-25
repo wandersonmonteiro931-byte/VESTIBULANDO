@@ -11,7 +11,6 @@ import Login from "@/pages/Login";
 import StudentDashboard from "@/pages/StudentDashboard";
 import TeacherDashboard from "@/pages/TeacherDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
-import Chat from "@/pages/Chat";
 import NotFound from "@/pages/not-found";
 
 function RootRedirect() {
@@ -64,12 +63,6 @@ function Router() {
       <Route path="/diretor">
         <ProtectedRoute allowedTypes={["diretor"]}>
           <AdminDashboard />
-        </ProtectedRoute>
-      </Route>
-      
-      <Route path="/chat">
-        <ProtectedRoute allowedTypes={["aluno", "professor", "diretor"]}>
-          <Chat />
         </ProtectedRoute>
       </Route>
       

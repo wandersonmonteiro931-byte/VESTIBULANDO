@@ -17,7 +17,6 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { PresenceIndicator } from "@/components/PresenceIndicator";
 import { MonitoringTab } from "@/components/MonitoringTab";
 import { DocumentationTab } from "@/components/DocumentationTab";
 import { AnnouncementsTab } from "@/components/AnnouncementsTab";
@@ -27,8 +26,6 @@ import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, C
 import { Checkbox } from "@/components/ui/checkbox";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
-import { useDeliveryOnPresence } from "@/hooks/useDeliveryOnPresence";
-import { useConversationStatusSync } from "@/hooks/useConversationStatusSync";
 import type { User, Turma, Maintenance } from "@shared/schema";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -161,9 +158,6 @@ export default function AdminDashboard() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<any | null>(null);
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
-
-  useDeliveryOnPresence(userData?.uid);
-  useConversationStatusSync(userData?.uid);
   const [solicitacaoToApprove, setSolicitacaoToApprove] = useState<any | null>(null);
   const [senhaInicial, setSenhaInicial] = useState("");
   const [editWhatsAppDialogOpen, setEditWhatsAppDialogOpen] = useState(false);
@@ -2092,9 +2086,6 @@ export default function AdminDashboard() {
               <p className="text-xs text-muted-foreground">Diretoria</p>
             </div>
             <BrasiliaClock />
-            <Button variant="ghost" size="icon" onClick={() => window.location.href = '/chat'} data-testid="button-chat">
-              <MessageCircle className="h-5 w-5" />
-            </Button>
             <ThemeToggle />
             <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout">
               <LogOut className="h-5 w-5" />
@@ -2406,7 +2397,6 @@ export default function AdminDashboard() {
                           <TableHead>Turma</TableHead>
                           <TableHead>Matrícula</TableHead>
                           <TableHead>Status</TableHead>
-                          <TableHead>Presença</TableHead>
                           <TableHead className="text-right">Ações</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -2444,14 +2434,6 @@ export default function AdminDashboard() {
                                   Inativo
                                 </Badge>
                               )}
-                            </TableCell>
-                            <TableCell>
-                              <PresenceIndicator
-                                isOnline={user.isOnline}
-                                lastSeen={user.lastSeen}
-                                lastActivity={user.lastActivity}
-                                variant="badge"
-                              />
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
@@ -5492,7 +5474,6 @@ export default function AdminDashboard() {
                         <TableHead>Nome</TableHead>
                         <TableHead>Email</TableHead>
                         <TableHead>Matrícula</TableHead>
-                        <TableHead>Presença</TableHead>
                         <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -5518,15 +5499,6 @@ export default function AdminDashboard() {
                             <TableCell>{student.email}</TableCell>
                             <TableCell>
                               <code className="text-xs">{student.matricula || "-"}</code>
-                            </TableCell>
-                            <TableCell>
-                              <PresenceIndicator
-                                isOnline={student.isOnline}
-                                lastSeen={student.lastSeen}
-                                lastActivity={student.lastActivity}
-                                variant="icon"
-                                showLabel={false}
-                              />
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
