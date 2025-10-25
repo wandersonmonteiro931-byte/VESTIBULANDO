@@ -84,6 +84,7 @@ const editStudentFormSchema = z.object({
   matricula: z.string().optional(),
   dataNascimento: z.string().min(1, "Data de nascimento é obrigatória"),
   cpf: z.string().min(1, "CPF é obrigatório"),
+  sexo: z.string().min(1, "Sexo é obrigatório"),
   telefone: z.string().min(1, "Telefone é obrigatório"),
   escolaridade: z.string().min(1, "Escolaridade é obrigatória"),
   cep: z.string().min(1, "CEP é obrigatório"),
