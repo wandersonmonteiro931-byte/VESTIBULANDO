@@ -38,7 +38,56 @@ export default function ProfileEditDialog({ onClose }: ProfileEditDialogProps) {
     return userData?.tipo === "diretor" ? "Diretoria" : userData?.nome || "";
   };
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          // Redimensionar de forma mais agressiva para mobile (800x800 em vez de maiores)
+          const MAX_WIDTH = 800;
+          const MAX_HEIGHT = 800;
+          
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            reject(new Error('Não foi possível criar contexto do canvas'));
+            return;
+          }
+          
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Converter para base64 com compressão maior para mobile (60% de qualidade)
+          const base64 = canvas.toDataURL('image/jpeg', 0.6);
+          resolve(base64);
+        };
+        img.onerror = () => reject(new Error('Erro ao carregar imagem'));
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => reject(new Error('Erro ao ler arquivo'));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -51,21 +100,33 @@ export default function ProfileEditDialog({ onClose }: ProfileEditDialogProps) {
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
+    // Validar tamanho ANTES da compressão para evitar problemas de memória
+    if (file.size > 50 * 1024 * 1024) {
       toast({
-        title: "Erro",
-        description: "A imagem deve ter no máximo 10MB",
+        title: "Arquivo muito grande",
+        description: "A foto deve ter no máximo 50MB. Por favor, tire uma foto com qualidade menor.",
         variant: "destructive",
       });
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64String = event.target?.result as string;
-      setFotoBase64(base64String);
-    };
-    reader.readAsDataURL(file);
+    try {
+      // Mostrar loading durante compressão
+      setIsLoading(true);
+      
+      // Comprimir a imagem antes de salvar em base64
+      const compressedBase64 = await compressImage(file);
+      setFotoBase64(compressedBase64);
+      setIsLoading(false);
+    } catch (error) {
+      console.error('Erro ao comprimir imagem:', error);
+      setIsLoading(false);
+      toast({
+        title: "Erro ao processar imagem",
+        description: "Não foi possível comprimir a imagem. Tente tirar uma foto com qualidade menor.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSave = async () => {

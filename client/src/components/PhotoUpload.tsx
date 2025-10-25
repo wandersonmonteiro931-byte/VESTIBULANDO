@@ -20,10 +20,76 @@ export function PhotoUpload({
 }: PhotoUploadProps) {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [isCompressing, setIsCompressing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const compressImage = (file: File): Promise<{ file: File; base64: string }> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          // Redimensionar de forma mais agressiva para mobile (800x800 em vez de maiores)
+          const MAX_WIDTH = 800;
+          const MAX_HEIGHT = 800;
+          
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            reject(new Error('Não foi possível criar contexto do canvas'));
+            return;
+          }
+          
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Converter para blob e base64 com compressão maior para mobile (60% de qualidade)
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                reject(new Error('Não foi possível comprimir a imagem'));
+                return;
+              }
+              
+              const compressedFile = new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+              });
+              
+              const base64 = canvas.toDataURL('image/jpeg', 0.6);
+              resolve({ file: compressedFile, base64 });
+            },
+            'image/jpeg',
+            0.6
+          );
+        };
+        img.onerror = () => reject(new Error('Erro ao carregar imagem'));
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => reject(new Error('Erro ao ler arquivo'));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     
     if (!file) return;
@@ -38,28 +104,39 @@ export function PhotoUpload({
       return;
     }
 
-    // Validar tamanho (máximo 10MB)
-    if (file.size > 10 * 1024 * 1024) {
+    // Validar tamanho ANTES da compressão (máximo 50MB)
+    if (file.size > 50 * 1024 * 1024) {
       toast({
         title: "Arquivo muito grande",
-        description: "A foto deve ter no máximo 10MB",
+        description: "A foto deve ter no máximo 50MB. Por favor, tire uma foto com qualidade menor.",
         variant: "destructive",
       });
       return;
     }
 
-    // Criar preview e converter para Base64
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const base64 = e.target?.result as string;
+    try {
+      // Mostrar loading durante compressão
+      setIsCompressing(true);
+      
+      // Comprimir a imagem
+      const { file: compressedFile, base64 } = await compressImage(file);
+      
       setPhotoPreview(base64);
-      setPhotoFile(file);
+      setPhotoFile(compressedFile);
       // Passar tanto o file quanto o base64 para o componente pai
-      onPhotoChange(file, base64);
+      onPhotoChange(compressedFile, base64);
       // Automaticamente definir como pública quando uma foto é enviada
       onPublicChange(true);
-    };
-    reader.readAsDataURL(file);
+      setIsCompressing(false);
+    } catch (error) {
+      console.error('Erro ao comprimir imagem:', error);
+      setIsCompressing(false);
+      toast({
+        title: "Erro ao processar imagem",
+        description: "Não foi possível comprimir a imagem. Tente tirar uma foto com qualidade menor.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleRemovePhoto = () => {
@@ -121,14 +198,15 @@ export function PhotoUpload({
               variant="outline"
               onClick={() => fileInputRef.current?.click()}
               className="w-full"
+              disabled={isCompressing}
               data-testid="button-upload-photo"
             >
               <Upload className="h-4 w-4 mr-2" />
-              {photoFile ? "Trocar foto" : "Selecionar foto"}
+              {isCompressing ? "Processando..." : (photoFile ? "Trocar foto" : "Selecionar foto")}
             </Button>
             
             <p className="text-xs text-muted-foreground">
-              Formato: JPG, PNG, etc. Tamanho máximo: 10MB
+              Formato: JPG, PNG, etc. Tamanho máximo: 50MB
             </p>
           </div>
         </div>
