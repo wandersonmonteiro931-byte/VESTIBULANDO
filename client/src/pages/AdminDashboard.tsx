@@ -22,7 +22,7 @@ import { DocumentationTab } from "@/components/DocumentationTab";
 import { AnnouncementsTab } from "@/components/AnnouncementsTab";
 import { InternalDocumentsTab } from "@/components/InternalDocumentsTab";
 import { BrasiliaClock } from "@/components/BrasiliaClock";
-import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, ArrowRightLeft, Clock, Search, Eye, AlertTriangle, Settings, Power, PowerOff, Archive, Download, ChevronDown, ChevronUp, MessageCircle, Camera, Upload, X } from "lucide-react";
+import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, ArrowRightLeft, Clock, Search, Eye, AlertTriangle, Settings, Power, PowerOff, Archive, Download, ChevronDown, ChevronUp, MessageCircle, Camera, Upload, X, Copy } from "lucide-react";
 import { Link } from "wouter";
 import { Checkbox } from "@/components/ui/checkbox";
 import { queryClient } from "@/lib/queryClient";
@@ -7543,7 +7543,9 @@ export default function AdminDashboard() {
       <Dialog open={viewPasswordDialogOpen} onOpenChange={setViewPasswordDialogOpen}>
         <DialogContent data-testid="dialog-view-password" className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-xl">DADOS PARA LOGIN DE ALUNO/PROFESSOR/DIRETOR</DialogTitle>
+            <DialogTitle className="text-xl">
+              DADOS PARA LOGIN DE {selectedUserForPassword?.tipo === "aluno" ? "ALUNO" : selectedUserForPassword?.tipo === "professor" ? "PROFESSOR" : "DIRETOR"}
+            </DialogTitle>
             <DialogDescription>
               Informações de acesso de {selectedUserForPassword?.nome}
             </DialogDescription>
@@ -7577,7 +7579,23 @@ export default function AdminDashboard() {
               </div>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                const tipoUsuario = selectedUserForPassword?.tipo === "aluno" ? "ALUNO" : selectedUserForPassword?.tipo === "professor" ? "PROFESSOR" : "DIRETOR";
+                const textoCopiar = `DADOS PARA LOGIN DE ${tipoUsuario}\nInformações de acesso de ${selectedUserForPassword?.nome}\n\nCPF\n${selectedUserForPassword?.cpf || "Não informado"}\n\nMatrícula\n${selectedUserForPassword?.matricula || "Não informada"}\n\nSenha Atual\n${selectedUserForPassword?.senhaAtual || "Não definida"}\n\nNÃO COMPARTILHE\nEssas informações são confidenciais e de uso exclusivo do usuário.`;
+                navigator.clipboard.writeText(textoCopiar);
+                toast({
+                  title: "Copiado!",
+                  description: "Os dados foram copiados para a área de transferência.",
+                });
+              }}
+              data-testid="button-copy-password-info"
+            >
+              <Copy className="h-4 w-4 mr-2" />
+              Copiar
+            </Button>
             <Button onClick={() => setViewPasswordDialogOpen(false)} data-testid="button-close-view-password">
               Fechar
             </Button>
