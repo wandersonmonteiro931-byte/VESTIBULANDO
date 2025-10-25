@@ -35,6 +35,8 @@ export const userSchema = z.object({
   mensagemStatus: z.string().optional(), // mensagem personalizada de status (ex: "Em reunião até 15h")
   // Campo para controlar primeiro acesso e troca de senha
   primeiroAcesso: z.boolean().optional().default(true), // true se ainda não alterou a senha inicial
+  senhaAtual: z.string().optional(), // senha atual do usuário (armazenada para visualização do diretor)
+  forcarTrocaSenha: z.boolean().optional().default(false), // true se diretor resetou senha e usuário deve alterar no próximo login
   // Campo para controlar aceite dos termos do chat
   chatTermsAccepted: z.boolean().optional().default(false), // true se aceitou os termos do chat
   chatTermsAcceptedDate: z.string().optional(), // data e hora da aceitação dos termos do chat
@@ -74,11 +76,34 @@ export const alunoRegistrationSchema = z.object({
   disponibilidade: z.array(z.string()).min(1, "Selecione pelo menos uma disponibilidade"),
 });
 
+// Schema para cadastro rápido de aluno pelo diretor (todos os campos opcionais)
+export const diretorQuickAddAlunoSchema = z.object({
+  nome: z.string().min(1, "Nome é obrigatório"),
+  email: z.string().email("Email inválido"),
+  senha: z.string().min(6, "A senha deve ter pelo menos 6 caracteres"),
+  dataNascimento: z.string().optional(),
+  cpf: z.string().optional(),
+  sexo: z.string().optional(),
+  escolaridade: z.string().optional(),
+  telefone: z.string().optional(),
+  turma: z.string().optional(),
+  cep: z.string().optional(),
+  rua: z.string().optional(),
+  bairro: z.string().optional(),
+  cidade: z.string().optional(),
+  estado: z.string().optional(),
+  disponibilidade: z.array(z.string()).optional(),
+  horarioEspecialObservacao: z.string().optional(),
+  fotoBase64: z.string().optional(),
+  fotoPublica: z.boolean().optional(),
+});
+
 export const insertUserSchema = userSchema.omit({ uid: true });
 
 export type User = z.infer<typeof userSchema>;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type AlunoRegistration = z.infer<typeof alunoRegistrationSchema>;
+export type DiretorQuickAddAluno = z.infer<typeof diretorQuickAddAlunoSchema>;
 
 // Tarefa (Assignment) schema
 export const tarefaSchema = z.object({
