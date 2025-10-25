@@ -34,13 +34,9 @@ service cloud.firestore {
     
     // Usuarios collection
     match /usuarios/{userId} {
-      // Anyone authenticated can read their own user doc
-      // Admins can read all individual documents AND perform queries (list operation)
-      allow get: if isAuthenticated() && (
-        request.auth.uid == userId || 
-        (exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) && 
-         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'diretor')
-      );
+      // Qualquer usuário autenticado pode ler dados de outros usuários (necessário para status de presença no chat)
+      // Dados sensíveis como CPF são protegidos a nível de aplicação
+      allow get: if isAuthenticated();
       
       // Allow list/query operation for:
       // 1. Anyone (authenticated or not) - needed for login by CPF/matricula

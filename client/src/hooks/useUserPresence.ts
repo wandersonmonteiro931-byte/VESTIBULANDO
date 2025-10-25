@@ -26,7 +26,6 @@ export function useUserPresence(userId: string): UserPresenceStatus {
       userRef, 
       (snapshot) => {
         if (!snapshot.exists()) {
-          console.log("User not found for presence:", userId);
           setStatus({ isOnline: false, statusText: "Nunca visto" });
           return;
         }
@@ -81,7 +80,6 @@ export function useUserPresence(userId: string): UserPresenceStatus {
       setStatus({ isOnline: false, statusText });
       },
       (error) => {
-        console.error("Error listening to user presence:", error);
         setStatus({ isOnline: false, statusText: "Offline" });
       }
     );
