@@ -94,9 +94,7 @@ export default function ChatConversationPage() {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background">
-      <div className="flex-1 flex flex-col">
-        <ChatWindow conversation={conversation} onBack={handleBack} />
-      </div>
+      <ChatWindow conversation={conversation} onBack={handleBack} />
     </div>
   );
 }
