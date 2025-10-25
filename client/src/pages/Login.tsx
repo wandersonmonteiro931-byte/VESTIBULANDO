@@ -2495,7 +2495,6 @@ export default function Login() {
           
           // Limpar estados
           setShowPasswordChangeDialog(false);
-          setUserData(null);
           setNewPassword("");
           setConfirmNewPassword("");
           setPasswordChangeError("");
