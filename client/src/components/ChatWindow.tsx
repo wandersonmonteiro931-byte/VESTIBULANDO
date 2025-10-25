@@ -63,6 +63,16 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
     scrollToBottom();
   }, [messages, otherUserTyping]);
 
+  useEffect(() => {
+    // Prevenir scroll do body no mobile quando estiver no chat
+    if (typeof window !== 'undefined') {
+      document.body.classList.add('chat-active');
+      return () => {
+        document.body.classList.remove('chat-active');
+      };
+    }
+  }, []);
+
   const handleSendMessage = async () => {
     if (message.trim() && !isSending) {
       try {
