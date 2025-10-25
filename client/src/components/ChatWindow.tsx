@@ -14,6 +14,7 @@ import { useTypingIndicator } from "@/hooks/useTypingIndicator";
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { formatBrasiliaTime, formatBrasiliaDate } from "@/lib/brasiliaTime";
 import UserProfileDialog from "@/components/UserProfileDialog";
+import { useUserData } from "@/hooks/useUserData";
 
 interface ChatWindowProps {
   conversation: ChatConversation;
@@ -40,6 +41,8 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
           nome: conversation.participante1Nome,
           tipo: conversation.participante1Tipo,
         };
+
+  const { userData: otherUserData } = useUserData(otherParticipant.id);
 
   const { messages = [], isLoading } = useChatMessages(conversation.id);
   const { sendMessage: sendMsg, isLoading: isSending } = useSendMessage();
@@ -133,7 +136,9 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
           data-testid="button-open-user-profile"
         >
           <Avatar className="h-10 w-10">
-            <AvatarImage src="" />
+            {otherUserData?.fotoBase64 && otherUserData.fotoPublica ? (
+              <AvatarImage src={otherUserData.fotoBase64} alt={otherParticipant.nome} />
+            ) : null}
             <AvatarFallback className="bg-white text-[#008069]">
               {otherParticipant.tipo === "diretor" ? "DIR" : otherParticipant.nome.charAt(0).toUpperCase()}
             </AvatarFallback>

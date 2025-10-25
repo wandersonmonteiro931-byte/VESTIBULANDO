@@ -23,7 +23,7 @@ export function useUserData(userId: string | null | undefined) {
     setLoading(true);
     setError(null);
 
-    const userRef = doc(db, 'Usuarios', userId);
+    const userRef = doc(db, 'usuarios', userId);
     
     const unsubscribe = onSnapshot(
       userRef,
