@@ -12,6 +12,8 @@ import { Check, CheckCheck } from "lucide-react";
 import { useChatMessages } from "@/hooks/useChatMessages";
 import { useSendMessage } from "@/hooks/useSendMessage";
 import { useUserPresence } from "@/hooks/useUserPresence";
+import { useTypingIndicator } from "@/hooks/useTypingIndicator";
+import { TypingIndicator } from "@/components/TypingIndicator";
 
 interface ChatWindowProps {
   conversation: ChatConversation;
@@ -41,6 +43,13 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
   const { messages = [], isLoading } = useChatMessages(conversation.id);
   const { sendMessage: sendMsg, isLoading: isSending } = useSendMessage();
   const presenceStatus = useUserPresence(otherParticipant.id);
+  
+  const isParticipant1 = conversation.participante1Id === userData?.uid;
+  const { otherUserTyping, handleTyping, stopTyping } = useTypingIndicator({
+    conversationId: conversation.id,
+    userId: userData?.uid || "",
+    isParticipant1
+  });
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -48,11 +57,12 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, otherUserTyping]);
 
   const handleSendMessage = async () => {
     if (message.trim() && !isSending) {
       try {
+        stopTyping();
         await sendMsg({
           conversationId: conversation.id,
           destinatarioId: otherParticipant.id,
@@ -247,6 +257,9 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
                 })}
               </div>
             ))}
+            
+            <TypingIndicator isTyping={otherUserTyping} />
+            
             <div ref={messagesEndRef} />
           </div>
         )}
@@ -277,8 +290,12 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
           placeholder="Digite uma mensagem"
           className="flex-1 bg-white dark:bg-[#2a3942] border-none focus-visible:ring-1"
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
+          onChange={(e) => {
+            setMessage(e.target.value);
+            handleTyping();
+          }}
           onKeyPress={handleKeyPress}
+          onBlur={stopTyping}
           disabled={isSending}
           data-testid="input-message"
         />
