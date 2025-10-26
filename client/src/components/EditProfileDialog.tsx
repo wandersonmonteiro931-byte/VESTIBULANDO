@@ -348,7 +348,23 @@ export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfi
               </div>
 
               <div className="flex-1 space-y-2">
+                <Label htmlFor="file-input-edit-profile" className="cursor-pointer">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    data-testid="button-upload-photo"
+                    asChild
+                  >
+                    <span>
+                      <Upload className="h-4 w-4 mr-2" />
+                      {photoPreview ? "Trocar foto" : "Selecionar foto"}
+                    </span>
+                  </Button>
+                </Label>
+                
                 <input
+                  id="file-input-edit-profile"
                   ref={fileInputRef}
                   type="file"
                   accept="image/*"
@@ -356,20 +372,6 @@ export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfi
                   className="hidden"
                   data-testid="input-photo-file"
                 />
-                
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    console.log('🖱️ Botão clicado!');
-                    fileInputRef.current?.click();
-                  }}
-                  className="w-full"
-                  data-testid="button-upload-photo"
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  {photoPreview ? "Trocar foto" : "Selecionar foto"}
-                </Button>
                 
                 <p className="text-xs text-muted-foreground">
                   Formato: JPG, PNG. A imagem será automaticamente otimizada.
