@@ -11,7 +11,6 @@ import { ChatConversation, User } from "@shared/schema";
 import NewChatDialog from "../components/NewChatDialog";
 import ProfileEditDialog from "../components/ProfileEditDialog";
 import ConversationItem from "../components/ConversationItem";
-import { PresenceIndicator } from "../components/PresenceIndicator";
 import { cn, getTipoAlunoGenero } from "@/lib/utils";
 import { useChatConversations } from "@/hooks/useChatConversations";
 import { collection, getDocs, addDoc, query as firestoreQuery, where } from "firebase/firestore";

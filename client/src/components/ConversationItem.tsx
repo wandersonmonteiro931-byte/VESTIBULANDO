@@ -2,7 +2,6 @@ import { Link } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ChatConversation } from "@shared/schema";
-import { PresenceIndicator } from "./PresenceIndicator";
 import { useUserData } from "@/hooks/useUserData";
 import { formatBrasiliaTime } from "@/lib/brasiliaTime";
 import { useAuth } from "@/contexts/AuthContext";
@@ -42,9 +41,6 @@ export default function ConversationItem({ conversation, otherParticipant, unrea
             {otherParticipant.tipo === "diretor" ? "DIR" : otherParticipant.nome.charAt(0).toUpperCase()}
           </AvatarFallback>
         </Avatar>
-        <div className="absolute bottom-0 right-0">
-          <PresenceIndicator userId={otherParticipant.id} />
-        </div>
       </div>
 
       <div className="flex-1 min-w-0">

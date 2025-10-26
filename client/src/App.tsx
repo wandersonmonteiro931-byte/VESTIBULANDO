@@ -7,7 +7,6 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { FirebaseErrorScreen } from "@/components/FirebaseErrorScreen";
-import { usePresence } from "@/hooks/usePresence";
 import Login from "@/pages/Login";
 import StudentDashboard from "@/pages/StudentDashboard";
 import TeacherDashboard from "@/pages/TeacherDashboard";
@@ -41,7 +40,6 @@ function RootRedirect() {
 
 function Router() {
   const { firebaseError } = useAuth();
-  usePresence();
 
   if (firebaseError) {
     return <FirebaseErrorScreen error={firebaseError} />;

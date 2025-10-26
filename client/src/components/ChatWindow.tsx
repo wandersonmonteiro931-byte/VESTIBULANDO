@@ -9,7 +9,6 @@ import { cn } from "@/lib/utils";
 import { Check, CheckCheck } from "lucide-react";
 import { useChatMessages } from "@/hooks/useChatMessages";
 import { useSendMessage } from "@/hooks/useSendMessage";
-import { useUserPresence } from "@/hooks/useUserPresence";
 import { useTypingIndicator } from "@/hooks/useTypingIndicator";
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { formatBrasiliaTime, formatBrasiliaDate } from "@/lib/brasiliaTime";
@@ -47,7 +46,6 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
 
   const { messages = [], isLoading } = useChatMessages(conversation.id);
   const { sendMessage: sendMsg, isLoading: isSending } = useSendMessage();
-  const presenceStatus = useUserPresence(otherParticipant.id);
   
   const isParticipant1 = conversation.participante1Id === userData?.uid;
   const { otherUserTyping, handleTyping, stopTyping } = useTypingIndicator({
@@ -154,14 +152,6 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
             <h2 className="font-semibold text-white truncate text-sm leading-tight" data-testid="text-chat-participant-name">
               {otherParticipant.tipo === "diretor" ? "Diretoria" : otherParticipant.nome}
             </h2>
-            <div className="flex items-center gap-1 mt-0.5">
-              {presenceStatus.isOnline && (
-                <div className="w-1.5 h-1.5 rounded-full bg-green-400" data-testid="indicator-online" />
-              )}
-              <p className="text-[11px] text-white/80 truncate leading-tight" data-testid="text-participant-status">
-                {presenceStatus.statusText}
-              </p>
-            </div>
           </div>
         </div>
 
