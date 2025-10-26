@@ -29,6 +29,7 @@ export default function ImageEditor({
   onCancel,
   aspectRatio = 1 
 }: ImageEditorProps) {
+  console.log('🎨 ImageEditor renderizado!');
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);

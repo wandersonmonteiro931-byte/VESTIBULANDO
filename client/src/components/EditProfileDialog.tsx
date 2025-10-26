@@ -118,9 +118,11 @@ export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfi
       return;
     }
 
+    console.log('📸 Preparando para abrir editor de fotos...');
     const reader = new FileReader();
     reader.onload = (e) => {
       const dataUrl = e.target?.result as string;
+      console.log('📸 Imagem carregada, abrindo editor...', { dataUrlLength: dataUrl.length });
       setImageToEdit(dataUrl);
       setShowEditor(true);
     };
@@ -281,6 +283,8 @@ export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfi
     }
     return nome.substring(0, 2).toUpperCase();
   };
+
+  console.log('📸 EditProfileDialog render - showEditor:', showEditor, 'hasImage:', !!imageToEdit);
 
   return (
     <>
