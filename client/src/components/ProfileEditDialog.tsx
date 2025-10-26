@@ -11,6 +11,7 @@ import { useState, useRef } from "react";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
+import ImageEditor from "./ImageEditor";
 
 interface ProfileEditDialogProps {
   onClose: () => void;
@@ -24,6 +25,8 @@ export default function ProfileEditDialog({ onClose }: ProfileEditDialogProps) {
   const [mensagemStatus, setMensagemStatus] = useState(userData?.mensagemStatus || "");
   const [fotoBase64, setFotoBase64] = useState(userData?.fotoBase64 || "");
   const [isLoading, setIsLoading] = useState(false);
+  const [showEditor, setShowEditor] = useState(false);
+  const [imageToEdit, setImageToEdit] = useState<string | null>(null);
 
   const getInitials = (nome: string, tipo?: string) => {
     if (tipo === "diretor" || nome === "Diretoria") return "DIR";
@@ -100,7 +103,6 @@ export default function ProfileEditDialog({ onClose }: ProfileEditDialogProps) {
       return;
     }
 
-    // Validar tamanho ANTES da compressão para evitar problemas de memória
     if (file.size > 50 * 1024 * 1024) {
       toast({
         title: "Arquivo muito grande",
@@ -110,23 +112,54 @@ export default function ProfileEditDialog({ onClose }: ProfileEditDialogProps) {
       return;
     }
 
+    console.log('📸 Abrindo editor para arquivo:', file.name);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      console.log('📸 Imagem carregada, abrindo editor...');
+      setImageToEdit(dataUrl);
+      setShowEditor(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleEditorComplete = async (croppedBlob: Blob) => {
     try {
-      // Mostrar loading durante compressão
       setIsLoading(true);
+      console.log('📸 Processando imagem cortada...');
       
-      // Comprimir a imagem antes de salvar em base64
-      const compressedBase64 = await compressImage(file);
+      const croppedFile = new File([croppedBlob], 'cropped-image.jpg', {
+        type: 'image/jpeg',
+        lastModified: Date.now(),
+      });
+
+      const compressedBase64 = await compressImage(croppedFile);
       setFotoBase64(compressedBase64);
+      setShowEditor(false);
+      setImageToEdit(null);
       setIsLoading(false);
+      
+      toast({
+        title: "Imagem processada",
+        description: "Sua foto foi cortada e está pronta para salvar",
+      });
     } catch (error) {
-      console.error('Erro ao comprimir imagem:', error);
+      console.error('Erro ao processar imagem:', error);
       setIsLoading(false);
+      setShowEditor(false);
+      setImageToEdit(null);
       toast({
         title: "Erro ao processar imagem",
-        description: "Não foi possível comprimir a imagem. Tente tirar uma foto com qualidade menor.",
+        description: "Não foi possível processar a imagem editada.",
         variant: "destructive",
       });
     }
+  };
+
+  const handleEditorCancel = () => {
+    console.log('📸 Editor cancelado');
+    setShowEditor(false);
+    setImageToEdit(null);
   };
 
   const handleSave = async () => {
@@ -164,8 +197,18 @@ export default function ProfileEditDialog({ onClose }: ProfileEditDialogProps) {
   if (!userData) return null;
 
   return (
-    <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+    <>
+      {showEditor && imageToEdit && (
+        <ImageEditor
+          image={imageToEdit}
+          onComplete={handleEditorComplete}
+          onCancel={handleEditorCancel}
+          aspectRatio={1}
+        />
+      )}
+      
+      <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       
       <Card className="relative w-full max-w-md max-h-[90vh] z-10 flex flex-col overflow-hidden">
         <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-4 shrink-0">
@@ -267,5 +310,6 @@ export default function ProfileEditDialog({ onClose }: ProfileEditDialogProps) {
         </div>
       </Card>
     </div>
+    </>
   );
 }

@@ -97,11 +97,18 @@ export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfi
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('📸 handleFileSelect CHAMADO!', e.target.files);
     const file = e.target.files?.[0];
     
-    if (!file) return;
+    if (!file) {
+      console.log('❌ Nenhum arquivo selecionado');
+      return;
+    }
+
+    console.log('📸 Arquivo selecionado:', { name: file.name, size: file.size, type: file.type });
 
     if (!file.type.startsWith('image/')) {
+      console.log('❌ Tipo de arquivo inválido:', file.type);
       toast({
         title: "Arquivo inválido",
         description: "Por favor, selecione uma imagem (JPG, PNG, etc.)",
@@ -111,6 +118,7 @@ export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfi
     }
 
     if (file.size > 50 * 1024 * 1024) {
+      console.log('❌ Arquivo muito grande:', file.size);
       toast({
         title: "Arquivo muito grande",
         description: "A foto deve ter no máximo 50MB. Por favor, tire uma foto com qualidade menor ou use outra imagem.",
@@ -124,8 +132,13 @@ export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfi
     reader.onload = (e) => {
       const dataUrl = e.target?.result as string;
       console.log('📸 Imagem carregada, abrindo editor...', { dataUrlLength: dataUrl.length });
+      console.log('📸 SETANDO imageToEdit e showEditor para TRUE');
       setImageToEdit(dataUrl);
       setShowEditor(true);
+      console.log('📸 Estados atualizados - imageToEdit definido, showEditor = true');
+    };
+    reader.onerror = (error) => {
+      console.error('❌ Erro ao ler arquivo:', error);
     };
     reader.readAsDataURL(file);
   };
