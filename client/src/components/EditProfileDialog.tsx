@@ -298,10 +298,16 @@ export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfi
         />
       )}
       
-      <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4" onClick={onClose}>
-        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       
-      <Card className="relative w-full max-w-md max-h-[90vh] z-10 flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+      <Card 
+        className="relative w-full max-w-md max-h-[90vh] z-[10002] flex flex-col overflow-hidden"
+        onClick={(e) => {
+          console.log('📦 Card clicado');
+          e.stopPropagation();
+        }}
+      >
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 shrink-0">
           <CardTitle>Editar Perfil</CardTitle>
           <Button size="icon" variant="ghost" onClick={onClose} data-testid="button-close-edit-profile">
