@@ -318,6 +318,49 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
     
+    // User Blocks collection - bloqueios entre usuários
+    match /userBlocks/{blockId} {
+      // Usuários podem listar bloqueios (necessário para verificar antes de enviar mensagens)
+      allow list: if isAuthenticated();
+      
+      // Usuários podem ler bloqueios onde são participantes, diretores podem ler todos
+      allow get: if isAuthenticated() && (
+        isAdmin() ||
+        resource.data.bloqueadorId == request.auth.uid ||
+        resource.data.bloqueadoId == request.auth.uid
+      );
+      
+      // Usuários autenticados podem criar bloqueios onde são o bloqueador
+      allow create: if isAuthenticated() && isUserActive() &&
+                       request.resource.data.bloqueadorId == request.auth.uid;
+      
+      // Apenas o bloqueador pode atualizar (para desbloquear)
+      allow update: if isAuthenticated() && isUserActive() &&
+                       resource.data.bloqueadorId == request.auth.uid;
+      
+      // Apenas diretores ou o bloqueador podem deletar
+      allow delete: if isAuthenticated() && (
+        isAdmin() ||
+        resource.data.bloqueadorId == request.auth.uid
+      );
+    }
+    
+    // Chat Reports collection - denúncias de conversas
+    match /chatReports/{reportId} {
+      // Apenas diretores podem ler denúncias
+      allow read: if isAdmin();
+      
+      // Usuários autenticados podem criar denúncias
+      allow create: if isAuthenticated() && isUserActive() &&
+                       request.resource.data.denuncianteId == request.auth.uid;
+      
+      // Apenas diretores podem atualizar denúncias (para revisar/resolver)
+      allow update: if isAdmin() && isUserActive();
+      
+      // Apenas diretores podem deletar denúncias
+      allow delete: if isAdmin();
+    }
+    
     // System collection - for counters and system-wide settings
     match /system/{documentId} {
       // Matricula counter can be read by anyone (needed for transactions)

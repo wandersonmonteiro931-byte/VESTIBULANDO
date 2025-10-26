@@ -39,8 +39,19 @@ The platform utilizes a consistent violet/purple color scheme across all dashboa
 - Comprehensive class management including total and filled vacancy tracking, configurable enrollment periods, and WhatsApp group link integration.
 - Student transfer functionality between classes.
 
+#### Chat System (NOVO - Outubro 2025)
+- **Sistema de Mensagens**: Chat em tempo real entre diretoria, professores e alunos.
+- **Moderação Completa**: 
+  - Bloqueio bilateral de usuários (afeta ambas as partes)
+  - Exclusão de mensagens (para mim / para todos)
+  - Denúncia de conversas com justificativa
+  - Exclusão unilateral de conversas
+  - Aviso de termos automático antes de cada conversa
+- **Conformidade Legal**: Sistema alinhado com Marco Civil da Internet e LGPD.
+- **Segurança**: Verificação em tempo real de bloqueios antes de enviar mensagens.
+
 #### Data Model
-The core data model includes `Usuarios` (users with `aluno`, `professor`, `admin` types, CPF, matricula, address via ViaCEP), `Tarefas` (assignments with title, description, professor, class, deadline, attachments), `Entregas` (submissions with student info, file, grade, feedback, status), and `Turmas` (classes with name, year, activity status, vacancies, enrollment period, WhatsApp link). Additional collection for `announcements` stores system notices.
+The core data model includes `Usuarios` (users with `aluno`, `professor`, `admin` types, CPF, matricula, address via ViaCEP), `Tarefas` (assignments with title, description, professor, class, deadline, attachments), `Entregas` (submissions with student info, file, grade, feedback, status), and `Turmas` (classes with name, year, activity status, vacancies, enrollment period, WhatsApp link). Additional collections: `announcements` (system notices), `chatMessages` (chat messages), `chatConversations` (conversations), `userBlocks` (user blocks), `chatReports` (conversation reports).
 
 ### System Design Choices
 - **Real-time Synchronization**: Implemented using Firebase Firestore's `onSnapshot` listeners and a custom `useRealtimeQuery` hook to ensure all dashboards reflect data changes instantly. TanStack Query is configured for automatic refetch on window focus and reconnect.
@@ -70,3 +81,16 @@ O sistema requer os seguintes secrets configurados no Replit para funcionar:
 - **DATABASE_URL**: Este projeto usa Firebase Firestore. DATABASE_URL não é utilizado e pode ser ignorado.
 
 Para instruções completas de configuração, consulte `FIREBASE_SETUP.md` e `README.md`.
+
+## Implantação de Regras do Firestore
+
+As regras de segurança do Firestore estão no arquivo `firestore.rules`. Após alterações, você deve implantá-las manualmente:
+
+1. Acesse [Firebase Console](https://console.firebase.google.com/)
+2. Selecione o projeto `plataforma-enem-f3682`
+3. Vá em **Firestore Database** > **Regras**
+4. Copie o conteúdo do arquivo `firestore.rules` local
+5. Cole no editor do Firebase Console
+6. Clique em **Publicar**
+
+**IMPORTANTE**: As regras do Firestore foram atualizadas em 26/10/2025 para incluir suporte às novas coleções `userBlocks` e `chatReports` do sistema de chat. É necessário implantar essas regras para que o chat funcione corretamente.
