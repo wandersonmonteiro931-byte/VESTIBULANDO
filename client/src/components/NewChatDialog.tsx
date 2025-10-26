@@ -48,9 +48,14 @@ export default function NewChatDialog({
       );
 
       const snapshot = await getDocs(q);
+      console.log("📋 Total de usuários encontrados:", snapshot.docs.length);
+      
       const allUsers = snapshot.docs
         .map(doc => ({ uid: doc.id, ...doc.data() } as User))
         .filter(user => user.uid !== userData.uid);
+      
+      console.log("📋 Usuários após filtrar o atual:", allUsers.length);
+      console.log("📋 Termo de busca:", searchTerm);
 
       const filtered = allUsers.filter(user => {
         const term = searchTerm.toLowerCase();
@@ -75,9 +80,10 @@ export default function NewChatDialog({
         );
       });
 
+      console.log("📋 Usuários filtrados:", filtered.length);
       setUsers(filtered);
     } catch (error) {
-      console.error("Error searching users:", error);
+      console.error("❌ Error searching users:", error);
     } finally {
       setIsLoading(false);
     }
