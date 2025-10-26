@@ -12,6 +12,7 @@ import { doc, updateDoc, deleteField } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import type { User } from "@shared/schema";
+import ImageEditor from "./ImageEditor";
 
 interface EditProfileDialogProps {
   user: User;
@@ -25,6 +26,8 @@ export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfi
   const [isPublic, setIsPublic] = useState(user.fotoPublica || false);
   const [statusText, setStatusText] = useState(user.mensagemStatus || "");
   const [saving, setSaving] = useState(false);
+  const [showEditor, setShowEditor] = useState(false);
+  const [imageToEdit, setImageToEdit] = useState<string | null>(null);
   const { toast } = useToast();
 
   const compressImage = (file: File): Promise<File> => {
@@ -106,7 +109,6 @@ export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfi
       return;
     }
 
-    // Validar tamanho ANTES da compressão para evitar problemas de memória
     if (file.size > 50 * 1024 * 1024) {
       toast({
         title: "Arquivo muito grande",
@@ -116,30 +118,52 @@ export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfi
       return;
     }
 
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      setImageToEdit(dataUrl);
+      setShowEditor(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleEditorComplete = async (croppedBlob: Blob) => {
     try {
-      // Mostrar loading durante compressão
       setSaving(true);
       
-      // Comprimir a imagem antes de processar
-      const compressedFile = await compressImage(file);
+      const croppedFile = new File([croppedBlob], 'cropped-image.jpg', {
+        type: 'image/jpeg',
+        lastModified: Date.now(),
+      });
+
+      const compressedFile = await compressImage(croppedFile);
       
       const reader = new FileReader();
       reader.onload = (e) => {
         const dataUrl = e.target?.result as string;
         setPhotoPreview(dataUrl);
         setPhotoFile(compressedFile);
+        setShowEditor(false);
+        setImageToEdit(null);
         setSaving(false);
       };
       reader.readAsDataURL(compressedFile);
     } catch (error) {
-      console.error('Erro ao comprimir imagem:', error);
+      console.error('Erro ao processar imagem:', error);
       setSaving(false);
+      setShowEditor(false);
+      setImageToEdit(null);
       toast({
         title: "Erro ao processar imagem",
-        description: "Não foi possível comprimir a imagem. Tente tirar uma foto com qualidade menor ou use outra imagem.",
+        description: "Não foi possível processar a imagem editada.",
         variant: "destructive",
       });
     }
+  };
+
+  const handleEditorCancel = () => {
+    setShowEditor(false);
+    setImageToEdit(null);
   };
 
   const handleRemovePhoto = () => {
@@ -259,8 +283,18 @@ export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfi
   };
 
   return (
-    <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+    <>
+      {showEditor && imageToEdit && (
+        <ImageEditor
+          image={imageToEdit}
+          onComplete={handleEditorComplete}
+          onCancel={handleEditorCancel}
+          aspectRatio={1}
+        />
+      )}
+      
+      <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       
       <Card className="relative w-full max-w-md max-h-[90vh] z-10 flex flex-col overflow-hidden">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 shrink-0">
@@ -402,5 +436,6 @@ export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfi
         </div>
       </Card>
     </div>
+    </>
   );
 }

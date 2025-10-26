@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Upload, X, Camera } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import ImageEditor from "./ImageEditor";
 
 interface PhotoUploadProps {
   onPhotoChange: (file: File | null, base64?: string | null) => void;
@@ -21,6 +22,8 @@ export function PhotoUpload({
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [isCompressing, setIsCompressing] = useState(false);
+  const [showEditor, setShowEditor] = useState(false);
+  const [imageToEdit, setImageToEdit] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -94,7 +97,6 @@ export function PhotoUpload({
     
     if (!file) return;
 
-    // Validar tipo de arquivo
     if (!file.type.startsWith('image/')) {
       toast({
         title: "Arquivo inválido",
@@ -104,7 +106,6 @@ export function PhotoUpload({
       return;
     }
 
-    // Validar tamanho ANTES da compressão (máximo 50MB)
     if (file.size > 50 * 1024 * 1024) {
       toast({
         title: "Arquivo muito grande",
@@ -114,28 +115,51 @@ export function PhotoUpload({
       return;
     }
 
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      setImageToEdit(dataUrl);
+      setShowEditor(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleEditorComplete = async (croppedBlob: Blob) => {
     try {
-      // Mostrar loading durante compressão
       setIsCompressing(true);
       
-      // Comprimir a imagem
-      const { file: compressedFile, base64 } = await compressImage(file);
+      const croppedFile = new File([croppedBlob], 'cropped-image.jpg', {
+        type: 'image/jpeg',
+        lastModified: Date.now(),
+      });
+
+      const { file: compressedFile, base64 } = await compressImage(croppedFile);
       
       setPhotoPreview(base64);
       setPhotoFile(compressedFile);
-      // Passar tanto o file quanto o base64 para o componente pai
       onPhotoChange(compressedFile, base64);
-      // Automaticamente definir como pública quando uma foto é enviada
       onPublicChange(true);
+      setShowEditor(false);
+      setImageToEdit(null);
       setIsCompressing(false);
     } catch (error) {
       console.error('Erro ao comprimir imagem:', error);
       setIsCompressing(false);
+      setShowEditor(false);
+      setImageToEdit(null);
       toast({
         title: "Erro ao processar imagem",
         description: "Não foi possível comprimir a imagem. Tente tirar uma foto com qualidade menor.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleEditorCancel = () => {
+    setShowEditor(false);
+    setImageToEdit(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 
@@ -151,72 +175,83 @@ export function PhotoUpload({
   };
 
   return (
-    <div className="space-y-4" data-testid="photo-upload-container">
-      <div className="space-y-2">
-        <Label>
-          {label} {required && <span className="text-destructive">*</span>}
-        </Label>
-        
-        <div className="flex items-start gap-4">
-          <div className="relative">
-            <Avatar className="h-24 w-24 border-2 border-dashed border-muted-foreground/30">
-              {photoPreview ? (
-                <AvatarImage src={photoPreview} alt="Preview" className="object-cover" />
-              ) : (
-                <AvatarFallback>
-                  <Camera className="h-10 w-10 text-muted-foreground" />
-                </AvatarFallback>
+    <>
+      {showEditor && imageToEdit && (
+        <ImageEditor
+          image={imageToEdit}
+          onComplete={handleEditorComplete}
+          onCancel={handleEditorCancel}
+          aspectRatio={1}
+        />
+      )}
+      
+      <div className="space-y-4" data-testid="photo-upload-container">
+        <div className="space-y-2">
+          <Label>
+            {label} {required && <span className="text-destructive">*</span>}
+          </Label>
+          
+          <div className="flex items-start gap-4">
+            <div className="relative">
+              <Avatar className="h-24 w-24 border-2 border-dashed border-muted-foreground/30">
+                {photoPreview ? (
+                  <AvatarImage src={photoPreview} alt="Preview" className="object-cover" />
+                ) : (
+                  <AvatarFallback>
+                    <Camera className="h-10 w-10 text-muted-foreground" />
+                  </AvatarFallback>
+                )}
+              </Avatar>
+              
+              {photoPreview && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="icon"
+                  className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                  onClick={handleRemovePhoto}
+                  data-testid="button-remove-photo"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
               )}
-            </Avatar>
-            
-            {photoPreview && (
+            </div>
+
+            <div className="flex-1 space-y-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileSelect}
+                className="hidden"
+                data-testid="input-photo-file"
+              />
+              
               <Button
                 type="button"
-                variant="destructive"
-                size="icon"
-                className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
-                onClick={handleRemovePhoto}
-                data-testid="button-remove-photo"
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full"
+                disabled={isCompressing}
+                data-testid="button-upload-photo"
               >
-                <X className="h-3 w-3" />
+                <Upload className="h-4 w-4 mr-2" />
+                {isCompressing ? "Processando..." : (photoFile ? "Trocar foto" : "Selecionar foto")}
               </Button>
-            )}
-          </div>
-
-          <div className="flex-1 space-y-2">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileSelect}
-              className="hidden"
-              data-testid="input-photo-file"
-            />
-            
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full"
-              disabled={isCompressing}
-              data-testid="button-upload-photo"
-            >
-              <Upload className="h-4 w-4 mr-2" />
-              {isCompressing ? "Processando..." : (photoFile ? "Trocar foto" : "Selecionar foto")}
-            </Button>
-            
-            <p className="text-xs text-muted-foreground">
-              Formato: JPG, PNG, etc. Tamanho máximo: 50MB
-            </p>
+              
+              <p className="text-xs text-muted-foreground">
+                Formato: JPG, PNG, etc. Tamanho máximo: 50MB
+              </p>
+            </div>
           </div>
         </div>
-      </div>
 
-      {!photoFile && required && (
-        <p className="text-xs text-destructive" data-testid="text-photo-required">
-          A foto é obrigatória
-        </p>
-      )}
-    </div>
+        {!photoFile && required && (
+          <p className="text-xs text-destructive" data-testid="text-photo-required">
+            A foto é obrigatória
+          </p>
+        )}
+      </div>
+    </>
   );
 }
