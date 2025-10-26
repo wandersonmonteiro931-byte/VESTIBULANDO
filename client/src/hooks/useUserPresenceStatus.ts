@@ -17,12 +17,12 @@ export interface UserPresenceStatus {
 export function useUserPresenceStatus(userId: string | null | undefined): UserPresenceStatus {
   const [status, setStatus] = useState<UserPresenceStatus>({
     isOnline: false,
-    statusText: 'NUNCA VISTO',
+    statusText: 'Nunca visto',
   });
 
   useEffect(() => {
     if (!userId) {
-      setStatus({ isOnline: false, statusText: 'NUNCA VISTO' });
+      setStatus({ isOnline: false, statusText: 'Nunca visto' });
       return;
     }
 
@@ -32,7 +32,7 @@ export function useUserPresenceStatus(userId: string | null | undefined): UserPr
       userRef,
       (snapshot) => {
         if (!snapshot.exists()) {
-          setStatus({ isOnline: false, statusText: 'NUNCA VISTO' });
+          setStatus({ isOnline: false, statusText: 'Nunca visto' });
           return;
         }
 
@@ -42,7 +42,7 @@ export function useUserPresenceStatus(userId: string | null | undefined): UserPr
         if (isOnline) {
           setStatus({
             isOnline: true,
-            statusText: 'ONLINE AGORA',
+            statusText: 'Online agora',
           });
         } else {
           // Usuário está offline, calcular última vez visto
@@ -51,7 +51,7 @@ export function useUserPresenceStatus(userId: string | null | undefined): UserPr
           if (!lastSeenTimestamp) {
             setStatus({
               isOnline: false,
-              statusText: 'NUNCA VISTO',
+              statusText: 'Nunca visto',
             });
             return;
           }
@@ -72,20 +72,20 @@ export function useUserPresenceStatus(userId: string | null | undefined): UserPr
 
             let statusText: string;
 
-            // Formatar conforme especificação EXATA:
-            // HOJE: "VISTO POR ÚLTIMO HOJE AS XX:XX"
-            // ONTEM: "VISTO POR ÚLTIMO ONTEM AS XX:XX"
-            // OUTRA DATA: "VISTO POR ÚLTIMO EM XX/XX/XXXX AS XX:XX"
+            // Formatar conforme especificação:
+            // CASO SEJA HOJE: "Visto por último hoje às XX:XX"
+            // CASO SEJA ONTEM: "Visto por último ontem às XX:XX"
+            // CASO SEJA OUTRA DATA: "Visto por último em XX/XX/XXXX às XX:XX"
             
             const timeStr = format(lastSeenDate, 'HH:mm');
             
             if (isToday(lastSeenDate)) {
-              statusText = `VISTO POR ÚLTIMO HOJE AS ${timeStr}`;
+              statusText = `Visto por último hoje às ${timeStr}`;
             } else if (isYesterday(lastSeenDate)) {
-              statusText = `VISTO POR ÚLTIMO ONTEM AS ${timeStr}`;
+              statusText = `Visto por último ontem às ${timeStr}`;
             } else {
               const dateStr = format(lastSeenDate, 'dd/MM/yyyy');
-              statusText = `VISTO POR ÚLTIMO EM ${dateStr} AS ${timeStr}`;
+              statusText = `Visto por último em ${dateStr} às ${timeStr}`;
             }
 
             setStatus({
@@ -97,14 +97,14 @@ export function useUserPresenceStatus(userId: string | null | undefined): UserPr
             console.error('Erro ao processar lastSeen:', error);
             setStatus({
               isOnline: false,
-              statusText: 'NUNCA VISTO',
+              statusText: 'Nunca visto',
             });
           }
         }
       },
       (error) => {
         console.error('Erro ao observar presença do usuário:', error);
-        setStatus({ isOnline: false, statusText: 'NUNCA VISTO' });
+        setStatus({ isOnline: false, statusText: 'Nunca visto' });
       }
     );
 
