@@ -27,6 +27,7 @@ export function useUserPresence(userId: string | null | undefined) {
       if (isOnlineRef.current) return;
       
       try {
+        console.log(`[Presence] Marcando usuário ${userId} como ONLINE`);
         await updateDoc(userRef, {
           isOnline: true,
           lastActivity: serverTimestamp(),
@@ -34,8 +35,9 @@ export function useUserPresence(userId: string | null | undefined) {
         });
         isOnlineRef.current = true;
         lastActivityUpdateRef.current = Date.now();
+        console.log(`[Presence] ✅ Usuário ${userId} marcado como ONLINE com sucesso`);
       } catch (error) {
-        console.error('Erro ao marcar usuário como online:', error);
+        console.error(`[Presence] ❌ Erro ao marcar usuário ${userId} como online:`, error);
       }
     };
 
@@ -55,14 +57,16 @@ export function useUserPresence(userId: string | null | undefined) {
       if (!isOnlineRef.current) return; // Já está offline
       
       try {
+        console.log(`[Presence] Marcando usuário ${userId} como OFFLINE`);
         await updateDoc(userRef, {
           isOnline: false,
           lastSeen: serverTimestamp(),
           statusPresenca: 'offline',
         });
         isOnlineRef.current = false;
+        console.log(`[Presence] ✅ Usuário ${userId} marcado como OFFLINE com sucesso`);
       } catch (error) {
-        console.error('Erro ao marcar usuário como offline:', error);
+        console.error(`[Presence] ❌ Erro ao marcar usuário ${userId} como offline:`, error);
       }
     };
 

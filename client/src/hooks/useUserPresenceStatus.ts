@@ -39,6 +39,8 @@ export function useUserPresenceStatus(userId: string | null | undefined): UserPr
         const userData = snapshot.data() as User;
         const isOnline = userData.isOnline || false;
 
+        console.log(`[PresenceStatus] Usuário ${userId} - isOnline:`, isOnline, 'lastSeen:', userData.lastSeen);
+
         if (isOnline) {
           setStatus({
             isOnline: true,
