@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Search, MessageSquare, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -31,13 +31,51 @@ export default function NewChatDialog({
 }: NewChatDialogProps) {
   const { userData } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
-  const [users, setUsers] = useState<User[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [turmas, setTurmas] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
-  const handleSearch = async () => {
-    if (!searchTerm.trim() || !userData) return;
+  useEffect(() => {
+    if (open && userData) {
+      loadUsers();
+      loadTurmas();
+    } else {
+      setSearchTerm("");
+    }
+  }, [open, userData]);
 
+  useEffect(() => {
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
+      const filtered = allUsers.filter(user => {
+        const displayName = user.tipo === "diretor" ? "Diretoria" : user.nome;
+        
+        if (user.tipo === "diretor") {
+          return (
+            "diretoria".includes(term) ||
+            "diretor".includes(term) ||
+            "dir".includes(term) ||
+            displayName.toLowerCase().includes(term)
+          );
+        }
+        
+        return (
+          displayName.toLowerCase().includes(term) ||
+          user.nome.toLowerCase().includes(term) ||
+          (user.matricula && user.matricula.includes(term))
+        );
+      });
+      setFilteredUsers(filtered);
+    } else {
+      setFilteredUsers(allUsers);
+    }
+  }, [searchTerm, allUsers]);
+
+  const loadUsers = async () => {
+    if (!userData) return;
+    
     setIsLoading(true);
     try {
       const usersRef = collection(db, "usuarios");
@@ -48,44 +86,38 @@ export default function NewChatDialog({
       );
 
       const snapshot = await getDocs(q);
-      console.log("📋 Total de usuários encontrados:", snapshot.docs.length);
-      
-      const allUsers = snapshot.docs
+      const users = snapshot.docs
         .map(doc => ({ uid: doc.id, ...doc.data() } as User))
-        .filter(user => user.uid !== userData.uid);
+        .filter(user => user.uid !== userData.uid)
+        .sort((a, b) => {
+          const nameA = a.tipo === "diretor" ? "Diretoria" : a.nome;
+          const nameB = b.tipo === "diretor" ? "Diretoria" : b.nome;
+          return nameA.localeCompare(nameB);
+        });
       
-      console.log("📋 Usuários após filtrar o atual:", allUsers.length);
-      console.log("📋 Termo de busca:", searchTerm);
-
-      const filtered = allUsers.filter(user => {
-        const term = searchTerm.toLowerCase();
-        const displayName = user.tipo === "diretor" ? "Diretoria" : user.nome;
-        
-        // Se for diretor, verificar se o termo busca por "dir", "diretor" ou "diretoria"
-        if (user.tipo === "diretor") {
-          return (
-            "diretoria".includes(term) ||
-            "diretor".includes(term) ||
-            "dir".includes(term) ||
-            displayName.toLowerCase().includes(term) ||
-            user.email.toLowerCase().includes(term)
-          );
-        }
-        
-        return (
-          displayName.toLowerCase().includes(term) ||
-          user.nome.toLowerCase().includes(term) ||
-          user.email.toLowerCase().includes(term) ||
-          (user.matricula && user.matricula.includes(term))
-        );
-      });
-
-      console.log("📋 Usuários filtrados:", filtered.length);
-      setUsers(filtered);
+      setAllUsers(users);
+      setFilteredUsers(users);
     } catch (error) {
-      console.error("❌ Error searching users:", error);
+      console.error("❌ Error loading users:", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadTurmas = async () => {
+    try {
+      const turmasRef = collection(db, "turmas");
+      const snapshot = await getDocs(turmasRef);
+      const turmasMap: Record<string, string> = {};
+      
+      snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        turmasMap[doc.id] = data.nome || doc.id;
+      });
+      
+      setTurmas(turmasMap);
+    } catch (error) {
+      console.error("❌ Error loading turmas:", error);
     }
   };
 
@@ -152,12 +184,6 @@ export default function NewChatDialog({
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleSearch();
-    }
-  };
 
   const getUserTypeLabel = (tipo: string) => {
     switch (tipo) {
@@ -186,41 +212,29 @@ export default function NewChatDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Buscar por nome, email ou matrícula..."
-                className="pl-9"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyPress={handleKeyPress}
-                data-testid="input-search-users"
-              />
-            </div>
-            <Button
-              onClick={handleSearch}
-              disabled={isLoading || !searchTerm.trim()}
-              className="bg-[#00a884] hover:bg-[#008069]"
-              data-testid="button-search-users"
-            >
-              <Search className="h-4 w-4 mr-2" />
-              Buscar
-            </Button>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Buscar por nome ou matrícula..."
+              className="pl-9"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              data-testid="input-search-users"
+            />
           </div>
 
           <ScrollArea className="h-[400px] rounded-md border p-4">
             {isLoading ? (
               <div className="flex items-center justify-center h-full">
-                <div className="text-muted-foreground">Buscando...</div>
+                <div className="text-muted-foreground">Carregando...</div>
               </div>
-            ) : users.length > 0 ? (
+            ) : filteredUsers.length > 0 ? (
               <div className="space-y-2">
-                {users.map((user) => (
+                {filteredUsers.map((user) => (
                   <div
                     key={user.uid}
-                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted cursor-pointer transition-colors"
+                    className="flex items-center gap-3 p-3 rounded-lg hover-elevate active-elevate-2 cursor-pointer transition-colors"
                     onClick={() => handleCreateConversation(user)}
                     data-testid={`user-item-${user.uid}`}
                   >
@@ -232,7 +246,7 @@ export default function NewChatDialog({
                     </Avatar>
 
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-semibold truncate" data-testid={`text-user-name-${user.uid}`}>
                           {user.tipo === "diretor" ? "Diretoria" : user.nome}
                         </h3>
@@ -247,12 +261,9 @@ export default function NewChatDialog({
                           {getUserTypeLabel(user.tipo)}
                         </Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground truncate">
-                        {user.email}
-                      </p>
                       {user.turma && (
-                        <p className="text-xs text-muted-foreground">
-                          Turma: {user.turma}
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {turmas[user.turma] || user.turma}
                         </p>
                       )}
                     </div>
@@ -264,16 +275,13 @@ export default function NewChatDialog({
                 <Search className="h-12 w-12 text-muted-foreground mb-4" />
                 <p className="text-muted-foreground">Nenhum usuário encontrado</p>
                 <p className="text-sm text-muted-foreground mt-2">
-                  Tente buscar por outro nome, email ou matrícula
+                  Tente buscar por outro nome ou matrícula
                 </p>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-full text-center">
                 <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Busque por usuários</p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Digite um nome, email ou matrícula e clique em Buscar
-                </p>
+                <p className="text-muted-foreground">Carregando usuários...</p>
               </div>
             )}
           </ScrollArea>
