@@ -119,7 +119,7 @@ export default function ImageEditor({
   };
 
   return (
-    <div className="fixed inset-0 z-[10002] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[10003] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
       <Card className="w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 shrink-0">
           <CardTitle>Editar Imagem</CardTitle>
