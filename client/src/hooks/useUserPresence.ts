@@ -13,6 +13,8 @@ export function useUserPresence(userId: string | null | undefined) {
   const isOnlineRef = useRef(false);
   const lastActivityUpdateRef = useRef<number>(0);
   const onlineDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const inactivityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastUserInteractionRef = useRef<number>(Date.now());
 
   useEffect(() => {
     if (!userId) return;
@@ -103,6 +105,9 @@ export function useUserPresence(userId: string | null | undefined) {
       }
     };
 
+    // Detecta se é dispositivo móvel
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
     // Handler para quando a página fica visível/oculta
     const handleVisibilityChange = () => {
       if (document.hidden) {
@@ -113,7 +118,10 @@ export function useUserPresence(userId: string | null | undefined) {
         }
         
         // Página foi minimizada ou usuário saiu da aba
-        // Aguarda 3 segundos antes de marcar como offline
+        // No mobile, marca offline imediatamente (0ms)
+        // No desktop, aguarda 3 segundos
+        const offlineDelay = isMobile ? 0 : 3000;
+        
         offlineTimeoutRef.current = setTimeout(() => {
           setOffline();
           // Para o intervalo de atualização de atividade
@@ -121,7 +129,7 @@ export function useUserPresence(userId: string | null | undefined) {
             clearInterval(activityIntervalRef.current);
             activityIntervalRef.current = null;
           }
-        }, 3000);
+        }, offlineDelay);
       } else {
         // Página voltou a ficar visível
         // Cancela o timeout de offline se ainda não executou
@@ -145,6 +153,21 @@ export function useUserPresence(userId: string | null | undefined) {
       const now = Date.now();
       const timeSinceLastUpdate = now - lastActivityUpdateRef.current;
       
+      // Atualiza timestamp da última interação do usuário
+      lastUserInteractionRef.current = now;
+      
+      // Reseta o timeout de inatividade
+      if (inactivityTimeoutRef.current) {
+        clearTimeout(inactivityTimeoutRef.current);
+      }
+      
+      // Marca como offline após 2 minutos sem atividade (especialmente útil no mobile)
+      inactivityTimeoutRef.current = setTimeout(() => {
+        if (isOnlineRef.current) {
+          setOffline();
+        }
+      }, 120000); // 2 minutos
+      
       // Se estava offline, marca como online
       if (!isOnlineRef.current) {
         setOnline();
@@ -163,15 +186,28 @@ export function useUserPresence(userId: string | null | undefined) {
       setOfflineBeacon();
     };
 
+    // Handler para pagehide (funciona melhor no mobile que beforeunload)
+    const handlePageHide = () => {
+      setOfflineBeacon();
+    };
+
     // Marca como online ao iniciar
     setOnline();
 
     // Inicia intervalo de atualização de atividade (a cada 30 segundos)
     activityIntervalRef.current = setInterval(updateActivity, 30000);
+    
+    // Inicia timeout de inatividade (2 minutos)
+    inactivityTimeoutRef.current = setTimeout(() => {
+      if (isOnlineRef.current) {
+        setOffline();
+      }
+    }, 120000);
 
     // Adiciona listeners para detectar quando usuário sai da página
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handlePageHide); // Melhor para mobile
     
     // Adiciona listeners para detectar atividade do usuário
     // Mas com throttle - só vai chamar handleUserActivity no máximo a cada 30s
@@ -203,6 +239,9 @@ export function useUserPresence(userId: string | null | undefined) {
       if (onlineDebounceRef.current) {
         clearTimeout(onlineDebounceRef.current);
       }
+      if (inactivityTimeoutRef.current) {
+        clearTimeout(inactivityTimeoutRef.current);
+      }
       if (activityThrottle) {
         clearTimeout(activityThrottle);
       }
@@ -210,6 +249,7 @@ export function useUserPresence(userId: string | null | undefined) {
       // Remove listeners
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handlePageHide);
       window.removeEventListener('focus', handleUserActivity);
       window.removeEventListener('mousemove', throttledActivity);
       window.removeEventListener('keydown', throttledActivity);
