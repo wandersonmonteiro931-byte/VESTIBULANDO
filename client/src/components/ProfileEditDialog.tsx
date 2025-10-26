@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useRef } from "react";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, deleteField } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import ImageEditor from "./ImageEditor";
@@ -162,17 +162,34 @@ export default function ProfileEditDialog({ onClose }: ProfileEditDialogProps) {
     setImageToEdit(null);
   };
 
+  const handleRemovePhoto = () => {
+    setFotoBase64("");
+    toast({
+      title: "Foto removida",
+      description: "Clique em Salvar para confirmar a remoção",
+    });
+  };
+
   const handleSave = async () => {
     if (!userData?.uid) return;
 
     setIsLoading(true);
     try {
       const userRef = doc(db, "usuarios", userData.uid);
-      await updateDoc(userRef, {
+      
+      const updateData: any = {
         mensagemStatus: mensagemStatus.trim() || "",
-        fotoBase64: fotoBase64,
-        fotoPublica: true,
-      });
+      };
+      
+      if (fotoBase64) {
+        updateData.fotoBase64 = fotoBase64;
+        updateData.fotoPublica = true;
+      } else {
+        updateData.fotoBase64 = deleteField();
+        updateData.fotoPublica = false;
+      }
+      
+      await updateDoc(userRef, updateData);
 
       await refreshUserData();
 
@@ -236,6 +253,18 @@ export default function ProfileEditDialog({ onClose }: ProfileEditDialogProps) {
                   {getInitials(userData.nome, userData.tipo)}
                 </AvatarFallback>
               </Avatar>
+              
+              {fotoBase64 && (
+                <Button
+                  size="icon"
+                  variant="destructive"
+                  className="absolute -top-2 -left-2 h-6 w-6 rounded-full shadow-lg"
+                  onClick={handleRemovePhoto}
+                  data-testid="button-remove-photo"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              )}
               
               <Button
                 size="icon"
