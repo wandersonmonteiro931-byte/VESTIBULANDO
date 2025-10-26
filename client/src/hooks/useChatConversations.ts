@@ -6,7 +6,8 @@ import {
   where, 
   onSnapshot,
   orderBy,
-  QueryConstraint
+  QueryConstraint,
+  getDocs
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { ChatConversation } from "@shared/schema";
@@ -46,11 +47,37 @@ export function useChatConversations() {
     let allConversations: ChatConversation[] = [];
     let loaded = { q1: false, q2: false };
 
-    const updateConversations = () => {
+    const updateConversations = async () => {
       if (loaded.q1 && loaded.q2) {
-        // Filtrar apenas conversas que têm mensagens reais
+        const blocksRef = collection(db, "userBlocks");
+        const blockQuery = firestoreQuery(
+          blocksRef,
+          where("ativo", "==", true)
+        );
+        
+        const blocksSnapshot = await getDocs(blockQuery);
+        const blocks = blocksSnapshot.docs.map(doc => doc.data());
+        
+        const blockedConversations = allConversations.filter(conv => {
+          const otherParticipantId = 
+            conv.participante1Id === userData.uid 
+              ? conv.participante2Id 
+              : conv.participante1Id;
+          
+          return blocks.some(
+            block => 
+              (block.bloqueadorId === userData.uid && block.bloqueadoId === otherParticipantId) ||
+              (block.bloqueadorId === otherParticipantId && block.bloqueadoId === userData.uid)
+          );
+        });
+        
+        const blockedIds = new Set(blockedConversations.map(c => c.id));
+        
         const conversationsWithMessages = allConversations.filter(
-          conv => conv.ultimaMensagem && conv.ultimaMensagem.trim() !== ""
+          conv => 
+            conv.ultimaMensagem && 
+            conv.ultimaMensagem.trim() !== "" &&
+            !blockedIds.has(conv.id)
         );
         
         const sorted = conversationsWithMessages.sort((a, b) => {

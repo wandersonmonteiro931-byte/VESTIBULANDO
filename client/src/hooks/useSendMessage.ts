@@ -9,6 +9,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { getNowBrasiliaISO } from "@/lib/brasiliaTime";
+import { checkIsBlocked } from "./useCheckBlock";
 
 interface SendMessageParams {
   conversationId: string;
@@ -31,6 +32,11 @@ export function useSendMessage() {
   const sendMessage = async (params: SendMessageParams) => {
     if (!userData) {
       throw new Error("User not authenticated");
+    }
+
+    const isBlocked = await checkIsBlocked(userData.uid, params.destinatarioId);
+    if (isBlocked) {
+      throw new Error("Não é possível enviar mensagens. O contato está bloqueado.");
     }
 
     setIsLoading(true);

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { ArrowLeft, MoreVertical, Send, Mic, Paperclip, Smile } from "lucide-react";
+import { ArrowLeft, Send, Mic, Paperclip, Smile } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -16,6 +16,18 @@ import UserProfileDialog from "@/components/UserProfileDialog";
 import { useUserData } from "@/hooks/useUserData";
 import watermarkLogo from "@/assets/watermark-logo.png";
 import { UserPresenceIndicator } from "@/components/UserPresenceIndicator";
+import { MessageContextMenu } from "@/components/MessageContextMenu";
+import { useDeleteMessage } from "@/hooks/useDeleteMessage";
+import { useToast } from "@/hooks/use-toast";
+import { ConversationOptionsMenu } from "@/components/ConversationOptionsMenu";
+import { BlockConfirmDialog } from "@/components/BlockConfirmDialog";
+import { DeleteConversationDialog } from "@/components/DeleteConversationDialog";
+import { ReportConversationDialog } from "@/components/ReportConversationDialog";
+import { useBlockUser } from "@/hooks/useBlockUser";
+import { useDeleteConversation } from "@/hooks/useDeleteConversation";
+import { useReportConversation } from "@/hooks/useReportConversation";
+import { useLocation } from "wouter";
+import { ChatTermsNotice } from "@/components/ChatTermsNotice";
 
 interface ChatWindowProps {
   conversation: ChatConversation;
@@ -24,11 +36,20 @@ interface ChatWindowProps {
 
 export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
   const { userData } = useAuth();
+  const { toast } = useToast();
+  const [, navigate] = useLocation();
   const [message, setMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [showUserProfile, setShowUserProfile] = useState(false);
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
+  const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
+  const [showContextMenu, setShowContextMenu] = useState(false);
+  const [showBlockDialog, setShowBlockDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const pressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const otherParticipant =
     conversation.participante1Id === userData?.uid
@@ -47,6 +68,10 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
 
   const { messages = [], isLoading } = useChatMessages(conversation.id);
   const { sendMessage: sendMsg, isLoading: isSending } = useSendMessage();
+  const { deleteMessage } = useDeleteMessage();
+  const { blockUser } = useBlockUser();
+  const { deleteConversation } = useDeleteConversation();
+  const { reportConversation, isLoading: isReporting } = useReportConversation();
   
   const isParticipant1 = conversation.participante1Id === userData?.uid;
   const { otherUserTyping, handleTyping, stopTyping } = useTypingIndicator({
@@ -117,6 +142,174 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
     return groups;
   };
 
+  const handleMessagePressStart = (messageId: string, event: React.MouseEvent | React.TouchEvent) => {
+    const isTouchEvent = 'touches' in event;
+    const clientX = isTouchEvent ? event.touches[0].clientX : event.clientX;
+    const clientY = isTouchEvent ? event.touches[0].clientY : event.clientY;
+
+    pressTimerRef.current = setTimeout(() => {
+      setSelectedMessageId(messageId);
+      setContextMenuPosition({ x: clientX, y: clientY });
+      setShowContextMenu(true);
+    }, 500);
+  };
+
+  const handleMessagePressEnd = () => {
+    if (pressTimerRef.current) {
+      clearTimeout(pressTimerRef.current);
+      pressTimerRef.current = null;
+    }
+  };
+
+  const handleDeleteForMe = async () => {
+    if (!selectedMessageId) return;
+
+    try {
+      await deleteMessage({
+        messageId: selectedMessageId,
+        deleteForEveryone: false,
+      });
+      
+      toast({
+        title: "Mensagem excluída",
+        description: "A mensagem foi excluída para você.",
+      });
+    } catch (error) {
+      console.error("Error deleting message:", error);
+      toast({
+        title: "Erro ao excluir mensagem",
+        description: "Não foi possível excluir a mensagem.",
+        variant: "destructive",
+      });
+    } finally {
+      setShowContextMenu(false);
+      setSelectedMessageId(null);
+    }
+  };
+
+  const handleDeleteForEveryone = async () => {
+    if (!selectedMessageId) return;
+
+    try {
+      await deleteMessage({
+        messageId: selectedMessageId,
+        deleteForEveryone: true,
+      });
+      
+      toast({
+        title: "Mensagem excluída",
+        description: "A mensagem foi excluída para todos.",
+      });
+    } catch (error) {
+      console.error("Error deleting message:", error);
+      toast({
+        title: "Erro ao excluir mensagem",
+        description: "Não foi possível excluir a mensagem.",
+        variant: "destructive",
+      });
+    } finally {
+      setShowContextMenu(false);
+      setSelectedMessageId(null);
+    }
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showContextMenu) {
+        setShowContextMenu(false);
+        setSelectedMessageId(null);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [showContextMenu]);
+
+  const handleBlock = () => {
+    setShowBlockDialog(true);
+  };
+
+  const handleConfirmBlock = async () => {
+    try {
+      await blockUser({
+        blockedUserId: otherParticipant.id,
+        blockedUserName: otherParticipant.nome,
+      });
+
+      toast({
+        title: "Usuário bloqueado",
+        description: "A conversa foi bloqueada para ambas as contas.",
+      });
+
+      setShowBlockDialog(false);
+      navigate("/chat");
+    } catch (error) {
+      console.error("Error blocking user:", error);
+      toast({
+        title: "Erro ao bloquear",
+        description: "Não foi possível bloquear o usuário.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDelete = () => {
+    setShowDeleteDialog(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    try {
+      await deleteConversation({
+        conversationId: conversation.id,
+      });
+
+      toast({
+        title: "Conversa excluída",
+        description: "A conversa foi excluída apenas para você.",
+      });
+
+      setShowDeleteDialog(false);
+      navigate("/chat");
+    } catch (error) {
+      console.error("Error deleting conversation:", error);
+      toast({
+        title: "Erro ao excluir conversa",
+        description: "Não foi possível excluir a conversa.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleReport = () => {
+    setShowReportDialog(true);
+  };
+
+  const handleConfirmReport = async (reason: string) => {
+    try {
+      await reportConversation({
+        conversationId: conversation.id,
+        reportedUserId: otherParticipant.id,
+        reportedUserName: otherParticipant.nome,
+        reportedUserType: otherParticipant.tipo,
+        reason,
+      });
+
+      toast({
+        title: "Denúncia enviada",
+        description: "A denúncia foi enviada para análise da diretoria.",
+      });
+
+      setShowReportDialog(false);
+    } catch (error) {
+      console.error("Error reporting conversation:", error);
+      toast({
+        title: "Erro ao denunciar",
+        description: "Não foi possível enviar a denúncia.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const messageGroups = groupMessagesByDate(messages);
 
   if (!userData) return null;
@@ -163,14 +356,11 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
           </div>
         </div>
 
-        <Button
-          size="icon"
-          variant="ghost"
-          className="text-white hover:bg-white/10 shrink-0 h-9 w-9"
-          data-testid="button-more-options"
-        >
-          <MoreVertical className="h-5 w-5" />
-        </Button>
+        <ConversationOptionsMenu
+          onBlock={handleBlock}
+          onDelete={handleDelete}
+          onReport={handleReport}
+        />
       </div>
 
       {/* Messages Area */}
@@ -181,6 +371,8 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
           </div>
         ) : (
           <div className="space-y-4">
+            <ChatTermsNotice />
+            
             {Object.entries(messageGroups).map(([date, msgs]) => (
               <div key={date}>
                 {/* Date Divider */}
@@ -193,6 +385,9 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
                 {/* Messages for this date */}
                 {msgs.map((msg) => {
                   const isSent = msg.remetenteId === userData.uid;
+                  const isDeletedForMe = isSent ? msg.deletadaPorRemetente : msg.deletadaPorDestinatario;
+                  const isDeletedForEveryone = msg.deletadaParaTodos;
+                  const shouldShowDeleted = isDeletedForMe || isDeletedForEveryone;
                   
                   return (
                     <div
@@ -205,20 +400,33 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
                     >
                       <div
                         className={cn(
-                          "max-w-[75%] md:max-w-[65%] px-3 py-2 rounded-lg shadow-sm",
+                          "max-w-[75%] md:max-w-[65%] px-3 py-2 rounded-lg shadow-sm cursor-pointer select-none",
                           isSent
                             ? "message-sent"
-                            : "message-received"
+                            : "message-received",
+                          selectedMessageId === msg.id && "ring-2 ring-primary"
                         )}
+                        onMouseDown={(e) => !shouldShowDeleted && handleMessagePressStart(msg.id, e)}
+                        onMouseUp={handleMessagePressEnd}
+                        onMouseLeave={handleMessagePressEnd}
+                        onTouchStart={(e) => !shouldShowDeleted && handleMessagePressStart(msg.id, e)}
+                        onTouchEnd={handleMessagePressEnd}
+                        onContextMenu={(e) => e.preventDefault()}
                       >
-                        <p className="text-sm whitespace-pre-wrap break-words">
-                          {msg.conteudo}
-                        </p>
+                        {shouldShowDeleted ? (
+                          <p className="text-sm italic opacity-60">
+                            Mensagem apagada
+                          </p>
+                        ) : (
+                          <p className="text-sm whitespace-pre-wrap break-words">
+                            {msg.conteudo}
+                          </p>
+                        )}
                         <div className="flex items-center justify-end gap-1 mt-1">
                           <span className="text-[10px] opacity-70">
                             {formatMessageTime(msg.timestamp)}
                           </span>
-                          {isSent && (
+                          {isSent && !shouldShowDeleted && (
                             <span className="text-[10px]">
                               {msg.lida ? (
                                 <CheckCheck className="h-3 w-3 text-blue-500" />
@@ -307,6 +515,36 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
           onClose={() => setShowUserProfile(false)} 
         />
       )}
+
+      <MessageContextMenu
+        isVisible={showContextMenu}
+        position={contextMenuPosition}
+        onDeleteForMe={handleDeleteForMe}
+        onDeleteForEveryone={handleDeleteForEveryone}
+        canDeleteForEveryone={selectedMessageId ? (messages.find(m => m.id === selectedMessageId)?.remetenteId === userData.uid) : false}
+      />
+
+      <BlockConfirmDialog
+        open={showBlockDialog}
+        onOpenChange={setShowBlockDialog}
+        onConfirm={handleConfirmBlock}
+        userName={otherParticipant.tipo === "diretor" ? "Diretoria" : otherParticipant.nome}
+      />
+
+      <DeleteConversationDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        onConfirm={handleConfirmDelete}
+        userName={otherParticipant.tipo === "diretor" ? "Diretoria" : otherParticipant.nome}
+      />
+
+      <ReportConversationDialog
+        open={showReportDialog}
+        onOpenChange={setShowReportDialog}
+        onConfirm={handleConfirmReport}
+        userName={otherParticipant.tipo === "diretor" ? "Diretoria" : otherParticipant.nome}
+        isLoading={isReporting}
+      />
     </div>
   );
 }

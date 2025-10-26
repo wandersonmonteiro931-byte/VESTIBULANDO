@@ -304,6 +304,9 @@ export const chatMessageSchema = z.object({
   deletadaPorDestinatario: z.boolean().default(false), // Se foi deletada pelo destinatário (só some da visualização)
   dataDeletadaPorRemetente: z.string().optional(), // Data/hora em que foi deletada pelo remetente
   dataDeletadaPorDestinatario: z.string().optional(), // Data/hora em que foi deletada pelo destinatário
+  deletadaParaTodos: z.boolean().default(false), // Se foi deletada para todos (mostra "Mensagem apagada")
+  dataDeletadaParaTodos: z.string().optional(), // Data/hora em que foi deletada para todos
+  deletadaParaTodosPorId: z.string().optional(), // ID de quem deletou para todos
 });
 
 export const insertChatMessageSchema = chatMessageSchema.omit({ id: true });
@@ -429,6 +432,7 @@ export const chatReportSchema = z.object({
   denunciadoNome: z.string(), // Nome de quem foi denunciado
   denunciadoTipo: z.enum(["aluno", "professor", "diretor"]), // Tipo de quem foi denunciado
   motivo: z.string(), // Comentário/motivo da denúncia
+  mensagensConversa: z.string().optional(), // JSON string com cópia de todas as mensagens da conversa
   dataDenuncia: z.string(), // Data/hora da denúncia
   status: z.enum(["pendente", "analisada", "arquivada"]).default("pendente"), // Status da denúncia
   analisadaPor: z.string().optional(), // ID do diretor que analisou

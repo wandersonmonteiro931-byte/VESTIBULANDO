@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation, Link } from "wouter";
-import { MessageSquare, Settings, Users, Search, ArrowLeft, Home, User as UserIcon } from "lucide-react";
+import { MessageSquare, Settings, Search, ArrowLeft, Home, User as UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -21,7 +21,7 @@ export default function ChatPage() {
   const { userData } = useAuth();
   const [, navigate] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState<"chats" | "groups" | "settings">("chats");
+  const [activeTab, setActiveTab] = useState<"chats">("chats");
   const [showNewChatDialog, setShowNewChatDialog] = useState(false);
   const [showProfileEditDialog, setShowProfileEditDialog] = useState(false);
   const [allUsers, setAllUsers] = useState<User[]>([]);
@@ -299,33 +299,6 @@ export default function ChatPage() {
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex border-b border-border bg-background">
-          <button
-            className={cn(
-              "flex-1 py-3 text-sm font-medium transition-colors",
-              activeTab === "chats"
-                ? "border-b-2 border-[#00a884] text-[#00a884]"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-            onClick={() => setActiveTab("chats")}
-            data-testid="button-tab-chats"
-          >
-            Conversas
-          </button>
-          <button
-            className={cn(
-              "flex-1 py-3 text-sm font-medium transition-colors",
-              activeTab === "groups"
-                ? "border-b-2 border-[#00a884] text-[#00a884]"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-            onClick={() => setActiveTab("groups")}
-            data-testid="button-tab-groups"
-          >
-            Grupos
-          </button>
-        </div>
 
         {/* Conversation List */}
         <ScrollArea className="flex-1 whatsapp-conversation-list">
