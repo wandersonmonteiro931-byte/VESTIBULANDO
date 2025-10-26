@@ -9,12 +9,14 @@ export function usePresence() {
     update: NodeJS.Timeout | null;
     heartbeat: NodeJS.Timeout | null;
     offlineCheck: NodeJS.Timeout | null;
-  }>({ update: null, heartbeat: null, offlineCheck: null });
+    offlineTimeout: NodeJS.Timeout | null;
+  }>({ update: null, heartbeat: null, offlineCheck: null, offlineTimeout: null });
   const stateRef = useRef<{
     lastActivity: number;
     isOnline: boolean;
     offlineAttempts: number;
-  }>({ lastActivity: Date.now(), isOnline: true, offlineAttempts: 0 });
+    pageVisible: boolean;
+  }>({ lastActivity: Date.now(), isOnline: true, offlineAttempts: 0, pageVisible: true });
 
   useEffect(() => {
     if (!userData?.uid) return;
@@ -55,10 +57,16 @@ export function usePresence() {
       }
     };
 
-    // Versão agressiva de marcar offline - tenta múltiplas vezes
+    // Versão agressiva de marcar offline - tenta múltiplas vezes com garantia de 3 segundos máximo
     const setOfflineImmediate = async () => {
       const now = new Date().toISOString();
       stateRef.current.isOnline = false;
+      stateRef.current.pageVisible = false;
+      
+      // Limpar qualquer timeout pendente de offline
+      if (intervalsRef.current.offlineTimeout) {
+        clearTimeout(intervalsRef.current.offlineTimeout);
+      }
       
       // Primeira tentativa imediata
       try {
@@ -69,14 +77,15 @@ export function usePresence() {
           statusPresenca: "offline"
         });
         stateRef.current.offlineAttempts = 0;
+        console.log("✅ Marcado offline imediatamente");
         return;
       } catch (error) {
-        console.warn("Tentativa 1 de marcar offline falhou:", error);
+        console.warn("⚠️ Tentativa 1 de marcar offline falhou:", error);
       }
 
-      // Tentar novamente após 1 segundo
+      // Tentar novamente após 500ms
       setTimeout(async () => {
-        if (stateRef.current.isOnline) return; // Já está online novamente
+        if (stateRef.current.pageVisible) return; // Página voltou a estar visível
         try {
           await updateDoc(userRef, {
             isOnline: false,
@@ -85,14 +94,15 @@ export function usePresence() {
             statusPresenca: "offline"
           });
           stateRef.current.offlineAttempts = 0;
+          console.log("✅ Marcado offline na tentativa 2 (500ms)");
         } catch (error) {
-          console.warn("Tentativa 2 de marcar offline falhou:", error);
+          console.warn("⚠️ Tentativa 2 de marcar offline falhou:", error);
         }
-      }, 1000);
+      }, 500);
 
-      // Última tentativa após 2 segundos
+      // Tentar novamente após 1.5 segundos
       setTimeout(async () => {
-        if (stateRef.current.isOnline) return; // Já está online novamente
+        if (stateRef.current.pageVisible) return; // Página voltou a estar visível
         try {
           await updateDoc(userRef, {
             isOnline: false,
@@ -101,10 +111,28 @@ export function usePresence() {
             statusPresenca: "offline"
           });
           stateRef.current.offlineAttempts = 0;
+          console.log("✅ Marcado offline na tentativa 3 (1.5s)");
         } catch (error) {
-          console.warn("Tentativa 3 de marcar offline falhou:", error);
+          console.warn("⚠️ Tentativa 3 de marcar offline falhou:", error);
         }
-      }, 2000);
+      }, 1500);
+
+      // Última tentativa garantida após 3 segundos (tolerância máxima)
+      intervalsRef.current.offlineTimeout = setTimeout(async () => {
+        if (stateRef.current.pageVisible) return; // Página voltou a estar visível
+        try {
+          await updateDoc(userRef, {
+            isOnline: false,
+            lastSeen: new Date().toISOString(),
+            lastActivity: new Date().toISOString(),
+            statusPresenca: "offline"
+          });
+          stateRef.current.offlineAttempts = 0;
+          console.log("✅ Marcado offline na tentativa final (3s - tolerância máxima)");
+        } catch (error) {
+          console.error("❌ ERRO CRÍTICO: Falha ao marcar offline após 3 segundos:", error);
+        }
+      }, 3000);
     };
 
     const setOfflineSync = () => {
@@ -136,22 +164,36 @@ export function usePresence() {
     const handleVisibilityChange = () => {
       if (document.hidden) {
         console.log("📱 Página ficou oculta - marcando offline imediatamente");
+        stateRef.current.pageVisible = false;
         setOfflineSync();
       } else {
         console.log("📱 Página voltou a ficar visível - marcando online");
+        stateRef.current.pageVisible = true;
         stateRef.current.lastActivity = Date.now();
+        // Limpar timeout de offline se existir
+        if (intervalsRef.current.offlineTimeout) {
+          clearTimeout(intervalsRef.current.offlineTimeout);
+          intervalsRef.current.offlineTimeout = null;
+        }
         setOnline();
       }
     };
 
     const handleBlur = () => {
       console.log("🔄 Janela perdeu foco - marcando offline");
+      stateRef.current.pageVisible = false;
       setOfflineSync();
     };
 
     const handleFocus = () => {
       console.log("🔄 Janela ganhou foco - marcando online");
+      stateRef.current.pageVisible = true;
       stateRef.current.lastActivity = Date.now();
+      // Limpar timeout de offline se existir
+      if (intervalsRef.current.offlineTimeout) {
+        clearTimeout(intervalsRef.current.offlineTimeout);
+        intervalsRef.current.offlineTimeout = null;
+      }
       if (!stateRef.current.isOnline) {
         setOnline();
       }
@@ -207,6 +249,9 @@ export function usePresence() {
       }
       if (intervalsRef.current.offlineCheck) {
         clearInterval(intervalsRef.current.offlineCheck);
+      }
+      if (intervalsRef.current.offlineTimeout) {
+        clearTimeout(intervalsRef.current.offlineTimeout);
       }
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("focus", handleFocus);
