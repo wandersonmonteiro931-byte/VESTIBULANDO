@@ -40,7 +40,7 @@ export default function NewChatDialog({
 
     setIsLoading(true);
     try {
-      const usersRef = collection(db, "Usuarios");
+      const usersRef = collection(db, "usuarios");
       const q = firestoreQuery(
         usersRef,
         where("ativo", "==", true),
