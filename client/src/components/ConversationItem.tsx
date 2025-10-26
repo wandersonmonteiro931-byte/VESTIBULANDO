@@ -6,6 +6,7 @@ import { useUserData } from "@/hooks/useUserData";
 import { formatBrasiliaTime } from "@/lib/brasiliaTime";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion } from "framer-motion";
+import { UserPresenceIndicator } from "@/components/UserPresenceIndicator";
 
 interface ConversationItemProps {
   conversation: ChatConversation;
@@ -41,6 +42,12 @@ export default function ConversationItem({ conversation, otherParticipant, unrea
             {otherParticipant.tipo === "diretor" ? "DIR" : otherParticipant.nome.charAt(0).toUpperCase()}
           </AvatarFallback>
         </Avatar>
+        <UserPresenceIndicator 
+          userId={otherParticipant.id} 
+          showText={false}
+          className="absolute bottom-0 right-0"
+          dotClassName="h-3 w-3 border-2 border-background"
+        />
       </div>
 
       <div className="flex-1 min-w-0">

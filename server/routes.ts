@@ -107,6 +107,52 @@ export async function registerRoutes(expressApp: Express): Promise<Server> {
     }
   });
 
+  // Endpoint para marcar usuário como offline (usado com sendBeacon quando página fecha)
+  expressApp.post("/api/user-offline/:userId", async (req, res) => {
+    try {
+      const { userId } = req.params;
+
+      if (!userId) {
+        console.warn("⚠️ Tentativa de marcar offline sem userId");
+        return res.status(400).json({ 
+          success: false, 
+          message: "ID do usuário é obrigatório" 
+        });
+      }
+
+      if (!firebaseAdmin) {
+        console.warn(`⚠️ Firebase Admin não configurado - não foi possível marcar ${userId} como offline`);
+        // Retorna 200 para não causar erro no cliente, mas indica que falhou
+        return res.json({ 
+          success: false, 
+          reason: 'firebase_admin_not_configured',
+          message: 'Firebase Admin SDK não configurado' 
+        });
+      }
+
+      const db = firebaseAdmin.firestore();
+      const userRef = db.collection('usuarios').doc(userId);
+
+      await userRef.update({
+        isOnline: false,
+        lastSeen: admin.firestore.FieldValue.serverTimestamp(),
+        statusPresenca: 'offline',
+      });
+
+      console.log(`✅ Usuário ${userId} marcado como offline`);
+      return res.json({ success: true });
+    } catch (error: any) {
+      console.error(`❌ Erro ao marcar usuário ${req.params.userId} offline:`, error.message);
+      
+      // Retorna 200 para não causar erro no sendBeacon, mas loga o problema
+      return res.json({ 
+        success: false, 
+        reason: 'firestore_update_failed',
+        message: error.message 
+      });
+    }
+  });
+
   const httpServer = createServer(expressApp);
   return httpServer;
 }

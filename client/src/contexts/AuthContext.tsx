@@ -3,6 +3,7 @@ import { onAuthStateChanged, signOut as firebaseSignOut, User as FirebaseUser } 
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { auth, db, firebaseError } from "@/lib/firebase";
 import type { User } from "@shared/schema";
+import { useUserPresence } from "@/hooks/useUserPresence";
 
 interface AuthContextType {
   currentUser: FirebaseUser | null;
@@ -19,6 +20,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [userData, setUserData] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Hook para gerenciar presença do usuário automaticamente
+  useUserPresence(currentUser?.uid);
 
   const fetchUserData = async (uid: string): Promise<boolean> => {
     try {

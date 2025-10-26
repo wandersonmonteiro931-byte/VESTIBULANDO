@@ -6,6 +6,10 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Middleware adicional para processar JSON raw (usado por sendBeacon)
+app.use(express.json({ type: 'application/json' }));
+app.use(express.text({ type: 'text/plain' }));
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;

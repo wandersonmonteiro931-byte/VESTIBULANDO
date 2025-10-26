@@ -15,6 +15,7 @@ import { formatBrasiliaTime, formatBrasiliaDate } from "@/lib/brasiliaTime";
 import UserProfileDialog from "@/components/UserProfileDialog";
 import { useUserData } from "@/hooks/useUserData";
 import watermarkLogo from "@/assets/watermark-logo.png";
+import { UserPresenceIndicator } from "@/components/UserPresenceIndicator";
 
 interface ChatWindowProps {
   conversation: ChatConversation;
@@ -152,6 +153,13 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
             <h2 className="font-semibold text-white truncate text-sm leading-tight" data-testid="text-chat-participant-name">
               {otherParticipant.tipo === "diretor" ? "Diretoria" : otherParticipant.nome}
             </h2>
+            <UserPresenceIndicator 
+              userId={otherParticipant.id} 
+              showText={true}
+              className="mt-0.5"
+              dotClassName="h-1.5 w-1.5"
+              variant="light"
+            />
           </div>
         </div>
 
