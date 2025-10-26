@@ -140,11 +140,13 @@ export function usePresence() {
     };
 
     const updateActivity = async () => {
-      stateRef.current.lastActivity = Date.now();
-      
+      // APENAS atualizar timestamps se o usuário já estiver online
+      // Não forçar online automaticamente - deixar para handleActivity
       if (!stateRef.current.isOnline) {
-        await setOnline();
+        return; // Usuário está offline, não fazer nada
       }
+
+      stateRef.current.lastActivity = Date.now();
 
       try {
         const timestamp = new Date().toISOString();
