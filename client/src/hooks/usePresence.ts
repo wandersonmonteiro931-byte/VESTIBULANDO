@@ -158,8 +158,16 @@ export function usePresence() {
       }
     };
 
-    setOnline();
-    stateRef.current.lastActivity = Date.now();
+    // Apenas marcar online se a página estiver visível ao carregar
+    if (!document.hidden) {
+      setOnline();
+      stateRef.current.lastActivity = Date.now();
+      stateRef.current.pageVisible = true;
+      console.log("🚀 Inicializado - página visível, marcando online");
+    } else {
+      stateRef.current.pageVisible = false;
+      console.log("🚀 Inicializado - página oculta, aguardando interação");
+    }
 
     const handleVisibilityChange = () => {
       if (document.hidden) {
@@ -167,15 +175,14 @@ export function usePresence() {
         stateRef.current.pageVisible = false;
         setOfflineSync();
       } else {
-        console.log("📱 Página voltou a ficar visível - marcando online");
+        console.log("📱 Página voltou a ficar visível - aguardando interação do usuário");
         stateRef.current.pageVisible = true;
-        stateRef.current.lastActivity = Date.now();
         // Limpar timeout de offline se existir
         if (intervalsRef.current.offlineTimeout) {
           clearTimeout(intervalsRef.current.offlineTimeout);
           intervalsRef.current.offlineTimeout = null;
         }
-        setOnline();
+        // NÃO marcar online automaticamente - aguardar interação real do usuário
       }
     };
 
@@ -186,17 +193,14 @@ export function usePresence() {
     };
 
     const handleFocus = () => {
-      console.log("🔄 Janela ganhou foco - marcando online");
+      console.log("🔄 Janela ganhou foco - aguardando interação do usuário");
       stateRef.current.pageVisible = true;
-      stateRef.current.lastActivity = Date.now();
       // Limpar timeout de offline se existir
       if (intervalsRef.current.offlineTimeout) {
         clearTimeout(intervalsRef.current.offlineTimeout);
         intervalsRef.current.offlineTimeout = null;
       }
-      if (!stateRef.current.isOnline) {
-        setOnline();
-      }
+      // NÃO marcar online automaticamente - aguardar interação real do usuário
     };
 
     const handleActivity = () => {
@@ -208,11 +212,12 @@ export function usePresence() {
 
     // Heartbeat verificando a cada 1 segundo para detecção rápida
     const checkHeartbeat = () => {
+      // Apenas marcar offline se a página estiver oculta e o usuário ainda estiver online
       if (document.hidden && stateRef.current.isOnline) {
+        console.log("⏱️ Heartbeat detectou página oculta - marcando offline");
         setOfflineSync();
-      } else if (!document.hidden && !stateRef.current.isOnline) {
-        setOnline();
       }
+      // NÃO marcar online automaticamente - deixar para os eventos de interação do usuário
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
