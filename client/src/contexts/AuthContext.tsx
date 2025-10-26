@@ -14,7 +14,16 @@ interface AuthContextType {
   firebaseError: Error | null;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// Cache context on globalThis to survive HMR (Hot Module Reload)
+// This prevents "useAuth must be used within an AuthProvider" errors during fast refresh
+const getAuthContext = () => {
+  if (!(globalThis as any).__appAuthContext) {
+    (globalThis as any).__appAuthContext = createContext<AuthContextType | undefined>(undefined);
+  }
+  return (globalThis as any).__appAuthContext;
+};
+
+const AuthContext = getAuthContext();
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);

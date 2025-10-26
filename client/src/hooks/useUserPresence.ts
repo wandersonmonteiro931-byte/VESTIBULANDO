@@ -114,6 +114,8 @@ export function useUserPresence(userId: string | null | undefined) {
     
     // Handler para quando a página fica visível/oculta
     const handleVisibilityChange = () => {
+      console.log(`[Presence] visibilitychange - document.hidden: ${document.hidden}, isMobile: ${isMobile}`);
+      
       if (document.hidden) {
         // Cancela qualquer debounce de online pendente
         if (onlineDebounceRef.current) {
@@ -126,6 +128,8 @@ export function useUserPresence(userId: string | null | undefined) {
         // No desktop, aguarda 3 segundos
         const offlineDelay = isMobile ? 0 : 3000;
         
+        console.log(`[Presence] Página oculta - marcando offline em ${offlineDelay}ms`);
+        
         offlineTimeoutRef.current = setTimeout(() => {
           setOffline();
           // Para o intervalo de atualização de atividade
@@ -135,6 +139,8 @@ export function useUserPresence(userId: string | null | undefined) {
           }
         }, offlineDelay);
       } else {
+        console.log(`[Presence] Página visível novamente`);
+        
         // Página voltou a ficar visível
         // Cancela o timeout de offline se ainda não executou
         if (offlineTimeoutRef.current) {
@@ -148,6 +154,49 @@ export function useUserPresence(userId: string | null | undefined) {
         // Inicia intervalo de atualização de atividade se não existe
         if (!activityIntervalRef.current && isOnlineRef.current) {
           activityIntervalRef.current = setInterval(updateActivity, 30000); // Atualiza a cada 30 segundos
+        }
+      }
+    };
+    
+    // Handler para quando a janela perde o foco (especialmente útil no mobile)
+    const handleWindowBlur = () => {
+      console.log(`[Presence] window blur - isMobile: ${isMobile}`);
+      
+      if (isMobile) {
+        // No mobile, quando perde o foco, marca offline imediatamente
+        // Cancela qualquer debounce de online pendente
+        if (onlineDebounceRef.current) {
+          clearTimeout(onlineDebounceRef.current);
+          onlineDebounceRef.current = null;
+        }
+        
+        console.log(`[Presence] Mobile perdeu foco - marcando offline imediatamente`);
+        
+        // Marca offline imediatamente no mobile
+        setOffline();
+        
+        // Para o intervalo de atualização de atividade
+        if (activityIntervalRef.current) {
+          clearInterval(activityIntervalRef.current);
+          activityIntervalRef.current = null;
+        }
+      }
+    };
+    
+    // Handler para quando a janela ganha o foco (especialmente útil no mobile)
+    const handleWindowFocus = () => {
+      console.log(`[Presence] window focus - isMobile: ${isMobile}`);
+      
+      if (isMobile) {
+        // No mobile, quando ganha o foco, marca online
+        if (!isOnlineRef.current) {
+          console.log(`[Presence] Mobile ganhou foco - marcando online`);
+          setOnline();
+          
+          // Inicia intervalo de atualização de atividade
+          if (!activityIntervalRef.current) {
+            activityIntervalRef.current = setInterval(updateActivity, 30000);
+          }
         }
       }
     };
@@ -212,6 +261,8 @@ export function useUserPresence(userId: string | null | undefined) {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('beforeunload', handleBeforeUnload);
     window.addEventListener('pagehide', handlePageHide); // Melhor para mobile
+    window.addEventListener('blur', handleWindowBlur); // Detecta quando o app perde foco (mobile)
+    window.addEventListener('focus', handleWindowFocus); // Detecta quando o app ganha foco (mobile)
     
     // Adiciona listeners para detectar atividade do usuário
     // Mas com throttle - só vai chamar handleUserActivity no máximo a cada 30s
@@ -254,6 +305,8 @@ export function useUserPresence(userId: string | null | undefined) {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('beforeunload', handleBeforeUnload);
       window.removeEventListener('pagehide', handlePageHide);
+      window.removeEventListener('blur', handleWindowBlur);
+      window.removeEventListener('focus', handleWindowFocus);
       window.removeEventListener('focus', handleUserActivity);
       window.removeEventListener('mousemove', throttledActivity);
       window.removeEventListener('keydown', throttledActivity);
