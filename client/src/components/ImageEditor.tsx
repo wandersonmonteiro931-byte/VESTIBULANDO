@@ -120,7 +120,7 @@ export default function ImageEditor({
 
   return (
     <div className="fixed inset-0 z-[10003] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-      <Card className="w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+      <Card className="w-full max-w-2xl h-[90vh] flex flex-col overflow-hidden">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 shrink-0">
           <CardTitle>Editar Imagem</CardTitle>
           <Button size="icon" variant="ghost" onClick={onCancel} data-testid="button-close-editor">
@@ -130,7 +130,7 @@ export default function ImageEditor({
 
         <Separator />
 
-        <CardContent className="flex-1 p-0 relative bg-black min-h-[300px] md:min-h-[400px]">
+        <CardContent className="flex-1 p-0 relative bg-black min-h-[200px] overflow-hidden">
           <Cropper
             image={image}
             crop={crop}
