@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +28,7 @@ export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfi
   const [saving, setSaving] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
   const [imageToEdit, setImageToEdit] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const compressImage = (file: File): Promise<File> => {
@@ -342,18 +343,21 @@ export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfi
 
               <div className="flex-1 space-y-2">
                 <input
+                  ref={fileInputRef}
                   type="file"
                   accept="image/*"
                   onChange={handleFileSelect}
                   className="hidden"
-                  id="photo-upload-input"
                   data-testid="input-photo-file"
                 />
                 
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => document.getElementById('photo-upload-input')?.click()}
+                  onClick={() => {
+                    console.log('🖱️ Botão clicado!');
+                    fileInputRef.current?.click();
+                  }}
                   className="w-full"
                   data-testid="button-upload-photo"
                 >
