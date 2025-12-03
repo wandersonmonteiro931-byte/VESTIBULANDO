@@ -111,9 +111,11 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
   const { userData } = useAuth();
   const { toast } = useToast();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [gradeDialogOpen, setGradeDialogOpen] = useState(false);
   const [selectedAvaliacao, setSelectedAvaliacao] = useState<Avaliacao | null>(null);
+  const [editingAvaliacao, setEditingAvaliacao] = useState<Avaliacao | null>(null);
   const [selectedEntrega, setSelectedEntrega] = useState<AvaliacaoEntrega | null>(null);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [activeTab, setActiveTab] = useState("todas");
@@ -159,6 +161,24 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
     defaultValues: {
       nota: 0,
       feedback: "",
+    },
+  });
+
+  const editForm = useForm<z.infer<typeof avaliacaoFormSchema>>({
+    resolver: zodResolver(avaliacaoFormSchema),
+    defaultValues: {
+      tipo: "prova",
+      materia: "",
+      destinatarioTipo: "turma",
+      turmaId: "",
+      dataInicio: "",
+      dataFim: "",
+      valorTotal: 10,
+      modeloTipo: "arquivo_anexo",
+      instrucoes: "",
+      permitirAtraso: false,
+      mostrarGabarito: false,
+      mostrarNota: true,
     },
   });
 
@@ -335,6 +355,131 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
       });
     },
   });
+
+  const updateMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof avaliacaoFormSchema> & { id: string }) => {
+      if (!userData || !editingAvaliacao) throw new Error("Erro ao atualizar");
+
+      const turma = turmas?.find((t: Turma) => t.id === data.turmaId);
+
+      let arquivoUrl = editingAvaliacao.arquivoUrl;
+      let arquivoNome = editingAvaliacao.arquivoNome;
+
+      if (attachmentFile) {
+        const storageRef = ref(storage, `avaliacoes/${data.id}/${attachmentFile.name}`);
+        await uploadBytes(storageRef, attachmentFile);
+        arquivoUrl = await getDownloadURL(storageRef);
+        arquivoNome = attachmentFile.name;
+      }
+
+      const avaliacaoData: any = {
+        titulo: data.titulo,
+        descricao: data.descricao || "",
+        tipo: data.tipo,
+        materia: data.materia,
+        turmaId: data.turmaId || "",
+        turmaNome: turma?.nome || "",
+        dataInicio: new Date(data.dataInicio).toISOString(),
+        dataFim: new Date(data.dataFim).toISOString(),
+        valorTotal: data.valorTotal,
+        modeloTipo: data.modeloTipo,
+        instrucoes: data.instrucoes || "",
+        permitirAtraso: data.permitirAtraso,
+        mostrarGabarito: data.mostrarGabarito,
+        mostrarNota: data.mostrarNota,
+        atualizadoEm: getNowBrasiliaISO(),
+      };
+
+      if (data.duracaoMinutos) avaliacaoData.duracaoMinutos = data.duracaoMinutos;
+      if (arquivoUrl) avaliacaoData.arquivoUrl = arquivoUrl;
+      if (arquivoNome) avaliacaoData.arquivoNome = arquivoNome;
+
+      if (questoes.length > 0) {
+        avaliacaoData.questoes = questoes.map(q => {
+          const questaoData: any = {
+            id: q.id,
+            ordem: q.ordem,
+            tipo: q.tipo,
+            enunciado: q.enunciado,
+            valor: q.valor,
+          };
+          if (q.opcoes && q.opcoes.length > 0) questaoData.opcoes = q.opcoes;
+          if (q.respostaCorreta) questaoData.respostaCorreta = q.respostaCorreta;
+          if (q.temaRedacao) questaoData.temaRedacao = q.temaRedacao;
+          if (q.generoTextual) questaoData.generoTextual = q.generoTextual;
+          if (q.minimoLinhas) questaoData.minimoLinhas = q.minimoLinhas;
+          if (q.maximoLinhas) questaoData.maximoLinhas = q.maximoLinhas;
+          if (q.tipoCustomizado) questaoData.tipoCustomizado = q.tipoCustomizado;
+          if (q.instrucoesEspecificas) questaoData.instrucoesEspecificas = q.instrucoesEspecificas;
+          return questaoData;
+        });
+      } else {
+        avaliacaoData.questoes = editingAvaliacao.questoes || [];
+      }
+
+      const avaliacaoRef = doc(db, "avaliacoes", data.id);
+      await updateDoc(avaliacaoRef, avaliacaoData);
+      return avaliacaoData;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/avaliacoes"] });
+      toast({
+        title: "Avaliação atualizada!",
+        description: "As alterações foram salvas com sucesso.",
+      });
+      setEditDialogOpen(false);
+      setEditingAvaliacao(null);
+      editForm.reset();
+      setAttachmentFile(null);
+      setQuestoes([]);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao atualizar avaliação",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleOpenEditDialog = (avaliacao: Avaliacao) => {
+    setEditingAvaliacao(avaliacao);
+    editForm.reset({
+      titulo: avaliacao.titulo,
+      descricao: avaliacao.descricao || "",
+      tipo: avaliacao.tipo as any,
+      materia: avaliacao.materia,
+      destinatarioTipo: avaliacao.turmaId ? "turma" : "alunos_especificos",
+      turmaId: avaliacao.turmaId || "",
+      dataInicio: format(new Date(avaliacao.dataInicio), "yyyy-MM-dd'T'HH:mm"),
+      dataFim: format(new Date(avaliacao.dataFim), "yyyy-MM-dd'T'HH:mm"),
+      duracaoMinutos: avaliacao.duracaoMinutos,
+      valorTotal: avaliacao.valorTotal,
+      modeloTipo: avaliacao.modeloTipo as any || "questoes",
+      instrucoes: avaliacao.instrucoes || "",
+      permitirAtraso: avaliacao.permitirAtraso || false,
+      mostrarGabarito: avaliacao.mostrarGabarito || false,
+      mostrarNota: avaliacao.mostrarNota !== false,
+    });
+    if (avaliacao.questoes && avaliacao.questoes.length > 0) {
+      setQuestoes(avaliacao.questoes.map((q: any) => ({
+        id: q.id,
+        ordem: q.ordem,
+        tipo: q.tipo,
+        enunciado: q.enunciado,
+        valor: q.valor,
+        opcoes: q.opcoes,
+        respostaCorreta: q.respostaCorreta,
+        temaRedacao: q.temaRedacao,
+        generoTextual: q.generoTextual,
+        minimoLinhas: q.minimoLinhas,
+        maximoLinhas: q.maximoLinhas,
+        tipoCustomizado: q.tipoCustomizado,
+        instrucoesEspecificas: q.instrucoesEspecificas,
+      })));
+    }
+    setEditDialogOpen(true);
+  };
 
   // Funções auxiliares para gerenciar questões
   const resetNovaQuestao = () => {
@@ -738,6 +883,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
             avaliacoes={filterAvaliacoes("todas")} 
             loading={loadingAvaliacoes}
             onView={(a) => { setSelectedAvaliacao(a); setViewDialogOpen(true); }}
+            onEdit={handleOpenEditDialog}
             onPrint={handlePrintPDF}
             onDelete={(id) => deleteMutation.mutate(id)}
             getStatus={getStatusAvaliacao}
@@ -752,6 +898,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
             avaliacoes={filterAvaliacoes("andamento")} 
             loading={loadingAvaliacoes}
             onView={(a) => { setSelectedAvaliacao(a); setViewDialogOpen(true); }}
+            onEdit={handleOpenEditDialog}
             onPrint={handlePrintPDF}
             onDelete={(id) => deleteMutation.mutate(id)}
             getStatus={getStatusAvaliacao}
@@ -766,6 +913,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
             avaliacoes={filterAvaliacoes("agendadas")} 
             loading={loadingAvaliacoes}
             onView={(a) => { setSelectedAvaliacao(a); setViewDialogOpen(true); }}
+            onEdit={handleOpenEditDialog}
             onPrint={handlePrintPDF}
             onDelete={(id) => deleteMutation.mutate(id)}
             getStatus={getStatusAvaliacao}
@@ -780,6 +928,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
             avaliacoes={filterAvaliacoes("encerradas")} 
             loading={loadingAvaliacoes}
             onView={(a) => { setSelectedAvaliacao(a); setViewDialogOpen(true); }}
+            onEdit={handleOpenEditDialog}
             onPrint={handlePrintPDF}
             onDelete={(id) => deleteMutation.mutate(id)}
             getStatus={getStatusAvaliacao}
@@ -1340,6 +1489,251 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={editDialogOpen} onOpenChange={(open) => {
+        setEditDialogOpen(open);
+        if (!open) {
+          setEditingAvaliacao(null);
+          editForm.reset();
+          setQuestoes([]);
+        }
+      }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-edit-avaliacao">
+          <DialogHeader>
+            <DialogTitle>Editar Avaliação</DialogTitle>
+            <DialogDescription>
+              Atualize os dados da avaliação
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...editForm}>
+            <form onSubmit={editForm.handleSubmit((data) => editingAvaliacao && updateMutation.mutate({ ...data, id: editingAvaliacao.id }))} className="space-y-4">
+              <FormField
+                control={editForm.control}
+                name="titulo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Título</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: Prova de Matemática - Unidade 1" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={editForm.control}
+                name="descricao"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Descrição (opcional)</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Descreva o conteúdo..." rows={2} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={editForm.control}
+                  name="tipo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tipo</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o tipo" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="prova">Prova</SelectItem>
+                          <SelectItem value="simulado">Simulado</SelectItem>
+                          <SelectItem value="atividade">Atividade</SelectItem>
+                          <SelectItem value="trabalho">Trabalho</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={editForm.control}
+                  name="materia"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Matéria</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione a matéria" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {MATERIAS.map((materia) => (
+                            <SelectItem key={materia} value={materia}>{materia}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={editForm.control}
+                  name="turmaId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Turma</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione a turma" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {turmas?.map((turma) => (
+                            <SelectItem key={turma.id} value={turma.id}>{turma.nome}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={editForm.control}
+                  name="valorTotal"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Valor (pontos)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          min="0" 
+                          max="100" 
+                          {...field}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={editForm.control}
+                  name="dataInicio"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Data/Hora de Início</FormLabel>
+                      <FormControl>
+                        <Input type="datetime-local" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={editForm.control}
+                  name="dataFim"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Data/Hora Limite</FormLabel>
+                      <FormControl>
+                        <Input type="datetime-local" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={editForm.control}
+                name="instrucoes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Instruções (opcional)</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Instruções para os alunos..." rows={2} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {editingAvaliacao?.questoes && editingAvaliacao.questoes.length > 0 && (
+                <div className="p-3 bg-muted rounded-lg">
+                  <p className="text-sm font-medium">
+                    Questões: {editingAvaliacao.questoes.length} questão(ões) cadastrada(s)
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Para editar questões, use o botão "Adicionar Questão" após salvar ou crie uma nova avaliação.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex items-center space-x-4">
+                <FormField
+                  control={editForm.control}
+                  name="permitirAtraso"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                      <FormControl>
+                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                      </FormControl>
+                      <FormLabel className="font-normal">Permitir atraso</FormLabel>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={editForm.control}
+                  name="mostrarNota"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                      <FormControl>
+                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                      </FormControl>
+                      <FormLabel className="font-normal">Mostrar nota</FormLabel>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setEditDialogOpen(false);
+                    setEditingAvaliacao(null);
+                    editForm.reset();
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={updateMutation.isPending}>
+                  {updateMutation.isPending && <Edit className="mr-2 h-4 w-4 animate-pulse" />}
+                  Salvar Alterações
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
         <DialogContent className="max-w-2xl" data-testid="dialog-view-avaliacao">
           <DialogHeader>
@@ -1883,6 +2277,7 @@ interface AvaliacaoListProps {
   avaliacoes: Avaliacao[];
   loading: boolean;
   onView: (avaliacao: Avaliacao) => void;
+  onEdit: (avaliacao: Avaliacao) => void;
   onPrint: (avaliacao: Avaliacao) => void;
   onDelete: (id: string) => void;
   getStatus: (avaliacao: Avaliacao) => { label: string; variant: "default" | "secondary" | "destructive" | "outline" };
@@ -1894,7 +2289,8 @@ interface AvaliacaoListProps {
 function AvaliacaoList({ 
   avaliacoes, 
   loading, 
-  onView, 
+  onView,
+  onEdit, 
   onPrint, 
   onDelete, 
   getStatus, 
@@ -1985,6 +2381,10 @@ function AvaliacaoList({
               <Button variant="outline" size="sm" onClick={() => onView(avaliacao)}>
                 <Eye className="h-4 w-4 mr-1" />
                 Ver
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => onEdit(avaliacao)} data-testid="button-edit-avaliacao">
+                <Edit className="h-4 w-4 mr-1" />
+                Editar
               </Button>
               <Button variant="outline" size="sm" onClick={() => onPrint(avaliacao)}>
                 <Printer className="h-4 w-4 mr-1" />

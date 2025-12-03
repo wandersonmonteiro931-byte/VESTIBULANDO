@@ -13,12 +13,14 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { FileUploadZone } from "@/components/FileUploadZone";
 import { 
   FileText, Calendar, Clock, Award, Download, Upload, Eye,
   CheckCircle, AlertCircle, FileCheck, BookOpen, ClipboardList, 
-  GraduationCap, Timer, AlertTriangle
+  GraduationCap, Timer, AlertTriangle, Edit3, Send
 } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
@@ -27,14 +29,23 @@ import { format, formatDistanceToNow, isPast, isFuture, isWithinInterval, differ
 import { ptBR } from "date-fns/locale";
 import { getNowBrasiliaISO } from "@/lib/brasiliaTime";
 
+interface Resposta {
+  questaoId: string;
+  tipo: string;
+  resposta: string;
+  respostaMultipla?: string[];
+}
+
 export function AlunoAvaliacoesTab() {
   const { userData } = useAuth();
   const { toast } = useToast();
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [submitDialogOpen, setSubmitDialogOpen] = useState(false);
+  const [answerDialogOpen, setAnswerDialogOpen] = useState(false);
   const [selectedAvaliacao, setSelectedAvaliacao] = useState<Avaliacao | null>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [activeTab, setActiveTab] = useState("disponiveis");
+  const [respostas, setRespostas] = useState<Resposta[]>([]);
 
   const { data: avaliacoesTurmaRaw } = useRealtimeQuery<Avaliacao>({
     collectionName: "avaliacoes",
@@ -130,6 +141,93 @@ export function AlunoAvaliacoesTab() {
       });
     },
   });
+
+  const answerMutation = useMutation({
+    mutationFn: async ({ avaliacaoId, respostasData }: { avaliacaoId: string; respostasData: Resposta[] }) => {
+      if (!userData) throw new Error("Usuário não autenticado");
+
+      const avaliacao = avaliacoes?.find(a => a.id === avaliacaoId);
+      if (!avaliacao) throw new Error("Avaliação não encontrada");
+
+      const prazoFim = new Date(avaliacao.dataFim);
+      const now = new Date();
+      const isLate = isPast(prazoFim);
+
+      if (isLate && !avaliacao.permitirAtraso) {
+        throw new Error("O prazo desta avaliação já expirou e não são permitidas entregas atrasadas.");
+      }
+
+      const status = isLate ? "atrasada" : "enviada";
+
+      const entregaData: any = {
+        avaliacaoId,
+        avaliacaoTitulo: avaliacao.titulo,
+        avaliacaoTipo: avaliacao.tipo,
+        alunoId: userData.uid,
+        alunoNome: userData.nome,
+        alunoMatricula: userData.matricula || "",
+        turmaId: userData.turma,
+        turmaNome: avaliacao.turmaNome,
+        dataEnvio: getNowBrasiliaISO(),
+        respostas: respostasData,
+        status,
+      };
+
+      await addDoc(collection(db, "avaliacaoEntregas"), entregaData);
+      return entregaData;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/avaliacao-entregas"] });
+      toast({
+        title: "Avaliação entregue!",
+        description: "Suas respostas foram registradas com sucesso.",
+      });
+      setAnswerDialogOpen(false);
+      setRespostas([]);
+      setSelectedAvaliacao(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao enviar",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleRespostaChange = (questaoId: string, tipo: string, valor: string) => {
+    setRespostas(prev => {
+      const existing = prev.find(r => r.questaoId === questaoId);
+      if (existing) {
+        return prev.map(r => r.questaoId === questaoId ? { ...r, resposta: valor } : r);
+      }
+      return [...prev, { questaoId, tipo, resposta: valor }];
+    });
+  };
+
+  const initializeAnswers = (avaliacao: Avaliacao) => {
+    if (avaliacao.questoes && avaliacao.questoes.length > 0) {
+      const initialRespostas = avaliacao.questoes.map((q: any) => ({
+        questaoId: q.id,
+        tipo: q.tipo,
+        resposta: "",
+      }));
+      setRespostas(initialRespostas);
+    }
+    setSelectedAvaliacao(avaliacao);
+    setAnswerDialogOpen(true);
+  };
+
+  const getTipoQuestaoLabel = (tipo: string) => {
+    switch (tipo) {
+      case "multipla_escolha": return "Múltipla Escolha";
+      case "objetiva": return "Objetiva";
+      case "verdadeiro_falso": return "Verdadeiro/Falso";
+      case "dissertativa": return "Dissertativa";
+      case "redacao": return "Redação";
+      default: return tipo;
+    }
+  };
 
   const getEntregaForAvaliacao = (avaliacaoId: string) => {
     return minhasEntregas?.find(e => e.avaliacaoId === avaliacaoId);
@@ -373,7 +471,7 @@ export function AlunoAvaliacoesTab() {
       </Tabs>
 
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="max-w-2xl" data-testid="dialog-view-avaliacao">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-view-avaliacao">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {selectedAvaliacao && getTipoIcon(selectedAvaliacao.tipo)}
@@ -442,6 +540,37 @@ export function AlunoAvaliacoesTab() {
                 </div>
               )}
 
+              {selectedAvaliacao.questoes && selectedAvaliacao.questoes.length > 0 && (
+                <div className="border-t pt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <Label className="text-muted-foreground">Questões ({selectedAvaliacao.questoes.length})</Label>
+                    <Badge variant="outline">{selectedAvaliacao.questoes.reduce((acc: number, q: any) => acc + (q.valor || 0), 0)} pts</Badge>
+                  </div>
+                  <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                    {selectedAvaliacao.questoes.map((q: any, index: number) => (
+                      <div key={q.id || index} className="p-3 bg-muted/50 rounded-lg">
+                        <div className="flex items-start gap-2 mb-2">
+                          <Badge variant="secondary" className="text-xs">{index + 1}</Badge>
+                          <Badge variant="outline" className="text-xs">{getTipoQuestaoLabel(q.tipo)}</Badge>
+                          <Badge variant="outline" className="text-xs">{q.valor} pt{q.valor !== 1 ? 's' : ''}</Badge>
+                        </div>
+                        <p className="text-sm">{q.enunciado}</p>
+                        {(q.tipo === "multipla_escolha" || q.tipo === "objetiva") && q.opcoes && (
+                          <div className="mt-2 space-y-1 pl-4">
+                            {q.opcoes.map((op: any) => (
+                              <div key={op.letra} className="text-sm text-muted-foreground flex items-center gap-2">
+                                <span className="font-medium">{op.letra})</span>
+                                <span>{op.texto}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {(() => {
                 const entrega = getEntregaForAvaliacao(selectedAvaliacao.id);
                 if (entrega) {
@@ -493,25 +622,197 @@ export function AlunoAvaliacoesTab() {
             </div>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="flex-wrap gap-2">
             {selectedAvaliacao && !getEntregaForAvaliacao(selectedAvaliacao.id) && (
-              <Button 
-                onClick={() => { 
-                  setViewDialogOpen(false);
-                  setSubmitDialogOpen(true); 
-                }}
-                disabled={
-                  !isWithinInterval(new Date(), { 
-                    start: new Date(selectedAvaliacao.dataInicio), 
-                    end: new Date(selectedAvaliacao.dataFim) 
-                  })
-                }
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                Entregar
-              </Button>
+              <>
+                {selectedAvaliacao.questoes && selectedAvaliacao.questoes.length > 0 && (
+                  <Button 
+                    onClick={() => { 
+                      setViewDialogOpen(false);
+                      initializeAnswers(selectedAvaliacao);
+                    }}
+                    disabled={
+                      !isWithinInterval(new Date(), { 
+                        start: new Date(selectedAvaliacao.dataInicio), 
+                        end: new Date(selectedAvaliacao.dataFim) 
+                      })
+                    }
+                    data-testid="button-responder-avaliacao"
+                  >
+                    <Edit3 className="h-4 w-4 mr-2" />
+                    Responder Questões
+                  </Button>
+                )}
+                <Button 
+                  variant={selectedAvaliacao.questoes && selectedAvaliacao.questoes.length > 0 ? "outline" : "default"}
+                  onClick={() => { 
+                    setViewDialogOpen(false);
+                    setSubmitDialogOpen(true); 
+                  }}
+                  disabled={
+                    !isWithinInterval(new Date(), { 
+                      start: new Date(selectedAvaliacao.dataInicio), 
+                      end: new Date(selectedAvaliacao.dataFim) 
+                    })
+                  }
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Enviar Arquivo
+                </Button>
+              </>
             )}
             <Button variant="outline" onClick={() => setViewDialogOpen(false)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={answerDialogOpen} onOpenChange={setAnswerDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh]" data-testid="dialog-answer-avaliacao">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit3 className="h-5 w-5" />
+              Responder Avaliação
+            </DialogTitle>
+            <DialogDescription>
+              {selectedAvaliacao?.titulo} - {selectedAvaliacao?.materia}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedAvaliacao && selectedAvaliacao.questoes && (
+            <ScrollArea className="max-h-[60vh] pr-4">
+              <div className="space-y-6">
+                {selectedAvaliacao.instrucoes && (
+                  <div className="p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded-lg">
+                    <Label className="text-amber-700 dark:text-amber-400">Instruções</Label>
+                    <p className="mt-1 text-amber-900 dark:text-amber-100 text-sm">{selectedAvaliacao.instrucoes}</p>
+                  </div>
+                )}
+
+                {selectedAvaliacao.questoes.map((q: any, index: number) => {
+                  const resposta = respostas.find(r => r.questaoId === q.id);
+                  
+                  return (
+                    <div key={q.id || index} className="p-4 border rounded-lg space-y-4">
+                      <div className="flex items-start gap-3">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-sm">
+                          {index + 1}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Badge variant="outline">{getTipoQuestaoLabel(q.tipo)}</Badge>
+                            <Badge variant="secondary">{q.valor} pt{q.valor !== 1 ? 's' : ''}</Badge>
+                          </div>
+                          <p className="text-sm leading-relaxed">{q.enunciado}</p>
+                        </div>
+                      </div>
+
+                      <div className="ml-11">
+                        {(q.tipo === "multipla_escolha" || q.tipo === "objetiva") && q.opcoes && (
+                          <RadioGroup
+                            value={resposta?.resposta || ""}
+                            onValueChange={(value) => handleRespostaChange(q.id, q.tipo, value)}
+                            className="space-y-2"
+                          >
+                            {q.opcoes.map((op: any) => (
+                              <div key={op.letra} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                                <RadioGroupItem value={op.letra} id={`${q.id}-${op.letra}`} />
+                                <Label htmlFor={`${q.id}-${op.letra}`} className="flex-1 cursor-pointer text-sm">
+                                  <span className="font-medium mr-2">{op.letra})</span>
+                                  {op.texto}
+                                </Label>
+                              </div>
+                            ))}
+                          </RadioGroup>
+                        )}
+
+                        {q.tipo === "verdadeiro_falso" && (
+                          <RadioGroup
+                            value={resposta?.resposta || ""}
+                            onValueChange={(value) => handleRespostaChange(q.id, q.tipo, value)}
+                            className="space-y-2"
+                          >
+                            <div className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                              <RadioGroupItem value="verdadeiro" id={`${q.id}-verdadeiro`} />
+                              <Label htmlFor={`${q.id}-verdadeiro`} className="cursor-pointer text-sm">Verdadeiro</Label>
+                            </div>
+                            <div className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                              <RadioGroupItem value="falso" id={`${q.id}-falso`} />
+                              <Label htmlFor={`${q.id}-falso`} className="cursor-pointer text-sm">Falso</Label>
+                            </div>
+                          </RadioGroup>
+                        )}
+
+                        {(q.tipo === "dissertativa" || q.tipo === "redacao") && (
+                          <div className="space-y-2">
+                            {q.tipo === "redacao" && (
+                              <div className="text-xs text-muted-foreground space-y-1">
+                                {q.temaRedacao && <p><strong>Tema:</strong> {q.temaRedacao}</p>}
+                                {q.generoTextual && <p><strong>Gênero:</strong> {q.generoTextual}</p>}
+                                {(q.minimoLinhas || q.maximoLinhas) && (
+                                  <p><strong>Linhas:</strong> {q.minimoLinhas || 0} a {q.maximoLinhas || 30}</p>
+                                )}
+                              </div>
+                            )}
+                            <Textarea
+                              placeholder={q.tipo === "redacao" ? "Escreva sua redação aqui..." : "Escreva sua resposta aqui..."}
+                              value={resposta?.resposta || ""}
+                              onChange={(e) => handleRespostaChange(q.id, q.tipo, e.target.value)}
+                              rows={q.tipo === "redacao" ? 15 : 5}
+                              className="resize-none"
+                            />
+                            {q.tipo === "redacao" && resposta?.resposta && (
+                              <p className="text-xs text-muted-foreground text-right">
+                                {resposta.resposta.split('\n').filter(l => l.trim()).length} linhas
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          )}
+
+          <DialogFooter>
+            <div className="flex items-center justify-between w-full">
+              <div className="text-sm text-muted-foreground">
+                {respostas.filter(r => r.resposta).length}/{selectedAvaliacao?.questoes?.length || 0} respondidas
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setAnswerDialogOpen(false);
+                    setRespostas([]);
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (selectedAvaliacao) {
+                      answerMutation.mutate({ avaliacaoId: selectedAvaliacao.id, respostasData: respostas });
+                    }
+                  }}
+                  disabled={answerMutation.isPending || respostas.filter(r => r.resposta).length === 0}
+                  data-testid="button-enviar-respostas"
+                >
+                  {answerMutation.isPending ? (
+                    <>
+                      <Send className="mr-2 h-4 w-4 animate-pulse" />
+                      Enviando...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="mr-2 h-4 w-4" />
+                      Enviar Respostas
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
