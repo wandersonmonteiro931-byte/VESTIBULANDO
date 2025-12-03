@@ -50,6 +50,29 @@ The platform utilizes a consistent violet/purple color scheme across all dashboa
 - **Conformidade Legal**: Sistema alinhado com Marco Civil da Internet e LGPD.
 - **Segurança**: Verificação em tempo real de bloqueios antes de enviar mensagens.
 
+#### Sistema de Avaliações (NOVO - Dezembro 2025)
+- **Tipos de Avaliação**: Provas, Simulados, Atividades e Trabalhos
+- **Criação Flexível**: 
+  - Anexar arquivos externos (PDF, Word, etc.)
+  - Criar questões diretamente no sistema (objetivas, dissertativas)
+  - Usar templates pré-definidos
+- **Gerenciamento de Prazos**:
+  - Data/hora de início (quando fica disponível)
+  - Data/hora limite (prazo final)
+  - Duração opcional (tempo máximo para realizar)
+  - Autorização para entregas atrasadas
+- **Destinatários**:
+  - Turma inteira
+  - Alunos específicos
+- **Correção e Notas**:
+  - Correção por turma
+  - Notas numéricas com feedback textual
+  - Visualização de gabarito (configurável)
+- **PDF/Impressão**: Geração de PDF para impressão com cabeçalho padrão
+- **Componentes**:
+  - `AvaliacoesTab.tsx` - Interface do professor/diretor
+  - `AlunoAvaliacoesTab.tsx` - Interface do aluno
+
 #### Data Model
 The core data model includes `Usuarios` (users with `aluno`, `professor`, `admin` types, CPF, matricula, address via ViaCEP), `Tarefas` (assignments with title, description, professor, class, deadline, attachments), `Entregas` (submissions with student info, file, grade, feedback, status), and `Turmas` (classes with name, year, activity status, vacancies, enrollment period, WhatsApp link). Additional collections: `announcements` (system notices), `chatMessages` (chat messages), `chatConversations` (conversations), `userBlocks` (user blocks), `chatReports` (conversation reports).
 

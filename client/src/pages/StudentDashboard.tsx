@@ -16,7 +16,8 @@ import { BrasiliaClock } from "@/components/BrasiliaClock";
 import { StatusBadge } from "@/components/StatusBadge";
 import { FileUploadZone } from "@/components/FileUploadZone";
 import { AnnouncementsCarousel } from "@/components/AnnouncementsCarousel";
-import { LogOut, FileText, Upload, Download, Calendar, Award, CheckCircle2, Clock, AlertTriangle, MessageCircle } from "lucide-react";
+import { LogOut, FileText, Upload, Download, Calendar, Award, CheckCircle2, Clock, AlertTriangle, MessageCircle, ClipboardList } from "lucide-react";
+import { AlunoAvaliacoesTab } from "@/components/AlunoAvaliacoesTab";
 import { Link } from "wouter";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
@@ -376,8 +377,12 @@ export default function StudentDashboard() {
         </div>
 
         <Tabs defaultValue="todas" className="space-y-4">
-          <TabsList>
+          <TabsList className="flex flex-wrap">
             <TabsTrigger value="todas" data-testid="tab-todas">Todas</TabsTrigger>
+            <TabsTrigger value="avaliacoes" data-testid="tab-avaliacoes">
+              <ClipboardList className="h-4 w-4 mr-1" />
+              Avaliações
+            </TabsTrigger>
             <TabsTrigger value="pendentes" data-testid="tab-pendentes">Pendentes</TabsTrigger>
             <TabsTrigger value="entregues" data-testid="tab-entregues">Entregues</TabsTrigger>
             <TabsTrigger value="notas" data-testid="tab-notas">Notas</TabsTrigger>
@@ -486,6 +491,10 @@ export default function StudentDashboard() {
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          <TabsContent value="avaliacoes" className="space-y-4">
+            <AlunoAvaliacoesTab />
           </TabsContent>
 
           <TabsContent value="pendentes">

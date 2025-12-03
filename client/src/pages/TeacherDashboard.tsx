@@ -19,7 +19,8 @@ import { BrasiliaClock } from "@/components/BrasiliaClock";
 import { StatusBadge } from "@/components/StatusBadge";
 import { FileUploadZone } from "@/components/FileUploadZone";
 import { AnnouncementsCarousel } from "@/components/AnnouncementsCarousel";
-import { LogOut, Plus, FileText, Users, Download, Edit, Calendar, Award, MessageCircle } from "lucide-react";
+import { LogOut, Plus, FileText, Users, Download, Edit, Calendar, Award, MessageCircle, ClipboardList } from "lucide-react";
+import { AvaliacoesTab } from "@/components/AvaliacoesTab";
 import { Link } from "wouter";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
@@ -286,6 +287,10 @@ export default function TeacherDashboard() {
         <Tabs defaultValue="tarefas" className="space-y-4">
           <TabsList>
             <TabsTrigger value="tarefas" data-testid="tab-tarefas">Minhas Tarefas</TabsTrigger>
+            <TabsTrigger value="avaliacoes" data-testid="tab-avaliacoes">
+              <ClipboardList className="h-4 w-4 mr-1" />
+              Avaliações
+            </TabsTrigger>
             <TabsTrigger value="correcoes" data-testid="tab-correcoes">
               Correções Pendentes
               {pendingGradings > 0 && (
@@ -374,6 +379,10 @@ export default function TeacherDashboard() {
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          <TabsContent value="avaliacoes" className="space-y-4">
+            <AvaliacoesTab userType="professor" />
           </TabsContent>
 
           <TabsContent value="correcoes" className="space-y-4">

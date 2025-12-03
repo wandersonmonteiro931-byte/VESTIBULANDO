@@ -465,3 +465,209 @@ export const insertCallSignalSchema = callSignalSchema.omit({ id: true });
 
 export type CallSignal = z.infer<typeof callSignalSchema>;
 export type InsertCallSignal = z.infer<typeof insertCallSignalSchema>;
+
+// Lista de matérias/disciplinas disponíveis
+export const MATERIAS_DISPONIVEIS = [
+  "Matemática",
+  "Português",
+  "Redação",
+  "Literatura",
+  "História",
+  "Geografia",
+  "Física",
+  "Química",
+  "Biologia",
+  "Inglês",
+  "Espanhol",
+  "Filosofia",
+  "Sociologia",
+  "Artes",
+  "Educação Física",
+  "Atualidades",
+  "Interdisciplinar",
+] as const;
+
+// Questão individual de uma avaliação
+export const avaliacaoQuestaoSchema = z.object({
+  id: z.string(),
+  ordem: z.number(), // Ordem da questão na avaliação
+  tipo: z.enum(["objetiva", "dissertativa", "multipla_escolha", "verdadeiro_falso"]),
+  enunciado: z.string(), // Texto da questão
+  imagemUrl: z.string().optional(), // URL de imagem anexada à questão
+  videoUrl: z.string().optional(), // URL de vídeo anexado à questão
+  opcoes: z.array(z.object({
+    letra: z.string(), // A, B, C, D, E
+    texto: z.string(),
+    correta: z.boolean().optional(), // Para questões objetivas
+  })).optional(),
+  respostaCorreta: z.string().optional(), // Gabarito para questões objetivas
+  valor: z.number().default(1), // Valor/pontuação da questão
+});
+
+export type AvaliacaoQuestao = z.infer<typeof avaliacaoQuestaoSchema>;
+
+// Template/Modelo de prova pré-definido pelo diretor
+export const avaliacaoTemplateSchema = z.object({
+  id: z.string(),
+  nome: z.string().min(1, "Nome do template é obrigatório"),
+  descricao: z.string().optional(),
+  tipo: z.enum(["cabecalho", "completo"]), // cabecalho = só header, completo = prova inteira
+  conteudoHtml: z.string().optional(), // HTML do template para impressão
+  arquivoUrl: z.string().optional(), // URL de arquivo Word/PDF modelo
+  arquivoNome: z.string().optional(),
+  criadoPor: z.string(), // ID do diretor
+  criadoPorNome: z.string(),
+  dataCriacao: z.string(),
+  dataAtualizacao: z.string().optional(),
+  ativo: z.boolean().default(true),
+});
+
+export const insertAvaliacaoTemplateSchema = avaliacaoTemplateSchema.omit({ id: true });
+
+export type AvaliacaoTemplate = z.infer<typeof avaliacaoTemplateSchema>;
+export type InsertAvaliacaoTemplate = z.infer<typeof insertAvaliacaoTemplateSchema>;
+
+// Avaliação principal (prova, simulado, atividade)
+export const avaliacaoSchema = z.object({
+  id: z.string(),
+  titulo: z.string().min(1, "Título é obrigatório"),
+  descricao: z.string().optional(),
+  tipo: z.enum(["prova", "simulado", "atividade", "trabalho"]),
+  materia: z.string().min(1, "Matéria é obrigatória"),
+  
+  // Criador
+  professorId: z.string(),
+  professorNome: z.string(),
+  
+  // Destinatários
+  destinatarioTipo: z.enum(["turma", "alunos_especificos"]),
+  turmaId: z.string().optional(), // Se destinatarioTipo === "turma"
+  turmaNome: z.string().optional(),
+  alunosIds: z.array(z.string()).optional(), // Se destinatarioTipo === "alunos_especificos"
+  alunosNomes: z.array(z.string()).optional(),
+  
+  // Datas e prazos
+  dataInicio: z.string(), // Data/hora que fica disponível para os alunos
+  dataFim: z.string(), // Data/hora limite para entrega
+  duracaoMinutos: z.number().optional(), // Tempo máximo para realizar (opcional)
+  
+  // Pontuação
+  valorTotal: z.number().default(10), // Valor total da avaliação
+  pesoNota: z.number().optional(), // Peso na média (opcional)
+  
+  // Modelo da avaliação
+  modeloTipo: z.enum(["questoes", "arquivo_anexo", "template"]),
+  questoes: z.array(avaliacaoQuestaoSchema).optional(), // Se modeloTipo === "questoes"
+  arquivoUrl: z.string().optional(), // Se modeloTipo === "arquivo_anexo" (arquivo criado externamente)
+  arquivoNome: z.string().optional(),
+  templateId: z.string().optional(), // Se modeloTipo === "template"
+  instrucoes: z.string().optional(), // Instruções adicionais para os alunos
+  
+  // Status
+  status: z.enum(["rascunho", "agendada", "em_andamento", "encerrada", "cancelada"]).default("rascunho"),
+  
+  // Configurações
+  permitirAtraso: z.boolean().default(false), // Se permite entrega atrasada com autorização
+  mostrarGabarito: z.boolean().default(false), // Se mostra gabarito após correção
+  mostrarNota: z.boolean().default(true), // Se mostra nota para o aluno
+  embaralharQuestoes: z.boolean().default(false), // Se embaralha ordem das questões
+  embaralharOpcoes: z.boolean().default(false), // Se embaralha opções das questões objetivas
+  
+  // Metadados
+  dataCriacao: z.string(),
+  dataAtualizacao: z.string().optional(),
+  dataPublicacao: z.string().optional(), // Quando foi publicada
+});
+
+export const insertAvaliacaoSchema = avaliacaoSchema.omit({ id: true, dataCriacao: true, status: true });
+
+export type Avaliacao = z.infer<typeof avaliacaoSchema>;
+export type InsertAvaliacao = z.infer<typeof insertAvaliacaoSchema>;
+
+// Resposta individual do aluno para cada questão
+export const avaliacaoRespostaSchema = z.object({
+  questaoId: z.string(),
+  resposta: z.string(), // Texto da resposta ou letra da opção
+  arquivoUrl: z.string().optional(), // Arquivo anexado à resposta (se permitido)
+  arquivoNome: z.string().optional(),
+  nota: z.number().optional(), // Nota atribuída pelo professor
+  feedback: z.string().optional(), // Feedback do professor para esta questão
+});
+
+export type AvaliacaoResposta = z.infer<typeof avaliacaoRespostaSchema>;
+
+// Entrega/Submissão do aluno
+export const avaliacaoEntregaSchema = z.object({
+  id: z.string(),
+  avaliacaoId: z.string(),
+  avaliacaoTitulo: z.string(),
+  avaliacaoTipo: z.enum(["prova", "simulado", "atividade", "trabalho"]),
+  
+  // Aluno
+  alunoId: z.string(),
+  alunoNome: z.string(),
+  alunoMatricula: z.string().optional(),
+  turmaId: z.string().optional(),
+  turmaNome: z.string().optional(),
+  
+  // Datas
+  dataInicio: z.string().optional(), // Quando o aluno iniciou
+  dataEnvio: z.string().optional(), // Quando o aluno enviou
+  
+  // Respostas
+  respostas: z.array(avaliacaoRespostaSchema).optional(), // Para avaliações com questões
+  arquivoUrl: z.string().optional(), // Arquivo enviado pelo aluno
+  arquivoNome: z.string().optional(),
+  
+  // Status e notas
+  status: z.enum(["nao_iniciada", "em_andamento", "enviada", "atrasada", "corrigida", "autorizada"]).default("nao_iniciada"),
+  nota: z.number().optional(), // Nota final
+  notaPercentual: z.number().optional(), // Nota em percentual (0-100)
+  feedback: z.string().optional(), // Feedback geral do professor
+  
+  // Correção
+  corrigidoPor: z.string().optional(), // ID do professor/diretor que corrigiu
+  corrigidoPorNome: z.string().optional(),
+  dataCorrecao: z.string().optional(),
+  
+  // Autorização para atraso
+  atrasadaAutorizada: z.boolean().default(false),
+  autorizadoPor: z.string().optional(),
+  autorizadoPorNome: z.string().optional(),
+  dataAutorizacao: z.string().optional(),
+  motivoAutorizacao: z.string().optional(),
+});
+
+export const insertAvaliacaoEntregaSchema = avaliacaoEntregaSchema.omit({ id: true });
+
+export type AvaliacaoEntrega = z.infer<typeof avaliacaoEntregaSchema>;
+export type InsertAvaliacaoEntrega = z.infer<typeof insertAvaliacaoEntregaSchema>;
+
+// Autorização para entrega atrasada
+export const autorizacaoAtrasoSchema = z.object({
+  id: z.string(),
+  avaliacaoId: z.string(),
+  avaliacaoTitulo: z.string(),
+  alunoId: z.string(),
+  alunoNome: z.string(),
+  alunoMatricula: z.string().optional(),
+  
+  // Solicitação
+  motivoSolicitacao: z.string().optional(), // Motivo apresentado pelo aluno (se aplicável)
+  dataSolicitacao: z.string().optional(),
+  
+  // Autorização
+  autorizado: z.boolean().default(false),
+  autorizadoPor: z.string().optional(),
+  autorizadoPorNome: z.string().optional(),
+  dataAutorizacao: z.string().optional(),
+  novaDataLimite: z.string().optional(), // Nova data limite concedida
+  observacao: z.string().optional(), // Observação do professor/diretor
+  
+  dataCriacao: z.string(),
+});
+
+export const insertAutorizacaoAtrasoSchema = autorizacaoAtrasoSchema.omit({ id: true });
+
+export type AutorizacaoAtraso = z.infer<typeof autorizacaoAtrasoSchema>;
+export type InsertAutorizacaoAtraso = z.infer<typeof insertAutorizacaoAtrasoSchema>;
