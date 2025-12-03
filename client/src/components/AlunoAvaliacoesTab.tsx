@@ -20,7 +20,7 @@ import { FileUploadZone } from "@/components/FileUploadZone";
 import { 
   FileText, Calendar, Clock, Award, Download, Upload, Eye,
   CheckCircle, AlertCircle, FileCheck, BookOpen, ClipboardList, 
-  GraduationCap, Timer, AlertTriangle, Edit3, Send, Check, X
+  GraduationCap, Timer, AlertTriangle, Edit3, Send, Check, X, Printer
 } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
@@ -379,6 +379,126 @@ export function AlunoAvaliacoesTab() {
     return (soma / entregasCorrigidas.length).toFixed(1);
   };
 
+  const handleExportCorrectionPDF = (avaliacao: Avaliacao, entrega: AvaliacaoEntrega) => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível abrir a janela de impressão. Verifique se pop-ups estão permitidos.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const isAtividade = avaliacao.tipo === "atividade";
+    
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+      <head>
+        <meta charset="UTF-8">
+        <title>Correção - ${avaliacao.titulo}</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
+          .header { border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 25px; }
+          .header h1 { margin: 0; font-size: 20px; color: #333; }
+          .header p { margin: 5px 0 0; color: #666; font-size: 14px; }
+          .title { font-size: 24px; font-weight: bold; margin-bottom: 20px; }
+          .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
+          .info-item { padding: 12px; background: #f5f5f5; border-radius: 6px; }
+          .info-label { font-weight: bold; font-size: 12px; color: #666; text-transform: uppercase; }
+          .info-value { font-size: 14px; margin-top: 4px; }
+          .grade-box { background: #d4edda; border: 2px solid #28a745; border-radius: 8px; padding: 20px; margin: 25px 0; text-align: center; }
+          .grade-box.activity { background: #cce5ff; border-color: #007bff; }
+          .grade-title { font-size: 14px; color: #666; margin-bottom: 8px; }
+          .grade-value { font-size: 36px; font-weight: bold; color: #28a745; }
+          .grade-value.activity { color: #007bff; }
+          .grade-percent { font-size: 18px; color: #666; margin-top: 5px; }
+          .feedback-section { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 20px; margin-top: 25px; }
+          .feedback-title { font-weight: bold; margin-bottom: 10px; color: #856404; }
+          .feedback-text { white-space: pre-wrap; line-height: 1.6; }
+          .submission-info { margin-top: 25px; padding: 15px; background: #f8f9fa; border-radius: 6px; }
+          .submission-info h4 { margin: 0 0 10px; font-size: 14px; color: #666; }
+          .footer { margin-top: 40px; text-align: center; color: #999; font-size: 12px; border-top: 1px solid #ddd; padding-top: 20px; }
+          @media print { 
+            body { padding: 20px; } 
+            .grade-box { page-break-inside: avoid; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>ENEM+ Preparatório</h1>
+          <p>Comprovante de Correção</p>
+        </div>
+        
+        <div class="title">${avaliacao.titulo}</div>
+        
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="info-label">Aluno(a)</div>
+            <div class="info-value">${userData?.name || "Aluno"}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Tipo</div>
+            <div class="info-value">${getTipoLabel(avaliacao.tipo)}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Matéria</div>
+            <div class="info-value">${avaliacao.materia}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Professor(a)</div>
+            <div class="info-value">${avaliacao.professorNome}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Data de Entrega</div>
+            <div class="info-value">${entrega.dataEntrega ? format(new Date(entrega.dataEntrega), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : "-"}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Status</div>
+            <div class="info-value">Corrigido</div>
+          </div>
+        </div>
+        
+        ${!isAtividade ? `
+        <div class="grade-box">
+          <div class="grade-title">Nota Obtida</div>
+          <div class="grade-value">${entrega.nota !== undefined ? entrega.nota : "-"} / ${avaliacao.valorTotal}</div>
+          ${entrega.nota !== undefined ? `<div class="grade-percent">${((entrega.nota / avaliacao.valorTotal) * 100).toFixed(0)}%</div>` : ""}
+        </div>
+        ` : `
+        <div class="grade-box activity">
+          <div class="grade-title">Status da Atividade</div>
+          <div class="grade-value activity">Corrigida</div>
+        </div>
+        `}
+        
+        ${entrega.feedback ? `
+        <div class="feedback-section">
+          <div class="feedback-title">Feedback do Professor</div>
+          <div class="feedback-text">${entrega.feedback}</div>
+        </div>
+        ` : ""}
+
+        ${entrega.arquivoUrl ? `
+        <div class="submission-info">
+          <h4>Arquivo Enviado</h4>
+          <p>${entrega.arquivoNome || "Arquivo da entrega"}</p>
+        </div>
+        ` : ""}
+        
+        <div class="footer">
+          <p>Documento gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
+          <p>Este documento é um comprovante de correção da avaliação.</p>
+        </div>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+  };
+
   // Stats para Atividades
   const statsAtividades = {
     disponiveis: filterAtividades("disponiveis").length,
@@ -536,6 +656,7 @@ export function AlunoAvaliacoesTab() {
                 emptyMessage="Nenhuma avaliação corrigida"
                 emptyDescription="Suas notas aparecerão aqui após correção"
                 showNota
+                onExportPDF={handleExportCorrectionPDF}
               />
             </TabsContent>
           </Tabs>
@@ -645,6 +766,7 @@ export function AlunoAvaliacoesTab() {
                 emptyMessage="Nenhuma atividade corrigida"
                 emptyDescription="Seu feedback aparecerá aqui após correção"
                 showFeedback
+                onExportPDF={handleExportCorrectionPDF}
               />
             </TabsContent>
           </Tabs>
@@ -670,10 +792,12 @@ export function AlunoAvaliacoesTab() {
                   <Label className="text-muted-foreground">Professor</Label>
                   <p className="font-medium">{selectedAvaliacao.professorNome}</p>
                 </div>
-                <div>
-                  <Label className="text-muted-foreground">Valor</Label>
-                  <p className="font-medium">{selectedAvaliacao.valorTotal} pontos</p>
-                </div>
+                {selectedAvaliacao.tipo !== "atividade" && (
+                  <div>
+                    <Label className="text-muted-foreground">Valor</Label>
+                    <p className="font-medium">{selectedAvaliacao.valorTotal} pontos</p>
+                  </div>
+                )}
                 <div>
                   <Label className="text-muted-foreground">Início</Label>
                   <p className="font-medium">
@@ -725,7 +849,9 @@ export function AlunoAvaliacoesTab() {
                 <div className="border-t pt-4">
                   <div className="flex items-center justify-between mb-3">
                     <Label className="text-muted-foreground">Questões ({selectedAvaliacao.questoes.length})</Label>
-                    <Badge variant="outline">{selectedAvaliacao.questoes.reduce((acc: number, q: any) => acc + (q.valor || 0), 0)} pts</Badge>
+                    {selectedAvaliacao.tipo !== "atividade" && (
+                      <Badge variant="outline">{selectedAvaliacao.questoes.reduce((acc: number, q: any) => acc + (q.valor || 0), 0)} pts</Badge>
+                    )}
                   </div>
                   <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
                     {selectedAvaliacao.questoes.map((q: any, index: number) => (
@@ -733,7 +859,9 @@ export function AlunoAvaliacoesTab() {
                         <div className="flex items-start gap-2 mb-2">
                           <Badge variant="secondary" className="text-xs">{index + 1}</Badge>
                           <Badge variant="outline" className="text-xs">{getTipoQuestaoLabel(q.tipo)}</Badge>
-                          <Badge variant="outline" className="text-xs">{q.valor} pt{q.valor !== 1 ? 's' : ''}</Badge>
+                          {selectedAvaliacao.tipo !== "atividade" && (
+                            <Badge variant="outline" className="text-xs">{q.valor} pt{q.valor !== 1 ? 's' : ''}</Badge>
+                          )}
                         </div>
                         <p className="text-sm">{q.enunciado}</p>
                         {(q.tipo === "multipla_escolha" || q.tipo === "objetiva") && q.opcoes && (
@@ -779,13 +907,24 @@ export function AlunoAvaliacoesTab() {
                         </Button>
                       )}
 
-                      {entrega.status === "corrigida" && entrega.nota !== undefined && (
+                      {entrega.status === "corrigida" && (
                         <div className="p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-lg">
                           <div className="flex items-center gap-2 mb-2">
-                            <Award className="h-5 w-5 text-green-600" />
-                            <span className="font-bold text-lg text-green-700 dark:text-green-400">
-                              Nota: {entrega.nota}/{selectedAvaliacao.valorTotal}
-                            </span>
+                            {selectedAvaliacao.tipo !== "atividade" && entrega.nota !== undefined ? (
+                              <>
+                                <Award className="h-5 w-5 text-green-600" />
+                                <span className="font-bold text-lg text-green-700 dark:text-green-400">
+                                  Nota: {entrega.nota}/{selectedAvaliacao.valorTotal}
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle className="h-5 w-5 text-green-600" />
+                                <span className="font-bold text-lg text-green-700 dark:text-green-400">
+                                  Atividade Corrigida
+                                </span>
+                              </>
+                            )}
                           </div>
                           {entrega.feedback && (
                             <div className="mt-2">
@@ -842,6 +981,24 @@ export function AlunoAvaliacoesTab() {
                 </Button>
               </>
             )}
+            {selectedAvaliacao && (() => {
+              const entrega = getEntregaForAvaliacao(selectedAvaliacao.id);
+              return entrega && entrega.status === "corrigida" && entrega.liberadoParaAluno;
+            })() && (
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  const entrega = getEntregaForAvaliacao(selectedAvaliacao.id);
+                  if (selectedAvaliacao && entrega) {
+                    handleExportCorrectionPDF(selectedAvaliacao, entrega);
+                  }
+                }}
+                data-testid="button-dialog-export-pdf"
+              >
+                <Printer className="h-4 w-4 mr-2" />
+                PDF da Correção
+              </Button>
+            )}
             <Button variant="outline" onClick={() => setViewDialogOpen(false)}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
@@ -881,7 +1038,9 @@ export function AlunoAvaliacoesTab() {
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
                             <Badge variant="outline">{getTipoQuestaoLabel(q.tipo)}</Badge>
-                            <Badge variant="secondary">{q.valor} pt{q.valor !== 1 ? 's' : ''}</Badge>
+                            {selectedAvaliacao.tipo !== "atividade" && (
+                              <Badge variant="secondary">{q.valor} pt{q.valor !== 1 ? 's' : ''}</Badge>
+                            )}
                           </div>
                           <p className="text-sm leading-relaxed">{q.enunciado}</p>
                         </div>
@@ -1088,6 +1247,7 @@ interface AvaliacaoListAlunoProps {
   emptyDescription: string;
   showNota?: boolean;
   showFeedback?: boolean;
+  onExportPDF?: (avaliacao: Avaliacao, entrega: AvaliacaoEntrega) => void;
 }
 
 function AvaliacaoListAluno({
@@ -1103,6 +1263,7 @@ function AvaliacaoListAluno({
   emptyMessage,
   emptyDescription,
   showNota = false,
+  onExportPDF,
 }: AvaliacaoListAlunoProps) {
   if (loading) {
     return (
@@ -1162,10 +1323,12 @@ function AvaliacaoListAluno({
                   <Calendar className="h-4 w-4" />
                   <span>Prazo: {format(fim, "dd/MM/yyyy HH:mm", { locale: ptBR })}</span>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Award className="h-4 w-4" />
-                  <span>Valor: {avaliacao.valorTotal} pts</span>
-                </div>
+                {avaliacao.tipo !== "atividade" && (
+                  <div className="flex items-center gap-1">
+                    <Award className="h-4 w-4" />
+                    <span>Valor: {avaliacao.valorTotal} pts</span>
+                  </div>
+                )}
                 {!entrega && disponivel && (
                   <div className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />
@@ -1230,6 +1393,12 @@ function AvaliacaoListAluno({
                 <Button size="sm" onClick={() => onSubmit(avaliacao)}>
                   <Upload className="h-4 w-4 mr-1" />
                   Entregar
+                </Button>
+              )}
+              {entrega && entrega.status === "corrigida" && entrega.liberadoParaAluno && onExportPDF && (
+                <Button variant="outline" size="sm" onClick={() => onExportPDF(avaliacao, entrega)} data-testid="button-export-correction-pdf">
+                  <Printer className="h-4 w-4 mr-1" />
+                  PDF Correção
                 </Button>
               )}
               {avaliacao.arquivoUrl && (

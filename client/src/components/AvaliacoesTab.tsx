@@ -75,7 +75,7 @@ const avaliacaoFormSchema = z.object({
 });
 
 const correcaoFormSchema = z.object({
-  nota: z.number().min(0).max(100),
+  nota: z.number().min(0).max(100).optional(),
   feedback: z.string().optional(),
 });
 
@@ -162,7 +162,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
   const correcaoForm = useForm<z.infer<typeof correcaoFormSchema>>({
     resolver: zodResolver(correcaoFormSchema),
     defaultValues: {
-      nota: 0,
+      nota: undefined,
       feedback: "",
     },
   });
@@ -950,10 +950,12 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
             <div class="info-label">Turma</div>
             <div class="info-value">${turma?.nome || avaliacao.turmaNome || "-"}</div>
           </div>
+          ${avaliacao.tipo !== "atividade" ? `
           <div class="info-item">
             <div class="info-label">Valor</div>
             <div class="info-value">${avaliacao.valorTotal} pontos</div>
           </div>
+          ` : ""}
           <div class="info-item">
             <div class="info-label">Data de Início</div>
             <div class="info-value">${format(new Date(avaliacao.dataInicio), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</div>
@@ -1528,26 +1530,28 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="valorTotal"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Valor Total (pontos)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          min="0" 
-                          max="100" 
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                          data-testid="input-valor"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {form.watch("tipo") !== "atividade" && (
+                  <FormField
+                    control={form.control}
+                    name="valorTotal"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Valor Total (pontos)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            min="0" 
+                            max="100" 
+                            {...field}
+                            onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                            data-testid="input-valor"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 <FormField
                   control={form.control}
@@ -1620,7 +1624,9 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
                       <p className="text-sm text-muted-foreground">
                         {questoes.length === 0 
                           ? "Nenhuma questão adicionada ainda" 
-                          : `${questoes.length} questão(ões) - Total: ${questoes.reduce((acc, q) => acc + q.valor, 0)} pontos`}
+                          : form.watch("tipo") !== "atividade" 
+                            ? `${questoes.length} questão(ões) - Total: ${questoes.reduce((acc, q) => acc + q.valor, 0)} pontos`
+                            : `${questoes.length} questão(ões)`}
                       </p>
                     </div>
                     <Button 
@@ -1672,9 +1678,11 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
                                   <Badge variant="secondary" className="text-xs">
                                     {getTipoQuestaoLabel(questao.tipo)}
                                   </Badge>
-                                  <Badge variant="outline" className="text-xs">
-                                    {questao.valor} pt{questao.valor !== 1 ? "s" : ""}
-                                  </Badge>
+                                  {form.watch("tipo") !== "atividade" && (
+                                    <Badge variant="outline" className="text-xs">
+                                      {questao.valor} pt{questao.valor !== 1 ? "s" : ""}
+                                    </Badge>
+                                  )}
                                 </div>
                                 <p className="text-sm text-muted-foreground line-clamp-2">
                                   {questao.enunciado}
@@ -1962,25 +1970,27 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
                   )}
                 />
 
-                <FormField
-                  control={editForm.control}
-                  name="valorTotal"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Valor (pontos)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          min="0" 
-                          max="100" 
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {editForm.watch("tipo") !== "atividade" && (
+                  <FormField
+                    control={editForm.control}
+                    name="valorTotal"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Valor (pontos)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            min="0" 
+                            max="100" 
+                            {...field}
+                            onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2123,10 +2133,12 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
                     {format(new Date(selectedAvaliacao.dataFim), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                   </p>
                 </div>
-                <div>
-                  <Label className="text-muted-foreground">Valor</Label>
-                  <p className="font-medium">{selectedAvaliacao.valorTotal} pontos</p>
-                </div>
+                {selectedAvaliacao.tipo !== "atividade" && (
+                  <div>
+                    <Label className="text-muted-foreground">Valor</Label>
+                    <p className="font-medium">{selectedAvaliacao.valorTotal} pontos</p>
+                  </div>
+                )}
                 <div>
                   <Label className="text-muted-foreground">Status</Label>
                   <Badge variant={getStatusAvaliacao(selectedAvaliacao).variant}>
@@ -2174,7 +2186,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
                             <p className="font-medium">{entrega.alunoNome}</p>
                             <p className="text-sm text-muted-foreground">
                               {entrega.status === "corrigida" 
-                                ? `Nota: ${entrega.nota}` 
+                                ? selectedAvaliacao.tipo !== "atividade" ? `Nota: ${entrega.nota}` : "Corrigida"
                                 : entrega.status === "enviada" 
                                   ? "Aguardando correção"
                                   : entrega.status
@@ -2664,7 +2676,9 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">
-                Valor total: {questoes.reduce((acc, q) => acc + (q.valor || 0), 0)} pts
+                {editingAvaliacao?.tipo !== "atividade" 
+                  ? `Valor total: ${questoes.reduce((acc, q) => acc + (q.valor || 0), 0)} pts`
+                  : `${questoes.length} questão(ões)`}
               </span>
               <Button
                 size="sm"
@@ -2699,7 +2713,9 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
                                questao.tipo === "verdadeiro_falso" ? "V/F" :
                                questao.tipo === "redacao" ? "Redação" : questao.tipo}
                             </Badge>
-                            <span className="text-sm text-muted-foreground">{questao.valor} pts</span>
+                            {editingAvaliacao?.tipo !== "atividade" && (
+                              <span className="text-sm text-muted-foreground">{questao.valor} pts</span>
+                            )}
                           </div>
                           <p className="text-sm line-clamp-2">
                             {questao.enunciado || "(Sem enunciado)"}
@@ -2767,24 +2783,27 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
             const valorTotal = avaliacao?.valorTotal || 0;
             const notaCalculada = calcularNotaFromMarcacoes(avaliacao, correcaoMarcacoes);
             const percentual = valorTotal > 0 ? ((notaCalculada / valorTotal) * 100).toFixed(1) : "0";
+            const isAtividade = avaliacao?.tipo === "atividade";
             
             return (
               <div className="space-y-4">
-                {/* Resumo da Nota */}
-                <Card className="bg-muted/50">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Nota Calculada</p>
-                        <p className="text-2xl font-bold">{notaCalculada} / {valorTotal}</p>
+                {/* Resumo da Nota - Apenas para não-atividades */}
+                {!isAtividade && (
+                  <Card className="bg-muted/50">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Nota Calculada</p>
+                          <p className="text-2xl font-bold">{notaCalculada} / {valorTotal}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-muted-foreground">Percentual</p>
+                          <p className="text-2xl font-bold">{percentual}%</p>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm text-muted-foreground">Percentual</p>
-                        <p className="text-2xl font-bold">{percentual}%</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Lista de Questões com Respostas e Marcações */}
                 <div className="space-y-4 max-h-[45vh] overflow-y-auto pr-2">
@@ -2803,7 +2822,9 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-2">
                                 <Badge variant="outline">Questão {index + 1}</Badge>
-                                <span className="text-sm font-medium">{questao.valor} pts</span>
+                                {avaliacao?.tipo !== "atividade" && (
+                                  <span className="text-sm font-medium">{questao.valor} pts</span>
+                                )}
                               </div>
                               <p className="text-sm mb-3 whitespace-pre-wrap">
                                 {questao.enunciado}
@@ -2860,8 +2881,8 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
                             </div>
                           </div>
 
-                          {/* Valor obtido */}
-                          {marcacao && (
+                          {/* Valor obtido - Apenas para não-atividades */}
+                          {marcacao && avaliacao?.tipo !== "atividade" && (
                             <div className="text-sm text-right">
                               Pontos: <span className="font-medium">
                                 {marcacao === "certo" ? questao.valor :
@@ -3016,10 +3037,12 @@ function AvaliacaoList({
                   <Clock className="h-4 w-4" />
                   <span>Prazo: {format(new Date(avaliacao.dataFim), "dd/MM/yyyy HH:mm", { locale: ptBR })}</span>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Award className="h-4 w-4" />
-                  <span>Valor: {avaliacao.valorTotal} pts</span>
-                </div>
+                {avaliacao.tipo !== "atividade" && (
+                  <div className="flex items-center gap-1">
+                    <Award className="h-4 w-4" />
+                    <span>Valor: {avaliacao.valorTotal} pts</span>
+                  </div>
+                )}
               </div>
 
               {entregasCount > 0 && (
