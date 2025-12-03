@@ -635,7 +635,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
         corrigidoPor: userData.uid,
         corrigidoPorNome: userData.nome,
         dataCorrecao: getNowBrasiliaISO(),
-        liberadoParaAluno,
+        liberadoParaAluno: liberarParaAluno,
         dataLiberacao: liberarParaAluno ? getNowBrasiliaISO() : undefined,
       });
     },
