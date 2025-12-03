@@ -229,14 +229,10 @@ export default function TeacherDashboard() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-10">
           <div>
             <h2 className="text-4xl font-bold mb-3 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-              Minhas Tarefas
+              Painel do Professor
             </h2>
-            <p className="text-muted-foreground text-lg">Gerencie tarefas e avalie entregas</p>
+            <p className="text-muted-foreground text-lg">Gerencie atividades e avalie entregas</p>
           </div>
-          <Button onClick={() => setCreateDialogOpen(true)} size="lg" className="shadow-md" data-testid="button-create-tarefa">
-            <Plus className="h-5 w-5 mr-2" />
-            Nova Tarefa
-          </Button>
         </div>
 
         <div className="mb-10">
