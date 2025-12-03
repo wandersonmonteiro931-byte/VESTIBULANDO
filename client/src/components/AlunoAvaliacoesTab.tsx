@@ -44,7 +44,9 @@ export function AlunoAvaliacoesTab() {
   const [answerDialogOpen, setAnswerDialogOpen] = useState(false);
   const [selectedAvaliacao, setSelectedAvaliacao] = useState<Avaliacao | null>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [activeTab, setActiveTab] = useState("disponiveis");
+  const [mainSection, setMainSection] = useState<"atividades" | "avaliacoes">("avaliacoes");
+  const [activeTabAtividades, setActiveTabAtividades] = useState("disponiveis");
+  const [activeTabAvaliacoes, setActiveTabAvaliacoes] = useState("disponiveis");
   const [respostas, setRespostas] = useState<Resposta[]>([]);
 
   const { data: avaliacoesTurmaRaw } = useRealtimeQuery<Avaliacao>({
@@ -67,12 +69,23 @@ export function AlunoAvaliacoesTab() {
     enabled: !!userData?.uid,
   });
 
-  const avaliacoes = useMemo(() => {
+  const todasAvaliacoes = useMemo(() => {
     const combined = [...(avaliacoesTurmaRaw || []), ...(avaliacoesEspecificasRaw || [])];
     return combined
       .filter(a => a.status !== "rascunho")
       .filter((avaliacao, index, self) => self.findIndex(av => av.id === avaliacao.id) === index);
   }, [avaliacoesTurmaRaw, avaliacoesEspecificasRaw]);
+
+  // Separar por tipo: atividades vs avaliações (provas, simulados, trabalhos)
+  const atividades = useMemo(() => 
+    todasAvaliacoes.filter(a => a.tipo === "atividade"), 
+    [todasAvaliacoes]
+  );
+  
+  const avaliacoesComNota = useMemo(() => 
+    todasAvaliacoes.filter(a => a.tipo === "prova" || a.tipo === "simulado" || a.tipo === "trabalho"), 
+    [todasAvaliacoes]
+  );
   
   const loadingAvaliacoes = !avaliacoesTurmaRaw && !avaliacoesEspecificasRaw;
 
@@ -88,7 +101,7 @@ export function AlunoAvaliacoesTab() {
     mutationFn: async ({ avaliacaoId, file }: { avaliacaoId: string; file: File }) => {
       if (!userData) throw new Error("Usuário não autenticado");
 
-      const avaliacao = avaliacoes?.find(a => a.id === avaliacaoId);
+      const avaliacao = todasAvaliacoes?.find(a => a.id === avaliacaoId);
       if (!avaliacao) throw new Error("Avaliação não encontrada");
 
       const prazoFim = new Date(avaliacao.dataFim);
@@ -147,7 +160,7 @@ export function AlunoAvaliacoesTab() {
     mutationFn: async ({ avaliacaoId, respostasData }: { avaliacaoId: string; respostasData: Resposta[] }) => {
       if (!userData) throw new Error("Usuário não autenticado");
 
-      const avaliacao = avaliacoes?.find(a => a.id === avaliacaoId);
+      const avaliacao = todasAvaliacoes?.find(a => a.id === avaliacaoId);
       if (!avaliacao) throw new Error("Avaliação não encontrada");
 
       const prazoFim = new Date(avaliacao.dataFim);
@@ -316,26 +329,21 @@ export function AlunoAvaliacoesTab() {
     }
   };
 
-  const filterAvaliacoes = (tab: string) => {
-    if (!avaliacoes) return [];
+  // Função de filtro genérica que recebe a lista de avaliações
+  const filterByTab = (lista: Avaliacao[], tab: string) => {
+    if (!lista) return [];
     const now = new Date();
 
     switch (tab) {
       case "disponiveis":
-        return avaliacoes.filter(a => {
+        return lista.filter(a => {
           const inicio = new Date(a.dataInicio);
           const fim = new Date(a.dataFim);
           const entrega = getEntregaForAvaliacao(a.id);
           return isWithinInterval(now, { start: inicio, end: fim }) && !entrega && a.status !== "cancelada";
         });
-      case "pendentes":
-        return avaliacoes.filter(a => {
-          const fim = new Date(a.dataFim);
-          const entrega = getEntregaForAvaliacao(a.id);
-          return !entrega && !isPast(fim) && a.status !== "cancelada";
-        });
       case "entregues":
-        return avaliacoes.filter(a => {
+        return lista.filter(a => {
           const entrega = getEntregaForAvaliacao(a.id);
           // Mostra entregas enviadas aguardando correção OU corrigidas mas não liberadas para o aluno
           return entrega && (
@@ -343,15 +351,19 @@ export function AlunoAvaliacoesTab() {
             (entrega.status === "corrigida" && entrega.liberadoParaAluno !== true)
           );
         });
-      case "notas":
-        return avaliacoes.filter(a => {
+      case "corrigidos":
+        return lista.filter(a => {
           const entrega = getEntregaForAvaliacao(a.id);
           return entrega && entrega.status === "corrigida" && entrega.liberadoParaAluno === true;
         });
       default:
-        return avaliacoes;
+        return lista;
     }
   };
+
+  // Filtros específicos para cada seção
+  const filterAtividades = (tab: string) => filterByTab(atividades, tab);
+  const filterAvaliacoesComNota = (tab: string) => filterByTab(avaliacoesComNota, tab);
 
   const calcularMedia = () => {
     // Só calcula média de entregas liberadas para aluno e que não são atividades (atividades não têm nota)
@@ -367,136 +379,275 @@ export function AlunoAvaliacoesTab() {
     return (soma / entregasCorrigidas.length).toFixed(1);
   };
 
-  const stats = {
-    disponiveis: filterAvaliacoes("disponiveis").length,
-    pendentes: filterAvaliacoes("pendentes").length,
-    entregues: filterAvaliacoes("entregues").length,
-    notas: filterAvaliacoes("notas").length,
+  // Stats para Atividades
+  const statsAtividades = {
+    disponiveis: filterAtividades("disponiveis").length,
+    entregues: filterAtividades("entregues").length,
+    corrigidos: filterAtividades("corrigidos").length,
+  };
+
+  // Stats para Avaliações (provas, simulados, trabalhos)
+  const statsAvaliacoes = {
+    disponiveis: filterAvaliacoesComNota("disponiveis").length,
+    entregues: filterAvaliacoesComNota("entregues").length,
+    corrigidos: filterAvaliacoesComNota("corrigidos").length,
     media: calcularMedia(),
   };
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="hover-elevate border-blue-200/50 dark:border-blue-900/50 bg-gradient-to-br from-card to-blue-50/30 dark:to-blue-950/10">
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Disponíveis</CardTitle>
-            <Clock className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats.disponiveis}</div>
-            <p className="text-xs text-muted-foreground">Para fazer agora</p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover-elevate border-amber-200/50 dark:border-amber-900/50 bg-gradient-to-br from-card to-amber-50/30 dark:to-amber-950/10">
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
-            <Calendar className="h-4 w-4 text-amber-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-amber-600">{stats.pendentes}</div>
-            <p className="text-xs text-muted-foreground">Aguardando entrega</p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover-elevate border-purple-200/50 dark:border-purple-900/50 bg-gradient-to-br from-card to-purple-50/30 dark:to-purple-950/10">
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Entregues</CardTitle>
-            <CheckCircle className="h-4 w-4 text-purple-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{stats.entregues}</div>
-            <p className="text-xs text-muted-foreground">Aguardando correção</p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover-elevate border-green-200/50 dark:border-green-900/50 bg-gradient-to-br from-card to-green-50/30 dark:to-green-950/10">
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Média</CardTitle>
-            <Award className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {stats.media || "-"}
-            </div>
-            <p className="text-xs text-muted-foreground">{stats.notas} avaliações corrigidas</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="disponiveis">
-            Disponíveis
-            {stats.disponiveis > 0 && (
-              <Badge variant="default" className="ml-2">{stats.disponiveis}</Badge>
+      {/* Seletor de Seção Principal */}
+      <Tabs value={mainSection} onValueChange={(v) => setMainSection(v as "atividades" | "avaliacoes")}>
+        <TabsList className="grid w-full grid-cols-2 max-w-md">
+          <TabsTrigger value="avaliacoes" className="flex items-center gap-2">
+            <GraduationCap className="h-4 w-4" />
+            Avaliações
+            {(statsAvaliacoes.disponiveis + statsAvaliacoes.corrigidos) > 0 && (
+              <Badge variant="default" className="ml-1">
+                {statsAvaliacoes.disponiveis + statsAvaliacoes.entregues + statsAvaliacoes.corrigidos}
+              </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="pendentes">Pendentes</TabsTrigger>
-          <TabsTrigger value="entregues">Entregues</TabsTrigger>
-          <TabsTrigger value="notas">Notas</TabsTrigger>
+          <TabsTrigger value="atividades" className="flex items-center gap-2">
+            <BookOpen className="h-4 w-4" />
+            Atividades
+            {(statsAtividades.disponiveis + statsAtividades.corrigidos) > 0 && (
+              <Badge variant="secondary" className="ml-1">
+                {statsAtividades.disponiveis + statsAtividades.entregues + statsAtividades.corrigidos}
+              </Badge>
+            )}
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="disponiveis" className="space-y-4">
-          <AvaliacaoListAluno
-            avaliacoes={filterAvaliacoes("disponiveis")}
-            loading={loadingAvaliacoes}
-            onView={(a) => { setSelectedAvaliacao(a); setViewDialogOpen(true); }}
-            onSubmit={(a) => { setSelectedAvaliacao(a); setSubmitDialogOpen(true); }}
-            getStatus={getStatusAvaliacao}
-            getTipoIcon={getTipoIcon}
-            getTipoLabel={getTipoLabel}
-            getEntrega={getEntregaForAvaliacao}
-            emptyMessage="Nenhuma avaliação disponível no momento"
-            emptyDescription="Fique atento aos próximos prazos"
-          />
+        {/* Seção de Avaliações (Provas, Simulados, Trabalhos) */}
+        <TabsContent value="avaliacoes" className="space-y-6 mt-6">
+          {/* Cards de estatísticas para Avaliações */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card className="hover-elevate border-blue-200/50 dark:border-blue-900/50 bg-gradient-to-br from-card to-blue-50/30 dark:to-blue-950/10">
+              <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Disponíveis</CardTitle>
+                <Clock className="h-4 w-4 text-blue-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-blue-600">{statsAvaliacoes.disponiveis}</div>
+                <p className="text-xs text-muted-foreground">Para fazer agora</p>
+              </CardContent>
+            </Card>
+
+            <Card className="hover-elevate border-purple-200/50 dark:border-purple-900/50 bg-gradient-to-br from-card to-purple-50/30 dark:to-purple-950/10">
+              <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Entregues</CardTitle>
+                <CheckCircle className="h-4 w-4 text-purple-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-purple-600">{statsAvaliacoes.entregues}</div>
+                <p className="text-xs text-muted-foreground">Aguardando correção</p>
+              </CardContent>
+            </Card>
+
+            <Card className="hover-elevate border-green-200/50 dark:border-green-900/50 bg-gradient-to-br from-card to-green-50/30 dark:to-green-950/10">
+              <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Corrigidos</CardTitle>
+                <Award className="h-4 w-4 text-green-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">{statsAvaliacoes.corrigidos}</div>
+                <p className="text-xs text-muted-foreground">Com nota disponível</p>
+              </CardContent>
+            </Card>
+
+            <Card className="hover-elevate border-amber-200/50 dark:border-amber-900/50 bg-gradient-to-br from-card to-amber-50/30 dark:to-amber-950/10">
+              <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Média</CardTitle>
+                <GraduationCap className="h-4 w-4 text-amber-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-amber-600">
+                  {statsAvaliacoes.media || "-"}
+                </div>
+                <p className="text-xs text-muted-foreground">{statsAvaliacoes.corrigidos} avaliações</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Sub-abas para Avaliações */}
+          <Tabs value={activeTabAvaliacoes} onValueChange={setActiveTabAvaliacoes}>
+            <TabsList>
+              <TabsTrigger value="disponiveis">
+                Disponíveis
+                {statsAvaliacoes.disponiveis > 0 && (
+                  <Badge variant="default" className="ml-2">{statsAvaliacoes.disponiveis}</Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="entregues">
+                Entregues
+                {statsAvaliacoes.entregues > 0 && (
+                  <Badge variant="secondary" className="ml-2">{statsAvaliacoes.entregues}</Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="corrigidos">
+                Corrigidos
+                {statsAvaliacoes.corrigidos > 0 && (
+                  <Badge variant="default" className="ml-2">{statsAvaliacoes.corrigidos}</Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="disponiveis" className="space-y-4">
+              <AvaliacaoListAluno
+                avaliacoes={filterAvaliacoesComNota("disponiveis")}
+                loading={loadingAvaliacoes}
+                onView={(a) => { setSelectedAvaliacao(a); setViewDialogOpen(true); }}
+                onSubmit={(a) => { setSelectedAvaliacao(a); setSubmitDialogOpen(true); }}
+                getStatus={getStatusAvaliacao}
+                getTipoIcon={getTipoIcon}
+                getTipoLabel={getTipoLabel}
+                getEntrega={getEntregaForAvaliacao}
+                emptyMessage="Nenhuma avaliação disponível"
+                emptyDescription="Provas, simulados e trabalhos aparecerão aqui"
+              />
+            </TabsContent>
+
+            <TabsContent value="entregues" className="space-y-4">
+              <AvaliacaoListAluno
+                avaliacoes={filterAvaliacoesComNota("entregues")}
+                loading={loadingAvaliacoes}
+                onView={(a) => { setSelectedAvaliacao(a); setViewDialogOpen(true); }}
+                onSubmit={(a) => { setSelectedAvaliacao(a); setSubmitDialogOpen(true); }}
+                getStatus={getStatusAvaliacao}
+                getTipoIcon={getTipoIcon}
+                getTipoLabel={getTipoLabel}
+                getEntrega={getEntregaForAvaliacao}
+                emptyMessage="Nenhuma avaliação entregue"
+                emptyDescription="Suas entregas aparecerão aqui"
+              />
+            </TabsContent>
+
+            <TabsContent value="corrigidos" className="space-y-4">
+              <AvaliacaoListAluno
+                avaliacoes={filterAvaliacoesComNota("corrigidos")}
+                loading={loadingAvaliacoes}
+                onView={(a) => { setSelectedAvaliacao(a); setViewDialogOpen(true); }}
+                onSubmit={(a) => { setSelectedAvaliacao(a); setSubmitDialogOpen(true); }}
+                getStatus={getStatusAvaliacao}
+                getTipoIcon={getTipoIcon}
+                getTipoLabel={getTipoLabel}
+                getEntrega={getEntregaForAvaliacao}
+                emptyMessage="Nenhuma avaliação corrigida"
+                emptyDescription="Suas notas aparecerão aqui após correção"
+                showNota
+              />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
-        <TabsContent value="pendentes" className="space-y-4">
-          <AvaliacaoListAluno
-            avaliacoes={filterAvaliacoes("pendentes")}
-            loading={loadingAvaliacoes}
-            onView={(a) => { setSelectedAvaliacao(a); setViewDialogOpen(true); }}
-            onSubmit={(a) => { setSelectedAvaliacao(a); setSubmitDialogOpen(true); }}
-            getStatus={getStatusAvaliacao}
-            getTipoIcon={getTipoIcon}
-            getTipoLabel={getTipoLabel}
-            getEntrega={getEntregaForAvaliacao}
-            emptyMessage="Nenhuma avaliação pendente"
-            emptyDescription="Todas as avaliações foram entregues"
-          />
-        </TabsContent>
+        {/* Seção de Atividades */}
+        <TabsContent value="atividades" className="space-y-6 mt-6">
+          {/* Cards de estatísticas para Atividades */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="hover-elevate border-blue-200/50 dark:border-blue-900/50 bg-gradient-to-br from-card to-blue-50/30 dark:to-blue-950/10">
+              <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Disponíveis</CardTitle>
+                <Clock className="h-4 w-4 text-blue-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-blue-600">{statsAtividades.disponiveis}</div>
+                <p className="text-xs text-muted-foreground">Para fazer agora</p>
+              </CardContent>
+            </Card>
 
-        <TabsContent value="entregues" className="space-y-4">
-          <AvaliacaoListAluno
-            avaliacoes={filterAvaliacoes("entregues")}
-            loading={loadingAvaliacoes}
-            onView={(a) => { setSelectedAvaliacao(a); setViewDialogOpen(true); }}
-            onSubmit={(a) => { setSelectedAvaliacao(a); setSubmitDialogOpen(true); }}
-            getStatus={getStatusAvaliacao}
-            getTipoIcon={getTipoIcon}
-            getTipoLabel={getTipoLabel}
-            getEntrega={getEntregaForAvaliacao}
-            emptyMessage="Nenhuma avaliação entregue"
-            emptyDescription="Suas entregas aparecerão aqui"
-          />
-        </TabsContent>
+            <Card className="hover-elevate border-purple-200/50 dark:border-purple-900/50 bg-gradient-to-br from-card to-purple-50/30 dark:to-purple-950/10">
+              <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Entregues</CardTitle>
+                <CheckCircle className="h-4 w-4 text-purple-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-purple-600">{statsAtividades.entregues}</div>
+                <p className="text-xs text-muted-foreground">Aguardando correção</p>
+              </CardContent>
+            </Card>
 
-        <TabsContent value="notas" className="space-y-4">
-          <AvaliacaoListAluno
-            avaliacoes={filterAvaliacoes("notas")}
-            loading={loadingAvaliacoes}
-            onView={(a) => { setSelectedAvaliacao(a); setViewDialogOpen(true); }}
-            onSubmit={(a) => { setSelectedAvaliacao(a); setSubmitDialogOpen(true); }}
-            getStatus={getStatusAvaliacao}
-            getTipoIcon={getTipoIcon}
-            getTipoLabel={getTipoLabel}
-            getEntrega={getEntregaForAvaliacao}
-            emptyMessage="Nenhuma nota disponível"
-            emptyDescription="Suas notas aparecerão aqui após correção"
-            showNota
-          />
+            <Card className="hover-elevate border-green-200/50 dark:border-green-900/50 bg-gradient-to-br from-card to-green-50/30 dark:to-green-950/10">
+              <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Corrigidos</CardTitle>
+                <FileCheck className="h-4 w-4 text-green-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">{statsAtividades.corrigidos}</div>
+                <p className="text-xs text-muted-foreground">Com feedback disponível</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Sub-abas para Atividades */}
+          <Tabs value={activeTabAtividades} onValueChange={setActiveTabAtividades}>
+            <TabsList>
+              <TabsTrigger value="disponiveis">
+                Disponíveis
+                {statsAtividades.disponiveis > 0 && (
+                  <Badge variant="default" className="ml-2">{statsAtividades.disponiveis}</Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="entregues">
+                Entregues
+                {statsAtividades.entregues > 0 && (
+                  <Badge variant="secondary" className="ml-2">{statsAtividades.entregues}</Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="corrigidos">
+                Corrigidos
+                {statsAtividades.corrigidos > 0 && (
+                  <Badge variant="default" className="ml-2">{statsAtividades.corrigidos}</Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="disponiveis" className="space-y-4">
+              <AvaliacaoListAluno
+                avaliacoes={filterAtividades("disponiveis")}
+                loading={loadingAvaliacoes}
+                onView={(a) => { setSelectedAvaliacao(a); setViewDialogOpen(true); }}
+                onSubmit={(a) => { setSelectedAvaliacao(a); setSubmitDialogOpen(true); }}
+                getStatus={getStatusAvaliacao}
+                getTipoIcon={getTipoIcon}
+                getTipoLabel={getTipoLabel}
+                getEntrega={getEntregaForAvaliacao}
+                emptyMessage="Nenhuma atividade disponível"
+                emptyDescription="Atividades para fazer aparecerão aqui"
+              />
+            </TabsContent>
+
+            <TabsContent value="entregues" className="space-y-4">
+              <AvaliacaoListAluno
+                avaliacoes={filterAtividades("entregues")}
+                loading={loadingAvaliacoes}
+                onView={(a) => { setSelectedAvaliacao(a); setViewDialogOpen(true); }}
+                onSubmit={(a) => { setSelectedAvaliacao(a); setSubmitDialogOpen(true); }}
+                getStatus={getStatusAvaliacao}
+                getTipoIcon={getTipoIcon}
+                getTipoLabel={getTipoLabel}
+                getEntrega={getEntregaForAvaliacao}
+                emptyMessage="Nenhuma atividade entregue"
+                emptyDescription="Suas entregas aparecerão aqui"
+              />
+            </TabsContent>
+
+            <TabsContent value="corrigidos" className="space-y-4">
+              <AvaliacaoListAluno
+                avaliacoes={filterAtividades("corrigidos")}
+                loading={loadingAvaliacoes}
+                onView={(a) => { setSelectedAvaliacao(a); setViewDialogOpen(true); }}
+                onSubmit={(a) => { setSelectedAvaliacao(a); setSubmitDialogOpen(true); }}
+                getStatus={getStatusAvaliacao}
+                getTipoIcon={getTipoIcon}
+                getTipoLabel={getTipoLabel}
+                getEntrega={getEntregaForAvaliacao}
+                emptyMessage="Nenhuma atividade corrigida"
+                emptyDescription="Seu feedback aparecerá aqui após correção"
+                showFeedback
+              />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
       </Tabs>
 
@@ -936,11 +1087,13 @@ interface AvaliacaoListAlunoProps {
   emptyMessage: string;
   emptyDescription: string;
   showNota?: boolean;
+  showFeedback?: boolean;
 }
 
 function AvaliacaoListAluno({
   avaliacoes,
   loading,
+  showFeedback = false,
   onView,
   onSubmit,
   getStatus,
@@ -1023,9 +1176,10 @@ function AvaliacaoListAluno({
                 )}
               </div>
 
-              {showNota && entrega && (
+              {/* Exibição de Nota para Avaliações (não atividades) */}
+              {showNota && entrega && avaliacao.tipo !== "atividade" && (
                 <div className="space-y-2">
-                  {avaliacao.tipo !== "atividade" && entrega.nota !== undefined ? (
+                  {entrega.nota !== undefined && (
                     <div className="p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-lg">
                       <div className="flex items-center gap-2">
                         <Award className="h-5 w-5 text-green-600" />
@@ -1037,16 +1191,27 @@ function AvaliacaoListAluno({
                         </span>
                       </div>
                     </div>
-                  ) : avaliacao.tipo === "atividade" ? (
-                    <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="h-5 w-5 text-blue-600" />
-                        <span className="font-medium text-blue-700 dark:text-blue-400">
-                          Atividade Corrigida
-                        </span>
-                      </div>
+                  )}
+                  {entrega.feedback && (
+                    <div className="p-3 bg-muted/50 border rounded-lg">
+                      <p className="text-sm font-medium mb-1">Feedback do Professor:</p>
+                      <p className="text-sm text-muted-foreground">{entrega.feedback}</p>
                     </div>
-                  ) : null}
+                  )}
+                </div>
+              )}
+
+              {/* Exibição de Feedback para Atividades (sem nota) */}
+              {showFeedback && entrega && avaliacao.tipo === "atividade" && (
+                <div className="space-y-2">
+                  <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-5 w-5 text-blue-600" />
+                      <span className="font-medium text-blue-700 dark:text-blue-400">
+                        Atividade Corrigida
+                      </span>
+                    </div>
+                  </div>
                   {entrega.feedback && (
                     <div className="p-3 bg-muted/50 border rounded-lg">
                       <p className="text-sm font-medium mb-1">Feedback do Professor:</p>
