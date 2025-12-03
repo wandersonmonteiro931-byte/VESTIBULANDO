@@ -322,37 +322,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
   };
 
   const handleAddQuestao = () => {
-    if (!novaQuestao.enunciado?.trim()) {
-      toast({
-        title: "Erro",
-        description: "O enunciado da questão é obrigatório.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validação específica para múltipla escolha
-    if (novaQuestao.tipo === "multipla_escolha") {
-      const hasCorrect = novaQuestao.opcoes?.some(o => o.correta);
-      if (!hasCorrect) {
-        toast({
-          title: "Erro",
-          description: "Selecione uma opção correta para questões de múltipla escolha.",
-          variant: "destructive",
-        });
-        return;
-      }
-      const filledOptions = novaQuestao.opcoes?.filter(o => o.texto.trim());
-      if (!filledOptions || filledOptions.length < 2) {
-        toast({
-          title: "Erro",
-          description: "Preencha pelo menos 2 opções.",
-          variant: "destructive",
-        });
-        return;
-      }
-    }
-
+    // Nenhum campo é obrigatório - professor pode salvar questões parcialmente preenchidas
     const questao: QuestaoTemp = {
       id: editingQuestao?.id || `q_${Date.now()}`,
       ordem: editingQuestao?.ordem || questoes.length + 1,
