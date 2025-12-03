@@ -195,8 +195,8 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
     mutationFn: async (data: z.infer<typeof avaliacaoFormSchema>) => {
       if (!userData) throw new Error("Usuário não autenticado");
 
-      let arquivoUrl = undefined;
-      let arquivoNome = undefined;
+      let arquivoUrl: string | null = null;
+      let arquivoNome: string | null = null;
 
       if (attachmentFile) {
         const storageRef = ref(storage, `avaliacoes/${userData.uid}/${Date.now()}_${attachmentFile.name}`);
@@ -207,14 +207,30 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
 
       const turma = turmas?.find(t => t.id === data.turmaId);
 
-      const avaliacaoData: any = {
-        ...data,
+      const avaliacaoData: Record<string, any> = {
+        titulo: data.titulo,
+        tipo: data.tipo,
+        materia: data.materia,
+        destinatarioTipo: data.destinatarioTipo,
+        dataInicio: data.dataInicio,
+        dataFim: data.dataFim,
+        valorTotal: data.valorTotal,
+        modeloTipo: data.modeloTipo,
+        permitirAtraso: data.permitirAtraso,
+        mostrarGabarito: data.mostrarGabarito,
+        mostrarNota: data.mostrarNota,
         professorId: userData.uid,
         professorNome: userData.nome,
         turmaNome: turma?.nome || "",
         status: "agendada",
         dataCriacao: getNowBrasiliaISO(),
       };
+
+      // Adicionar campos opcionais apenas se tiverem valor
+      if (data.descricao) avaliacaoData.descricao = data.descricao;
+      if (data.turmaId) avaliacaoData.turmaId = data.turmaId;
+      if (data.duracaoMinutos) avaliacaoData.duracaoMinutos = data.duracaoMinutos;
+      if (data.instrucoes) avaliacaoData.instrucoes = data.instrucoes;
 
       if (arquivoUrl) {
         avaliacaoData.arquivoUrl = arquivoUrl;
@@ -223,10 +239,25 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
 
       // Adicionar questões se o modelo for "questoes"
       if (data.modeloTipo === "questoes" && questoes.length > 0) {
-        avaliacaoData.questoes = questoes.map((q, index) => ({
-          ...q,
-          ordem: index + 1,
-        }));
+        // Limpar campos undefined das questões também
+        avaliacaoData.questoes = questoes.map((q, index) => {
+          const questaoData: Record<string, any> = {
+            id: q.id,
+            ordem: index + 1,
+            tipo: q.tipo,
+            enunciado: q.enunciado || "",
+            valor: q.valor,
+          };
+          if (q.opcoes && q.opcoes.length > 0) questaoData.opcoes = q.opcoes;
+          if (q.respostaCorreta) questaoData.respostaCorreta = q.respostaCorreta;
+          if (q.temaRedacao) questaoData.temaRedacao = q.temaRedacao;
+          if (q.generoTextual) questaoData.generoTextual = q.generoTextual;
+          if (q.minimoLinhas) questaoData.minimoLinhas = q.minimoLinhas;
+          if (q.maximoLinhas) questaoData.maximoLinhas = q.maximoLinhas;
+          if (q.tipoCustomizado) questaoData.tipoCustomizado = q.tipoCustomizado;
+          if (q.instrucoesEspecificas) questaoData.instrucoesEspecificas = q.instrucoesEspecificas;
+          return questaoData;
+        });
       }
 
       await addDoc(collection(db, "avaliacoes"), avaliacaoData);
