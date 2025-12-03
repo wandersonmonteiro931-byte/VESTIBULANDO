@@ -243,11 +243,29 @@ export function AlunoAvaliacoesTab() {
 
     if (entrega) {
       if (entrega.status === "corrigida") {
-        return { 
-          label: `Nota: ${entrega.nota}`, 
-          variant: "default" as const, 
-          icon: <Award className="h-4 w-4" /> 
-        };
+        // Só mostra nota se liberadoParaAluno === true
+        if (entrega.liberadoParaAluno === true) {
+          // Para atividades, não mostra nota (só "Corrigida")
+          if (avaliacao.tipo === "atividade") {
+            return { 
+              label: "Corrigida", 
+              variant: "default" as const, 
+              icon: <CheckCircle className="h-4 w-4" /> 
+            };
+          }
+          return { 
+            label: `Nota: ${entrega.nota}`, 
+            variant: "default" as const, 
+            icon: <Award className="h-4 w-4" /> 
+          };
+        } else {
+          // Corrigida mas não liberada - mostra como "Em correção"
+          return { 
+            label: "Em correção", 
+            variant: "secondary" as const, 
+            icon: <Clock className="h-4 w-4" /> 
+          };
+        }
       }
       if (entrega.status === "atrasada") {
         return { 
@@ -319,12 +337,16 @@ export function AlunoAvaliacoesTab() {
       case "entregues":
         return avaliacoes.filter(a => {
           const entrega = getEntregaForAvaliacao(a.id);
-          return entrega && entrega.status !== "corrigida";
+          // Mostra entregas enviadas aguardando correção OU corrigidas mas não liberadas para o aluno
+          return entrega && (
+            entrega.status !== "corrigida" || 
+            (entrega.status === "corrigida" && entrega.liberadoParaAluno !== true)
+          );
         });
       case "notas":
         return avaliacoes.filter(a => {
           const entrega = getEntregaForAvaliacao(a.id);
-          return entrega && entrega.status === "corrigida";
+          return entrega && entrega.status === "corrigida" && entrega.liberadoParaAluno === true;
         });
       default:
         return avaliacoes;
@@ -332,7 +354,13 @@ export function AlunoAvaliacoesTab() {
   };
 
   const calcularMedia = () => {
-    const entregasCorrigidas = minhasEntregas?.filter(e => e.status === "corrigida" && e.nota !== undefined);
+    // Só calcula média de entregas liberadas para aluno e que não são atividades (atividades não têm nota)
+    const entregasCorrigidas = minhasEntregas?.filter(e => 
+      e.status === "corrigida" && 
+      e.liberadoParaAluno === true && 
+      e.nota !== undefined &&
+      e.avaliacaoTipo !== "atividade"
+    );
     if (!entregasCorrigidas || entregasCorrigidas.length === 0) return null;
     
     const soma = entregasCorrigidas.reduce((acc, e) => acc + (e.nota || 0), 0);
@@ -995,17 +1023,36 @@ function AvaliacaoListAluno({
                 )}
               </div>
 
-              {showNota && entrega && entrega.nota !== undefined && (
-                <div className="p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <Award className="h-5 w-5 text-green-600" />
-                    <span className="font-bold text-green-700 dark:text-green-400">
-                      Nota: {entrega.nota}/{avaliacao.valorTotal}
-                    </span>
-                    <span className="text-sm text-green-600">
-                      ({((entrega.nota / avaliacao.valorTotal) * 100).toFixed(0)}%)
-                    </span>
-                  </div>
+              {showNota && entrega && (
+                <div className="space-y-2">
+                  {avaliacao.tipo !== "atividade" && entrega.nota !== undefined ? (
+                    <div className="p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Award className="h-5 w-5 text-green-600" />
+                        <span className="font-bold text-green-700 dark:text-green-400">
+                          Nota: {entrega.nota}/{avaliacao.valorTotal}
+                        </span>
+                        <span className="text-sm text-green-600">
+                          ({((entrega.nota / avaliacao.valorTotal) * 100).toFixed(0)}%)
+                        </span>
+                      </div>
+                    </div>
+                  ) : avaliacao.tipo === "atividade" ? (
+                    <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="h-5 w-5 text-blue-600" />
+                        <span className="font-medium text-blue-700 dark:text-blue-400">
+                          Atividade Corrigida
+                        </span>
+                      </div>
+                    </div>
+                  ) : null}
+                  {entrega.feedback && (
+                    <div className="p-3 bg-muted/50 border rounded-lg">
+                      <p className="text-sm font-medium mb-1">Feedback do Professor:</p>
+                      <p className="text-sm text-muted-foreground">{entrega.feedback}</p>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
