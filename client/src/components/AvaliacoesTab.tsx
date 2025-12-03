@@ -2538,7 +2538,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
                             size="icon"
                             variant="ghost"
                             className="text-destructive hover:text-destructive"
-                            onClick={() => handleRemoveQuestao(questao.id)}
+                            onClick={() => handleDeleteQuestao(questao.id)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
