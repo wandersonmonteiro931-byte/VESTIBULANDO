@@ -479,6 +479,74 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
 
     const turma = turmas?.find(t => t.id === avaliacao.turmaId);
     
+    const generateQuestoesHTML = () => {
+      if (!avaliacao.questoes || avaliacao.questoes.length === 0) return "";
+      
+      return `
+        <div class="questoes-section">
+          <h3 style="margin-top: 30px; margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px;">Questões</h3>
+          ${avaliacao.questoes.map((q: any, index: number) => `
+            <div class="questao" style="margin-bottom: 25px; page-break-inside: avoid;">
+              <div style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px;">
+                <span style="font-weight: bold; background: #e5e7eb; padding: 4px 10px; border-radius: 4px; font-size: 14px;">
+                  ${index + 1}
+                </span>
+                <span style="font-size: 12px; color: #666; background: #f3f4f6; padding: 4px 8px; border-radius: 4px;">
+                  ${getTipoQuestaoLabel(q.tipo)} - ${q.valor} pt${q.valor !== 1 ? 's' : ''}
+                </span>
+              </div>
+              <p style="margin: 10px 0; line-height: 1.6;">${q.enunciado || "(Sem enunciado)"}</p>
+              ${q.tipo === "multipla_escolha" || q.tipo === "objetiva" ? `
+                <div style="margin-left: 20px;">
+                  ${(q.opcoes || []).map((op: any) => `
+                    <div style="margin: 8px 0; display: flex; align-items: center; gap: 8px;">
+                      <span style="font-weight: bold; border: 1px solid #000; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%;">
+                        ${op.letra}
+                      </span>
+                      <span>${op.texto || ""}</span>
+                    </div>
+                  `).join("")}
+                </div>
+              ` : ""}
+              ${q.tipo === "verdadeiro_falso" ? `
+                <div style="margin-left: 20px;">
+                  <div style="margin: 8px 0; display: flex; align-items: center; gap: 8px;">
+                    <span style="border: 1px solid #000; width: 20px; height: 20px; display: inline-block;"></span>
+                    <span>Verdadeiro</span>
+                  </div>
+                  <div style="margin: 8px 0; display: flex; align-items: center; gap: 8px;">
+                    <span style="border: 1px solid #000; width: 20px; height: 20px; display: inline-block;"></span>
+                    <span>Falso</span>
+                  </div>
+                </div>
+              ` : ""}
+              ${q.tipo === "dissertativa" ? `
+                <div style="margin-top: 15px;">
+                  ${Array(5).fill(0).map(() => `
+                    <div style="border-bottom: 1px solid #ccc; height: 30px; margin-bottom: 5px;"></div>
+                  `).join("")}
+                </div>
+              ` : ""}
+              ${q.tipo === "redacao" ? `
+                <div style="margin-top: 10px; padding: 10px; background: #f9fafb; border-radius: 4px;">
+                  ${q.temaRedacao ? `<p><strong>Tema:</strong> ${q.temaRedacao}</p>` : ""}
+                  ${q.generoTextual ? `<p><strong>Gênero:</strong> ${q.generoTextual}</p>` : ""}
+                  ${q.minimoLinhas || q.maximoLinhas ? `<p><strong>Linhas:</strong> ${q.minimoLinhas || 0} a ${q.maximoLinhas || 30}</p>` : ""}
+                </div>
+                <div style="margin-top: 15px;">
+                  ${Array(q.maximoLinhas || 20).fill(0).map((_, i) => `
+                    <div style="display: flex; align-items: center; height: 28px; border-bottom: 1px solid #ccc;">
+                      <span style="width: 25px; font-size: 10px; color: #999;">${i + 1}</span>
+                    </div>
+                  `).join("")}
+                </div>
+              ` : ""}
+            </div>
+          `).join("")}
+        </div>
+      `;
+    };
+    
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
@@ -498,7 +566,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
           .instructions { background: #fffbeb; padding: 15px; border-radius: 4px; margin-bottom: 20px; }
           .instructions h3 { margin-top: 0; }
           .content { margin-top: 30px; }
-          @media print { body { padding: 20px; } }
+          @media print { body { padding: 20px; } .questao { page-break-inside: avoid; } }
         </style>
       </head>
       <body>
@@ -554,6 +622,8 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
             <p>${avaliacao.descricao}</p>
           </div>
         ` : ""}
+        
+        ${generateQuestoesHTML()}
         
         <div style="margin-top: 50px; text-align: center; color: #999; font-size: 12px;">
           <p>Documento gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
