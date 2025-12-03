@@ -361,6 +361,128 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
     
+    // Avaliacoes collection - provas, simulados, atividades, trabalhos
+    match /avaliacoes/{avaliacaoId} {
+      // Helper to check if user is targeted by the avaliacao
+      function isTargetedStudent() {
+        return isAluno() && (
+          resource.data.turmaId == getUserData().turma ||
+          (resource.data.alunosIds != null && request.auth.uid in resource.data.alunosIds)
+        );
+      }
+      
+      // Alunos podem ler avaliações da sua turma ou onde são destinatários específicos
+      // Professores/Diretores podem ler todas as avaliações
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        isProfessor() ||
+        isTargetedStudent()
+      );
+      
+      // Professores e diretores podem criar avaliações
+      allow create: if isAuthenticated() && isUserActive() && (
+        isAdmin() ||
+        (isProfessor() && request.resource.data.professorId == request.auth.uid)
+      );
+      
+      // Professores podem atualizar suas próprias avaliações, diretores podem atualizar todas
+      allow update: if isAuthenticated() && isUserActive() && (
+        isAdmin() ||
+        (isProfessor() && resource.data.professorId == request.auth.uid)
+      );
+      
+      // Apenas diretores ou o professor criador podem deletar
+      allow delete: if isAuthenticated() && isUserActive() && (
+        isAdmin() ||
+        (isProfessor() && resource.data.professorId == request.auth.uid)
+      );
+    }
+    
+    // Avaliacao Questoes collection - questões das avaliações
+    match /avaliacaoQuestoes/{questaoId} {
+      // Questões podem ser lidas por professores e diretores
+      // Alunos podem ler questões de avaliações às quais têm acesso (verificação via aplicação)
+      allow read: if isAuthenticated();
+      
+      // Professores e diretores podem criar questões
+      allow create: if isAuthenticated() && isUserActive() && (isAdmin() || isProfessor());
+      
+      // Professores e diretores podem atualizar questões
+      allow update: if isAuthenticated() && isUserActive() && (isAdmin() || isProfessor());
+      
+      // Apenas diretores ou professores podem deletar questões
+      allow delete: if isAuthenticated() && isUserActive() && (isAdmin() || isProfessor());
+    }
+    
+    // Avaliacao Templates collection - modelos de avaliação
+    match /avaliacaoTemplates/{templateId} {
+      // Templates podem ser lidos por professores e diretores
+      allow read: if isAuthenticated() && (isAdmin() || isProfessor());
+      
+      // Professores e diretores podem criar templates
+      allow create: if isAuthenticated() && isUserActive() && (isAdmin() || isProfessor());
+      
+      // Professores e diretores podem atualizar templates
+      allow update: if isAuthenticated() && isUserActive() && (isAdmin() || isProfessor());
+      
+      // Apenas diretores podem deletar templates
+      allow delete: if isAdmin() && isUserActive();
+    }
+    
+    // Avaliacao Entregas collection - entregas dos alunos
+    match /avaliacaoEntregas/{entregaId} {
+      // Helper to check if professor owns the avaliacao
+      function professorOwnsAvaliacao(avaliacaoId) {
+        return exists(/databases/$(database)/documents/avaliacoes/$(avaliacaoId)) &&
+               get(/databases/$(database)/documents/avaliacoes/$(avaliacaoId)).data.professorId == request.auth.uid;
+      }
+      
+      // Alunos podem ler suas próprias entregas
+      // Professores podem ler entregas das suas avaliações
+      // Diretores podem ler todas as entregas
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        (isAluno() && resource.data.alunoId == request.auth.uid) ||
+        (isProfessor() && professorOwnsAvaliacao(resource.data.avaliacaoId))
+      );
+      
+      // Alunos podem criar entregas para si mesmos
+      allow create: if isAluno() && isUserActive() &&
+                       request.resource.data.alunoId == request.auth.uid;
+      
+      // Professores podem atualizar entregas das suas avaliações (para corrigir)
+      // Diretores podem atualizar qualquer entrega
+      allow update: if isAuthenticated() && isUserActive() && (
+        isAdmin() ||
+        (isProfessor() && professorOwnsAvaliacao(resource.data.avaliacaoId))
+      );
+      
+      // Apenas diretores podem deletar entregas
+      allow delete: if isAdmin() && isUserActive();
+    }
+    
+    // Avaliacao Autorizacoes Atraso collection - autorizações para entregas atrasadas
+    match /avaliacaoAutorizacoesAtraso/{autorizacaoId} {
+      // Alunos podem ler suas próprias autorizações
+      // Professores e diretores podem ler todas
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        isProfessor() ||
+        (isAluno() && resource.data.alunoId == request.auth.uid)
+      );
+      
+      // Alunos podem solicitar autorização
+      allow create: if isAluno() && isUserActive() &&
+                       request.resource.data.alunoId == request.auth.uid &&
+                       request.resource.data.status == 'pendente';
+      
+      // Professores e diretores podem atualizar (aprovar/rejeitar)
+      allow update: if isAuthenticated() && isUserActive() && (isAdmin() || isProfessor());
+      
+      // Apenas diretores podem deletar
+      allow delete: if isAdmin() && isUserActive();
+    }
+    
     // System collection - for counters and system-wide settings
     match /system/{documentId} {
       // Matricula counter can be read by anyone (needed for transactions)

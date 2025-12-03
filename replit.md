@@ -116,4 +116,11 @@ As regras de segurança do Firestore estão no arquivo `firestore.rules`. Após 
 5. Cole no editor do Firebase Console
 6. Clique em **Publicar**
 
-**IMPORTANTE**: As regras do Firestore foram atualizadas em 26/10/2025 para incluir suporte às novas coleções `userBlocks` e `chatReports` do sistema de chat. É necessário implantar essas regras para que o chat funcione corretamente.
+**IMPORTANTE**: As regras do Firestore foram atualizadas em 03/12/2025 para incluir suporte às novas coleções do sistema de avaliações:
+- `avaliacoes` - provas, simulados, atividades, trabalhos
+- `avaliacaoQuestoes` - questões das avaliações
+- `avaliacaoTemplates` - modelos de prova
+- `avaliacaoEntregas` - entregas dos alunos
+- `avaliacaoAutorizacoesAtraso` - autorizações para entregas atrasadas
+
+É necessário implantar essas regras no Firebase Console para que o sistema de avaliações funcione corretamente.
