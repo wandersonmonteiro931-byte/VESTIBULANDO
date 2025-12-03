@@ -21,6 +21,7 @@ export const userSchema = z.object({
   email: z.string().email("Email inválido"),
   tipo: z.enum(["aluno", "professor", "diretor"]),
   turma: z.string().optional(),
+  turmas: z.array(z.string()).optional(), // Array de turmas para professores
   ativo: z.boolean().default(true),
   status: z.enum(["pendente", "aprovado", "reprovado", "devolvido"]).default("pendente"),
   matricula: z.string().optional(), // 4 dígitos - número da matrícula do aluno

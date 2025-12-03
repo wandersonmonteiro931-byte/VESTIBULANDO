@@ -181,6 +181,11 @@ export default function AdminDashboard() {
   const [studentSearchTerm, setStudentSearchTerm] = useState("");
   const [studentDetailsDialogOpen, setStudentDetailsDialogOpen] = useState(false);
   const [selectedStudentDetails, setSelectedStudentDetails] = useState<User | null>(null);
+  const [professorSearchTerm, setProfessorSearchTerm] = useState("");
+  const [professorDetailsDialogOpen, setProfessorDetailsDialogOpen] = useState(false);
+  const [selectedProfessorDetails, setSelectedProfessorDetails] = useState<User | null>(null);
+  const [isEditingProfessor, setIsEditingProfessor] = useState(false);
+  const [editProfessorTurmas, setEditProfessorTurmas] = useState<string[]>([]);
   const [isEditingStudent, setIsEditingStudent] = useState(false);
   const [editStudentDisponibilidade, setEditStudentDisponibilidade] = useState<string[]>([]);
   const [editStudentHorarioEspecialObs, setEditStudentHorarioEspecialObs] = useState<string>("");
@@ -2427,6 +2432,7 @@ export default function AdminDashboard() {
               )}
             </TabsTrigger>
             <TabsTrigger value="usuarios" data-testid="tab-usuarios" className="text-xs px-2 py-1.5">Alunos</TabsTrigger>
+            <TabsTrigger value="professores" data-testid="tab-professores" className="text-xs px-2 py-1.5">Professores</TabsTrigger>
             <TabsTrigger value="senhas-logins" data-testid="tab-senhas-logins" className="text-xs px-2 py-1.5">Senhas</TabsTrigger>
             <TabsTrigger value="turmas" data-testid="tab-turmas" className="text-xs px-2 py-1.5">Turmas</TabsTrigger>
             <TabsTrigger value="disciplinares" data-testid="tab-disciplinares" className="text-xs px-2 py-1.5">Advertências</TabsTrigger>
@@ -2629,16 +2635,10 @@ export default function AdminDashboard() {
           <TabsContent value="usuarios" className="space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-xl font-semibold">Gerenciar Alunos</h3>
-              <div className="flex gap-2">
-                <Button onClick={() => setCreateAlunoDialogOpen(true)} variant="outline" data-testid="button-create-user">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Adicionar Aluno
-                </Button>
-                <Button onClick={() => setCreateProfessorDiretorDialogOpen(true)} data-testid="button-create-professor-admin">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Criar Professor/Diretor
-                </Button>
-              </div>
+              <Button onClick={() => setCreateAlunoDialogOpen(true)} data-testid="button-create-user">
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar Aluno
+              </Button>
             </div>
 
             <div className="relative">
@@ -2660,14 +2660,24 @@ export default function AdminDashboard() {
                     <Skeleton className="h-12 w-full mb-4" />
                     <Skeleton className="h-12 w-full" />
                   </div>
-                ) : users && users.length > 0 ? (
+                ) : (() => {
+                  const alunos = users?.filter((u) => u.tipo === "aluno") || [];
+                  const filteredAlunos = alunos.filter((user) => {
+                    if (!studentSearchTerm) return true;
+                    const searchLower = studentSearchTerm.toLowerCase();
+                    return (
+                      user.nome?.toLowerCase().includes(searchLower) ||
+                      user.matricula?.toLowerCase().includes(searchLower)
+                    );
+                  });
+                  
+                  return filteredAlunos.length > 0 ? (
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
                           <TableHead>Nome</TableHead>
                           <TableHead>Email</TableHead>
-                          <TableHead>Tipo</TableHead>
                           <TableHead>Turma</TableHead>
                           <TableHead>Matrícula</TableHead>
                           <TableHead>Status</TableHead>
@@ -2675,25 +2685,10 @@ export default function AdminDashboard() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {users.filter((user) => {
-                          if (!studentSearchTerm) return true;
-                          const searchLower = studentSearchTerm.toLowerCase();
-                          return (
-                            user.nome?.toLowerCase().includes(searchLower) ||
-                            user.matricula?.toLowerCase().includes(searchLower)
-                          );
-                        }).map((user) => (
+                        {filteredAlunos.map((user) => (
                           <TableRow key={user.uid} data-testid={`row-user-${user.uid}`}>
                             <TableCell className="font-medium">{user.nome}</TableCell>
                             <TableCell>{user.email}</TableCell>
-                            <TableCell>
-                              <Badge variant={
-                                user.tipo === "diretor" ? "default" : 
-                                user.tipo === "professor" ? "secondary" : "outline"
-                              }>
-                                {user.tipo}
-                              </Badge>
-                            </TableCell>
                             <TableCell>{getTurmaNome(user.turma)}</TableCell>
                             <TableCell>{user.matricula || "-"}</TableCell>
                             <TableCell>
@@ -2792,7 +2787,158 @@ export default function AdminDashboard() {
                     <p className="text-lg font-medium mb-2">Nenhum aluno cadastrado</p>
                     <p className="text-sm text-muted-foreground">Novos alunos devem se cadastrar na tela de login e aguardar aprovação</p>
                   </div>
-                )}
+                )})()}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="professores" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-xl font-semibold">Gerenciar Professores</h3>
+              <Button onClick={() => setCreateProfessorDiretorDialogOpen(true)} data-testid="button-create-professor">
+                <Plus className="h-4 w-4 mr-2" />
+                Criar Professor/Diretor
+              </Button>
+            </div>
+
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Pesquisar por nome, email ou matrícula..."
+                value={professorSearchTerm}
+                onChange={(e) => setProfessorSearchTerm(e.target.value)}
+                className="pl-10"
+                data-testid="input-search-professor"
+              />
+            </div>
+
+            <Card>
+              <CardContent className="p-0">
+                {loadingUsers ? (
+                  <div className="p-8">
+                    <Skeleton className="h-12 w-full mb-4" />
+                    <Skeleton className="h-12 w-full mb-4" />
+                    <Skeleton className="h-12 w-full" />
+                  </div>
+                ) : (() => {
+                  const professores = users?.filter((u: User) => u.tipo === "professor" || u.tipo === "diretor") || [];
+                  const filteredProfessores = professores.filter((user: User) => {
+                    if (!professorSearchTerm) return true;
+                    const searchLower = professorSearchTerm.toLowerCase();
+                    return (
+                      user.nome?.toLowerCase().includes(searchLower) ||
+                      user.email?.toLowerCase().includes(searchLower) ||
+                      user.matricula?.toLowerCase().includes(searchLower)
+                    );
+                  });
+                  
+                  return filteredProfessores.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Nome</TableHead>
+                            <TableHead>Email</TableHead>
+                            <TableHead>Tipo</TableHead>
+                            <TableHead>Turmas</TableHead>
+                            <TableHead>Matrícula</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Ações</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredProfessores.map((user: User) => (
+                            <TableRow key={user.uid} data-testid={`row-professor-${user.uid}`}>
+                              <TableCell className="font-medium">{user.nome}</TableCell>
+                              <TableCell>{user.email}</TableCell>
+                              <TableCell>
+                                <Badge variant={user.tipo === "diretor" ? "default" : "secondary"}>
+                                  {user.tipo}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                {user.turmas && user.turmas.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1">
+                                    {user.turmas.map((turmaId: string) => (
+                                      <Badge key={turmaId} variant="outline" className="text-xs">
+                                        {getTurmaNome(turmaId)}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                ) : user.turma ? (
+                                  <Badge variant="outline" className="text-xs">{getTurmaNome(user.turma)}</Badge>
+                                ) : (
+                                  <span className="text-muted-foreground">-</span>
+                                )}
+                              </TableCell>
+                              <TableCell>{user.matricula || "-"}</TableCell>
+                              <TableCell>
+                                {user.ativo ? (
+                                  <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                    Ativo
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                                    <XCircle className="h-3 w-3 mr-1" />
+                                    Inativo
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedProfessorDetails(user);
+                                      setIsEditingProfessor(false);
+                                      setEditProfessorTurmas(user.turmas || (user.turma ? user.turma.split(",").filter(Boolean) : []));
+                                      setProfessorDetailsDialogOpen(true);
+                                    }}
+                                    data-testid={`button-view-professor-${user.uid}`}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => toggleUserStatusMutation.mutate({ 
+                                      userId: user.uid, 
+                                      ativo: !user.ativo 
+                                    })}
+                                    data-testid={`button-toggle-professor-status-${user.uid}`}
+                                  >
+                                    {user.ativo ? "Desativar" : "Ativar"}
+                                  </Button>
+                                  {user.tipo !== "diretor" && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        setUserToDelete(user);
+                                        setDeleteDialogOpen(true);
+                                      }}
+                                      data-testid={`button-delete-professor-${user.uid}`}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <GraduationCap className="h-16 w-16 text-muted-foreground mb-4" />
+                      <p className="text-lg font-medium mb-2">Nenhum professor cadastrado</p>
+                      <p className="text-sm text-muted-foreground">Clique em "Criar Professor/Diretor" para adicionar</p>
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
           </TabsContent>
@@ -5814,6 +5960,184 @@ export default function AdminDashboard() {
                   data-testid="button-save-student"
                 >
                   {updateStudentDataMutation.isPending ? "Salvando..." : "Salvar Alterações"}
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={professorDetailsDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          setIsEditingProfessor(false);
+          setSelectedProfessorDetails(null);
+        }
+        setProfessorDetailsDialogOpen(open);
+      }}>
+        <DialogContent className="max-w-2xl" data-testid="dialog-professor-details">
+          <DialogHeader>
+            <DialogTitle>{isEditingProfessor ? "Editar Professor" : "Detalhes do Professor"}</DialogTitle>
+            <DialogDescription>
+              {isEditingProfessor ? "Edite as informações e turmas do professor" : "Informações completas do professor"}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedProfessorDetails && !isEditingProfessor && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground">Nome</Label>
+                  <p className="font-medium">{selectedProfessorDetails.nome}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Email</Label>
+                  <p className="font-medium">{selectedProfessorDetails.email}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Tipo</Label>
+                  <Badge variant={selectedProfessorDetails.tipo === "diretor" ? "default" : "secondary"}>
+                    {selectedProfessorDetails.tipo}
+                  </Badge>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Matrícula</Label>
+                  <p className="font-medium">{selectedProfessorDetails.matricula || "Não informada"}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">CPF</Label>
+                  <p className="font-medium">{selectedProfessorDetails.cpf || "Não informado"}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Telefone</Label>
+                  <p className="font-medium">{selectedProfessorDetails.telefone || "Não informado"}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Data de Nascimento</Label>
+                  <p className="font-medium">{selectedProfessorDetails.dataNascimento || "Não informada"}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Escolaridade</Label>
+                  <p className="font-medium">{selectedProfessorDetails.escolaridade || "Não informada"}</p>
+                </div>
+              </div>
+              
+              <div>
+                <Label className="text-muted-foreground">Turmas Atribuídas</Label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {selectedProfessorDetails.turmas && selectedProfessorDetails.turmas.length > 0 ? (
+                    selectedProfessorDetails.turmas.map((turmaId: string) => (
+                      <Badge key={turmaId} variant="secondary">{getTurmaNome(turmaId)}</Badge>
+                    ))
+                  ) : selectedProfessorDetails.turma ? (
+                    <Badge variant="secondary">{getTurmaNome(selectedProfessorDetails.turma)}</Badge>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Nenhuma turma atribuída</p>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-muted-foreground">Disponibilidade</Label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {selectedProfessorDetails.disponibilidade && selectedProfessorDetails.disponibilidade.length > 0 ? (
+                    selectedProfessorDetails.disponibilidade.map((horario: string, index: number) => (
+                      <Badge key={index} variant="outline">{horario}</Badge>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Não informada</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {selectedProfessorDetails && isEditingProfessor && (
+            <div className="space-y-4">
+              <div>
+                <Label>Turmas Atribuídas</Label>
+                <div className="grid grid-cols-2 gap-2 mt-2 p-4 border rounded-lg max-h-[300px] overflow-y-auto">
+                  {turmas?.map((turma) => (
+                    <div key={turma.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`prof-turma-${turma.id}`}
+                        checked={editProfessorTurmas.includes(turma.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setEditProfessorTurmas([...editProfessorTurmas, turma.id]);
+                          } else {
+                            setEditProfessorTurmas(editProfessorTurmas.filter(id => id !== turma.id));
+                          }
+                        }}
+                        data-testid={`checkbox-prof-turma-${turma.id}`}
+                      />
+                      <label 
+                        htmlFor={`prof-turma-${turma.id}`}
+                        className="text-sm cursor-pointer"
+                      >
+                        {turma.nome}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            {!isEditingProfessor ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setProfessorDetailsDialogOpen(false)}
+                  data-testid="button-close-professor"
+                >
+                  Fechar
+                </Button>
+                <Button
+                  onClick={() => setIsEditingProfessor(true)}
+                  data-testid="button-edit-professor"
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Editar
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsEditingProfessor(false)}
+                  data-testid="button-cancel-edit-professor"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={async () => {
+                    if (!selectedProfessorDetails) return;
+                    try {
+                      const userRef = doc(db, "usuarios", selectedProfessorDetails.uid);
+                      await updateDoc(userRef, {
+                        turmas: editProfessorTurmas,
+                        turma: editProfessorTurmas.join(","),
+                      });
+                      toast({
+                        title: "Professor atualizado!",
+                        description: "As turmas foram atualizadas com sucesso.",
+                      });
+                      queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
+                      queryClient.invalidateQueries({ queryKey: ["/api/usuarios/all"] });
+                      setIsEditingProfessor(false);
+                      setProfessorDetailsDialogOpen(false);
+                    } catch (error: any) {
+                      toast({
+                        title: "Erro ao atualizar",
+                        description: error.message,
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  data-testid="button-save-professor"
+                >
+                  Salvar Alterações
                 </Button>
               </>
             )}
