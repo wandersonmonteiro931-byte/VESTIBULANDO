@@ -2,27 +2,30 @@ import { useEffect, useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { ChatConversation } from "@shared/schema";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import ChatWindow from "@/components/ChatWindow";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { ConversationWithBlockInfo } from "@/hooks/useChatConversations";
 
 export default function ChatConversationPage() {
   const { conversationId } = useParams<{ conversationId: string }>();
   const { userData } = useAuth();
   const [, navigate] = useLocation();
-  const [conversation, setConversation] = useState<ChatConversation | null>(null);
+  const [conversation, setConversation] = useState<ConversationWithBlockInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadConversation = async () => {
-      if (!conversationId || !userData?.uid) {
-        setError("Conversa não encontrada");
-        setIsLoading(false);
-        return;
-      }
+    if (!conversationId || !userData?.uid) {
+      setError("Conversa não encontrada");
+      setIsLoading(false);
+      return;
+    }
 
+    let unsubscribeBlocks: (() => void) | null = null;
+
+    const loadConversation = async () => {
       try {
         const conversationRef = doc(db, "chatConversations", conversationId);
         const conversationSnap = await getDoc(conversationRef);
@@ -48,8 +51,52 @@ export default function ChatConversationPage() {
           return;
         }
 
-        setConversation(conversationData);
-        setIsLoading(false);
+        const otherParticipantId = 
+          conversationData.participante1Id === userData.uid 
+            ? conversationData.participante2Id 
+            : conversationData.participante1Id;
+
+        const blocksRef = collection(db, "userBlocks");
+        const blockQuery = query(
+          blocksRef,
+          where("ativo", "==", true)
+        );
+
+        unsubscribeBlocks = onSnapshot(
+          blockQuery,
+          (snapshot) => {
+            const blocks = snapshot.docs.map(d => ({
+              bloqueadorId: d.data().bloqueadorId,
+              bloqueadoId: d.data().bloqueadoId,
+            }));
+
+            const iBlockedOther = blocks.some(
+              block => block.bloqueadorId === userData.uid && block.bloqueadoId === otherParticipantId
+            );
+            
+            const otherBlockedMe = blocks.some(
+              block => block.bloqueadorId === otherParticipantId && block.bloqueadoId === userData.uid
+            );
+
+            setConversation({
+              ...conversationData,
+              isBlocked: iBlockedOther || otherBlockedMe,
+              iBlockedOther,
+              otherBlockedMe,
+            });
+            setIsLoading(false);
+          },
+          (err) => {
+            console.error("Error loading blocks:", err);
+            setConversation({
+              ...conversationData,
+              isBlocked: false,
+              iBlockedOther: false,
+              otherBlockedMe: false,
+            });
+            setIsLoading(false);
+          }
+        );
       } catch (err) {
         console.error("Error loading conversation:", err);
         setError("Erro ao carregar conversa");
@@ -58,6 +105,12 @@ export default function ChatConversationPage() {
     };
 
     loadConversation();
+
+    return () => {
+      if (unsubscribeBlocks) {
+        unsubscribeBlocks();
+      }
+    };
   }, [conversationId, userData?.uid]);
 
   const handleBack = () => {

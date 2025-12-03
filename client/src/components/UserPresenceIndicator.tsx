@@ -8,12 +8,14 @@ interface UserPresenceIndicatorProps {
   dotClassName?: string;
   textClassName?: string;
   variant?: "default" | "light";
+  isBlocked?: boolean;
 }
 
 /**
  * Componente que exibe indicador de presença de um usuário
  * Mostra um ponto verde se online, cinza se offline
  * Opcionalmente mostra texto com o status
+ * Se bloqueado, não mostra nenhuma informação de presença
  */
 export function UserPresenceIndicator({
   userId,
@@ -22,8 +24,13 @@ export function UserPresenceIndicator({
   dotClassName = "",
   textClassName = "",
   variant = "default",
+  isBlocked = false,
 }: UserPresenceIndicatorProps) {
   const { isOnline, statusText } = useUserPresenceStatus(userId);
+
+  if (isBlocked) {
+    return null;
+  }
 
   return (
     <div className={cn("flex items-center gap-1.5", className)} data-testid="user-presence-indicator">

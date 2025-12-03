@@ -370,6 +370,7 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
               className="mt-0.5"
               dotClassName="h-1.5 w-1.5"
               variant="light"
+              isBlocked={conversation.isBlocked}
             />
           </div>
         </div>

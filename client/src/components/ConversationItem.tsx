@@ -49,6 +49,7 @@ export default function ConversationItem({ conversation, otherParticipant, unrea
           showText={false}
           className="absolute bottom-0 right-0"
           dotClassName="h-3 w-3 border-2 border-background"
+          isBlocked={conversation.isBlocked}
         />
       </div>
 
