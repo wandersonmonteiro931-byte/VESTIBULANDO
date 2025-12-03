@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { ArrowLeft, Send, Mic, Paperclip, Smile } from "lucide-react";
+import { ArrowLeft, Send, Mic, Paperclip, Smile, Ban, Unlock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -28,9 +28,10 @@ import { useDeleteConversation } from "@/hooks/useDeleteConversation";
 import { useReportConversation } from "@/hooks/useReportConversation";
 import { useLocation } from "wouter";
 import { ChatTermsNotice } from "@/components/ChatTermsNotice";
+import type { ConversationWithBlockInfo } from "@/hooks/useChatConversations";
 
 interface ChatWindowProps {
-  conversation: ChatConversation;
+  conversation: ConversationWithBlockInfo;
   onBack: () => void;
 }
 
@@ -69,7 +70,7 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
   const { messages = [], isLoading } = useChatMessages(conversation.id);
   const { sendMessage: sendMsg, isLoading: isSending } = useSendMessage();
   const { deleteMessage } = useDeleteMessage();
-  const { blockUser } = useBlockUser();
+  const { blockUser, unblockUser } = useBlockUser();
   const { deleteConversation } = useDeleteConversation();
   const { reportConversation, isLoading: isReporting } = useReportConversation();
   
@@ -238,16 +239,33 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
 
       toast({
         title: "Usuário bloqueado",
-        description: "A conversa foi bloqueada para ambas as contas.",
+        description: "Você não poderá mais enviar ou receber mensagens desta pessoa.",
       });
 
       setShowBlockDialog(false);
-      navigate("/chat");
     } catch (error) {
       console.error("Error blocking user:", error);
       toast({
         title: "Erro ao bloquear",
         description: "Não foi possível bloquear o usuário.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUnblock = async () => {
+    try {
+      await unblockUser(otherParticipant.id);
+
+      toast({
+        title: "Usuário desbloqueado",
+        description: "Você pode voltar a trocar mensagens com esta pessoa.",
+      });
+    } catch (error) {
+      console.error("Error unblocking user:", error);
+      toast({
+        title: "Erro ao desbloquear",
+        description: "Não foi possível desbloquear o usuário.",
         variant: "destructive",
       });
     }
@@ -358,8 +376,11 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
 
         <ConversationOptionsMenu
           onBlock={handleBlock}
+          onUnblock={handleUnblock}
           onDelete={handleDelete}
           onReport={handleReport}
+          isBlocked={conversation.isBlocked}
+          iBlockedOther={conversation.iBlockedOther}
         />
       </div>
 
@@ -453,61 +474,91 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
       </div>
 
       {/* Input Area */}
-      <div className="whatsapp-input-area flex items-center gap-1.5 px-3 py-2.5 md:px-4 md:py-3">
-        <Button
-          size="icon"
-          variant="ghost"
-          className="text-muted-foreground hover:text-foreground shrink-0 h-9 w-9"
-          data-testid="button-emoji"
-        >
-          <Smile className="h-5 w-5" />
-        </Button>
-
-        <Button
-          size="icon"
-          variant="ghost"
-          className="text-muted-foreground hover:text-foreground shrink-0 h-9 w-9"
-          data-testid="button-attach"
-        >
-          <Paperclip className="h-5 w-5" />
-        </Button>
-
-        <Input
-          type="text"
-          placeholder="Digite uma mensagem"
-          className="flex-1 bg-white dark:bg-[#2a3942] border-none focus-visible:ring-1 h-9 text-sm rounded-full px-3"
-          value={message}
-          onChange={(e) => {
-            setMessage(e.target.value);
-            handleTyping();
-          }}
-          onKeyPress={handleKeyPress}
-          onBlur={stopTyping}
-          disabled={isSending}
-          data-testid="input-message"
-        />
-
-        {message.trim() ? (
-          <Button
-            size="icon"
-            className="bg-[#00a884] hover:bg-[#008069] text-white shrink-0 h-9 w-9"
-            onClick={handleSendMessage}
-            disabled={isSending}
-            data-testid="button-send"
-          >
-            <Send className="h-4 w-4" />
-          </Button>
-        ) : (
+      {conversation.isBlocked ? (
+        <div className="whatsapp-input-area px-3 py-3 md:px-4 md:py-4">
+          <div className="flex flex-col items-center justify-center gap-2 py-2">
+            {conversation.iBlockedOther ? (
+              <>
+                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                  <Ban className="h-5 w-5" />
+                  <span className="text-sm font-medium">Você bloqueou este contato</span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleUnblock}
+                  className="text-green-600 border-green-600 hover:bg-green-50 dark:hover:bg-green-950"
+                  data-testid="button-unblock-inline"
+                >
+                  <Unlock className="h-4 w-4 mr-2" />
+                  Desbloquear
+                </Button>
+              </>
+            ) : (
+              <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
+                <Ban className="h-5 w-5" />
+                <span className="text-sm font-medium">Este contato bloqueou você</span>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="whatsapp-input-area flex items-center gap-1.5 px-3 py-2.5 md:px-4 md:py-3">
           <Button
             size="icon"
             variant="ghost"
             className="text-muted-foreground hover:text-foreground shrink-0 h-9 w-9"
-            data-testid="button-voice"
+            data-testid="button-emoji"
           >
-            <Mic className="h-5 w-5" />
+            <Smile className="h-5 w-5" />
           </Button>
-        )}
-      </div>
+
+          <Button
+            size="icon"
+            variant="ghost"
+            className="text-muted-foreground hover:text-foreground shrink-0 h-9 w-9"
+            data-testid="button-attach"
+          >
+            <Paperclip className="h-5 w-5" />
+          </Button>
+
+          <Input
+            type="text"
+            placeholder="Digite uma mensagem"
+            className="flex-1 bg-white dark:bg-[#2a3942] border-none focus-visible:ring-1 h-9 text-sm rounded-full px-3"
+            value={message}
+            onChange={(e) => {
+              setMessage(e.target.value);
+              handleTyping();
+            }}
+            onKeyPress={handleKeyPress}
+            onBlur={stopTyping}
+            disabled={isSending}
+            data-testid="input-message"
+          />
+
+          {message.trim() ? (
+            <Button
+              size="icon"
+              className="bg-[#00a884] hover:bg-[#008069] text-white shrink-0 h-9 w-9"
+              onClick={handleSendMessage}
+              disabled={isSending}
+              data-testid="button-send"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          ) : (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="text-muted-foreground hover:text-foreground shrink-0 h-9 w-9"
+              data-testid="button-voice"
+            >
+              <Mic className="h-5 w-5" />
+            </Button>
+          )}
+        </div>
+      )}
 
       {showUserProfile && (
         <UserProfileDialog 

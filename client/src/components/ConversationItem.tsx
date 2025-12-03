@@ -7,9 +7,11 @@ import { formatBrasiliaTime } from "@/lib/brasiliaTime";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion } from "framer-motion";
 import { UserPresenceIndicator } from "@/components/UserPresenceIndicator";
+import { Ban } from "lucide-react";
+import type { ConversationWithBlockInfo } from "@/hooks/useChatConversations";
 
 interface ConversationItemProps {
-  conversation: ChatConversation;
+  conversation: ConversationWithBlockInfo;
   otherParticipant: {
     id: string;
     nome: string;
@@ -65,7 +67,14 @@ export default function ConversationItem({ conversation, otherParticipant, unrea
           )}
         </div>
         <div className="flex items-center justify-between gap-2 mt-1">
-          {otherUserTyping ? (
+          {conversation.isBlocked ? (
+            <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
+              <Ban className="h-3.5 w-3.5" />
+              <span className="text-sm font-medium">
+                {conversation.iBlockedOther ? "Bloqueado" : "Você foi bloqueado"}
+              </span>
+            </div>
+          ) : otherUserTyping ? (
             <div className="flex items-center gap-1" data-testid={`typing-indicator-${conversation.id}`}>
               <span className="text-sm text-[#25d366] font-medium">digitando</span>
               <div className="flex gap-0.5 items-center">
@@ -106,7 +115,7 @@ export default function ConversationItem({ conversation, otherParticipant, unrea
               {conversation.ultimaMensagem || "Sem mensagens"}
             </p>
           )}
-          {unreadCount > 0 && (
+          {!conversation.isBlocked && unreadCount > 0 && (
             <Badge
               className="bg-[#25d366] text-white hover:bg-[#25d366] min-w-[20px] h-5 flex items-center justify-center rounded-full px-1.5"
               data-testid={`badge-unread-${conversation.id}`}

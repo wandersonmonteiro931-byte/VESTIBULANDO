@@ -12,7 +12,7 @@ import NewChatDialog from "../components/NewChatDialog";
 import ProfileEditDialog from "../components/ProfileEditDialog";
 import ConversationItem from "../components/ConversationItem";
 import { cn, getTipoAlunoGenero } from "@/lib/utils";
-import { useChatConversations } from "@/hooks/useChatConversations";
+import { useChatConversations, ConversationWithBlockInfo } from "@/hooks/useChatConversations";
 import { collection, getDocs, addDoc, query as firestoreQuery, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { formatBrasiliaTime, getNowBrasiliaISO } from "@/lib/brasiliaTime";
@@ -131,7 +131,7 @@ export default function ChatPage() {
         return displayName.toLowerCase().includes(term);
       });
 
-  const getOtherParticipant = (conversation: ChatConversation) => {
+  const getOtherParticipant = (conversation: ConversationWithBlockInfo) => {
     if (conversation.participante1Id === userData?.uid) {
       return {
         id: conversation.participante2Id,

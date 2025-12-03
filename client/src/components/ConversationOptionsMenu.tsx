@@ -6,18 +6,24 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { MoreVertical, Ban, Trash2, AlertTriangle } from "lucide-react";
+import { MoreVertical, Ban, Trash2, AlertTriangle, Unlock } from "lucide-react";
 
 interface ConversationOptionsMenuProps {
   onBlock: () => void;
+  onUnblock?: () => void;
   onDelete: () => void;
   onReport: () => void;
+  isBlocked?: boolean;
+  iBlockedOther?: boolean;
 }
 
 export function ConversationOptionsMenu({
   onBlock,
+  onUnblock,
   onDelete,
   onReport,
+  isBlocked,
+  iBlockedOther,
 }: ConversationOptionsMenuProps) {
   return (
     <DropdownMenu>
@@ -32,14 +38,25 @@ export function ConversationOptionsMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuItem
-          onClick={onBlock}
-          className="gap-2 cursor-pointer"
-          data-testid="menu-item-block"
-        >
-          <Ban className="h-4 w-4" />
-          Bloquear
-        </DropdownMenuItem>
+        {iBlockedOther ? (
+          <DropdownMenuItem
+            onClick={onUnblock}
+            className="gap-2 cursor-pointer text-green-600 focus:text-green-600"
+            data-testid="menu-item-unblock"
+          >
+            <Unlock className="h-4 w-4" />
+            Desbloquear
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem
+            onClick={onBlock}
+            className="gap-2 cursor-pointer"
+            data-testid="menu-item-block"
+          >
+            <Ban className="h-4 w-4" />
+            Bloquear
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={onDelete}

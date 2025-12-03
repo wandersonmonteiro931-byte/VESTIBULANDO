@@ -12,9 +12,15 @@ import {
 import { db } from "@/lib/firebase";
 import { ChatConversation } from "@shared/schema";
 
+export interface ConversationWithBlockInfo extends ChatConversation {
+  isBlocked?: boolean;
+  iBlockedOther?: boolean;
+  otherBlockedMe?: boolean;
+}
+
 export function useChatConversations() {
   const { userData } = useAuth();
-  const [conversations, setConversations] = useState<ChatConversation[]>([]);
+  const [conversations, setConversations] = useState<ConversationWithBlockInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -58,29 +64,33 @@ export function useChatConversations() {
         const blocksSnapshot = await getDocs(blockQuery);
         const blocks = blocksSnapshot.docs.map(doc => doc.data());
         
-        const blockedConversations = allConversations.filter(conv => {
+        const conversationsWithMessages = allConversations.filter(
+          conv => conv.ultimaMensagem && conv.ultimaMensagem.trim() !== ""
+        );
+        
+        const conversationsWithBlockInfo: ConversationWithBlockInfo[] = conversationsWithMessages.map(conv => {
           const otherParticipantId = 
             conv.participante1Id === userData.uid 
               ? conv.participante2Id 
               : conv.participante1Id;
           
-          return blocks.some(
-            block => 
-              (block.bloqueadorId === userData.uid && block.bloqueadoId === otherParticipantId) ||
-              (block.bloqueadorId === otherParticipantId && block.bloqueadoId === userData.uid)
+          const iBlockedOther = blocks.some(
+            block => block.bloqueadorId === userData.uid && block.bloqueadoId === otherParticipantId
           );
+          
+          const otherBlockedMe = blocks.some(
+            block => block.bloqueadorId === otherParticipantId && block.bloqueadoId === userData.uid
+          );
+          
+          return {
+            ...conv,
+            isBlocked: iBlockedOther || otherBlockedMe,
+            iBlockedOther,
+            otherBlockedMe,
+          };
         });
         
-        const blockedIds = new Set(blockedConversations.map(c => c.id));
-        
-        const conversationsWithMessages = allConversations.filter(
-          conv => 
-            conv.ultimaMensagem && 
-            conv.ultimaMensagem.trim() !== "" &&
-            !blockedIds.has(conv.id)
-        );
-        
-        const sorted = conversationsWithMessages.sort((a, b) => {
+        const sorted = conversationsWithBlockInfo.sort((a, b) => {
           const aTime = a.ultimaMensagemTimestamp || a.dataUltimaAtualizacao || "";
           const bTime = b.ultimaMensagemTimestamp || b.dataUltimaAtualizacao || "";
           return bTime.localeCompare(aTime);
