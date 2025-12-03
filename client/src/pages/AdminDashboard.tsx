@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { collection, addDoc, updateDoc, doc, where, setDoc, deleteDoc, getDoc, getDocs, query, runTransaction, increment } from "firebase/firestore";
-import { db, auth as firebaseAuth } from "@/lib/firebase";
-import { createUserWithEmailAndPassword, deleteUser, fetchSignInMethodsForEmail } from "firebase/auth";
+import { db, auth as firebaseAuth, createUserWithoutSignIn } from "@/lib/firebase";
+import { deleteUser, fetchSignInMethodsForEmail } from "firebase/auth";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -380,7 +380,7 @@ export default function AdminDashboard() {
       
       try {
         console.log("🔐 Criando usuário no Firebase Auth...");
-        const userCredential = await createUserWithEmailAndPassword(firebaseAuth, solicitacao.email, senha);
+        const userCredential = await createUserWithoutSignIn(solicitacao.email, senha);
         userId = userCredential.user.uid;
         console.log("✅ Usuário criado no Auth, UID:", userId);
         
@@ -814,7 +814,7 @@ export default function AdminDashboard() {
         return matriculaGerada;
       });
 
-      const userCredential = await createUserWithEmailAndPassword(firebaseAuth, data.email, data.senha);
+      const userCredential = await createUserWithoutSignIn(data.email, data.senha);
       
       await setDoc(doc(db, "usuarios", userCredential.user.uid), {
         uid: userCredential.user.uid,
@@ -950,8 +950,8 @@ export default function AdminDashboard() {
         return String(ultimaMatricula + 1).padStart(4, '0');
       });
 
-      // Criar conta no Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(firebaseAuth, data.email, data.senha);
+      // Criar conta no Firebase Auth (usando instância secundária para não deslogar o admin)
+      const userCredential = await createUserWithoutSignIn(data.email, data.senha);
       
       // Criar documento do aluno/professor/diretor
       await setDoc(doc(db, "usuarios", userCredential.user.uid), {
