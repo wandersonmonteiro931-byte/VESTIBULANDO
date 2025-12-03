@@ -558,8 +558,8 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h3 className="text-2xl font-bold">Avaliações</h3>
-          <p className="text-muted-foreground">Gerencie provas, simulados e atividades</p>
+          <h3 className="text-2xl font-bold">Atividades e Avaliações</h3>
+          <p className="text-muted-foreground">Gerencie provas, simulados, atividades e trabalhos</p>
         </div>
         <Button onClick={() => setCreateDialogOpen(true)} data-testid="button-create-avaliacao">
           <Plus className="h-4 w-4 mr-2" />

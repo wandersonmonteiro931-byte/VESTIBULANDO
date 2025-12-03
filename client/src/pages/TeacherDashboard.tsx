@@ -284,12 +284,11 @@ export default function TeacherDashboard() {
           </Card>
         </div>
 
-        <Tabs defaultValue="tarefas" className="space-y-4">
+        <Tabs defaultValue="avaliacoes" className="space-y-4">
           <TabsList>
-            <TabsTrigger value="tarefas" data-testid="tab-tarefas">Minhas Tarefas</TabsTrigger>
             <TabsTrigger value="avaliacoes" data-testid="tab-avaliacoes">
               <ClipboardList className="h-4 w-4 mr-1" />
-              Avaliações
+              Atividades e Avaliações
             </TabsTrigger>
             <TabsTrigger value="correcoes" data-testid="tab-correcoes">
               Correções Pendentes
@@ -298,88 +297,6 @@ export default function TeacherDashboard() {
               )}
             </TabsTrigger>
           </TabsList>
-
-          <TabsContent value="tarefas" className="space-y-4">
-            {loadingTarefas ? (
-              <>
-                <Skeleton className="h-48 w-full" />
-                <Skeleton className="h-48 w-full" />
-              </>
-            ) : tarefas && tarefas.length > 0 ? (
-              tarefas.map((tarefa) => {
-                const entregasTarefa = getEntregasForTarefa(tarefa.id);
-                const totalEntregas = entregasTarefa.length;
-                const avaliadas = entregasTarefa.filter(e => e.status === "avaliado").length;
-                
-                return (
-                  <Card key={tarefa.id} className="hover-elevate" data-testid={`card-tarefa-${tarefa.id}`}>
-                    <CardHeader>
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1">
-                          <CardTitle className="text-xl">{tarefa.titulo}</CardTitle>
-                          <CardDescription className="mt-1">
-                            Turma: {tarefa.turma}
-                          </CardDescription>
-                        </div>
-                        <Badge variant="outline">
-                          {totalEntregas} {totalEntregas === 1 ? "entrega" : "entregas"}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <p className="text-sm">{tarefa.descricao}</p>
-                      
-                      <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4" />
-                          <span>Prazo: {format(new Date(tarefa.prazo), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
-                        </div>
-                      </div>
-                      
-                      {tarefa.arquivoAnexo && (
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={tarefa.arquivoAnexo} target="_blank" rel="noopener noreferrer">
-                            <Download className="h-4 w-4 mr-2" />
-                            Material anexado
-                          </a>
-                        </Button>
-                      )}
-                      
-                      {totalEntregas > 0 && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <span className="text-muted-foreground">Progresso:</span>
-                          <div className="flex-1 bg-secondary rounded-full h-2">
-                            <div 
-                              className="bg-primary h-2 rounded-full transition-all"
-                              style={{ width: `${(avaliadas / totalEntregas) * 100}%` }}
-                            />
-                          </div>
-                          <span className="text-muted-foreground">{avaliadas}/{totalEntregas}</span>
-                        </div>
-                      )}
-                    </CardContent>
-                    <CardFooter>
-                      <p className="text-sm text-muted-foreground">
-                        Criada em {format(new Date(tarefa.criadoEm), "dd/MM/yyyy", { locale: ptBR })}
-                      </p>
-                    </CardFooter>
-                  </Card>
-                );
-              })
-            ) : (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                  <FileText className="h-16 w-16 text-muted-foreground mb-4" />
-                  <p className="text-lg font-medium mb-2">Nenhuma tarefa criada</p>
-                  <p className="text-sm text-muted-foreground mb-4">Comece criando sua primeira tarefa</p>
-                  <Button onClick={() => setCreateDialogOpen(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Criar Tarefa
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
 
           <TabsContent value="avaliacoes" className="space-y-4">
             <AvaliacoesTab userType="professor" />
