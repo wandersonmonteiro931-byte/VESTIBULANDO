@@ -2419,24 +2419,24 @@ export default function AdminDashboard() {
         </div>
 
         <Tabs defaultValue="aprovacoes" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="aprovacoes" data-testid="tab-aprovacoes">
+          <TabsList className="flex-wrap h-auto gap-1 p-1">
+            <TabsTrigger value="aprovacoes" data-testid="tab-aprovacoes" className="text-xs px-2 py-1.5">
               Aprovações
               {pendingUsers && pendingUsers.length > 0 && (
-                <Badge variant="destructive" className="ml-2">{pendingUsers.length}</Badge>
+                <Badge variant="destructive" className="ml-1 text-[10px] px-1">{pendingUsers.length}</Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="usuarios" data-testid="tab-usuarios">Alunos</TabsTrigger>
-            <TabsTrigger value="senhas-logins" data-testid="tab-senhas-logins">Senhas e Logins</TabsTrigger>
-            <TabsTrigger value="turmas" data-testid="tab-turmas">Turmas</TabsTrigger>
-            <TabsTrigger value="disciplinares" data-testid="tab-disciplinares">Advertências e Suspensões</TabsTrigger>
-            <TabsTrigger value="monitoramento" data-testid="tab-monitoramento">Frequência</TabsTrigger>
-            <TabsTrigger value="auditoria-chat" data-testid="tab-auditoria-chat">Auditoria de Chat</TabsTrigger>
-            <TabsTrigger value="denuncias" data-testid="tab-denuncias">Denúncias</TabsTrigger>
-            <TabsTrigger value="documentos-internos" data-testid="tab-documentos-internos">Documentos Internos</TabsTrigger>
-            <TabsTrigger value="documentacao" data-testid="tab-documentacao">Documentação</TabsTrigger>
-            <TabsTrigger value="avisos" data-testid="tab-avisos">Avisos</TabsTrigger>
-            <TabsTrigger value="manutencao" data-testid="tab-manutencao">Manutenção</TabsTrigger>
+            <TabsTrigger value="usuarios" data-testid="tab-usuarios" className="text-xs px-2 py-1.5">Alunos</TabsTrigger>
+            <TabsTrigger value="senhas-logins" data-testid="tab-senhas-logins" className="text-xs px-2 py-1.5">Senhas</TabsTrigger>
+            <TabsTrigger value="turmas" data-testid="tab-turmas" className="text-xs px-2 py-1.5">Turmas</TabsTrigger>
+            <TabsTrigger value="disciplinares" data-testid="tab-disciplinares" className="text-xs px-2 py-1.5">Advertências</TabsTrigger>
+            <TabsTrigger value="monitoramento" data-testid="tab-monitoramento" className="text-xs px-2 py-1.5">Frequência</TabsTrigger>
+            <TabsTrigger value="auditoria-chat" data-testid="tab-auditoria-chat" className="text-xs px-2 py-1.5">Auditoria</TabsTrigger>
+            <TabsTrigger value="denuncias" data-testid="tab-denuncias" className="text-xs px-2 py-1.5">Denúncias</TabsTrigger>
+            <TabsTrigger value="documentos-internos" data-testid="tab-documentos-internos" className="text-xs px-2 py-1.5">Docs Internos</TabsTrigger>
+            <TabsTrigger value="documentacao" data-testid="tab-documentacao" className="text-xs px-2 py-1.5">Documentação</TabsTrigger>
+            <TabsTrigger value="avisos" data-testid="tab-avisos" className="text-xs px-2 py-1.5">Avisos</TabsTrigger>
+            <TabsTrigger value="manutencao" data-testid="tab-manutencao" className="text-xs px-2 py-1.5">Manutenção</TabsTrigger>
           </TabsList>
 
           <TabsContent value="aprovacoes" className="space-y-4">
