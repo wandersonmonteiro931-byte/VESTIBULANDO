@@ -488,21 +488,39 @@ export const MATERIAS_DISPONIVEIS = [
   "Interdisciplinar",
 ] as const;
 
+// Tipos de questão disponíveis
+export const TIPOS_QUESTAO = [
+  { value: "multipla_escolha", label: "Múltipla Escolha (uma correta)" },
+  { value: "verdadeiro_falso", label: "Verdadeiro ou Falso" },
+  { value: "objetiva", label: "Objetiva (resposta curta)" },
+  { value: "dissertativa", label: "Dissertativa" },
+  { value: "redacao", label: "Redação" },
+  { value: "outros", label: "Outros" },
+] as const;
+
 // Questão individual de uma avaliação
 export const avaliacaoQuestaoSchema = z.object({
   id: z.string(),
   ordem: z.number(), // Ordem da questão na avaliação
-  tipo: z.enum(["objetiva", "dissertativa", "multipla_escolha", "verdadeiro_falso"]),
+  tipo: z.enum(["objetiva", "dissertativa", "multipla_escolha", "verdadeiro_falso", "redacao", "outros"]),
   enunciado: z.string(), // Texto da questão
   imagemUrl: z.string().optional(), // URL de imagem anexada à questão
   videoUrl: z.string().optional(), // URL de vídeo anexado à questão
   opcoes: z.array(z.object({
     letra: z.string(), // A, B, C, D, E
     texto: z.string(),
-    correta: z.boolean().optional(), // Para questões objetivas
+    correta: z.boolean().optional(), // Para questões objetivas/multipla escolha
   })).optional(),
   respostaCorreta: z.string().optional(), // Gabarito para questões objetivas
   valor: z.number().default(1), // Valor/pontuação da questão
+  // Campos específicos para redação
+  temaRedacao: z.string().optional(), // Tema específico para redação
+  generoTextual: z.string().optional(), // Gênero textual esperado (dissertativo-argumentativo, carta, etc)
+  minimoLinhas: z.number().optional(), // Mínimo de linhas
+  maximoLinhas: z.number().optional(), // Máximo de linhas
+  // Campo para tipo "outros"
+  tipoCustomizado: z.string().optional(), // Descrição do tipo customizado
+  instrucoesEspecificas: z.string().optional(), // Instruções específicas para a questão
 });
 
 export type AvaliacaoQuestao = z.infer<typeof avaliacaoQuestaoSchema>;

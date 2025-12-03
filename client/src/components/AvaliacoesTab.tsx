@@ -21,11 +21,13 @@ import { FileUploadZone } from "@/components/FileUploadZone";
 import { 
   Plus, FileText, Calendar, Clock, Users, Award, Download, Edit, 
   Trash2, Eye, CheckCircle, AlertCircle, FileCheck, Printer,
-  BookOpen, ClipboardList, GraduationCap
+  BookOpen, ClipboardList, GraduationCap, ListOrdered, ChevronUp,
+  ChevronDown, Copy, Check, X, HelpCircle, PenLine
 } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
-import type { Avaliacao, AvaliacaoEntrega, Turma, User, MATERIAS_DISPONIVEIS } from "@shared/schema";
+import type { Avaliacao, AvaliacaoEntrega, Turma, User, AvaliacaoQuestao } from "@shared/schema";
+import { TIPOS_QUESTAO } from "@shared/schema";
 import { format, isPast, isFuture, isWithinInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useForm } from "react-hook-form";
@@ -81,6 +83,30 @@ interface AvaliacoesTabProps {
   userType: "professor" | "diretor";
 }
 
+// Interface para opções de questão
+interface QuestaoOpcao {
+  letra: string;
+  texto: string;
+  correta?: boolean;
+}
+
+// Interface para questão temporária (antes de salvar)
+interface QuestaoTemp {
+  id: string;
+  ordem: number;
+  tipo: "objetiva" | "dissertativa" | "multipla_escolha" | "verdadeiro_falso" | "redacao" | "outros";
+  enunciado: string;
+  opcoes?: QuestaoOpcao[];
+  respostaCorreta?: string;
+  valor: number;
+  temaRedacao?: string;
+  generoTextual?: string;
+  minimoLinhas?: number;
+  maximoLinhas?: number;
+  tipoCustomizado?: string;
+  instrucoesEspecificas?: string;
+}
+
 export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
   const { userData } = useAuth();
   const { toast } = useToast();
@@ -91,6 +117,22 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
   const [selectedEntrega, setSelectedEntrega] = useState<AvaliacaoEntrega | null>(null);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [activeTab, setActiveTab] = useState("todas");
+  
+  // Estados para criação de questões
+  const [questoes, setQuestoes] = useState<QuestaoTemp[]>([]);
+  const [questaoDialogOpen, setQuestaoDialogOpen] = useState(false);
+  const [editingQuestao, setEditingQuestao] = useState<QuestaoTemp | null>(null);
+  const [novaQuestao, setNovaQuestao] = useState<Partial<QuestaoTemp>>({
+    tipo: "multipla_escolha",
+    enunciado: "",
+    valor: 1,
+    opcoes: [
+      { letra: "A", texto: "", correta: false },
+      { letra: "B", texto: "", correta: false },
+      { letra: "C", texto: "", correta: false },
+      { letra: "D", texto: "", correta: false },
+    ],
+  });
 
   const form = useForm<z.infer<typeof avaliacaoFormSchema>>({
     resolver: zodResolver(avaliacaoFormSchema),
@@ -179,6 +221,14 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
         avaliacaoData.arquivoNome = arquivoNome;
       }
 
+      // Adicionar questões se o modelo for "questoes"
+      if (data.modeloTipo === "questoes" && questoes.length > 0) {
+        avaliacaoData.questoes = questoes.map((q, index) => ({
+          ...q,
+          ordem: index + 1,
+        }));
+      }
+
       await addDoc(collection(db, "avaliacoes"), avaliacaoData);
       return avaliacaoData;
     },
@@ -191,6 +241,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
       setCreateDialogOpen(false);
       form.reset();
       setAttachmentFile(null);
+      setQuestoes([]); // Limpar questões
     },
     onError: (error: any) => {
       toast({
@@ -253,6 +304,134 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
       });
     },
   });
+
+  // Funções auxiliares para gerenciar questões
+  const resetNovaQuestao = () => {
+    setNovaQuestao({
+      tipo: "multipla_escolha",
+      enunciado: "",
+      valor: 1,
+      opcoes: [
+        { letra: "A", texto: "", correta: false },
+        { letra: "B", texto: "", correta: false },
+        { letra: "C", texto: "", correta: false },
+        { letra: "D", texto: "", correta: false },
+      ],
+    });
+    setEditingQuestao(null);
+  };
+
+  const handleAddQuestao = () => {
+    if (!novaQuestao.enunciado?.trim()) {
+      toast({
+        title: "Erro",
+        description: "O enunciado da questão é obrigatório.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validação específica para múltipla escolha
+    if (novaQuestao.tipo === "multipla_escolha") {
+      const hasCorrect = novaQuestao.opcoes?.some(o => o.correta);
+      if (!hasCorrect) {
+        toast({
+          title: "Erro",
+          description: "Selecione uma opção correta para questões de múltipla escolha.",
+          variant: "destructive",
+        });
+        return;
+      }
+      const filledOptions = novaQuestao.opcoes?.filter(o => o.texto.trim());
+      if (!filledOptions || filledOptions.length < 2) {
+        toast({
+          title: "Erro",
+          description: "Preencha pelo menos 2 opções.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    const questao: QuestaoTemp = {
+      id: editingQuestao?.id || `q_${Date.now()}`,
+      ordem: editingQuestao?.ordem || questoes.length + 1,
+      tipo: novaQuestao.tipo || "multipla_escolha",
+      enunciado: novaQuestao.enunciado || "",
+      valor: novaQuestao.valor || 1,
+      opcoes: novaQuestao.opcoes?.filter(o => o.texto.trim()),
+      respostaCorreta: novaQuestao.respostaCorreta,
+      temaRedacao: novaQuestao.temaRedacao,
+      generoTextual: novaQuestao.generoTextual,
+      minimoLinhas: novaQuestao.minimoLinhas,
+      maximoLinhas: novaQuestao.maximoLinhas,
+      tipoCustomizado: novaQuestao.tipoCustomizado,
+      instrucoesEspecificas: novaQuestao.instrucoesEspecificas,
+    };
+
+    if (editingQuestao) {
+      setQuestoes(prev => prev.map(q => q.id === editingQuestao.id ? questao : q));
+      toast({ title: "Questão atualizada!" });
+    } else {
+      setQuestoes(prev => [...prev, questao]);
+      toast({ title: "Questão adicionada!" });
+    }
+
+    setQuestaoDialogOpen(false);
+    resetNovaQuestao();
+  };
+
+  const handleEditQuestao = (questao: QuestaoTemp) => {
+    setEditingQuestao(questao);
+    setNovaQuestao({
+      tipo: questao.tipo,
+      enunciado: questao.enunciado,
+      valor: questao.valor,
+      opcoes: questao.opcoes || [
+        { letra: "A", texto: "", correta: false },
+        { letra: "B", texto: "", correta: false },
+        { letra: "C", texto: "", correta: false },
+        { letra: "D", texto: "", correta: false },
+      ],
+      respostaCorreta: questao.respostaCorreta,
+      temaRedacao: questao.temaRedacao,
+      generoTextual: questao.generoTextual,
+      minimoLinhas: questao.minimoLinhas,
+      maximoLinhas: questao.maximoLinhas,
+      tipoCustomizado: questao.tipoCustomizado,
+      instrucoesEspecificas: questao.instrucoesEspecificas,
+    });
+    setQuestaoDialogOpen(true);
+  };
+
+  const handleDeleteQuestao = (id: string) => {
+    setQuestoes(prev => prev.filter(q => q.id !== id).map((q, index) => ({ ...q, ordem: index + 1 })));
+    toast({ title: "Questão removida!" });
+  };
+
+  const handleMoveQuestao = (index: number, direction: "up" | "down") => {
+    const newQuestoes = [...questoes];
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= newQuestoes.length) return;
+    
+    [newQuestoes[index], newQuestoes[targetIndex]] = [newQuestoes[targetIndex], newQuestoes[index]];
+    setQuestoes(newQuestoes.map((q, i) => ({ ...q, ordem: i + 1 })));
+  };
+
+  const handleDuplicateQuestao = (questao: QuestaoTemp) => {
+    const duplicated: QuestaoTemp = {
+      ...questao,
+      id: `q_${Date.now()}`,
+      ordem: questoes.length + 1,
+    };
+    setQuestoes(prev => [...prev, duplicated]);
+    toast({ title: "Questão duplicada!" });
+  };
+
+  const getTipoQuestaoLabel = (tipo: string) => {
+    const found = TIPOS_QUESTAO.find(t => t.value === tipo);
+    return found?.label || tipo;
+  };
 
   const getStatusAvaliacao = (avaliacao: Avaliacao) => {
     const now = new Date();
@@ -856,6 +1035,134 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
                 </div>
               )}
 
+              {form.watch("modeloTipo") === "questoes" && (
+                <div className="space-y-4 border rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-medium flex items-center gap-2">
+                        <ListOrdered className="h-4 w-4" />
+                        Questões da Avaliação
+                      </h4>
+                      <p className="text-sm text-muted-foreground">
+                        {questoes.length === 0 
+                          ? "Nenhuma questão adicionada ainda" 
+                          : `${questoes.length} questão(ões) - Total: ${questoes.reduce((acc, q) => acc + q.valor, 0)} pontos`}
+                      </p>
+                    </div>
+                    <Button 
+                      type="button" 
+                      onClick={() => {
+                        resetNovaQuestao();
+                        setQuestaoDialogOpen(true);
+                      }}
+                      data-testid="button-add-questao"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Adicionar Questão
+                    </Button>
+                  </div>
+
+                  {questoes.length > 0 && (
+                    <ScrollArea className="max-h-[300px]">
+                      <div className="space-y-2">
+                        {questoes.map((questao, index) => (
+                          <Card key={questao.id} className="p-3">
+                            <div className="flex items-start gap-3">
+                              <div className="flex flex-col gap-1">
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-6 w-6"
+                                  disabled={index === 0}
+                                  onClick={() => handleMoveQuestao(index, "up")}
+                                  data-testid={`button-move-up-${questao.id}`}
+                                >
+                                  <ChevronUp className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-6 w-6"
+                                  disabled={index === questoes.length - 1}
+                                  onClick={() => handleMoveQuestao(index, "down")}
+                                  data-testid={`button-move-down-${questao.id}`}
+                                >
+                                  <ChevronDown className="h-3 w-3" />
+                                </Button>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="font-medium text-sm">Questão {questao.ordem}</span>
+                                  <Badge variant="secondary" className="text-xs">
+                                    {getTipoQuestaoLabel(questao.tipo)}
+                                  </Badge>
+                                  <Badge variant="outline" className="text-xs">
+                                    {questao.valor} pt{questao.valor !== 1 ? "s" : ""}
+                                  </Badge>
+                                </div>
+                                <p className="text-sm text-muted-foreground line-clamp-2">
+                                  {questao.enunciado}
+                                </p>
+                                {questao.tipo === "multipla_escolha" && questao.opcoes && (
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {questao.opcoes.map(op => (
+                                      <span 
+                                        key={op.letra}
+                                        className={`text-xs px-1.5 py-0.5 rounded ${
+                                          op.correta 
+                                            ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" 
+                                            : "bg-muted"
+                                        }`}
+                                      >
+                                        {op.letra}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex gap-1">
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-7 w-7"
+                                  onClick={() => handleDuplicateQuestao(questao)}
+                                  data-testid={`button-duplicate-${questao.id}`}
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-7 w-7"
+                                  onClick={() => handleEditQuestao(questao)}
+                                  data-testid={`button-edit-${questao.id}`}
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-7 w-7 text-destructive hover:text-destructive"
+                                  onClick={() => handleDeleteQuestao(questao.id)}
+                                  data-testid={`button-delete-${questao.id}`}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  )}
+                </div>
+              )}
+
               <FormField
                 control={form.control}
                 name="instrucoes"
@@ -1159,6 +1466,342 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo para criar/editar questão */}
+      <Dialog open={questaoDialogOpen} onOpenChange={(open) => {
+        setQuestaoDialogOpen(open);
+        if (!open) resetNovaQuestao();
+      }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-questao">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <HelpCircle className="h-5 w-5" />
+              {editingQuestao ? "Editar Questão" : "Nova Questão"}
+            </DialogTitle>
+            <DialogDescription>
+              Configure os detalhes da questão para a avaliação
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Tipo da Questão */}
+            <div className="space-y-2">
+              <Label>Tipo da Questão</Label>
+              <Select 
+                value={novaQuestao.tipo} 
+                onValueChange={(value: QuestaoTemp["tipo"]) => {
+                  setNovaQuestao(prev => {
+                    const newState: Partial<QuestaoTemp> = { ...prev, tipo: value };
+                    if (value === "multipla_escolha" && !prev.opcoes?.length) {
+                      newState.opcoes = [
+                        { letra: "A", texto: "", correta: false },
+                        { letra: "B", texto: "", correta: false },
+                        { letra: "C", texto: "", correta: false },
+                        { letra: "D", texto: "", correta: false },
+                      ];
+                    }
+                    if (value === "verdadeiro_falso") {
+                      newState.opcoes = [
+                        { letra: "V", texto: "Verdadeiro", correta: false },
+                        { letra: "F", texto: "Falso", correta: false },
+                      ];
+                    }
+                    return newState;
+                  });
+                }}
+              >
+                <SelectTrigger data-testid="select-tipo-questao">
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TIPOS_QUESTAO.map(tipo => (
+                    <SelectItem key={tipo.value} value={tipo.value}>
+                      {tipo.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Tipo Customizado (para "outros") */}
+            {novaQuestao.tipo === "outros" && (
+              <div className="space-y-2">
+                <Label>Descrição do Tipo</Label>
+                <Input
+                  placeholder="Ex: Questão de associação de colunas"
+                  value={novaQuestao.tipoCustomizado || ""}
+                  onChange={(e) => setNovaQuestao(prev => ({ ...prev, tipoCustomizado: e.target.value }))}
+                  data-testid="input-tipo-customizado"
+                />
+              </div>
+            )}
+
+            {/* Valor da Questão */}
+            <div className="space-y-2">
+              <Label>Valor (pontos)</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.5"
+                value={novaQuestao.valor || 1}
+                onChange={(e) => setNovaQuestao(prev => ({ ...prev, valor: parseFloat(e.target.value) || 1 }))}
+                data-testid="input-valor-questao"
+              />
+            </div>
+
+            {/* Enunciado */}
+            <div className="space-y-2">
+              <Label>Enunciado da Questão *</Label>
+              <Textarea
+                rows={4}
+                placeholder="Digite o texto da questão..."
+                value={novaQuestao.enunciado || ""}
+                onChange={(e) => setNovaQuestao(prev => ({ ...prev, enunciado: e.target.value }))}
+                data-testid="input-enunciado"
+              />
+            </div>
+
+            {/* Opções para Múltipla Escolha */}
+            {novaQuestao.tipo === "multipla_escolha" && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Opções de Resposta</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const letras = ["A", "B", "C", "D", "E", "F", "G", "H"];
+                      const nextLetter = letras[novaQuestao.opcoes?.length || 0];
+                      if (nextLetter) {
+                        setNovaQuestao(prev => ({
+                          ...prev,
+                          opcoes: [...(prev.opcoes || []), { letra: nextLetter, texto: "", correta: false }]
+                        }));
+                      }
+                    }}
+                    disabled={(novaQuestao.opcoes?.length || 0) >= 8}
+                    data-testid="button-add-opcao"
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Opção
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {novaQuestao.opcoes?.map((opcao, index) => (
+                    <div key={opcao.letra} className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant={opcao.correta ? "default" : "outline"}
+                        className="h-8 w-8 shrink-0"
+                        onClick={() => {
+                          setNovaQuestao(prev => ({
+                            ...prev,
+                            opcoes: prev.opcoes?.map(o => ({
+                              ...o,
+                              correta: o.letra === opcao.letra
+                            }))
+                          }));
+                        }}
+                        data-testid={`button-correta-${opcao.letra}`}
+                      >
+                        {opcao.correta ? <Check className="h-4 w-4" /> : opcao.letra}
+                      </Button>
+                      <Input
+                        placeholder={`Opção ${opcao.letra}`}
+                        value={opcao.texto}
+                        onChange={(e) => {
+                          setNovaQuestao(prev => ({
+                            ...prev,
+                            opcoes: prev.opcoes?.map(o => 
+                              o.letra === opcao.letra ? { ...o, texto: e.target.value } : o
+                            )
+                          }));
+                        }}
+                        data-testid={`input-opcao-${opcao.letra}`}
+                      />
+                      {(novaQuestao.opcoes?.length || 0) > 2 && (
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 shrink-0"
+                          onClick={() => {
+                            setNovaQuestao(prev => ({
+                              ...prev,
+                              opcoes: prev.opcoes?.filter(o => o.letra !== opcao.letra)
+                            }));
+                          }}
+                          data-testid={`button-remove-opcao-${opcao.letra}`}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Clique na letra para marcar como resposta correta
+                </p>
+              </div>
+            )}
+
+            {/* Opções para Verdadeiro/Falso */}
+            {novaQuestao.tipo === "verdadeiro_falso" && (
+              <div className="space-y-3">
+                <Label>Resposta Correta</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={novaQuestao.opcoes?.find(o => o.letra === "V")?.correta ? "default" : "outline"}
+                    onClick={() => {
+                      setNovaQuestao(prev => ({
+                        ...prev,
+                        opcoes: prev.opcoes?.map(o => ({
+                          ...o,
+                          correta: o.letra === "V"
+                        }))
+                      }));
+                    }}
+                    data-testid="button-verdadeiro"
+                  >
+                    {novaQuestao.opcoes?.find(o => o.letra === "V")?.correta && <Check className="h-4 w-4 mr-2" />}
+                    Verdadeiro
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={novaQuestao.opcoes?.find(o => o.letra === "F")?.correta ? "default" : "outline"}
+                    onClick={() => {
+                      setNovaQuestao(prev => ({
+                        ...prev,
+                        opcoes: prev.opcoes?.map(o => ({
+                          ...o,
+                          correta: o.letra === "F"
+                        }))
+                      }));
+                    }}
+                    data-testid="button-falso"
+                  >
+                    {novaQuestao.opcoes?.find(o => o.letra === "F")?.correta && <Check className="h-4 w-4 mr-2" />}
+                    Falso
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Campo de resposta para objetiva */}
+            {novaQuestao.tipo === "objetiva" && (
+              <div className="space-y-2">
+                <Label>Resposta Esperada (gabarito)</Label>
+                <Input
+                  placeholder="Ex: Brasil, 42, etc."
+                  value={novaQuestao.respostaCorreta || ""}
+                  onChange={(e) => setNovaQuestao(prev => ({ ...prev, respostaCorreta: e.target.value }))}
+                  data-testid="input-resposta-correta"
+                />
+                <p className="text-xs text-muted-foreground">
+                  A resposta esperada para correção automática
+                </p>
+              </div>
+            )}
+
+            {/* Campos específicos para Redação */}
+            {novaQuestao.tipo === "redacao" && (
+              <div className="space-y-4 border rounded-lg p-4 bg-muted/30">
+                <h4 className="font-medium flex items-center gap-2">
+                  <PenLine className="h-4 w-4" />
+                  Configurações da Redação
+                </h4>
+                
+                <div className="space-y-2">
+                  <Label>Tema da Redação</Label>
+                  <Input
+                    placeholder="Ex: A importância da leitura na formação cidadã"
+                    value={novaQuestao.temaRedacao || ""}
+                    onChange={(e) => setNovaQuestao(prev => ({ ...prev, temaRedacao: e.target.value }))}
+                    data-testid="input-tema-redacao"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Gênero Textual</Label>
+                  <Select
+                    value={novaQuestao.generoTextual || ""}
+                    onValueChange={(value) => setNovaQuestao(prev => ({ ...prev, generoTextual: value }))}
+                  >
+                    <SelectTrigger data-testid="select-genero-textual">
+                      <SelectValue placeholder="Selecione o gênero" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="dissertativo-argumentativo">Dissertativo-Argumentativo</SelectItem>
+                      <SelectItem value="carta">Carta</SelectItem>
+                      <SelectItem value="artigo">Artigo de Opinião</SelectItem>
+                      <SelectItem value="narrativo">Texto Narrativo</SelectItem>
+                      <SelectItem value="descritivo">Texto Descritivo</SelectItem>
+                      <SelectItem value="cronica">Crônica</SelectItem>
+                      <SelectItem value="livre">Livre</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Mínimo de Linhas</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      placeholder="Ex: 20"
+                      value={novaQuestao.minimoLinhas || ""}
+                      onChange={(e) => setNovaQuestao(prev => ({ ...prev, minimoLinhas: parseInt(e.target.value) || undefined }))}
+                      data-testid="input-minimo-linhas"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Máximo de Linhas</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      placeholder="Ex: 30"
+                      value={novaQuestao.maximoLinhas || ""}
+                      onChange={(e) => setNovaQuestao(prev => ({ ...prev, maximoLinhas: parseInt(e.target.value) || undefined }))}
+                      data-testid="input-maximo-linhas"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Instruções Específicas (para todos os tipos) */}
+            <div className="space-y-2">
+              <Label>Instruções Específicas (opcional)</Label>
+              <Textarea
+                rows={2}
+                placeholder="Ex: Use caneta azul ou preta. Não é permitido rasuras."
+                value={novaQuestao.instrucoesEspecificas || ""}
+                onChange={(e) => setNovaQuestao(prev => ({ ...prev, instrucoesEspecificas: e.target.value }))}
+                data-testid="input-instrucoes-especificas"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => {
+                setQuestaoDialogOpen(false);
+                resetNovaQuestao();
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button type="button" onClick={handleAddQuestao} data-testid="button-save-questao">
+              {editingQuestao ? "Atualizar" : "Adicionar"} Questão
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
