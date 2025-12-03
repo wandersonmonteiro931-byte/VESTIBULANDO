@@ -98,6 +98,7 @@ export default function StudentDashboard() {
         alunoId: userData.uid,
         alunoNome: userData.nome,
         alunoEmail: userData.email,
+        professorId: tarefa.professorId,
         dataEnvio: now.toISOString(),
         arquivo: downloadURL,
         arquivoNome: file.name,

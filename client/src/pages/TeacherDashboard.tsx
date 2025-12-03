@@ -94,8 +94,10 @@ export default function TeacherDashboard() {
 
   const { data: entregas, isLoading: loadingEntregas } = useRealtimeQuery<Entrega>({
     collectionName: "entregas",
-    queryKey: ["/api/entregas"],
+    queryKey: ["/api/entregas", userData?.uid],
+    constraints: userData?.uid ? [where("professorId", "==", userData.uid)] : [],
     transform: (docs) => docs as Entrega[],
+    enabled: !!userData?.uid,
   });
 
   const createTarefaMutation = useMutation({

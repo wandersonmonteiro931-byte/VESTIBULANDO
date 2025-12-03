@@ -113,10 +113,11 @@ service cloud.firestore {
                get(/databases/$(database)/documents/tarefas/$(tarefaId)).data.professorId == request.auth.uid;
       }
       
-      // Alunos can read their own entregas, professors can read submissions for their tarefas, admins can read all
+      // Alunos can read their own entregas, professors can read submissions for their tarefas (via professorId or tarefaId), admins can read all
       allow read: if isAuthenticated() && isUserActive() && (
         isAdmin() ||
         (isAluno() && resource.data.alunoId == request.auth.uid) ||
+        (isProfessor() && resource.data.professorId == request.auth.uid) ||
         (isProfessor() && professorOwnsTarefa(resource.data.tarefaId))
       );
       
@@ -438,11 +439,12 @@ service cloud.firestore {
       }
       
       // Alunos podem ler suas próprias entregas
-      // Professores podem ler entregas das suas avaliações
+      // Professores podem ler entregas das suas avaliações (via professorId ou via avaliacaoId)
       // Diretores podem ler todas as entregas
       allow read: if isAuthenticated() && (
         isAdmin() ||
         (isAluno() && resource.data.alunoId == request.auth.uid) ||
+        (isProfessor() && resource.data.professorId == request.auth.uid) ||
         (isProfessor() && professorOwnsAvaliacao(resource.data.avaliacaoId))
       );
       

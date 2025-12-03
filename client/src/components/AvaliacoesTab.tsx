@@ -203,8 +203,10 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
 
   const { data: entregas } = useRealtimeQuery<AvaliacaoEntrega>({
     collectionName: "avaliacaoEntregas",
-    queryKey: ["/api/avaliacao-entregas"],
+    queryKey: ["/api/avaliacao-entregas", userData?.uid],
+    constraints: userData?.uid ? [where("professorId", "==", userData.uid)] : [],
     transform: (docs) => docs as AvaliacaoEntrega[],
+    enabled: !!userData?.uid,
   });
 
   const { data: alunos } = useRealtimeQuery<User>({
