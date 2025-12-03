@@ -563,7 +563,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
         </div>
         <Button onClick={() => setCreateDialogOpen(true)} data-testid="button-create-avaliacao">
           <Plus className="h-4 w-4 mr-2" />
-          Nova Avaliação
+          Nova Demanda
         </Button>
       </div>
 
