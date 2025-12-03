@@ -20,7 +20,7 @@ import { FileUploadZone } from "@/components/FileUploadZone";
 import { 
   FileText, Calendar, Clock, Award, Download, Upload, Eye,
   CheckCircle, AlertCircle, FileCheck, BookOpen, ClipboardList, 
-  GraduationCap, Timer, AlertTriangle, Edit3, Send
+  GraduationCap, Timer, AlertTriangle, Edit3, Send, Check, X
 } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";

@@ -592,6 +592,9 @@ export const avaliacaoSchema = z.object({
   embaralharQuestoes: z.boolean().default(false), // Se embaralha ordem das questões
   embaralharOpcoes: z.boolean().default(false), // Se embaralha opções das questões objetivas
   
+  // Data limite para correção (definida pelo diretor)
+  dataLimiteCorrecao: z.string().optional(), // Prazo para o professor corrigir
+  
   // Metadados
   dataCriacao: z.string(),
   dataAtualizacao: z.string().optional(),
@@ -611,6 +614,8 @@ export const avaliacaoRespostaSchema = z.object({
   arquivoNome: z.string().optional(),
   nota: z.number().optional(), // Nota atribuída pelo professor
   feedback: z.string().optional(), // Feedback do professor para esta questão
+  marcacao: z.enum(["certo", "errado", "parcial"]).optional(), // Marcação do professor: certo (100%), errado (0%), parcial (50%)
+  valorObtido: z.number().optional(), // Valor obtido na questão baseado na marcação
 });
 
 export type AvaliacaoResposta = z.infer<typeof avaliacaoRespostaSchema>;
@@ -648,6 +653,10 @@ export const avaliacaoEntregaSchema = z.object({
   corrigidoPor: z.string().optional(), // ID do professor/diretor que corrigiu
   corrigidoPorNome: z.string().optional(),
   dataCorrecao: z.string().optional(),
+  
+  // Liberação para o aluno
+  liberadoParaAluno: z.boolean().default(false), // Se a correção foi liberada para visualização do aluno
+  dataLiberacao: z.string().optional(), // Data em que foi liberada
   
   // Autorização para atraso
   atrasadaAutorizada: z.boolean().default(false),

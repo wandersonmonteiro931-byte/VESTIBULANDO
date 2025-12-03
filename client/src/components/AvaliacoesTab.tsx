@@ -119,6 +119,9 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
   const [selectedEntrega, setSelectedEntrega] = useState<AvaliacaoEntrega | null>(null);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [activeTab, setActiveTab] = useState("todas");
+  const [editQuestoesDialogOpen, setEditQuestoesDialogOpen] = useState(false);
+  const [detailedCorrectionDialogOpen, setDetailedCorrectionDialogOpen] = useState(false);
+  const [correcaoMarcacoes, setCorrecaoMarcacoes] = useState<Record<string, "certo" | "errado" | "parcial">>({});
   
   // Estados para criação de questões
   const [questoes, setQuestoes] = useState<QuestaoTemp[]>([]);
@@ -480,6 +483,181 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
     }
     setEditDialogOpen(true);
   };
+
+  // Handler para abrir diálogo de edição de questões diretamente
+  const handleOpenEditQuestoesDialog = (avaliacao: Avaliacao) => {
+    setEditingAvaliacao(avaliacao);
+    if (avaliacao.questoes && avaliacao.questoes.length > 0) {
+      setQuestoes(avaliacao.questoes.map((q: any) => ({
+        id: q.id,
+        ordem: q.ordem,
+        tipo: q.tipo,
+        enunciado: q.enunciado,
+        valor: q.valor,
+        opcoes: q.opcoes,
+        respostaCorreta: q.respostaCorreta,
+        temaRedacao: q.temaRedacao,
+        generoTextual: q.generoTextual,
+        minimoLinhas: q.minimoLinhas,
+        maximoLinhas: q.maximoLinhas,
+        tipoCustomizado: q.tipoCustomizado,
+        instrucoesEspecificas: q.instrucoesEspecificas,
+      })));
+    } else {
+      setQuestoes([]);
+    }
+    setEditQuestoesDialogOpen(true);
+  };
+
+  // Mutation para atualizar apenas as questões
+  const updateQuestoesMutation = useMutation({
+    mutationFn: async () => {
+      if (!editingAvaliacao) throw new Error("Nenhuma avaliação selecionada");
+      
+      const questoesData = questoes.map(q => {
+        const questaoData: any = {
+          id: q.id,
+          ordem: q.ordem,
+          tipo: q.tipo,
+          enunciado: q.enunciado,
+          valor: q.valor,
+        };
+        if (q.opcoes && q.opcoes.length > 0) questaoData.opcoes = q.opcoes;
+        if (q.respostaCorreta) questaoData.respostaCorreta = q.respostaCorreta;
+        if (q.temaRedacao) questaoData.temaRedacao = q.temaRedacao;
+        if (q.generoTextual) questaoData.generoTextual = q.generoTextual;
+        if (q.minimoLinhas) questaoData.minimoLinhas = q.minimoLinhas;
+        if (q.maximoLinhas) questaoData.maximoLinhas = q.maximoLinhas;
+        if (q.tipoCustomizado) questaoData.tipoCustomizado = q.tipoCustomizado;
+        if (q.instrucoesEspecificas) questaoData.instrucoesEspecificas = q.instrucoesEspecificas;
+        return questaoData;
+      });
+
+      const avaliacaoRef = doc(db, "avaliacoes", editingAvaliacao.id);
+      await updateDoc(avaliacaoRef, {
+        questoes: questoesData,
+        atualizadoEm: getNowBrasiliaISO(),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/avaliacoes"] });
+      toast({
+        title: "Questões atualizadas!",
+        description: "As questões foram salvas com sucesso.",
+      });
+      setEditQuestoesDialogOpen(false);
+      setEditingAvaliacao(null);
+      setQuestoes([]);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao atualizar questões",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handler para abrir correção detalhada
+  const handleOpenDetailedCorrection = (entrega: AvaliacaoEntrega) => {
+    setSelectedEntrega(entrega);
+    // Inicializar marcações se já existirem
+    const initialMarcacoes: Record<string, "certo" | "errado" | "parcial"> = {};
+    if (entrega.respostas) {
+      entrega.respostas.forEach(r => {
+        if (r.marcacao) {
+          initialMarcacoes[r.questaoId] = r.marcacao;
+        }
+      });
+    }
+    setCorrecaoMarcacoes(initialMarcacoes);
+    setDetailedCorrectionDialogOpen(true);
+  };
+
+  // Calcular nota baseada nas marcações
+  const calcularNotaFromMarcacoes = (avaliacao: Avaliacao | undefined, marcacoes: Record<string, "certo" | "errado" | "parcial">) => {
+    if (!avaliacao?.questoes) return 0;
+    
+    let totalObtido = 0;
+    avaliacao.questoes.forEach((q: any) => {
+      const marcacao = marcacoes[q.id];
+      if (marcacao === "certo") {
+        totalObtido += q.valor;
+      } else if (marcacao === "parcial") {
+        totalObtido += q.valor / 2;
+      }
+      // "errado" = 0, então não soma nada
+    });
+    
+    return totalObtido;
+  };
+
+  // Mutation para salvar correção detalhada
+  const saveDetailedCorrectionMutation = useMutation({
+    mutationFn: async ({ entregaId, liberarParaAluno }: { entregaId: string; liberarParaAluno: boolean }) => {
+      if (!userData || !selectedEntrega) throw new Error("Dados inválidos");
+      
+      const avaliacao = avaliacoes?.find(a => a.id === selectedEntrega.avaliacaoId);
+      if (!avaliacao) throw new Error("Avaliação não encontrada");
+      
+      // Calcular nota total baseada nas marcações
+      const notaTotal = calcularNotaFromMarcacoes(avaliacao, correcaoMarcacoes);
+      const notaPercentual = (notaTotal / avaliacao.valorTotal) * 100;
+      
+      // Atualizar respostas com marcações e valores obtidos
+      const respostasAtualizadas = selectedEntrega.respostas?.map(r => {
+        const questao = avaliacao.questoes?.find((q: any) => q.id === r.questaoId);
+        const marcacao = correcaoMarcacoes[r.questaoId];
+        let valorObtido = 0;
+        
+        if (marcacao === "certo" && questao) {
+          valorObtido = questao.valor;
+        } else if (marcacao === "parcial" && questao) {
+          valorObtido = questao.valor / 2;
+        }
+        
+        return {
+          ...r,
+          marcacao,
+          valorObtido,
+        };
+      });
+      
+      const entregaRef = doc(db, "avaliacaoEntregas", entregaId);
+      await updateDoc(entregaRef, {
+        nota: notaTotal,
+        notaPercentual,
+        respostas: respostasAtualizadas,
+        feedback: correcaoForm.getValues("feedback") || "",
+        status: "corrigida",
+        corrigidoPor: userData.uid,
+        corrigidoPorNome: userData.nome,
+        dataCorrecao: getNowBrasiliaISO(),
+        liberadoParaAluno,
+        dataLiberacao: liberarParaAluno ? getNowBrasiliaISO() : undefined,
+      });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/avaliacao-entregas"] });
+      toast({
+        title: "Correção salva!",
+        description: variables.liberarParaAluno 
+          ? "A correção foi liberada para o aluno." 
+          : "A correção foi salva mas ainda não foi liberada para o aluno.",
+      });
+      setDetailedCorrectionDialogOpen(false);
+      setSelectedEntrega(null);
+      setCorrecaoMarcacoes({});
+      correcaoForm.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao salvar correção",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   // Funções auxiliares para gerenciar questões
   const resetNovaQuestao = () => {
@@ -884,6 +1062,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
             loading={loadingAvaliacoes}
             onView={(a) => { setSelectedAvaliacao(a); setViewDialogOpen(true); }}
             onEdit={handleOpenEditDialog}
+            onEditQuestoes={handleOpenEditQuestoesDialog}
             onPrint={handlePrintPDF}
             onDelete={(id) => deleteMutation.mutate(id)}
             getStatus={getStatusAvaliacao}
@@ -899,6 +1078,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
             loading={loadingAvaliacoes}
             onView={(a) => { setSelectedAvaliacao(a); setViewDialogOpen(true); }}
             onEdit={handleOpenEditDialog}
+            onEditQuestoes={handleOpenEditQuestoesDialog}
             onPrint={handlePrintPDF}
             onDelete={(id) => deleteMutation.mutate(id)}
             getStatus={getStatusAvaliacao}
@@ -914,6 +1094,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
             loading={loadingAvaliacoes}
             onView={(a) => { setSelectedAvaliacao(a); setViewDialogOpen(true); }}
             onEdit={handleOpenEditDialog}
+            onEditQuestoes={handleOpenEditQuestoesDialog}
             onPrint={handlePrintPDF}
             onDelete={(id) => deleteMutation.mutate(id)}
             getStatus={getStatusAvaliacao}
@@ -929,6 +1110,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
             loading={loadingAvaliacoes}
             onView={(a) => { setSelectedAvaliacao(a); setViewDialogOpen(true); }}
             onEdit={handleOpenEditDialog}
+            onEditQuestoes={handleOpenEditQuestoesDialog}
             onPrint={handlePrintPDF}
             onDelete={(id) => deleteMutation.mutate(id)}
             getStatus={getStatusAvaliacao}
@@ -981,17 +1163,35 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
                     </Button>
                   )}
                 </CardContent>
-                <CardFooter>
-                  <Button
-                    onClick={() => {
-                      setSelectedEntrega(entrega);
-                      setGradeDialogOpen(true);
-                    }}
-                    data-testid="button-corrigir"
-                  >
-                    <Edit className="h-4 w-4 mr-2" />
-                    Corrigir
-                  </Button>
+                <CardFooter className="flex flex-wrap gap-2">
+                  {(() => {
+                    const avaliacao = avaliacoes?.find(a => a.id === entrega.avaliacaoId);
+                    const hasQuestoes = avaliacao?.questoes && avaliacao.questoes.length > 0;
+                    return (
+                      <>
+                        {hasQuestoes && (
+                          <Button
+                            onClick={() => handleOpenDetailedCorrection(entrega)}
+                            data-testid="button-corrigir-detalhado"
+                          >
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Correção Detalhada
+                          </Button>
+                        )}
+                        <Button
+                          variant={hasQuestoes ? "outline" : "default"}
+                          onClick={() => {
+                            setSelectedEntrega(entrega);
+                            setGradeDialogOpen(true);
+                          }}
+                          data-testid="button-corrigir"
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          {hasQuestoes ? "Correção Rápida" : "Corrigir"}
+                        </Button>
+                      </>
+                    );
+                  })()}
                 </CardFooter>
               </Card>
             ))
@@ -2269,6 +2469,281 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Diálogo de Edição Direta de Questões */}
+      <Dialog open={editQuestoesDialogOpen} onOpenChange={setEditQuestoesDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" data-testid="dialog-edit-questoes">
+          <DialogHeader>
+            <DialogTitle>Editar Questões</DialogTitle>
+            <DialogDescription>
+              {editingAvaliacao?.titulo} - {questoes.length} questão(ões)
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">
+                Valor total: {questoes.reduce((acc, q) => acc + (q.valor || 0), 0)} pts
+              </span>
+              <Button
+                size="sm"
+                onClick={() => setQuestaoDialogOpen(true)}
+                data-testid="button-add-questao-edit"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Nova Questão
+              </Button>
+            </div>
+
+            <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-2">
+              {questoes.length === 0 ? (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+                    <FileText className="h-12 w-12 text-muted-foreground mb-3" />
+                    <p className="text-muted-foreground">Nenhuma questão cadastrada</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                questoes.map((questao, index) => (
+                  <Card key={questao.id} className="hover-elevate">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Badge variant="outline">Q{index + 1}</Badge>
+                            <Badge variant="secondary">
+                              {questao.tipo === "multipla_escolha" ? "Múltipla Escolha" :
+                               questao.tipo === "objetiva" ? "Objetiva" :
+                               questao.tipo === "dissertativa" ? "Dissertativa" :
+                               questao.tipo === "verdadeiro_falso" ? "V/F" :
+                               questao.tipo === "redacao" ? "Redação" : questao.tipo}
+                            </Badge>
+                            <span className="text-sm text-muted-foreground">{questao.valor} pts</span>
+                          </div>
+                          <p className="text-sm line-clamp-2">
+                            {questao.enunciado || "(Sem enunciado)"}
+                          </p>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleEditQuestao(questao)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => handleRemoveQuestao(questao.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEditQuestoesDialogOpen(false);
+                setEditingAvaliacao(null);
+                setQuestoes([]);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => updateQuestoesMutation.mutate()}
+              disabled={updateQuestoesMutation.isPending}
+              data-testid="button-save-questoes"
+            >
+              {updateQuestoesMutation.isPending ? "Salvando..." : "Salvar Questões"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo de Correção Detalhada com Marcações */}
+      <Dialog open={detailedCorrectionDialogOpen} onOpenChange={setDetailedCorrectionDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="dialog-detailed-correction">
+          <DialogHeader>
+            <DialogTitle>Correção Detalhada</DialogTitle>
+            <DialogDescription>
+              {selectedEntrega?.avaliacaoTitulo} - Aluno: {selectedEntrega?.alunoNome}
+            </DialogDescription>
+          </DialogHeader>
+
+          {(() => {
+            const avaliacao = avaliacoes?.find(a => a.id === selectedEntrega?.avaliacaoId);
+            const valorTotal = avaliacao?.valorTotal || 0;
+            const notaCalculada = calcularNotaFromMarcacoes(avaliacao, correcaoMarcacoes);
+            const percentual = valorTotal > 0 ? ((notaCalculada / valorTotal) * 100).toFixed(1) : "0";
+            
+            return (
+              <div className="space-y-4">
+                {/* Resumo da Nota */}
+                <Card className="bg-muted/50">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Nota Calculada</p>
+                        <p className="text-2xl font-bold">{notaCalculada} / {valorTotal}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-muted-foreground">Percentual</p>
+                        <p className="text-2xl font-bold">{percentual}%</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Lista de Questões com Respostas e Marcações */}
+                <div className="space-y-4 max-h-[45vh] overflow-y-auto pr-2">
+                  {avaliacao?.questoes?.map((questao: any, index: number) => {
+                    const resposta = selectedEntrega?.respostas?.find(r => r.questaoId === questao.id);
+                    const marcacao = correcaoMarcacoes[questao.id];
+                    
+                    return (
+                      <Card key={questao.id} className={
+                        marcacao === "certo" ? "border-green-500 border-2" :
+                        marcacao === "errado" ? "border-red-500 border-2" :
+                        marcacao === "parcial" ? "border-amber-500 border-2" : ""
+                      }>
+                        <CardContent className="p-4 space-y-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Badge variant="outline">Questão {index + 1}</Badge>
+                                <span className="text-sm font-medium">{questao.valor} pts</span>
+                              </div>
+                              <p className="text-sm mb-3 whitespace-pre-wrap">
+                                {questao.enunciado}
+                              </p>
+                              
+                              {/* Resposta do aluno */}
+                              <div className="bg-muted/50 p-3 rounded-md">
+                                <p className="text-xs text-muted-foreground mb-1">Resposta do aluno:</p>
+                                <p className="text-sm">
+                                  {resposta?.resposta || "(Não respondeu)"}
+                                </p>
+                              </div>
+
+                              {/* Gabarito (se objetiva) */}
+                              {questao.respostaCorreta && (
+                                <div className="mt-2 text-xs text-muted-foreground">
+                                  Gabarito: <span className="font-medium">{questao.respostaCorreta}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Botões de Marcação */}
+                            <div className="flex flex-col gap-2">
+                              <Button
+                                size="sm"
+                                variant={marcacao === "certo" ? "default" : "outline"}
+                                className={marcacao === "certo" ? "bg-green-600 hover:bg-green-700" : ""}
+                                onClick={() => setCorrecaoMarcacoes(prev => ({ ...prev, [questao.id]: "certo" }))}
+                                data-testid={`button-mark-certo-${questao.id}`}
+                              >
+                                <Check className="h-4 w-4 mr-1" />
+                                Certo
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant={marcacao === "parcial" ? "default" : "outline"}
+                                className={marcacao === "parcial" ? "bg-amber-600 hover:bg-amber-700" : ""}
+                                onClick={() => setCorrecaoMarcacoes(prev => ({ ...prev, [questao.id]: "parcial" }))}
+                                data-testid={`button-mark-parcial-${questao.id}`}
+                              >
+                                <AlertCircle className="h-4 w-4 mr-1" />
+                                Parcial
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant={marcacao === "errado" ? "default" : "outline"}
+                                className={marcacao === "errado" ? "bg-red-600 hover:bg-red-700" : ""}
+                                onClick={() => setCorrecaoMarcacoes(prev => ({ ...prev, [questao.id]: "errado" }))}
+                                data-testid={`button-mark-errado-${questao.id}`}
+                              >
+                                <X className="h-4 w-4 mr-1" />
+                                Errado
+                              </Button>
+                            </div>
+                          </div>
+
+                          {/* Valor obtido */}
+                          {marcacao && (
+                            <div className="text-sm text-right">
+                              Pontos: <span className="font-medium">
+                                {marcacao === "certo" ? questao.valor :
+                                 marcacao === "parcial" ? (questao.valor / 2) : 0}
+                              </span> / {questao.valor}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+
+                {/* Feedback Geral */}
+                <div className="space-y-2">
+                  <Label>Feedback Geral (opcional)</Label>
+                  <Textarea
+                    placeholder="Escreva um feedback geral sobre a avaliação do aluno..."
+                    rows={3}
+                    {...correcaoForm.register("feedback")}
+                    data-testid="input-feedback-detalhado"
+                  />
+                </div>
+              </div>
+            );
+          })()}
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDetailedCorrectionDialogOpen(false);
+                setSelectedEntrega(null);
+                setCorrecaoMarcacoes({});
+                correcaoForm.reset();
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => selectedEntrega && saveDetailedCorrectionMutation.mutate({ 
+                entregaId: selectedEntrega.id, 
+                liberarParaAluno: false 
+              })}
+              disabled={saveDetailedCorrectionMutation.isPending}
+              data-testid="button-save-correction-draft"
+            >
+              Salvar Rascunho
+            </Button>
+            <Button
+              onClick={() => selectedEntrega && saveDetailedCorrectionMutation.mutate({ 
+                entregaId: selectedEntrega.id, 
+                liberarParaAluno: true 
+              })}
+              disabled={saveDetailedCorrectionMutation.isPending}
+              data-testid="button-save-and-release"
+            >
+              {saveDetailedCorrectionMutation.isPending ? "Salvando..." : "Salvar e Liberar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -2278,6 +2753,7 @@ interface AvaliacaoListProps {
   loading: boolean;
   onView: (avaliacao: Avaliacao) => void;
   onEdit: (avaliacao: Avaliacao) => void;
+  onEditQuestoes: (avaliacao: Avaliacao) => void;
   onPrint: (avaliacao: Avaliacao) => void;
   onDelete: (id: string) => void;
   getStatus: (avaliacao: Avaliacao) => { label: string; variant: "default" | "secondary" | "destructive" | "outline" };
@@ -2290,7 +2766,8 @@ function AvaliacaoList({
   avaliacoes, 
   loading, 
   onView,
-  onEdit, 
+  onEdit,
+  onEditQuestoes,
   onPrint, 
   onDelete, 
   getStatus, 
@@ -2386,6 +2863,12 @@ function AvaliacaoList({
                 <Edit className="h-4 w-4 mr-1" />
                 Editar
               </Button>
+              {avaliacao.modeloTipo === "questoes" && (
+                <Button variant="outline" size="sm" onClick={() => onEditQuestoes(avaliacao)} data-testid="button-edit-questoes">
+                  <ListOrdered className="h-4 w-4 mr-1" />
+                  Editar questões
+                </Button>
+              )}
               <Button variant="outline" size="sm" onClick={() => onPrint(avaliacao)}>
                 <Printer className="h-4 w-4 mr-1" />
                 PDF
