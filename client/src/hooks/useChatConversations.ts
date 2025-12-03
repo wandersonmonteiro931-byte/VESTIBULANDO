@@ -4,10 +4,7 @@ import {
   collection, 
   query as firestoreQuery, 
   where, 
-  onSnapshot,
-  orderBy,
-  QueryConstraint,
-  getDocs
+  onSnapshot
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { ChatConversation } from "@shared/schema";
@@ -53,17 +50,11 @@ export function useChatConversations() {
     let allConversations: ChatConversation[] = [];
     let loaded = { q1: false, q2: false };
 
-    const updateConversations = async () => {
-      if (loaded.q1 && loaded.q2) {
-        const blocksRef = collection(db, "userBlocks");
-        const blockQuery = firestoreQuery(
-          blocksRef,
-          where("ativo", "==", true)
-        );
-        
-        const blocksSnapshot = await getDocs(blockQuery);
-        const blocks = blocksSnapshot.docs.map(doc => doc.data());
-        
+    let currentBlocks: { bloqueadorId: string; bloqueadoId: string }[] = [];
+    let blocksLoaded = false;
+
+    const updateConversations = () => {
+      if (loaded.q1 && loaded.q2 && blocksLoaded) {
         const conversationsWithMessages = allConversations.filter(
           conv => conv.ultimaMensagem && conv.ultimaMensagem.trim() !== ""
         );
@@ -74,11 +65,11 @@ export function useChatConversations() {
               ? conv.participante2Id 
               : conv.participante1Id;
           
-          const iBlockedOther = blocks.some(
+          const iBlockedOther = currentBlocks.some(
             block => block.bloqueadorId === userData.uid && block.bloqueadoId === otherParticipantId
           );
           
-          const otherBlockedMe = blocks.some(
+          const otherBlockedMe = currentBlocks.some(
             block => block.bloqueadorId === otherParticipantId && block.bloqueadoId === userData.uid
           );
           
@@ -99,6 +90,29 @@ export function useChatConversations() {
         setIsLoading(false);
       }
     };
+
+    const blocksRef = collection(db, "userBlocks");
+    const blockQuery = firestoreQuery(
+      blocksRef,
+      where("ativo", "==", true)
+    );
+    
+    const unsubscribeBlocks = onSnapshot(
+      blockQuery,
+      (snapshot) => {
+        currentBlocks = snapshot.docs.map(doc => ({
+          bloqueadorId: doc.data().bloqueadorId,
+          bloqueadoId: doc.data().bloqueadoId,
+        }));
+        blocksLoaded = true;
+        updateConversations();
+      },
+      (err) => {
+        console.error("Error loading blocks:", err);
+        blocksLoaded = true;
+        updateConversations();
+      }
+    );
 
     const unsubscribe1 = onSnapshot(
       q1,
@@ -148,7 +162,7 @@ export function useChatConversations() {
       }
     );
 
-    unsubscribers.push(unsubscribe1, unsubscribe2);
+    unsubscribers.push(unsubscribe1, unsubscribe2, unsubscribeBlocks);
 
     return () => {
       unsubscribers.forEach(unsub => unsub());
