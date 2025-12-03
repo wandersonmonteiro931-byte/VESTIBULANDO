@@ -28,7 +28,7 @@ import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 import type { Avaliacao, AvaliacaoEntrega, Turma, User, AvaliacaoQuestao } from "@shared/schema";
 import { TIPOS_QUESTAO } from "@shared/schema";
-import { format, isPast, isFuture, isWithinInterval } from "date-fns";
+import { format, isPast, isFuture, isWithinInterval, differenceInHours } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -309,24 +309,36 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
   });
 
   const gradeMutation = useMutation({
-    mutationFn: async ({ entregaId, data }: { entregaId: string; data: z.infer<typeof correcaoFormSchema> }) => {
-      if (!userData) throw new Error("Usuário não autenticado");
+    mutationFn: async ({ entregaId, data, liberarParaAluno }: { entregaId: string; data: z.infer<typeof correcaoFormSchema>; liberarParaAluno: boolean }) => {
+      if (!userData || !selectedEntrega) throw new Error("Usuário não autenticado");
       
       const entregaRef = doc(db, "avaliacaoEntregas", entregaId);
-      await updateDoc(entregaRef, {
-        nota: data.nota,
+      const isAtividade = selectedEntrega.avaliacaoTipo === "atividade";
+      
+      const updateData: Record<string, any> = {
         feedback: data.feedback || "",
         status: "corrigida",
         corrigidoPor: userData.uid,
         corrigidoPorNome: userData.nome,
         dataCorrecao: getNowBrasiliaISO(),
-      });
+        liberadoParaAluno: liberarParaAluno,
+        dataLiberacao: liberarParaAluno ? getNowBrasiliaISO() : undefined,
+      };
+      
+      // Só adiciona nota se não for atividade
+      if (!isAtividade) {
+        updateData.nota = data.nota;
+      }
+      
+      await updateDoc(entregaRef, updateData);
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/avaliacao-entregas"] });
       toast({
         title: "Correção salva!",
-        description: "O aluno poderá visualizar a nota.",
+        description: variables.liberarParaAluno 
+          ? "A correção foi liberada para o aluno." 
+          : "A correção foi salva mas ainda não foi liberada para o aluno.",
       });
       setGradeDialogOpen(false);
       setSelectedEntrega(null);
@@ -602,9 +614,11 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
       const avaliacao = avaliacoes?.find(a => a.id === selectedEntrega.avaliacaoId);
       if (!avaliacao) throw new Error("Avaliação não encontrada");
       
-      // Calcular nota total baseada nas marcações
-      const notaTotal = calcularNotaFromMarcacoes(avaliacao, correcaoMarcacoes);
-      const notaPercentual = (notaTotal / avaliacao.valorTotal) * 100;
+      const isAtividade = selectedEntrega.avaliacaoTipo === "atividade";
+      
+      // Calcular nota total baseada nas marcações (só para não-atividades)
+      const notaTotal = isAtividade ? undefined : calcularNotaFromMarcacoes(avaliacao, correcaoMarcacoes);
+      const notaPercentual = isAtividade ? undefined : ((notaTotal || 0) / avaliacao.valorTotal) * 100;
       
       // Atualizar respostas com marcações e valores obtidos
       const respostasAtualizadas = selectedEntrega.respostas?.map(r => {
@@ -626,9 +640,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
       });
       
       const entregaRef = doc(db, "avaliacaoEntregas", entregaId);
-      await updateDoc(entregaRef, {
-        nota: notaTotal,
-        notaPercentual,
+      const updateData: Record<string, any> = {
         respostas: respostasAtualizadas,
         feedback: correcaoForm.getValues("feedback") || "",
         status: "corrigida",
@@ -637,7 +649,15 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
         dataCorrecao: getNowBrasiliaISO(),
         liberadoParaAluno: liberarParaAluno,
         dataLiberacao: liberarParaAluno ? getNowBrasiliaISO() : undefined,
-      });
+      };
+      
+      // Só adiciona nota se não for atividade
+      if (!isAtividade && notaTotal !== undefined) {
+        updateData.nota = notaTotal;
+        updateData.notaPercentual = notaPercentual;
+      }
+      
+      await updateDoc(entregaRef, updateData);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/avaliacao-entregas"] });
@@ -797,6 +817,21 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
   };
 
   const pendingCorrections = entregas?.filter(e => e.status === "enviada" || e.status === "atrasada").length || 0;
+  const deliveredCorrections = entregas?.filter(e => e.status === "corrigida").length || 0;
+
+  // Verificar se a correção pode ser editada (dentro de 24 horas)
+  const canEditCorrection = (entrega: AvaliacaoEntrega) => {
+    if (!entrega.dataCorrecao) return false;
+    const dataCorrecao = new Date(entrega.dataCorrecao);
+    const now = new Date();
+    const hoursElapsed = differenceInHours(now, dataCorrecao);
+    return hoursElapsed < 24;
+  };
+
+  // Verificar se o tipo permite nota (não é atividade)
+  const tipoPermiteNota = (tipo: string) => {
+    return tipo !== "atividade";
+  };
 
   const handlePrintPDF = (avaliacao: Avaliacao) => {
     const printWindow = window.open("", "_blank");
@@ -1056,6 +1091,12 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
               <Badge variant="destructive" className="ml-2">{pendingCorrections}</Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="entregues">
+            Entregues
+            {deliveredCorrections > 0 && (
+              <Badge variant="secondary" className="ml-2">{deliveredCorrections}</Badge>
+            )}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="todas" className="space-y-4">
@@ -1197,6 +1238,117 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
                 </CardFooter>
               </Card>
             ))
+          )}
+        </TabsContent>
+
+        <TabsContent value="entregues" className="space-y-4">
+          {entregas?.filter(e => e.status === "corrigida").length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                <FileCheck className="h-16 w-16 text-muted-foreground mb-4" />
+                <p className="text-lg font-medium mb-2">Nenhuma correção entregue</p>
+                <p className="text-sm text-muted-foreground">As correções que você entregar aparecerão aqui</p>
+              </CardContent>
+            </Card>
+          ) : (
+            entregas?.filter(e => e.status === "corrigida").map(entrega => {
+              const canEdit = canEditCorrection(entrega);
+              const horasRestantes = entrega.dataCorrecao 
+                ? Math.max(0, 24 - differenceInHours(new Date(), new Date(entrega.dataCorrecao)))
+                : 0;
+              const isAtividade = entrega.avaliacaoTipo === "atividade";
+
+              return (
+                <Card key={entrega.id} className="hover-elevate">
+                  <CardHeader>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        <CardTitle className="text-lg">{entrega.avaliacaoTitulo}</CardTitle>
+                        <CardDescription>
+                          Aluno: {entrega.alunoNome} {entrega.alunoMatricula && `(${entrega.alunoMatricula})`}
+                        </CardDescription>
+                      </div>
+                      <div className="flex flex-col gap-1 items-end">
+                        <Badge variant={entrega.liberadoParaAluno ? "default" : "secondary"}>
+                          {entrega.liberadoParaAluno ? "Liberado para aluno" : "Não liberado"}
+                        </Badge>
+                        <Badge variant="outline">
+                          {getTipoLabel(entrega.avaliacaoTipo)}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="text-sm text-muted-foreground">
+                      Turma: {entrega.turmaNome}
+                    </div>
+                    {!isAtividade && entrega.nota !== undefined && (
+                      <div className="text-sm font-medium">
+                        Nota: {entrega.nota} {entrega.notaPercentual && `(${entrega.notaPercentual.toFixed(1)}%)`}
+                      </div>
+                    )}
+                    {entrega.feedback && (
+                      <div className="text-sm text-muted-foreground">
+                        Feedback: {entrega.feedback.substring(0, 100)}{entrega.feedback.length > 100 ? "..." : ""}
+                      </div>
+                    )}
+                    {entrega.dataCorrecao && (
+                      <div className="text-sm text-muted-foreground">
+                        Corrigido em {format(new Date(entrega.dataCorrecao), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                        {canEdit && (
+                          <span className="text-amber-600 ml-2">
+                            ({horasRestantes}h restantes para editar)
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                  <CardFooter className="flex flex-wrap gap-2">
+                    {canEdit ? (
+                      <>
+                        <Button
+                          onClick={() => {
+                            setSelectedEntrega(entrega);
+                            if (entrega.respostas && entrega.respostas.length > 0) {
+                              const initialMarcacoes: Record<string, "certo" | "errado" | "parcial"> = {};
+                              entrega.respostas.forEach(r => {
+                                if (r.marcacao) {
+                                  initialMarcacoes[r.questaoId] = r.marcacao;
+                                }
+                              });
+                              setCorrecaoMarcacoes(initialMarcacoes);
+                              correcaoForm.setValue("feedback", entrega.feedback || "");
+                              setDetailedCorrectionDialogOpen(true);
+                            } else {
+                              correcaoForm.setValue("nota", entrega.nota || 0);
+                              correcaoForm.setValue("feedback", entrega.feedback || "");
+                              setGradeDialogOpen(true);
+                            }
+                          }}
+                          data-testid="button-editar-correcao"
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Editar Correção
+                        </Button>
+                      </>
+                    ) : (
+                      <Button variant="outline" disabled>
+                        <Clock className="h-4 w-4 mr-2" />
+                        Prazo de edição expirado
+                      </Button>
+                    )}
+                    {entrega.arquivoUrl && (
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={entrega.arquivoUrl} target="_blank" rel="noopener noreferrer">
+                          <Download className="h-4 w-4 mr-2" />
+                          Ver Entrega
+                        </a>
+                      </Button>
+                    )}
+                  </CardFooter>
+                </Card>
+              );
+            })
           )}
         </TabsContent>
       </Tabs>
@@ -2061,6 +2213,9 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
             <DialogTitle>Corrigir Entrega</DialogTitle>
             <DialogDescription>
               {selectedEntrega?.alunoNome} - {selectedEntrega?.avaliacaoTitulo}
+              {selectedEntrega?.avaliacaoTipo === "atividade" && (
+                <Badge variant="outline" className="ml-2">Atividade (sem nota)</Badge>
+              )}
             </DialogDescription>
           </DialogHeader>
 
@@ -2068,39 +2223,45 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
             <form
               onSubmit={correcaoForm.handleSubmit((data) => {
                 if (selectedEntrega) {
-                  gradeMutation.mutate({ entregaId: selectedEntrega.id, data });
+                  gradeMutation.mutate({ 
+                    entregaId: selectedEntrega.id, 
+                    data,
+                    liberarParaAluno: true 
+                  });
                 }
               })}
               className="space-y-4"
             >
-              <FormField
-                control={correcaoForm.control}
-                name="nota"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nota</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.5"
-                        {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                        data-testid="input-nota"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {selectedEntrega?.avaliacaoTipo !== "atividade" && (
+                <FormField
+                  control={correcaoForm.control}
+                  name="nota"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nota</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.5"
+                          {...field}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                          data-testid="input-nota"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <FormField
                 control={correcaoForm.control}
                 name="feedback"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Feedback (opcional)</FormLabel>
+                    <FormLabel>Feedback {selectedEntrega?.avaliacaoTipo === "atividade" ? "" : "(opcional)"}</FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder="Deixe comentários para o aluno..."
@@ -2114,7 +2275,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
                 )}
               />
 
-              <DialogFooter>
+              <DialogFooter className="flex flex-col sm:flex-row gap-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -2126,9 +2287,27 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
                 >
                   Cancelar
                 </Button>
+                <Button 
+                  type="button"
+                  variant="secondary"
+                  disabled={gradeMutation.isPending}
+                  onClick={() => {
+                    correcaoForm.handleSubmit((data) => {
+                      if (selectedEntrega) {
+                        gradeMutation.mutate({ 
+                          entregaId: selectedEntrega.id, 
+                          data,
+                          liberarParaAluno: false 
+                        });
+                      }
+                    })();
+                  }}
+                >
+                  Salvar Rascunho
+                </Button>
                 <Button type="submit" disabled={gradeMutation.isPending}>
                   {gradeMutation.isPending && <Award className="mr-2 h-4 w-4 animate-pulse" />}
-                  Salvar Correção
+                  Salvar e Liberar
                 </Button>
               </DialogFooter>
             </form>
