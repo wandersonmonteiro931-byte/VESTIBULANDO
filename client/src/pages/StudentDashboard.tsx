@@ -16,12 +16,14 @@ import { BrasiliaClock } from "@/components/BrasiliaClock";
 import { StatusBadge } from "@/components/StatusBadge";
 import { FileUploadZone } from "@/components/FileUploadZone";
 import { AnnouncementsCarousel } from "@/components/AnnouncementsCarousel";
+import { ChatNotificationBubble } from "@/components/ChatNotificationBubble";
 import { LogOut, FileText, Upload, Download, Calendar, Award, CheckCircle2, Clock, AlertTriangle, MessageCircle } from "lucide-react";
 import { AlunoAvaliacoesTab } from "@/components/AlunoAvaliacoesTab";
 import { AlunoBoletimTab } from "@/components/AlunoBoletimTab";
 import { Link } from "wouter";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import type { Tarefa, Entrega, DisciplinaryAction } from "@shared/schema";
 import { format, formatDistanceToNow, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -29,6 +31,7 @@ import jsPDF from "jspdf";
 import assinaturaDeclaracaoUrl from "@assets/Captura de tela 2025-10-23 011843_1761193443162.png";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
 
 export default function StudentDashboard() {
   const { userData, signOut } = useAuth();
@@ -39,6 +42,8 @@ export default function StudentDashboard() {
   const [submissionDialogOpen, setSubmissionDialogOpen] = useState(false);
   const [selectedSection, setSelectedSection] = useState("inicio");
   const warningAlertShownRef = useRef(false);
+  
+  const { hasUnread, latestMessage, showNotification, dismissNotification } = useUnreadMessages();
 
   useEffect(() => {
     const handleFileError = (event: any) => {
@@ -322,11 +327,20 @@ export default function StudentDashboard() {
                   <Button 
                     variant="outline" 
                     size="icon"
-                    className="flex flex-col h-auto py-2 px-3 gap-1"
+                    className={cn(
+                      "flex flex-col h-auto py-2 px-3 gap-1 relative",
+                      hasUnread && "animate-pulse border-primary"
+                    )}
                     data-testid="button-chat-header"
                   >
-                    <MessageCircle className="h-4 w-4" />
+                    <MessageCircle className={cn("h-4 w-4", hasUnread && "text-primary")} />
                     <span className="text-xs font-normal">Chat</span>
+                    {hasUnread && (
+                      <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full animate-ping" />
+                    )}
+                    {hasUnread && (
+                      <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full" />
+                    )}
                   </Button>
                 </Link>
                 <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout">
@@ -335,6 +349,16 @@ export default function StudentDashboard() {
               </div>
             </div>
           </header>
+          
+          {latestMessage && (
+            <ChatNotificationBubble
+              show={showNotification}
+              senderName={latestMessage.senderName}
+              message={latestMessage.text}
+              conversationId={latestMessage.conversationId}
+              onDismiss={dismissNotification}
+            />
+          )}
 
           <main className="container px-6 py-10 max-w-7xl mx-auto flex-1">
             {selectedSection === "inicio" && (

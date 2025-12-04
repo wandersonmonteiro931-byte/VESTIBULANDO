@@ -25,6 +25,7 @@ import { BimestresTab } from "@/components/BimestresTab";
 import { BoletimTab } from "@/components/BoletimTab";
 import { AutorizacaoNotasTab } from "@/components/AutorizacaoNotasTab";
 import { DisciplinaryRequestsAdminTab } from "@/components/DisciplinaryRequestsAdminTab";
+import { ChatNotificationBubble } from "@/components/ChatNotificationBubble";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, ArrowRightLeft, Clock, Search, Eye, AlertTriangle, Settings, Power, PowerOff, Archive, Download, ChevronDown, ChevronUp, MessageCircle, Camera, Upload, X, Copy, Shield } from "lucide-react";
@@ -32,6 +33,8 @@ import { Link } from "wouter";
 import { Checkbox } from "@/components/ui/checkbox";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
+import { cn } from "@/lib/utils";
 import type { User, Turma, Maintenance, DiretorQuickAddAluno } from "@shared/schema";
 import { HORARIOS_DISPONIVEIS, MATERIAS_DISPONIVEIS, diretorQuickAddAlunoSchema } from "@shared/schema";
 import { useForm } from "react-hook-form";
@@ -160,6 +163,8 @@ export default function AdminDashboard() {
   const { userData, signOut, refreshUserData } = useAuth();
   const { toast } = useToast();
   const [selectedSection, setSelectedSection] = useState("aprovacoes");
+  
+  const { hasUnread, latestMessage, showNotification, dismissNotification } = useUnreadMessages();
   const [createTurmaDialogOpen, setCreateTurmaDialogOpen] = useState(false);
   const [createAlunoDialogOpen, setCreateAlunoDialogOpen] = useState(false);
   const [createProfessorDiretorDialogOpen, setCreateProfessorDiretorDialogOpen] = useState(false);
@@ -2516,11 +2521,20 @@ export default function AdminDashboard() {
                   <Button 
                     variant="outline" 
                     size="icon"
-                    className="flex flex-col h-auto py-2 px-3 gap-1"
+                    className={cn(
+                      "flex flex-col h-auto py-2 px-3 gap-1 relative",
+                      hasUnread && "animate-pulse border-primary"
+                    )}
                     data-testid="button-chat-header"
                   >
-                    <MessageCircle className="h-4 w-4" />
+                    <MessageCircle className={cn("h-4 w-4", hasUnread && "text-primary")} />
                     <span className="text-xs font-normal">Chat</span>
+                    {hasUnread && (
+                      <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full animate-ping" />
+                    )}
+                    {hasUnread && (
+                      <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full" />
+                    )}
                   </Button>
                 </Link>
                 <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout">
@@ -2529,6 +2543,16 @@ export default function AdminDashboard() {
               </div>
             </div>
           </header>
+          
+          {latestMessage && (
+            <ChatNotificationBubble
+              show={showNotification}
+              senderName={latestMessage.senderName}
+              message={latestMessage.text}
+              conversationId={latestMessage.conversationId}
+              onDismiss={dismissNotification}
+            />
+          )}
 
           <main className="flex-1 overflow-auto p-6">
             <div className="max-w-7xl mx-auto">

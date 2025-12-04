@@ -19,6 +19,7 @@ import { BrasiliaClock } from "@/components/BrasiliaClock";
 import { StatusBadge } from "@/components/StatusBadge";
 import { FileUploadZone } from "@/components/FileUploadZone";
 import { AnnouncementsCarousel } from "@/components/AnnouncementsCarousel";
+import { ChatNotificationBubble } from "@/components/ChatNotificationBubble";
 import { LogOut, Plus, FileText, Users, Download, Edit, Calendar, Award, MessageCircle, ClipboardList, GraduationCap, CalendarClock, AlertTriangle, ShieldAlert } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AvaliacoesTab } from "@/components/AvaliacoesTab";
@@ -31,6 +32,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Link } from "wouter";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import type { Tarefa, Entrega } from "@shared/schema";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -39,6 +41,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { getNowBrasiliaISO } from "@/lib/brasiliaTime";
+import { cn } from "@/lib/utils";
 
 const tarefaFormSchema = z.object({
   titulo: z.string().min(1, "Título é obrigatório"),
@@ -61,6 +64,8 @@ export default function TeacherDashboard() {
   const [selectedEntrega, setSelectedEntrega] = useState<Entrega | null>(null);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [selectedSection, setSelectedSection] = useState("inicio");
+  
+  const { hasUnread, latestMessage, showNotification, dismissNotification } = useUnreadMessages();
 
   useEffect(() => {
     const handleFileError = (event: any) => {
@@ -236,11 +241,20 @@ export default function TeacherDashboard() {
                   <Button 
                     variant="outline" 
                     size="icon"
-                    className="flex flex-col h-auto py-2 px-3 gap-1"
+                    className={cn(
+                      "flex flex-col h-auto py-2 px-3 gap-1 relative",
+                      hasUnread && "animate-pulse border-primary"
+                    )}
                     data-testid="button-chat-header"
                   >
-                    <MessageCircle className="h-4 w-4" />
+                    <MessageCircle className={cn("h-4 w-4", hasUnread && "text-primary")} />
                     <span className="text-xs font-normal">Chat</span>
+                    {hasUnread && (
+                      <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full animate-ping" />
+                    )}
+                    {hasUnread && (
+                      <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full" />
+                    )}
                   </Button>
                 </Link>
                 <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout">
@@ -249,6 +263,16 @@ export default function TeacherDashboard() {
               </div>
             </div>
           </header>
+          
+          {latestMessage && (
+            <ChatNotificationBubble
+              show={showNotification}
+              senderName={latestMessage.senderName}
+              message={latestMessage.text}
+              conversationId={latestMessage.conversationId}
+              onDismiss={dismissNotification}
+            />
+          )}
 
           <main className="flex-1 overflow-auto p-6">
             <div className="max-w-7xl mx-auto">
