@@ -33,7 +33,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { getNowBrasiliaISO } from "@/lib/brasiliaTime";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 
 const PERIODOS_BIMESTRE = ["1º Bimestre", "2º Bimestre", "3º Bimestre", "4º Bimestre"];
 const PERIODOS_TRIMESTRE = ["1º Trimestre", "2º Trimestre", "3º Trimestre"];
@@ -912,7 +912,7 @@ export function BoletimTab() {
       (m.mediaEsperada || 7).toFixed(1),
     ]);
 
-    (doc as any).autoTable({
+    autoTable(doc, {
       startY: yPos,
       head: tableHead,
       body: tableBody,
