@@ -232,6 +232,35 @@ export function DisciplinaryRequestsAdminTab() {
       const directorUid = userData.uid || firebaseAuth.currentUser.uid;
       const directorNome = userData.nome;
       
+      const actionsQuery = query(
+        collection(db, "disciplinaryActions"),
+        where("alunoId", "==", selectedRequest.alunoId),
+        where("tipo", "==", selectedRequest.tipo),
+        where("ativo", "==", true)
+      );
+      const actionsSnapshot = await getDocs(actionsQuery);
+      
+      for (const actionDoc of actionsSnapshot.docs) {
+        await updateDoc(doc(db, "disciplinaryActions", actionDoc.id), {
+          ativo: false,
+          dataRemocao: getNowBrasiliaISO(),
+          motivoRemocao: motivoRemocao || null,
+          removidoPor: directorUid,
+          removidoPorNome: directorNome,
+        });
+      }
+      
+      if (selectedRequest.tipo === "suspensao") {
+        await updateDoc(doc(db, "usuarios", selectedRequest.alunoId), {
+          ativo: true,
+          suspensaoAtiva: false,
+          suspensaoDataAplicacao: null,
+          suspensaoDataTermino: null,
+          suspensaoMotivo: null,
+          suspensaoAplicadoPorNome: null,
+        });
+      }
+      
       await updateDoc(doc(db, "disciplinaryRequests", selectedRequest.id), {
         status: "removido",
         dataRemocao: getNowBrasiliaISO(),
@@ -241,10 +270,12 @@ export function DisciplinaryRequestsAdminTab() {
       });
       
       queryClient.invalidateQueries({ queryKey: ["/api/disciplinary-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/disciplinaryActions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
       
       toast({
         title: "Ação removida",
-        description: "A ação disciplinar foi removida e o professor será notificado.",
+        description: "A ação disciplinar foi removida do registro do aluno.",
       });
       
       setRemoveDialogOpen(false);
