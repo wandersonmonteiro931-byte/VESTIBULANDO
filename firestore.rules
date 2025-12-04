@@ -207,6 +207,32 @@ service cloud.firestore {
       allow delete: if isAdmin() && isUserActive();
     }
     
+    // Disciplinary Requests collection - solicitações de advertências/suspensões por professores
+    match /disciplinaryRequests/{requestId} {
+      // Professores podem ler suas próprias solicitações
+      // Diretores podem ler todas as solicitações
+      allow read: if isAuthenticated() && isUserActive() && (
+        isAdmin() ||
+        (isProfessor() && resource.data.solicitadoPor == request.auth.uid)
+      );
+      
+      // Apenas professores podem criar solicitações
+      allow create: if isProfessor() && isUserActive() &&
+                       request.resource.data.solicitadoPor == request.auth.uid;
+      
+      // Diretores podem atualizar solicitações (para aprovar/rejeitar)
+      // Professores podem atualizar apenas suas próprias solicitações pendentes (para cancelar)
+      allow update: if isUserActive() && (
+        isAdmin() ||
+        (isProfessor() && 
+         resource.data.solicitadoPor == request.auth.uid &&
+         resource.data.status == "pendente")
+      );
+      
+      // Apenas diretores podem deletar solicitações
+      allow delete: if isAdmin() && isUserActive();
+    }
+    
     // Login History collection - histórico de login/logout
     match /loginHistory/{historyId} {
       // Apenas diretores podem ler o histórico
