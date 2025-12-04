@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
-import type { Boletim, BoletimNota, User, Turma, BoletimConfig } from "@shared/schema";
+import type { Boletim, BoletimNota, User, Turma, BoletimConfig, Frequencia } from "@shared/schema";
 import { MATERIAS_BOLETIM } from "@shared/schema";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -53,8 +53,6 @@ export function BoletimTab() {
   const [anoLetivo, setAnoLetivo] = useState(new Date().getFullYear().toString());
   const [periodoTipo, setPeriodoTipo] = useState<"bimestre" | "trimestre">("bimestre");
   const [materiasNotas, setMateriasNotas] = useState<BoletimNota[]>([]);
-  const [presencas, setPresencas] = useState(0);
-  const [faltas, setFaltas] = useState(0);
   const [observacoes, setObservacoes] = useState("");
   const [situacao, setSituacao] = useState<"cursando" | "aprovado" | "reprovado">("cursando");
 
@@ -83,7 +81,28 @@ export function BoletimTab() {
     transform: (docs) => docs as BoletimConfig[],
   });
 
+  const { data: frequencias } = useRealtimeQuery<Frequencia>({
+    collectionName: "frequencia",
+    queryKey: ["/api/frequencia"],
+    transform: (docs) => docs as Frequencia[],
+  });
+
   const periodos = periodoTipo === "bimestre" ? PERIODOS_BIMESTRE : PERIODOS_TRIMESTRE;
+
+  const frequenciaDoAluno = useMemo(() => {
+    if (!selectedAlunoId || !frequencias || !anoLetivo) return { presencas: 0, faltas: 0 };
+    
+    const registros = frequencias.filter(f => {
+      const matchAluno = f.alunoId === selectedAlunoId;
+      const matchAno = f.data?.startsWith(anoLetivo);
+      return matchAluno && matchAno;
+    });
+    
+    const presencas = registros.filter(f => f.tipo === "presente").length;
+    const faltas = registros.filter(f => f.tipo === "ausente" || f.tipo === "justificada").length;
+    
+    return { presencas, faltas };
+  }, [selectedAlunoId, frequencias, anoLetivo]);
 
   const filteredBoletins = useMemo(() => {
     if (!boletins) return [];
@@ -134,8 +153,6 @@ export function BoletimTab() {
     setAnoLetivo(new Date().getFullYear().toString());
     setPeriodoTipo("bimestre");
     initializeMateriasNotas();
-    setPresencas(0);
-    setFaltas(0);
     setObservacoes("");
     setSituacao("cursando");
     setCreateDialogOpen(true);
@@ -148,8 +165,6 @@ export function BoletimTab() {
     setAnoLetivo(boletim.anoLetivo);
     setPeriodoTipo(boletim.periodoTipo);
     setMateriasNotas(boletim.materias);
-    setPresencas(boletim.presencas);
-    setFaltas(boletim.faltas);
     setObservacoes(boletim.observacoes || "");
     setSituacao(boletim.situacao);
     setEditDialogOpen(true);
@@ -167,8 +182,10 @@ export function BoletimTab() {
       if (!aluno || !turma) throw new Error("Aluno ou turma não encontrados");
 
       const mediaGeral = calcularMediaGeral(materiasNotas);
-      const percentualPresenca = (presencas + faltas) > 0 
-        ? (presencas / (presencas + faltas)) * 100 
+      const presencasCalc = frequenciaDoAluno.presencas;
+      const faltasCalc = frequenciaDoAluno.faltas;
+      const percentualPresenca = (presencasCalc + faltasCalc) > 0 
+        ? (presencasCalc / (presencasCalc + faltasCalc)) * 100 
         : null;
 
       const boletimData: any = {
@@ -185,8 +202,8 @@ export function BoletimTab() {
         mediaGeral,
         mediaGeralEsperada: 7,
         situacao,
-        presencas,
-        faltas,
+        presencas: presencasCalc,
+        faltas: faltasCalc,
         percentualPresenca,
         observacoes,
         liberado: false,
@@ -220,16 +237,18 @@ export function BoletimTab() {
       if (!userData || !selectedBoletim) throw new Error("Erro ao atualizar");
 
       const mediaGeral = calcularMediaGeral(materiasNotas);
-      const percentualPresenca = (presencas + faltas) > 0 
-        ? (presencas / (presencas + faltas)) * 100 
+      const presencasCalc = frequenciaDoAluno.presencas;
+      const faltasCalc = frequenciaDoAluno.faltas;
+      const percentualPresenca = (presencasCalc + faltasCalc) > 0 
+        ? (presencasCalc / (presencasCalc + faltasCalc)) * 100 
         : null;
 
       const boletimData: any = {
         materias: materiasNotas,
         mediaGeral,
         situacao,
-        presencas,
-        faltas,
+        presencas: presencasCalc,
+        faltas: faltasCalc,
         percentualPresenca,
         observacoes,
         dataAtualizacao: getNowBrasiliaISO(),
@@ -512,26 +531,28 @@ export function BoletimTab() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="space-y-2">
             <Label>Presenças</Label>
-            <Input 
-              type="number" 
-              min="0" 
-              value={presencas}
-              onChange={(e) => setPresencas(parseInt(e.target.value) || 0)}
-              data-testid="input-presencas"
-            />
+            <div className="h-9 px-3 py-2 bg-muted rounded-md border flex items-center font-medium" data-testid="display-presencas">
+              {frequenciaDoAluno.presencas}
+            </div>
+            <p className="text-xs text-muted-foreground">Calculado automaticamente</p>
           </div>
           <div className="space-y-2">
             <Label>Faltas</Label>
-            <Input 
-              type="number" 
-              min="0" 
-              value={faltas}
-              onChange={(e) => setFaltas(parseInt(e.target.value) || 0)}
-              data-testid="input-faltas"
-            />
+            <div className="h-9 px-3 py-2 bg-muted rounded-md border flex items-center font-medium" data-testid="display-faltas">
+              {frequenciaDoAluno.faltas}
+            </div>
+            <p className="text-xs text-muted-foreground">Calculado automaticamente</p>
+          </div>
+          <div className="space-y-2">
+            <Label>Frequência</Label>
+            <div className="h-9 px-3 py-2 bg-muted rounded-md border flex items-center font-medium" data-testid="display-frequencia">
+              {(frequenciaDoAluno.presencas + frequenciaDoAluno.faltas) > 0 
+                ? ((frequenciaDoAluno.presencas / (frequenciaDoAluno.presencas + frequenciaDoAluno.faltas)) * 100).toFixed(1) + "%" 
+                : "-"}
+            </div>
           </div>
           <div className="space-y-2">
             <Label>Situação</Label>
@@ -565,14 +586,6 @@ export function BoletimTab() {
               <p className="font-medium">Média Geral</p>
               <p className="text-2xl font-bold">
                 {calcularMediaGeral(materiasNotas)?.toFixed(2) || "-"}
-              </p>
-            </div>
-            <div>
-              <p className="font-medium">Frequência</p>
-              <p className="text-2xl font-bold">
-                {(presencas + faltas) > 0 
-                  ? ((presencas / (presencas + faltas)) * 100).toFixed(1) + "%" 
-                  : "-"}
               </p>
             </div>
           </div>
