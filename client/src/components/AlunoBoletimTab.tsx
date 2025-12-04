@@ -17,7 +17,7 @@ import type { Boletim } from "@shared/schema";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 
 const PERIODOS_BIMESTRE = ["1º Bimestre", "2º Bimestre", "3º Bimestre", "4º Bimestre"];
 const PERIODOS_TRIMESTRE = ["1º Trimestre", "2º Trimestre", "3º Trimestre"];
@@ -77,7 +77,7 @@ export function AlunoBoletimTab() {
 
     const periodos = boletim.periodos || (boletim.periodoTipo === "bimestre" ? PERIODOS_BIMESTRE : PERIODOS_TRIMESTRE);
     
-    const tableHead = [["MATÉRIA", ...periodos, "MÉDIA", "MÉDIA ESP."]];
+    const tableHead = [["MATÉRIA", ...periodos, "MÉDIA", "MÍN. ESP."]];
     const tableBody = boletim.materias.map(m => [
       m.materia,
       ...periodos.map(p => m.notas[p]?.toFixed(1) || "-"),
@@ -85,7 +85,7 @@ export function AlunoBoletimTab() {
       (m.mediaEsperada || 7).toFixed(1),
     ]);
 
-    (doc as any).autoTable({
+    autoTable(doc, {
       startY: yPos,
       head: tableHead,
       body: tableBody,
@@ -118,8 +118,8 @@ export function AlunoBoletimTab() {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
     yPos += 10;
-    doc.text(`Média Geral: ${boletim.mediaGeral?.toFixed(2) || "-"}`, margin + 5, yPos);
-    doc.text(`Média Esperada: ${(boletim.mediaGeralEsperada || 7).toFixed(1)}`, margin + 60, yPos);
+    doc.text(`Média Anual: ${boletim.mediaGeral?.toFixed(1).replace(".", ",") || "-"}`, margin + 5, yPos);
+    doc.text(`Média Mínima Esperada: ${(boletim.mediaGeralEsperada || 7).toFixed(1).replace(".", ",")}`, margin + 55, yPos);
     
     const situacaoLabel = boletim.situacao.charAt(0).toUpperCase() + boletim.situacao.slice(1);
     const situacaoColor = boletim.situacao === "aprovado" ? [34, 139, 34] : 
@@ -151,12 +151,11 @@ export function AlunoBoletimTab() {
     yPos = Math.max(yPos + 10, 250);
     
     doc.setDrawColor(100, 100, 100);
-    doc.line(margin, yPos, margin + 70, yPos);
+    const lineWidth = 70;
+    const lineX = (pageWidth - lineWidth) / 2;
+    doc.line(lineX, yPos, lineX + lineWidth, yPos);
     doc.setFontSize(9);
-    doc.text("Assinatura do Professor", margin + 5, yPos + 6);
-
-    doc.line(pageWidth - margin - 70, yPos, pageWidth - margin, yPos);
-    doc.text("Assinatura da Coordenação", pageWidth - margin - 65, yPos + 6);
+    doc.text("Assinatura da Diretoria", pageWidth / 2, yPos + 6, { align: "center" });
 
     doc.setFontSize(8);
     doc.setTextColor(128, 128, 128);
@@ -262,12 +261,12 @@ export function AlunoBoletimTab() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="p-3 bg-muted rounded-lg text-center">
-                    <p className="text-xs text-muted-foreground">Média Geral</p>
-                    <p className="text-xl font-bold">{boletim.mediaGeral?.toFixed(2) || "-"}</p>
+                    <p className="text-xs text-muted-foreground">Média Anual</p>
+                    <p className="text-xl font-bold">{boletim.mediaGeral?.toFixed(1).replace(".", ",") || "-"}</p>
                   </div>
                   <div className="p-3 bg-muted rounded-lg text-center">
-                    <p className="text-xs text-muted-foreground">Média Esperada</p>
-                    <p className="text-xl font-bold">{(boletim.mediaGeralEsperada || 7).toFixed(1)}</p>
+                    <p className="text-xs text-muted-foreground">Média Mínima Esperada</p>
+                    <p className="text-xl font-bold">{(boletim.mediaGeralEsperada || 7).toFixed(1).replace(".", ",")}</p>
                   </div>
                   <div className="p-3 bg-muted rounded-lg text-center">
                     <p className="text-xs text-muted-foreground">Frequência</p>
@@ -354,7 +353,7 @@ export function AlunoBoletimTab() {
                           <TableHead key={p} className="text-center font-bold">{p}</TableHead>
                         ))}
                         <TableHead className="text-center font-bold bg-primary/10">Média Final</TableHead>
-                        <TableHead className="text-center font-bold">Média Esperada</TableHead>
+                        <TableHead className="text-center font-bold">Média Mínima Esperada</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -384,18 +383,18 @@ export function AlunoBoletimTab() {
                 {/* Resumo */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="p-4 bg-primary/5 rounded-lg text-center border border-primary/10">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Média Geral</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Média Anual</p>
                     <p className={`text-3xl font-bold ${
                       selectedBoletim.mediaGeral !== null && 
                       selectedBoletim.mediaGeral < (selectedBoletim.mediaGeralEsperada || 7) 
                         ? "text-red-600" : "text-green-600"
                     }`}>
-                      {selectedBoletim.mediaGeral?.toFixed(2) || "-"}
+                      {selectedBoletim.mediaGeral?.toFixed(1).replace(".", ",") || "-"}
                     </p>
                   </div>
                   <div className="p-4 bg-muted rounded-lg text-center">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Média Esperada</p>
-                    <p className="text-3xl font-bold">{(selectedBoletim.mediaGeralEsperada || 7).toFixed(1)}</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Média Mínima Esperada</p>
+                    <p className="text-3xl font-bold">{(selectedBoletim.mediaGeralEsperada || 7).toFixed(1).replace(".", ",")}</p>
                   </div>
                   <div className="p-4 bg-muted rounded-lg text-center">
                     <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Frequência</p>
@@ -421,16 +420,11 @@ export function AlunoBoletimTab() {
                   </div>
                 )}
 
-                {/* Rodapé com assinaturas */}
-                <div className="grid grid-cols-2 gap-8 pt-8 mt-4 border-t">
+                {/* Rodapé com assinatura */}
+                <div className="flex justify-center pt-8 mt-4 border-t">
                   <div className="text-center">
-                    <div className="border-t border-dashed border-muted-foreground/50 pt-2 mt-8">
-                      <p className="text-sm text-muted-foreground">Assinatura do Professor</p>
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <div className="border-t border-dashed border-muted-foreground/50 pt-2 mt-8">
-                      <p className="text-sm text-muted-foreground">Assinatura da Coordenação</p>
+                    <div className="border-t border-dashed border-muted-foreground/50 pt-2 mt-8 w-64">
+                      <p className="text-sm text-muted-foreground">Assinatura da Diretoria</p>
                     </div>
                   </div>
                 </div>
