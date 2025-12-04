@@ -708,12 +708,36 @@ export default function AdminDashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/usuarios/all"] });
       toast({
         title: "Status atualizado",
-        description: "O status do aluno foi alterado.",
+        description: "O status do usuário foi alterado.",
       });
     },
     onError: (error: any) => {
       toast({
         title: "Erro ao atualizar status",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const toggleUserBlockMutation = useMutation({
+    mutationFn: async ({ userId, bloqueado }: { userId: string; bloqueado: boolean }) => {
+      const userRef = doc(db, "usuarios", userId);
+      await updateDoc(userRef, { bloqueado });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/usuarios/all"] });
+      toast({
+        title: variables.bloqueado ? "Usuário bloqueado" : "Usuário desbloqueado",
+        description: variables.bloqueado 
+          ? "O usuário foi bloqueado e não poderá acessar a plataforma."
+          : "O bloqueio do usuário foi removido.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao alterar bloqueio",
         description: error.message,
         variant: "destructive",
       });
@@ -2795,17 +2819,24 @@ export default function AdminDashboard() {
                             <TableCell>{getTurmaNome(user.turma)}</TableCell>
                             <TableCell>{user.matricula || "-"}</TableCell>
                             <TableCell>
-                              {user.ativo ? (
-                                <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                                  <CheckCircle className="h-3 w-3 mr-1" />
-                                  Ativo
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
-                                  <XCircle className="h-3 w-3 mr-1" />
-                                  Inativo
-                                </Badge>
-                              )}
+                              <div className="flex flex-col gap-1">
+                                {user.bloqueado ? (
+                                  <Badge variant="outline" className="bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400">
+                                    <Shield className="h-3 w-3 mr-1" />
+                                    Bloqueado
+                                  </Badge>
+                                ) : user.ativo ? (
+                                  <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                    Ativo
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                                    <XCircle className="h-3 w-3 mr-1" />
+                                    Desativado
+                                  </Badge>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
@@ -2850,6 +2881,18 @@ export default function AdminDashboard() {
                                   data-testid="button-toggle-status"
                                 >
                                   {user.ativo ? "Desativar" : "Ativar"}
+                                </Button>
+                                <Button
+                                  variant={user.bloqueado ? "outline" : "destructive"}
+                                  size="sm"
+                                  onClick={() => toggleUserBlockMutation.mutate({ 
+                                    userId: user.uid, 
+                                    bloqueado: !user.bloqueado 
+                                  })}
+                                  data-testid={`button-block-${user.uid}`}
+                                >
+                                  <Shield className="h-4 w-4 mr-1" />
+                                  {user.bloqueado ? "Desbloquear" : "Bloquear"}
                                 </Button>
                                 {user.tipo === "aluno" && user.turma && (
                                   <Button
@@ -2976,17 +3019,24 @@ export default function AdminDashboard() {
                               </TableCell>
                               <TableCell>{user.matricula || "-"}</TableCell>
                               <TableCell>
-                                {user.ativo ? (
-                                  <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                                    <CheckCircle className="h-3 w-3 mr-1" />
-                                    Ativo
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
-                                    <XCircle className="h-3 w-3 mr-1" />
-                                    Inativo
-                                  </Badge>
-                                )}
+                                <div className="flex flex-col gap-1">
+                                  {user.bloqueado ? (
+                                    <Badge variant="outline" className="bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400">
+                                      <Shield className="h-3 w-3 mr-1" />
+                                      Bloqueado
+                                    </Badge>
+                                  ) : user.ativo ? (
+                                    <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                      <CheckCircle className="h-3 w-3 mr-1" />
+                                      Ativo
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                                      <XCircle className="h-3 w-3 mr-1" />
+                                      Desativado
+                                    </Badge>
+                                  )}
+                                </div>
                               </TableCell>
                               <TableCell className="text-right">
                                 <div className="flex justify-end gap-2">
@@ -3014,6 +3064,20 @@ export default function AdminDashboard() {
                                   >
                                     {user.ativo ? "Desativar" : "Ativar"}
                                   </Button>
+                                  {user.tipo !== "diretor" && (
+                                    <Button
+                                      variant={user.bloqueado ? "outline" : "destructive"}
+                                      size="sm"
+                                      onClick={() => toggleUserBlockMutation.mutate({ 
+                                        userId: user.uid, 
+                                        bloqueado: !user.bloqueado 
+                                      })}
+                                      data-testid={`button-block-professor-${user.uid}`}
+                                    >
+                                      <Shield className="h-4 w-4 mr-1" />
+                                      {user.bloqueado ? "Desbloquear" : "Bloquear"}
+                                    </Button>
+                                  )}
                                   {user.tipo !== "diretor" && (
                                     <Button
                                       variant="ghost"

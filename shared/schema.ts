@@ -24,6 +24,7 @@ export const userSchema = z.object({
   turmas: z.array(z.string()).optional(), // Array de turmas para professores
   materias: z.array(z.string()).optional(), // Array de matérias que o professor leciona (só professores podem alterar dados nas suas matérias)
   ativo: z.boolean().default(true),
+  bloqueado: z.boolean().default(false),
   status: z.enum(["pendente", "aprovado", "reprovado", "devolvido"]).default("pendente"),
   matricula: z.string().optional(), // 4 dígitos - número da matrícula do aluno
   comentarioReprovacao: z.string().optional(),
