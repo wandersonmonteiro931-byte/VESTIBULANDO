@@ -554,7 +554,7 @@ export function BimestresNotasTab() {
                 </SelectContent>
               </Select>
               {userData?.tipo === "professor" && materiasDisponiveis.length === 0 && (
-                <p className="text-xs text-destructive">Você não possui matérias cadastradas. Entre em contato com a diretoria.</p>
+                <p className="text-xs text-destructive">Você não possui matérias cadastradas. Solicite à diretoria para realizar o cadastro das suas matérias.</p>
               )}
             </div>
           </div>

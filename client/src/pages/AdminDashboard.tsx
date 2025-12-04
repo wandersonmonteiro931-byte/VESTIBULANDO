@@ -89,6 +89,23 @@ const editStudentFormSchema = z.object({
   fotoBase64: z.string().optional(),
 });
 
+const editProfessorFormSchema = z.object({
+  nome: z.string().min(1, "Nome é obrigatório"),
+  email: z.string().email("Email inválido"),
+  matricula: z.string().optional(),
+  dataNascimento: z.string().optional(),
+  cpf: z.string().optional(),
+  telefone: z.string().optional(),
+  escolaridade: z.string().optional(),
+  cep: z.string().optional(),
+  rua: z.string().optional(),
+  bairro: z.string().optional(),
+  cidade: z.string().optional(),
+  estado: z.string().optional(),
+  turmas: z.array(z.string()).optional(),
+  materias: z.array(z.string()).optional(),
+});
+
 // Componente para mostrar tempo decorrido da manutenção
 function MaintenanceTimer({ startTime, onFinalize }: { startTime: string; onFinalize: () => void }) {
   const [elapsed, setElapsed] = useState("");
@@ -319,6 +336,28 @@ export default function AdminDashboard() {
       fotoBase64: "",
     },
   });
+
+  const editProfessorForm = useForm<z.infer<typeof editProfessorFormSchema>>({
+    resolver: zodResolver(editProfessorFormSchema),
+    defaultValues: {
+      nome: "",
+      email: "",
+      matricula: "",
+      dataNascimento: "",
+      cpf: "",
+      telefone: "",
+      escolaridade: "",
+      cep: "",
+      rua: "",
+      bairro: "",
+      cidade: "",
+      estado: "",
+      turmas: [],
+      materias: [],
+    },
+  });
+  
+  const [buscandoCepEditProfessor, setBuscandoCepEditProfessor] = useState(false);
 
   const { data: users, isLoading: loadingUsers } = useRealtimeQuery({
     collectionName: "usuarios",
@@ -745,6 +784,55 @@ export default function AdminDashboard() {
       setStudentDetailsDialogOpen(false);
       setSelectedStudentDetails(null);
       editStudentForm.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao atualizar dados",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateProfessorDataMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof editProfessorFormSchema> & { userId: string }) => {
+      const { userId, ...updateData } = data;
+      const userRef = doc(db, "usuarios", userId);
+      
+      const userDoc = await getDoc(userRef);
+      if (!userDoc.exists()) {
+        throw new Error("Professor não encontrado");
+      }
+      
+      const currentUserData = userDoc.data();
+      
+      if (updateData.matricula && updateData.matricula !== currentUserData.matricula) {
+        const usuariosRef = collection(db, "usuarios");
+        const q = query(usuariosRef, where("matricula", "==", updateData.matricula));
+        const snapshot = await getDocs(q);
+        
+        const outroUsuarioComMatricula = snapshot.docs.find(doc => doc.id !== userId);
+        if (outroUsuarioComMatricula) {
+          throw new Error(`A matrícula ${updateData.matricula} já está em uso por outro usuário.`);
+        }
+      }
+      
+      await updateDoc(userRef, {
+        ...updateData,
+        turma: updateData.turmas?.join(",") || "",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/usuarios/all"] });
+      toast({
+        title: "Dados atualizados!",
+        description: "Os dados do professor foram atualizados com sucesso.",
+      });
+      setIsEditingProfessor(false);
+      setProfessorDetailsDialogOpen(false);
+      setSelectedProfessorDetails(null);
+      editProfessorForm.reset();
     },
     onError: (error: any) => {
       toast({
@@ -6029,14 +6117,15 @@ export default function AdminDashboard() {
         if (!open) {
           setIsEditingProfessor(false);
           setSelectedProfessorDetails(null);
+          editProfessorForm.reset();
         }
         setProfessorDetailsDialogOpen(open);
       }}>
-        <DialogContent className="max-w-2xl" data-testid="dialog-professor-details">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-professor-details">
           <DialogHeader>
             <DialogTitle>{isEditingProfessor ? "Editar Professor" : "Detalhes do Professor"}</DialogTitle>
             <DialogDescription>
-              {isEditingProfessor ? "Edite as informações e turmas do professor" : "Informações completas do professor"}
+              {isEditingProfessor ? "Edite todas as informações do professor" : "Informações completas do professor"}
             </DialogDescription>
           </DialogHeader>
           
@@ -6079,6 +6168,29 @@ export default function AdminDashboard() {
                 </div>
               </div>
               
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground">CEP</Label>
+                  <p className="font-medium">{selectedProfessorDetails.cep || "Não informado"}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Rua</Label>
+                  <p className="font-medium">{selectedProfessorDetails.rua || "Não informada"}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Bairro</Label>
+                  <p className="font-medium">{selectedProfessorDetails.bairro || "Não informado"}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Cidade/Estado</Label>
+                  <p className="font-medium">
+                    {selectedProfessorDetails.cidade || selectedProfessorDetails.estado 
+                      ? `${selectedProfessorDetails.cidade || ""} ${selectedProfessorDetails.estado ? `- ${selectedProfessorDetails.estado}` : ""}` 
+                      : "Não informado"}
+                  </p>
+                </div>
+              </div>
+
               <div>
                 <Label className="text-muted-foreground">Turmas Atribuídas</Label>
                 <div className="flex flex-wrap gap-2 mt-2">
@@ -6123,64 +6235,314 @@ export default function AdminDashboard() {
           )}
 
           {selectedProfessorDetails && isEditingProfessor && (
-            <div className="space-y-4">
-              <div>
-                <Label>Turmas Atribuídas</Label>
-                <div className="grid grid-cols-2 gap-2 mt-2 p-4 border rounded-lg max-h-[200px] overflow-y-auto">
-                  {turmas?.map((turma) => (
-                    <div key={turma.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`prof-turma-${turma.id}`}
-                        checked={editProfessorTurmas.includes(turma.id)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setEditProfessorTurmas([...editProfessorTurmas, turma.id]);
-                          } else {
-                            setEditProfessorTurmas(editProfessorTurmas.filter(id => id !== turma.id));
-                          }
-                        }}
-                        data-testid={`checkbox-prof-turma-${turma.id}`}
-                      />
-                      <label 
-                        htmlFor={`prof-turma-${turma.id}`}
-                        className="text-sm cursor-pointer"
-                      >
-                        {turma.nome}
-                      </label>
-                    </div>
-                  ))}
+            <Form {...editProfessorForm}>
+              <form className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={editProfessorForm.control}
+                    name="nome"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nome Completo</FormLabel>
+                        <FormControl>
+                          <Input {...field} data-testid="input-edit-professor-nome" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={editProfessorForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input type="email" {...field} data-testid="input-edit-professor-email" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
-              </div>
 
-              <div>
-                <Label>Matérias Atribuídas</Label>
-                <p className="text-xs text-muted-foreground mb-2">O professor só poderá criar e editar conteúdo das matérias selecionadas</p>
-                <div className="grid grid-cols-2 gap-2 mt-2 p-4 border rounded-lg max-h-[200px] overflow-y-auto">
-                  {MATERIAS_DISPONIVEIS.map((materia) => (
-                    <div key={materia} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`prof-materia-${materia}`}
-                        checked={editProfessorMaterias.includes(materia)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setEditProfessorMaterias([...editProfessorMaterias, materia]);
-                          } else {
-                            setEditProfessorMaterias(editProfessorMaterias.filter(m => m !== materia));
-                          }
-                        }}
-                        data-testid={`checkbox-prof-materia-${materia}`}
-                      />
-                      <label 
-                        htmlFor={`prof-materia-${materia}`}
-                        className="text-sm cursor-pointer"
-                      >
-                        {materia}
-                      </label>
-                    </div>
-                  ))}
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={editProfessorForm.control}
+                    name="matricula"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Matrícula</FormLabel>
+                        <FormControl>
+                          <Input {...field} data-testid="input-edit-professor-matricula" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={editProfessorForm.control}
+                    name="cpf"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>CPF</FormLabel>
+                        <FormControl>
+                          <Input 
+                            {...field}
+                            placeholder="000.000.000-00"
+                            maxLength={14}
+                            onChange={(e) => {
+                              let value = e.target.value.replace(/\D/g, '');
+                              if (value.length > 11) value = value.slice(0, 11);
+                              if (value.length > 9) {
+                                value = value.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, '$1.$2.$3-$4');
+                              } else if (value.length > 6) {
+                                value = value.replace(/(\d{3})(\d{3})(\d{1,3})/, '$1.$2.$3');
+                              } else if (value.length > 3) {
+                                value = value.replace(/(\d{3})(\d{1,3})/, '$1.$2');
+                              }
+                              field.onChange(value);
+                            }}
+                            data-testid="input-edit-professor-cpf"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
-              </div>
-            </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={editProfessorForm.control}
+                    name="dataNascimento"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Data de Nascimento</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} data-testid="input-edit-professor-datanascimento" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={editProfessorForm.control}
+                    name="telefone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Telefone (WhatsApp)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            {...field}
+                            placeholder="(00) 00000-0000"
+                            maxLength={15}
+                            onChange={(e) => {
+                              let value = e.target.value.replace(/\D/g, '');
+                              if (value.length > 11) value = value.slice(0, 11);
+                              if (value.length > 10) {
+                                value = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+                              } else if (value.length > 6) {
+                                value = value.replace(/(\d{2})(\d{4,5})(\d{0,4})/, '($1) $2-$3');
+                              } else if (value.length > 2) {
+                                value = value.replace(/(\d{2})(\d{0,5})/, '($1) $2');
+                              }
+                              field.onChange(value);
+                            }}
+                            data-testid="input-edit-professor-telefone"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={editProfessorForm.control}
+                  name="escolaridade"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Escolaridade</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-edit-professor-escolaridade">
+                            <SelectValue placeholder="Selecione a escolaridade" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Ensino Superior Incompleto">Ensino Superior Incompleto</SelectItem>
+                          <SelectItem value="Ensino Superior Completo">Ensino Superior Completo</SelectItem>
+                          <SelectItem value="Pós-Graduação">Pós-Graduação</SelectItem>
+                          <SelectItem value="Mestrado">Mestrado</SelectItem>
+                          <SelectItem value="Doutorado">Doutorado</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-3 gap-4">
+                  <FormField
+                    control={editProfessorForm.control}
+                    name="cep"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>CEP</FormLabel>
+                        <FormControl>
+                          <Input 
+                            {...field}
+                            placeholder="00000-000"
+                            maxLength={9}
+                            onChange={async (e) => {
+                              let value = e.target.value.replace(/\D/g, '');
+                              if (value.length > 8) value = value.slice(0, 8);
+                              if (value.length > 5) {
+                                value = value.replace(/(\d{5})(\d{1,3})/, '$1-$2');
+                              }
+                              field.onChange(value);
+                              
+                              if (value.replace(/\D/g, '').length === 8) {
+                                setBuscandoCepEditProfessor(true);
+                                try {
+                                  const response = await fetch(`https://viacep.com.br/ws/${value.replace(/\D/g, '')}/json/`);
+                                  const data = await response.json();
+                                  if (!data.erro) {
+                                    editProfessorForm.setValue('rua', data.logradouro || '');
+                                    editProfessorForm.setValue('bairro', data.bairro || '');
+                                    editProfessorForm.setValue('cidade', data.localidade || '');
+                                    editProfessorForm.setValue('estado', data.uf || '');
+                                  }
+                                } catch (error) {
+                                  console.error('Erro ao buscar CEP:', error);
+                                } finally {
+                                  setBuscandoCepEditProfessor(false);
+                                }
+                              }
+                            }}
+                            data-testid="input-edit-professor-cep"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={editProfessorForm.control}
+                    name="rua"
+                    render={({ field }) => (
+                      <FormItem className="col-span-2">
+                        <FormLabel>Rua</FormLabel>
+                        <FormControl>
+                          <Input {...field} disabled={buscandoCepEditProfessor} data-testid="input-edit-professor-rua" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <FormField
+                    control={editProfessorForm.control}
+                    name="bairro"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Bairro</FormLabel>
+                        <FormControl>
+                          <Input {...field} disabled={buscandoCepEditProfessor} data-testid="input-edit-professor-bairro" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={editProfessorForm.control}
+                    name="cidade"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Cidade</FormLabel>
+                        <FormControl>
+                          <Input {...field} disabled={buscandoCepEditProfessor} data-testid="input-edit-professor-cidade" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={editProfessorForm.control}
+                    name="estado"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Estado</FormLabel>
+                        <FormControl>
+                          <Input {...field} disabled={buscandoCepEditProfessor} maxLength={2} data-testid="input-edit-professor-estado" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div>
+                  <Label>Turmas Atribuídas</Label>
+                  <div className="grid grid-cols-2 gap-2 mt-2 p-4 border rounded-lg max-h-[150px] overflow-y-auto">
+                    {turmas?.map((turma) => (
+                      <div key={turma.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`prof-turma-${turma.id}`}
+                          checked={editProfessorTurmas.includes(turma.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setEditProfessorTurmas([...editProfessorTurmas, turma.id]);
+                            } else {
+                              setEditProfessorTurmas(editProfessorTurmas.filter(id => id !== turma.id));
+                            }
+                          }}
+                          data-testid={`checkbox-prof-turma-${turma.id}`}
+                        />
+                        <label 
+                          htmlFor={`prof-turma-${turma.id}`}
+                          className="text-sm cursor-pointer"
+                        >
+                          {turma.nome}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Matérias Atribuídas</Label>
+                  <p className="text-xs text-muted-foreground mb-2">O professor só poderá criar e editar conteúdo das matérias selecionadas</p>
+                  <div className="grid grid-cols-2 gap-2 mt-2 p-4 border rounded-lg max-h-[150px] overflow-y-auto">
+                    {MATERIAS_DISPONIVEIS.map((materia) => (
+                      <div key={materia} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`prof-materia-${materia}`}
+                          checked={editProfessorMaterias.includes(materia)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setEditProfessorMaterias([...editProfessorMaterias, materia]);
+                            } else {
+                              setEditProfessorMaterias(editProfessorMaterias.filter(m => m !== materia));
+                            }
+                          }}
+                          data-testid={`checkbox-prof-materia-${materia}`}
+                        />
+                        <label 
+                          htmlFor={`prof-materia-${materia}`}
+                          className="text-sm cursor-pointer"
+                        >
+                          {materia}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </form>
+            </Form>
           )}
 
           <DialogFooter>
@@ -6195,14 +6557,32 @@ export default function AdminDashboard() {
                 </Button>
                 <Button
                   onClick={() => {
-                    setEditProfessorTurmas(selectedProfessorDetails?.turmas || []);
-                    setEditProfessorMaterias(selectedProfessorDetails?.materias || []);
+                    if (selectedProfessorDetails) {
+                      editProfessorForm.reset({
+                        nome: selectedProfessorDetails.nome || "",
+                        email: selectedProfessorDetails.email || "",
+                        matricula: selectedProfessorDetails.matricula || "",
+                        dataNascimento: selectedProfessorDetails.dataNascimento || "",
+                        cpf: selectedProfessorDetails.cpf || "",
+                        telefone: selectedProfessorDetails.telefone || "",
+                        escolaridade: selectedProfessorDetails.escolaridade || "",
+                        cep: selectedProfessorDetails.cep || "",
+                        rua: selectedProfessorDetails.rua || "",
+                        bairro: selectedProfessorDetails.bairro || "",
+                        cidade: selectedProfessorDetails.cidade || "",
+                        estado: selectedProfessorDetails.estado || "",
+                        turmas: selectedProfessorDetails.turmas || [],
+                        materias: selectedProfessorDetails.materias || [],
+                      });
+                      setEditProfessorTurmas(selectedProfessorDetails.turmas || []);
+                      setEditProfessorMaterias(selectedProfessorDetails.materias || []);
+                    }
                     setIsEditingProfessor(true);
                   }}
                   data-testid="button-edit-professor"
                 >
                   <Edit className="h-4 w-4 mr-2" />
-                  Editar
+                  Editar Cadastro
                 </Button>
               </>
             ) : (
@@ -6215,34 +6595,18 @@ export default function AdminDashboard() {
                   Cancelar
                 </Button>
                 <Button
-                  onClick={async () => {
-                    if (!selectedProfessorDetails) return;
-                    try {
-                      const userRef = doc(db, "usuarios", selectedProfessorDetails.uid);
-                      await updateDoc(userRef, {
-                        turmas: editProfessorTurmas,
-                        turma: editProfessorTurmas.join(","),
-                        materias: editProfessorMaterias,
-                      });
-                      toast({
-                        title: "Professor atualizado!",
-                        description: "As turmas e matérias foram atualizadas com sucesso.",
-                      });
-                      queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
-                      queryClient.invalidateQueries({ queryKey: ["/api/usuarios/all"] });
-                      setIsEditingProfessor(false);
-                      setProfessorDetailsDialogOpen(false);
-                    } catch (error: any) {
-                      toast({
-                        title: "Erro ao atualizar",
-                        description: error.message,
-                        variant: "destructive",
-                      });
-                    }
-                  }}
+                  onClick={editProfessorForm.handleSubmit((data) => {
+                    updateProfessorDataMutation.mutate({
+                      ...data,
+                      userId: selectedProfessorDetails!.uid,
+                      turmas: editProfessorTurmas,
+                      materias: editProfessorMaterias,
+                    });
+                  })}
+                  disabled={updateProfessorDataMutation.isPending}
                   data-testid="button-save-professor"
                 >
-                  Salvar Alterações
+                  {updateProfessorDataMutation.isPending ? "Salvando..." : "Salvar Alterações"}
                 </Button>
               </>
             )}

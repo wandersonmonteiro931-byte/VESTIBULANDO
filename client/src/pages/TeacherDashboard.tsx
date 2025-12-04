@@ -20,7 +20,8 @@ import { BrasiliaClock } from "@/components/BrasiliaClock";
 import { StatusBadge } from "@/components/StatusBadge";
 import { FileUploadZone } from "@/components/FileUploadZone";
 import { AnnouncementsCarousel } from "@/components/AnnouncementsCarousel";
-import { LogOut, Plus, FileText, Users, Download, Edit, Calendar, Award, MessageCircle, ClipboardList, GraduationCap, CalendarClock } from "lucide-react";
+import { LogOut, Plus, FileText, Users, Download, Edit, Calendar, Award, MessageCircle, ClipboardList, GraduationCap, CalendarClock, AlertTriangle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AvaliacoesTab } from "@/components/AvaliacoesTab";
 import { BoletimTab } from "@/components/BoletimTab";
 import { BimestresNotasTab } from "@/components/BimestresNotasTab";
@@ -245,6 +246,17 @@ export default function TeacherDashboard() {
         <div className="mb-10">
           <AnnouncementsCarousel userType="professor" />
         </div>
+
+        {(!userData?.materias || userData.materias.length === 0) && (
+          <Alert variant="destructive" className="mb-10" data-testid="alert-no-subjects">
+            <AlertTriangle className="h-5 w-5" />
+            <AlertTitle>Nenhuma matéria atribuída</AlertTitle>
+            <AlertDescription>
+              Você ainda não possui matérias atribuídas ao seu perfil. Entre em contato com a diretoria para que realizem o cadastro das suas matérias. 
+              Sem matérias cadastradas, você não poderá criar atividades, provas ou lançar notas.
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
           <Card className="border-primary/20 bg-gradient-to-br from-card to-primary/5 hover-elevate">

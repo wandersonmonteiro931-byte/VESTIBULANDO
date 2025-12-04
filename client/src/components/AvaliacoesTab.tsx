@@ -1979,7 +1979,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
                         </SelectContent>
                       </Select>
                       {userType === "professor" && materiasDisponiveis.length === 0 && (
-                        <p className="text-xs text-destructive">Você não possui matérias cadastradas. Entre em contato com a diretoria.</p>
+                        <p className="text-xs text-destructive">Você não possui matérias cadastradas. Solicite à diretoria para realizar o cadastro das suas matérias.</p>
                       )}
                       <FormMessage />
                     </FormItem>
@@ -2513,7 +2513,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
                         </SelectContent>
                       </Select>
                       {userType === "professor" && materiasDisponiveis.length === 0 && (
-                        <p className="text-xs text-destructive">Você não possui matérias cadastradas. Entre em contato com a diretoria.</p>
+                        <p className="text-xs text-destructive">Você não possui matérias cadastradas. Solicite à diretoria para realizar o cadastro das suas matérias.</p>
                       )}
                       <FormMessage />
                     </FormItem>
