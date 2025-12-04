@@ -115,9 +115,17 @@ export function BimestresNotasTab() {
 
   const professorTurmas = useMemo(() => {
     if (!turmas || !userData) return [];
-    // Diretores e professores podem ver todas as turmas ativas
-    if (userData.tipo === "diretor" || userData.tipo === "professor") {
+    // Diretor pode ver todas as turmas ativas
+    if (userData.tipo === "diretor") {
       return turmas.filter(t => t.ativa);
+    }
+    // Professor só vê as turmas que está cadastrado
+    if (userData.tipo === "professor") {
+      if (userData.turmas && userData.turmas.length > 0) {
+        return turmas.filter(t => t.ativa && userData.turmas?.includes(t.id));
+      }
+      // Se professor não tem turmas cadastradas, retorna lista vazia
+      return [];
     }
     return [];
   }, [turmas, userData]);
@@ -510,9 +518,9 @@ export function BimestresNotasTab() {
 
             <div className="space-y-2">
               <Label>Turma</Label>
-              <Select value={selectedTurma} onValueChange={setSelectedTurma}>
+              <Select value={selectedTurma} onValueChange={setSelectedTurma} disabled={professorTurmas.length === 0}>
                 <SelectTrigger data-testid="select-turma">
-                  <SelectValue placeholder="Selecione a turma" />
+                  <SelectValue placeholder={professorTurmas.length === 0 ? "Nenhuma turma cadastrada" : "Selecione a turma"} />
                 </SelectTrigger>
                 <SelectContent>
                   {professorTurmas.map(turma => (
@@ -520,6 +528,9 @@ export function BimestresNotasTab() {
                   ))}
                 </SelectContent>
               </Select>
+              {userData?.tipo === "professor" && professorTurmas.length === 0 && (
+                <p className="text-xs text-destructive">Você não possui turmas cadastradas. Solicite à diretoria para realizar o cadastro das suas turmas.</p>
+              )}
             </div>
 
             <div className="space-y-2">

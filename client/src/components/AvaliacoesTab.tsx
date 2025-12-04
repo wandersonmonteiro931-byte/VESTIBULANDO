@@ -220,6 +220,24 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
     transform: (docs) => docs as User[],
   });
 
+  // Filtrar turmas disponíveis: diretor vê todas, professor vê apenas suas turmas cadastradas
+  const turmasDisponiveis = useMemo(() => {
+    if (!turmas || !userData) return [];
+    // Diretor pode ver todas as turmas ativas
+    if (userType === "diretor") {
+      return turmas;
+    }
+    // Professor só vê as turmas que está cadastrado
+    if (userType === "professor") {
+      if (userData.turmas && userData.turmas.length > 0) {
+        return turmas.filter(t => userData.turmas?.includes(t.id));
+      }
+      // Se professor não tem turmas cadastradas, retorna lista vazia
+      return [];
+    }
+    return turmas;
+  }, [turmas, userData, userType]);
+
   // Filtrar matérias disponíveis: diretor vê todas, professor vê apenas suas matérias cadastradas
   const materiasDisponiveis = useMemo(() => {
     if (!userData) return [];
@@ -2053,18 +2071,21 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Turma</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={turmasDisponiveis.length === 0}>
                           <FormControl>
                             <SelectTrigger data-testid="select-turma">
-                              <SelectValue placeholder="Selecione a turma" />
+                              <SelectValue placeholder={turmasDisponiveis.length === 0 ? "Nenhuma turma cadastrada" : "Selecione a turma"} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {turmas?.map((turma) => (
+                            {turmasDisponiveis.map((turma) => (
                               <SelectItem key={turma.id} value={turma.id}>{turma.nome}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
+                        {userType === "professor" && turmasDisponiveis.length === 0 && (
+                          <p className="text-xs text-destructive">Você não possui turmas cadastradas. Solicite à diretoria para realizar o cadastro das suas turmas.</p>
+                        )}
                         <FormMessage />
                       </FormItem>
                     )}
@@ -2531,14 +2552,14 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Turma</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={turmasDisponiveis.length === 0}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Selecione a turma" />
+                            <SelectValue placeholder={turmasDisponiveis.length === 0 ? "Nenhuma turma cadastrada" : "Selecione a turma"} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {turmas?.map((turma) => (
+                          {turmasDisponiveis.map((turma) => (
                             <SelectItem key={turma.id} value={turma.id}>{turma.nome}</SelectItem>
                           ))}
                         </SelectContent>
