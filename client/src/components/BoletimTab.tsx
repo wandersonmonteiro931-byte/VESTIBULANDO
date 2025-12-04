@@ -1177,9 +1177,9 @@ export function BoletimTab() {
         <div className="p-4 bg-muted rounded-lg">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium">Média Geral</p>
+              <p className="font-medium">Média Anual</p>
               <p className="text-2xl font-bold">
-                {calcularMediaGeral(materiasNotas)?.toFixed(2) || "-"}
+                {calcularMediaGeral(materiasNotas)?.toFixed(1).replace(".", ",") || "-"}
               </p>
             </div>
           </div>
@@ -1340,8 +1340,8 @@ export function BoletimTab() {
               <CardContent>
                 <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                   <div>
-                    <span className="font-medium">Média Geral:</span>{" "}
-                    <span className="font-bold text-foreground">{boletim.mediaGeral?.toFixed(2) || "-"}</span>
+                    <span className="font-medium">Média Anual:</span>{" "}
+                    <span className="font-bold text-foreground">{boletim.mediaGeral?.toFixed(1).replace(".", ",") || "-"}</span>
                   </div>
                   <div>
                     <span className="font-medium">Frequência:</span>{" "}
@@ -1535,8 +1535,8 @@ export function BoletimTab() {
 
                 <div className="grid grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
                   <div className="text-center">
-                    <p className="text-sm text-muted-foreground">Média Geral</p>
-                    <p className="text-2xl font-bold">{selectedBoletim.mediaGeral?.toFixed(2) || "-"}</p>
+                    <p className="text-sm text-muted-foreground">Média Anual</p>
+                    <p className="text-2xl font-bold">{selectedBoletim.mediaGeral?.toFixed(1).replace(".", ",") || "-"}</p>
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-muted-foreground">Presenças/Faltas</p>
