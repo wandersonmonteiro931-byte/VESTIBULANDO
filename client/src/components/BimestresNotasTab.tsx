@@ -682,7 +682,7 @@ export function BimestresNotasTab() {
                         <TableHead className="w-32 text-center">Nota (0-10)</TableHead>
                         <TableHead className="w-48">Observação</TableHead>
                         <TableHead className="w-24 text-center">Status</TableHead>
-                        <TableHead className="w-32 text-center">Ações</TableHead>
+                        <TableHead className="w-32 text-center">Modificar Nota</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
