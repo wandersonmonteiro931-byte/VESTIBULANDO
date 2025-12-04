@@ -765,6 +765,60 @@ export function BoletimTab() {
     }
   };
 
+  const handleCreateSingleBoletim = async (aluno: User) => {
+    if (!selectedTurmaId || !userData) return;
+    
+    setBulkCreating(true);
+    
+    try {
+      const turma = turmas?.find(t => t.id === selectedTurmaId);
+      const notasAluno = getNotasFromProfessores(aluno.uid, selectedTurmaId);
+      const mediaGeral = calcularMediaGeral(notasAluno);
+      const freq = getFrequenciaAluno(aluno.uid);
+      const percentualPresenca = (freq.presencas + freq.faltas) > 0 
+        ? (freq.presencas / (freq.presencas + freq.faltas)) * 100 
+        : null;
+      
+      const novoBoletim: Omit<Boletim, "id"> = {
+        alunoId: aluno.uid,
+        alunoNome: aluno.nome,
+        alunoMatricula: aluno.matricula || "",
+        turmaId: selectedTurmaId,
+        turmaNome: turma?.nome || "",
+        anoLetivo,
+        periodoTipo,
+        periodos,
+        materias: notasAluno,
+        mediaGeral,
+        presencas: freq.presencas,
+        faltas: freq.faltas,
+        percentualPresenca,
+        situacao: "cursando",
+        liberado: false,
+        escola: "Preparatório Vestibulando",
+        dataCriacao: getNowBrasiliaISO(),
+        dataAtualizacao: getNowBrasiliaISO(),
+      };
+      
+      await addDoc(collection(db, "boletins"), novoBoletim);
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/boletins"] });
+      
+      toast({
+        title: "Boletim criado!",
+        description: `Boletim de ${aluno.nome} foi criado com sucesso.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao criar boletim",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setBulkCreating(false);
+    }
+  };
+
   const refreshAllNotasFromProfessores = async () => {
     if (!selectedTurmaId || !userData) return;
     
@@ -1725,12 +1779,22 @@ export function BoletimTab() {
                               </div>
                               
                               <div className="flex items-center gap-1">
-                                {temBoletim && (
+                                {temBoletim ? (
                                   <>
                                     <Button
                                       variant="ghost"
                                       size="icon"
+                                      onClick={() => toggleExpandAluno(aluno.uid)}
+                                      title="Ver/Editar boletim"
+                                      data-testid={`button-view-${aluno.uid}`}
+                                    >
+                                      <Eye className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
                                       onClick={() => handlePrintBoletim(boletimAluno!)}
+                                      title="Imprimir boletim"
                                       data-testid={`button-print-${aluno.uid}`}
                                     >
                                       <Printer className="h-4 w-4" />
@@ -1742,6 +1806,7 @@ export function BoletimTab() {
                                         boletimId: boletimAluno!.id, 
                                         liberar: !boletimAluno!.liberado 
                                       })}
+                                      title={boletimAluno?.liberado ? "Bloquear boletim" : "Liberar boletim"}
                                       data-testid={`button-toggle-release-${aluno.uid}`}
                                     >
                                       {boletimAluno?.liberado ? (
@@ -1751,6 +1816,17 @@ export function BoletimTab() {
                                       )}
                                     </Button>
                                   </>
+                                ) : (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleCreateSingleBoletim(aluno)}
+                                    disabled={bulkCreating}
+                                    data-testid={`button-create-${aluno.uid}`}
+                                  >
+                                    <Plus className="h-4 w-4 mr-1" />
+                                    Criar Boletim
+                                  </Button>
                                 )}
                               </div>
                             </div>
