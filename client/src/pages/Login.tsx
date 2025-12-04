@@ -428,12 +428,12 @@ export default function Login() {
         return;
       }
       
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      // Mostrar tempo restante em horas totais para corresponder com "2 dias (48 horas)"
+      const totalHours = Math.floor(diff / (1000 * 60 * 60));
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((diff % (1000 * 60)) / 1000);
       
-      setSuspensionTimeRemaining(`${days}d ${hours}h ${minutes}m ${seconds}s`);
+      setSuspensionTimeRemaining(`${totalHours}h ${minutes.toString().padStart(2, '0')}m ${seconds.toString().padStart(2, '0')}s`);
     };
     
     updateCounter();
@@ -887,20 +887,16 @@ export default function Login() {
           // Verificar se é uma suspensão ativa
           if (userData.suspensaoAtiva === true && userData.suspensaoDataTermino) {
             const dataTermino = new Date(userData.suspensaoDataTermino);
-            const dataAplicacao = new Date(userData.suspensaoDataAplicacao || new Date());
             const agora = new Date();
             
             // Se a suspensão ainda está ativa, mostrar overlay de suspensão
             if (agora < dataTermino) {
-              const duracaoDias = Math.ceil((dataTermino.getTime() - dataAplicacao.getTime()) / (1000 * 60 * 60 * 24));
-              
               console.log("🚫 BLOQUEANDO LOGIN - Conta suspensa");
               setSuspensionData({
                 alunoNome: userData.nome || "",
                 comentario: userData.suspensaoMotivo,
                 dataAplicacao: userData.suspensaoDataAplicacao,
                 dataTerminoSuspensao: userData.suspensaoDataTermino,
-                duracaoDias,
                 aplicadoPorNome: userData.suspensaoAplicadoPorNome || "Diretoria",
               });
               setShowSuspensionOverlay(true);
@@ -2309,7 +2305,7 @@ export default function Login() {
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium">Duração</p>
                     <p className="text-xs text-muted-foreground" data-testid="text-suspension-duration">
-                      {suspensionData.duracaoDias} {suspensionData.duracaoDias === 1 ? 'dia' : 'dias'}
+                      2 dias (48 horas)
                     </p>
                   </div>
                 </div>
