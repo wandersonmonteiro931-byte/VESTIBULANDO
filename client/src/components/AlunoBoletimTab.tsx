@@ -7,7 +7,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   GraduationCap, FileText, Printer, Eye, 
   CheckCircle, AlertCircle, Clock
@@ -236,8 +235,8 @@ export function AlunoBoletimTab() {
 
       {/* Dialog de Visualização Detalhada */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh]">
-          <DialogHeader className="border-b pb-4">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader className="border-b pb-4 flex-shrink-0">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-primary/10 rounded-lg">
                 <GraduationCap className="h-6 w-6 text-primary" />
@@ -252,7 +251,7 @@ export function AlunoBoletimTab() {
           </DialogHeader>
           
           {selectedBoletim && (
-            <ScrollArea className="max-h-[65vh]">
+            <div className="flex-1 overflow-y-auto">
               <div className="space-y-6 pr-4 py-4">
                 {/* Dados do Aluno */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted/50 rounded-lg">
@@ -365,10 +364,10 @@ export function AlunoBoletimTab() {
                   </div>
                 </div>
               </div>
-            </ScrollArea>
+            </div>
           )}
 
-          <DialogFooter className="border-t pt-4 gap-2">
+          <DialogFooter className="border-t pt-4 gap-2 flex-shrink-0">
             <Button variant="outline" onClick={() => setViewDialogOpen(false)}>
               Fechar
             </Button>
