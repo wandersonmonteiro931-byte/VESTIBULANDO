@@ -16,7 +16,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Badge } from "@/components/ui/badge";
 import { PendingIndicator } from "@/components/PendingIndicator";
 import {
   Users,
@@ -42,6 +41,7 @@ import {
   Calendar,
   FileCheck,
   Award,
+  Home,
 } from "lucide-react";
 
 export interface MenuItem {
@@ -203,6 +203,12 @@ const alunoCategories: MenuCategory[] = [
   },
 ];
 
+interface HomeItem {
+  id: string;
+  label: string;
+  icon: React.ElementType;
+}
+
 export function DashboardSidebar({
   role,
   selectedItem,
@@ -217,29 +223,35 @@ export function DashboardSidebar({
       ? professorCategories 
       : alunoCategories;
 
-  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = {};
-    categories.forEach(cat => {
-      if (cat.items.some(item => item.id === selectedItem)) {
-        initial[cat.id] = true;
-      }
-    });
-    return initial;
+  const showHomeItem = role === "professor" || role === "aluno";
+
+  const [openCategory, setOpenCategory] = useState<string | null>(() => {
+    const found = categories.find(cat => 
+      cat.items.some(item => item.id === selectedItem)
+    );
+    return found?.id || null;
   });
 
   const toggleCategory = (categoryId: string) => {
-    setOpenCategories(prev => ({
-      ...prev,
-      [categoryId]: !prev[categoryId],
-    }));
+    setOpenCategory(prev => prev === categoryId ? null : categoryId);
+  };
+
+  const handleSelectItem = (itemId: string) => {
+    const parentCategory = categories.find(cat => 
+      cat.items.some(item => item.id === itemId)
+    );
+    if (parentCategory) {
+      setOpenCategory(parentCategory.id);
+    }
+    onSelectItem(itemId);
   };
 
   return (
     <Sidebar>
-      <SidebarHeader className="border-b border-sidebar-border p-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <GraduationCap className="h-6 w-6" />
+      <SidebarHeader className="border-b border-sidebar-border p-3">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <GraduationCap className="h-5 w-5" />
           </div>
           <div className="flex flex-col">
             <span className="text-sm font-semibold">Vestibulando</span>
@@ -250,33 +262,51 @@ export function DashboardSidebar({
         </div>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="py-1">
+        {showHomeItem && (
+          <SidebarGroup className="py-0.5">
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={selectedItem === "inicio"}
+                  onClick={() => onSelectItem("inicio")}
+                  data-testid="sidebar-item-inicio"
+                  className="py-1.5"
+                >
+                  <Home className="h-4 w-4" />
+                  <span>Início</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroup>
+        )}
+
         {categories.map((category) => {
-          const isOpen = openCategories[category.id] || false;
+          const isOpen = openCategory === category.id;
           const categoryHasPending = category.items.some(
             item => (pendingCounts[item.id] || 0) > 0
           );
           const CategoryIcon = category.icon;
 
           return (
-            <SidebarGroup key={category.id}>
+            <SidebarGroup key={category.id} className="py-0.5">
               <Collapsible open={isOpen} onOpenChange={() => toggleCategory(category.id)}>
                 <CollapsibleTrigger asChild>
-                  <SidebarGroupLabel className="cursor-pointer hover:bg-sidebar-accent/50 rounded-md transition-colors py-2 px-2 flex items-center justify-between w-full">
-                    <div className="flex items-center gap-2">
-                      <CategoryIcon className="h-4 w-4" />
+                  <SidebarGroupLabel className="cursor-pointer hover:bg-sidebar-accent/50 rounded-md transition-colors py-1.5 px-2 flex items-center justify-between w-full text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <CategoryIcon className="h-3.5 w-3.5" />
                       <span>{category.label}</span>
                       {categoryHasPending && <PendingIndicator size="sm" />}
                     </div>
                     {isOpen ? (
-                      <ChevronDown className="h-4 w-4 transition-transform" />
+                      <ChevronDown className="h-3.5 w-3.5 transition-transform" />
                     ) : (
-                      <ChevronRight className="h-4 w-4 transition-transform" />
+                      <ChevronRight className="h-3.5 w-3.5 transition-transform" />
                     )}
                   </SidebarGroupLabel>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                  <SidebarGroupContent>
+                  <SidebarGroupContent className="py-0.5">
                     <SidebarMenu>
                       {category.items.map((item) => {
                         const ItemIcon = item.icon;
@@ -287,19 +317,14 @@ export function DashboardSidebar({
                           <SidebarMenuItem key={item.id}>
                             <SidebarMenuButton
                               isActive={isActive}
-                              onClick={() => onSelectItem(item.id)}
-                              className="pl-6"
+                              onClick={() => handleSelectItem(item.id)}
+                              className="pl-5 py-1"
                               data-testid={`sidebar-item-${item.id}`}
                             >
-                              {ItemIcon && <ItemIcon className="h-4 w-4" />}
-                              <span className="flex-1">{item.label}</span>
+                              {ItemIcon && <ItemIcon className="h-3.5 w-3.5" />}
+                              <span className="flex-1 text-sm">{item.label}</span>
                               {pendingCount > 0 && (
-                                <div className="flex items-center gap-1">
-                                  <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
-                                    {pendingCount}
-                                  </Badge>
-                                  <PendingIndicator size="sm" />
-                                </div>
+                                <PendingIndicator size="sm" />
                               )}
                             </SidebarMenuButton>
                           </SidebarMenuItem>
@@ -315,7 +340,7 @@ export function DashboardSidebar({
       </SidebarContent>
 
       {userName && (
-        <SidebarFooter className="border-t border-sidebar-border p-4">
+        <SidebarFooter className="border-t border-sidebar-border p-3">
           <div className="text-xs text-muted-foreground truncate">
             {userName}
           </div>

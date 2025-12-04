@@ -37,7 +37,7 @@ export default function StudentDashboard() {
   const [selectedTarefa, setSelectedTarefa] = useState<Tarefa | null>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [submissionDialogOpen, setSubmissionDialogOpen] = useState(false);
-  const [selectedSection, setSelectedSection] = useState("todas");
+  const [selectedSection, setSelectedSection] = useState("inicio");
   const warningAlertShownRef = useRef(false);
 
   useEffect(() => {
@@ -361,9 +361,11 @@ export default function StudentDashboard() {
               <p className="text-muted-foreground text-lg">Acompanhe suas tarefas e progresso</p>
             </div>
 
-            <div className="mb-10">
-              <AnnouncementsCarousel userType="aluno" userTurma={userData?.turma} />
-            </div>
+            {selectedSection === "inicio" && (
+              <div className="mb-10">
+                <AnnouncementsCarousel userType="aluno" userTurma={userData?.turma} />
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
               <Card className="border-amber-200/50 dark:border-amber-900/50 bg-gradient-to-br from-card to-amber-50/30 dark:to-amber-950/10 hover-elevate">

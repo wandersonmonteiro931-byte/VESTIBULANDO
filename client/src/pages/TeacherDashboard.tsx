@@ -60,7 +60,7 @@ export default function TeacherDashboard() {
   const [gradeDialogOpen, setGradeDialogOpen] = useState(false);
   const [selectedEntrega, setSelectedEntrega] = useState<Entrega | null>(null);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
-  const [selectedSection, setSelectedSection] = useState("avaliacoes");
+  const [selectedSection, setSelectedSection] = useState("inicio");
 
   useEffect(() => {
     const handleFileError = (event: any) => {
@@ -261,9 +261,11 @@ export default function TeacherDashboard() {
                 </div>
               </div>
 
-              <div className="mb-8">
-                <AnnouncementsCarousel userType="professor" />
-              </div>
+              {selectedSection === "inicio" && (
+                <div className="mb-8">
+                  <AnnouncementsCarousel userType="professor" />
+                </div>
+              )}
 
               {(!userData?.materias || userData.materias.length === 0) && (
                 <Alert variant="destructive" className="mb-8" data-testid="alert-no-subjects">
