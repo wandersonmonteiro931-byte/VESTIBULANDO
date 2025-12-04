@@ -25,6 +25,7 @@ import { BrasiliaClock } from "@/components/BrasiliaClock";
 import { BimestresTab } from "@/components/BimestresTab";
 import { BoletimTab } from "@/components/BoletimTab";
 import { AutorizacaoNotasTab } from "@/components/AutorizacaoNotasTab";
+import { DisciplinaryRequestsAdminTab } from "@/components/DisciplinaryRequestsAdminTab";
 import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, ArrowRightLeft, Clock, Search, Eye, AlertTriangle, Settings, Power, PowerOff, Archive, Download, ChevronDown, ChevronUp, MessageCircle, Camera, Upload, X, Copy, Shield } from "lucide-react";
 import { Link } from "wouter";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -2568,6 +2569,7 @@ export default function AdminDashboard() {
             <TabsTrigger value="senhas-logins" data-testid="tab-senhas-logins" className="text-xs px-2 py-1.5">Senhas</TabsTrigger>
             <TabsTrigger value="turmas" data-testid="tab-turmas" className="text-xs px-2 py-1.5">Turmas</TabsTrigger>
             <TabsTrigger value="disciplinares" data-testid="tab-disciplinares" className="text-xs px-2 py-1.5">Advertências</TabsTrigger>
+            <TabsTrigger value="pedidos-disciplinares" data-testid="tab-pedidos-disciplinares" className="text-xs px-2 py-1.5">Pedidos Professores</TabsTrigger>
             <TabsTrigger value="monitoramento" data-testid="tab-monitoramento" className="text-xs px-2 py-1.5">Frequência</TabsTrigger>
             <TabsTrigger value="auditoria-chat" data-testid="tab-auditoria-chat" className="text-xs px-2 py-1.5">Auditoria</TabsTrigger>
             <TabsTrigger value="denuncias" data-testid="tab-denuncias" className="text-xs px-2 py-1.5">Denúncias</TabsTrigger>
@@ -3578,6 +3580,10 @@ export default function AdminDashboard() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="pedidos-disciplinares" className="space-y-4">
+            <DisciplinaryRequestsAdminTab />
           </TabsContent>
 
           <TabsContent value="monitoramento" className="space-y-4">
