@@ -946,11 +946,10 @@ export function BoletimTab() {
     }
 
     yPos = Math.max(yPos, 250);
-    doc.line(margin, yPos, margin + 60, yPos);
-    doc.text("Assinatura do Professor", margin, yPos + 5);
-
-    doc.line(pageWidth - margin - 60, yPos, pageWidth - margin, yPos);
-    doc.text("Assinatura da Coordenação", pageWidth - margin - 60, yPos + 5);
+    const lineWidth = 70;
+    const lineX = (pageWidth - lineWidth) / 2;
+    doc.line(lineX, yPos, lineX + lineWidth, yPos);
+    doc.text("Assinatura da Diretoria", pageWidth / 2, yPos + 5, { align: "center" });
 
     doc.setFontSize(8);
     doc.text(
