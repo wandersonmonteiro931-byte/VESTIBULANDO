@@ -517,7 +517,7 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin() && isUserActive();
     }
     
-    // Frequencias collection - registros de presença
+    // Frequencias collection - registros de presença (frequencias e frequencia)
     match /frequencias/{frequenciaId} {
       // Alunos podem ver apenas suas próprias frequências
       // Professores e diretores podem ver todas
@@ -534,6 +534,59 @@ service cloud.firestore {
       allow update: if isAuthenticated() && isUserActive() && (isAdmin() || isProfessor());
       
       // Apenas diretores podem deletar frequências
+      allow delete: if isAdmin() && isUserActive();
+    }
+    
+    // Frequencia collection (singular) - registros de presença
+    match /frequencia/{frequenciaId} {
+      // Alunos podem ver apenas suas próprias frequências
+      // Professores e diretores podem ver todas
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        isProfessor() ||
+        (isAluno() && resource.data.alunoId == request.auth.uid)
+      );
+      
+      // Professores e diretores podem registrar frequência
+      allow create: if isAuthenticated() && isUserActive() && (isAdmin() || isProfessor());
+      
+      // Professores e diretores podem atualizar frequência
+      allow update: if isAuthenticated() && isUserActive() && (isAdmin() || isProfessor());
+      
+      // Apenas diretores podem deletar frequências
+      allow delete: if isAdmin() && isUserActive();
+    }
+    
+    // ==================== BIMESTRES E NOTAS ====================
+    
+    // Bimestres Config collection - configuração dos bimestres
+    match /bimestresConfig/{configId} {
+      // Professores e diretores podem ler configurações
+      allow read: if isAuthenticated() && (isAdmin() || isProfessor());
+      
+      // Apenas diretores podem criar/atualizar/deletar configurações
+      allow create: if isAdmin() && isUserActive();
+      allow update: if isAdmin() && isUserActive();
+      allow delete: if isAdmin() && isUserActive();
+    }
+    
+    // Notas Bimestre collection - notas por bimestre
+    match /notasBimestre/{notaId} {
+      // Alunos podem ver apenas suas próprias notas
+      // Professores e diretores podem ver todas
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        isProfessor() ||
+        (isAluno() && resource.data.alunoId == request.auth.uid)
+      );
+      
+      // Professores e diretores podem lançar notas
+      allow create: if isAuthenticated() && isUserActive() && (isAdmin() || isProfessor());
+      
+      // Professores e diretores podem atualizar notas
+      allow update: if isAuthenticated() && isUserActive() && (isAdmin() || isProfessor());
+      
+      // Apenas diretores podem deletar notas
       allow delete: if isAdmin() && isUserActive();
     }
     
