@@ -904,7 +904,7 @@ export function BoletimTab() {
 
     const periodos = boletim.periodos || (boletim.periodoTipo === "bimestre" ? PERIODOS_BIMESTRE : PERIODOS_TRIMESTRE);
     
-    const tableHead = [["Matéria", ...periodos, "Média Final", "Média Esperada"]];
+    const tableHead = [["Matéria", ...periodos, "Média Final", "Média Mínima Esperada"]];
     const tableBody = boletim.materias.map(m => [
       m.materia,
       ...periodos.map(p => m.notas[p]?.toFixed(1) || "-"),
