@@ -20,6 +20,8 @@ import { AnnouncementsCarousel } from "@/components/AnnouncementsCarousel";
 import { LogOut, FileText, Upload, Download, Calendar, Award, CheckCircle2, Clock, AlertTriangle, MessageCircle, ClipboardList, GraduationCap } from "lucide-react";
 import { AlunoAvaliacoesTab } from "@/components/AlunoAvaliacoesTab";
 import { AlunoBoletimTab } from "@/components/AlunoBoletimTab";
+import { PendingIndicator } from "@/components/PendingIndicator";
+import { Separator } from "@/components/ui/separator";
 import { Link } from "wouter";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
@@ -403,31 +405,66 @@ export default function StudentDashboard() {
           </Card>
         </div>
 
-        <Tabs defaultValue="todas" className="space-y-4">
-          <TabsList className="flex flex-wrap">
-            <TabsTrigger value="todas" data-testid="tab-todas">Todas</TabsTrigger>
-            <TabsTrigger value="avaliacoes" data-testid="tab-avaliacoes">
-              <ClipboardList className="h-4 w-4 mr-1" />
-              Avaliações
-            </TabsTrigger>
-            <TabsTrigger value="pendentes" data-testid="tab-pendentes">Pendentes</TabsTrigger>
-            <TabsTrigger value="entregues" data-testid="tab-entregues">Entregues</TabsTrigger>
-            <TabsTrigger value="notas" data-testid="tab-notas">Notas</TabsTrigger>
-            <TabsTrigger value="advertencias" data-testid="tab-advertencias">
+        <Tabs defaultValue="todas" className="space-y-6">
+          <div className="space-y-4">
+            <div className="space-y-2">
               <div className="flex items-center gap-2">
-                Advertências
-                {disciplinaryActions && disciplinaryActions.filter((a: any) => a.ativo).length > 0 && (
-                  <Badge variant="destructive" className="h-5 min-w-5 rounded-full p-1 text-xs">
-                    {disciplinaryActions.filter((a: any) => a.ativo).length}
-                  </Badge>
-                )}
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tarefas</span>
+                <Separator className="flex-1" />
               </div>
-            </TabsTrigger>
-            <TabsTrigger value="boletim" data-testid="tab-boletim">
-              <GraduationCap className="h-4 w-4 mr-1" />
-              Boletim
-            </TabsTrigger>
-          </TabsList>
+              <TabsList className="flex-wrap h-auto gap-1 p-1 bg-muted/50">
+                <TabsTrigger value="todas" data-testid="tab-todas" className="text-xs px-3 py-2">Todas</TabsTrigger>
+                <TabsTrigger value="pendentes" data-testid="tab-pendentes" className="text-xs px-3 py-2 gap-2">
+                  Pendentes
+                  {stats.pendentes > 0 && (
+                    <>
+                      <Badge variant="destructive" className="text-[10px] px-1.5">{stats.pendentes}</Badge>
+                      <PendingIndicator size="sm" />
+                    </>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="entregues" data-testid="tab-entregues" className="text-xs px-3 py-2">Entregues</TabsTrigger>
+              </TabsList>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Notas e Avaliações</span>
+                <Separator className="flex-1" />
+              </div>
+              <TabsList className="flex-wrap h-auto gap-1 p-1 bg-muted/50">
+                <TabsTrigger value="avaliacoes" data-testid="tab-avaliacoes" className="text-xs px-3 py-2 gap-1">
+                  <ClipboardList className="h-4 w-4" />
+                  Avaliações
+                </TabsTrigger>
+                <TabsTrigger value="notas" data-testid="tab-notas" className="text-xs px-3 py-2">Notas</TabsTrigger>
+                <TabsTrigger value="boletim" data-testid="tab-boletim" className="text-xs px-3 py-2 gap-1">
+                  <GraduationCap className="h-4 w-4" />
+                  Boletim
+                </TabsTrigger>
+              </TabsList>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Disciplinar</span>
+                <Separator className="flex-1" />
+              </div>
+              <TabsList className="flex-wrap h-auto gap-1 p-1 bg-muted/50">
+                <TabsTrigger value="advertencias" data-testid="tab-advertencias" className="text-xs px-3 py-2 gap-2">
+                  Advertências
+                  {disciplinaryActions && disciplinaryActions.filter((a: any) => a.ativo).length > 0 && (
+                    <>
+                      <Badge variant="destructive" className="text-[10px] px-1.5">
+                        {disciplinaryActions.filter((a: any) => a.ativo).length}
+                      </Badge>
+                      <PendingIndicator size="sm" />
+                    </>
+                  )}
+                </TabsTrigger>
+              </TabsList>
+            </div>
+          </div>
 
           <TabsContent value="todas" className="space-y-4">
             {loadingTarefas ? (

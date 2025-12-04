@@ -26,6 +26,8 @@ import { AvaliacoesTab } from "@/components/AvaliacoesTab";
 import { BoletimTab } from "@/components/BoletimTab";
 import { BimestresNotasTab } from "@/components/BimestresNotasTab";
 import { DisciplinaryRequestsTab } from "@/components/DisciplinaryRequestsTab";
+import { PendingIndicator } from "@/components/PendingIndicator";
+import { Separator } from "@/components/ui/separator";
 import { Link } from "wouter";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
@@ -300,33 +302,62 @@ export default function TeacherDashboard() {
           </Card>
         </div>
 
-        <Tabs defaultValue="avaliacoes" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="avaliacoes" data-testid="tab-avaliacoes">
-              <ClipboardList className="h-4 w-4 mr-1" />
-              Atividades e Avaliações
-            </TabsTrigger>
-            <TabsTrigger value="correcoes" data-testid="tab-correcoes">
-              Correções Pendentes
-              {pendingGradings > 0 && (
-                <Badge variant="destructive" className="ml-2">{pendingGradings}</Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="bimestres" data-testid="tab-bimestres">
-              <CalendarClock className="h-4 w-4 mr-1" />
-              Notas Bimestre
-            </TabsTrigger>
-            <TabsTrigger value="disciplinar" data-testid="tab-disciplinar">
-              <ShieldAlert className="h-4 w-4 mr-1" />
-              Ações Disciplinares
-            </TabsTrigger>
-            {userData?.tipo === "diretor" && (
-              <TabsTrigger value="boletins" data-testid="tab-boletins">
-                <GraduationCap className="h-4 w-4 mr-1" />
-                Boletins
-              </TabsTrigger>
-            )}
-          </TabsList>
+        <Tabs defaultValue="avaliacoes" className="space-y-6">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Atividades</span>
+                <Separator className="flex-1" />
+              </div>
+              <TabsList className="flex-wrap h-auto gap-1 p-1 bg-muted/50">
+                <TabsTrigger value="avaliacoes" data-testid="tab-avaliacoes" className="text-xs px-3 py-2 gap-1">
+                  <ClipboardList className="h-4 w-4" />
+                  Atividades e Avaliações
+                </TabsTrigger>
+                <TabsTrigger value="correcoes" data-testid="tab-correcoes" className="text-xs px-3 py-2 gap-2">
+                  Correções Pendentes
+                  {pendingGradings > 0 && (
+                    <>
+                      <Badge variant="destructive" className="text-[10px] px-1.5">{pendingGradings}</Badge>
+                      <PendingIndicator size="sm" />
+                    </>
+                  )}
+                </TabsTrigger>
+              </TabsList>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Notas e Boletins</span>
+                <Separator className="flex-1" />
+              </div>
+              <TabsList className="flex-wrap h-auto gap-1 p-1 bg-muted/50">
+                <TabsTrigger value="bimestres" data-testid="tab-bimestres" className="text-xs px-3 py-2 gap-1">
+                  <CalendarClock className="h-4 w-4" />
+                  Notas Bimestre
+                </TabsTrigger>
+                {userData?.tipo === "diretor" && (
+                  <TabsTrigger value="boletins" data-testid="tab-boletins" className="text-xs px-3 py-2 gap-1">
+                    <GraduationCap className="h-4 w-4" />
+                    Boletins
+                  </TabsTrigger>
+                )}
+              </TabsList>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Disciplinar</span>
+                <Separator className="flex-1" />
+              </div>
+              <TabsList className="flex-wrap h-auto gap-1 p-1 bg-muted/50">
+                <TabsTrigger value="disciplinar" data-testid="tab-disciplinar" className="text-xs px-3 py-2 gap-1">
+                  <ShieldAlert className="h-4 w-4" />
+                  Ações Disciplinares
+                </TabsTrigger>
+              </TabsList>
+            </div>
+          </div>
 
           <TabsContent value="avaliacoes" className="space-y-4">
             <AvaliacoesTab userType="professor" />

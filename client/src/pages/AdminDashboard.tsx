@@ -26,6 +26,8 @@ import { BimestresTab } from "@/components/BimestresTab";
 import { BoletimTab } from "@/components/BoletimTab";
 import { AutorizacaoNotasTab } from "@/components/AutorizacaoNotasTab";
 import { DisciplinaryRequestsAdminTab } from "@/components/DisciplinaryRequestsAdminTab";
+import { PendingIndicator } from "@/components/PendingIndicator";
+import { Separator } from "@/components/ui/separator";
 import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, ArrowRightLeft, Clock, Search, Eye, AlertTriangle, Settings, Power, PowerOff, Archive, Download, ChevronDown, ChevronUp, MessageCircle, Camera, Upload, X, Copy, Shield } from "lucide-react";
 import { Link } from "wouter";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -396,6 +398,19 @@ export default function AdminDashboard() {
     queryKey: ["/api/maintenance"],
     transform: (docs) => docs as Maintenance[],
   });
+
+  const { data: disciplinaryRequests } = useRealtimeQuery({
+    collectionName: "disciplinaryRequests",
+    queryKey: ["/api/disciplinary-requests/all"],
+  });
+
+  const { data: solicitacoesEdicaoNota } = useRealtimeQuery({
+    collectionName: "solicitacoesEdicaoNota",
+    queryKey: ["/api/solicitacoes-edicao-nota-all"],
+  });
+
+  const pendingDisciplinaryRequests = disciplinaryRequests?.filter((r: any) => r.status === "pendente")?.length || 0;
+  const pendingGradeAuthorizations = solicitacoesEdicaoNota?.filter((s: any) => s.status === "pendente")?.length || 0;
 
   const pendingUsers = solicitacoes?.map((sol: any) => ({
     ...sol,
@@ -2556,31 +2571,103 @@ export default function AdminDashboard() {
           </Card>
         </div>
 
-        <Tabs defaultValue="aprovacoes" className="space-y-4">
-          <TabsList className="flex-wrap h-auto gap-1 p-1">
-            <TabsTrigger value="aprovacoes" data-testid="tab-aprovacoes" className="text-xs px-2 py-1.5">
-              Aprovações
-              {pendingUsers && pendingUsers.length > 0 && (
-                <Badge variant="destructive" className="ml-1 text-[10px] px-1">{pendingUsers.length}</Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="usuarios" data-testid="tab-usuarios" className="text-xs px-2 py-1.5">Alunos</TabsTrigger>
-            <TabsTrigger value="professores" data-testid="tab-professores" className="text-xs px-2 py-1.5">Professores</TabsTrigger>
-            <TabsTrigger value="senhas-logins" data-testid="tab-senhas-logins" className="text-xs px-2 py-1.5">Senhas</TabsTrigger>
-            <TabsTrigger value="turmas" data-testid="tab-turmas" className="text-xs px-2 py-1.5">Turmas</TabsTrigger>
-            <TabsTrigger value="disciplinares" data-testid="tab-disciplinares" className="text-xs px-2 py-1.5">Advertências</TabsTrigger>
-            <TabsTrigger value="pedidos-disciplinares" data-testid="tab-pedidos-disciplinares" className="text-xs px-2 py-1.5">Pedidos Professores</TabsTrigger>
-            <TabsTrigger value="monitoramento" data-testid="tab-monitoramento" className="text-xs px-2 py-1.5">Frequência</TabsTrigger>
-            <TabsTrigger value="auditoria-chat" data-testid="tab-auditoria-chat" className="text-xs px-2 py-1.5">Auditoria</TabsTrigger>
-            <TabsTrigger value="denuncias" data-testid="tab-denuncias" className="text-xs px-2 py-1.5">Denúncias</TabsTrigger>
-            <TabsTrigger value="documentos-internos" data-testid="tab-documentos-internos" className="text-xs px-2 py-1.5">Docs Internos</TabsTrigger>
-            <TabsTrigger value="documentacao" data-testid="tab-documentacao" className="text-xs px-2 py-1.5">Documentação</TabsTrigger>
-            <TabsTrigger value="avisos" data-testid="tab-avisos" className="text-xs px-2 py-1.5">Avisos</TabsTrigger>
-            <TabsTrigger value="bimestres" data-testid="tab-bimestres" className="text-xs px-2 py-1.5">Bimestres</TabsTrigger>
-            <TabsTrigger value="boletins" data-testid="tab-boletins" className="text-xs px-2 py-1.5">Boletins</TabsTrigger>
-            <TabsTrigger value="autorizacoes-notas" data-testid="tab-autorizacoes-notas" className="text-xs px-2 py-1.5">Autorizações</TabsTrigger>
-            <TabsTrigger value="manutencao" data-testid="tab-manutencao" className="text-xs px-2 py-1.5">Manutenção</TabsTrigger>
-          </TabsList>
+        <Tabs defaultValue="aprovacoes" className="space-y-6">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Gestão de Usuários</span>
+                <Separator className="flex-1" />
+              </div>
+              <TabsList className="flex-wrap h-auto gap-1 p-1 bg-muted/50">
+                <TabsTrigger value="aprovacoes" data-testid="tab-aprovacoes" className="text-xs px-3 py-2 gap-2">
+                  Aprovações
+                  {pendingUsers && pendingUsers.length > 0 && (
+                    <>
+                      <Badge variant="destructive" className="text-[10px] px-1.5">{pendingUsers.length}</Badge>
+                      <PendingIndicator size="sm" />
+                    </>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="usuarios" data-testid="tab-usuarios" className="text-xs px-3 py-2">Alunos</TabsTrigger>
+                <TabsTrigger value="professores" data-testid="tab-professores" className="text-xs px-3 py-2">Professores</TabsTrigger>
+                <TabsTrigger value="senhas-logins" data-testid="tab-senhas-logins" className="text-xs px-3 py-2">Senhas</TabsTrigger>
+                <TabsTrigger value="turmas" data-testid="tab-turmas" className="text-xs px-3 py-2">Turmas</TabsTrigger>
+              </TabsList>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Disciplinar</span>
+                <Separator className="flex-1" />
+              </div>
+              <TabsList className="flex-wrap h-auto gap-1 p-1 bg-muted/50">
+                <TabsTrigger value="disciplinares" data-testid="tab-disciplinares" className="text-xs px-3 py-2">Advertências</TabsTrigger>
+                <TabsTrigger value="pedidos-disciplinares" data-testid="tab-pedidos-disciplinares" className="text-xs px-3 py-2 gap-2">
+                  Pedidos Professores
+                  {pendingDisciplinaryRequests > 0 && (
+                    <>
+                      <Badge variant="destructive" className="text-[10px] px-1.5">{pendingDisciplinaryRequests}</Badge>
+                      <PendingIndicator size="sm" />
+                    </>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="denuncias" data-testid="tab-denuncias" className="text-xs px-3 py-2">Denúncias</TabsTrigger>
+              </TabsList>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Acadêmico</span>
+                <Separator className="flex-1" />
+              </div>
+              <TabsList className="flex-wrap h-auto gap-1 p-1 bg-muted/50">
+                <TabsTrigger value="bimestres" data-testid="tab-bimestres" className="text-xs px-3 py-2">Bimestres</TabsTrigger>
+                <TabsTrigger value="boletins" data-testid="tab-boletins" className="text-xs px-3 py-2">Boletins</TabsTrigger>
+                <TabsTrigger value="autorizacoes-notas" data-testid="tab-autorizacoes-notas" className="text-xs px-3 py-2 gap-2">
+                  Autorizações
+                  {pendingGradeAuthorizations > 0 && (
+                    <>
+                      <Badge variant="destructive" className="text-[10px] px-1.5">{pendingGradeAuthorizations}</Badge>
+                      <PendingIndicator size="sm" />
+                    </>
+                  )}
+                </TabsTrigger>
+              </TabsList>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Monitoramento</span>
+                <Separator className="flex-1" />
+              </div>
+              <TabsList className="flex-wrap h-auto gap-1 p-1 bg-muted/50">
+                <TabsTrigger value="monitoramento" data-testid="tab-monitoramento" className="text-xs px-3 py-2">Frequência</TabsTrigger>
+                <TabsTrigger value="auditoria-chat" data-testid="tab-auditoria-chat" className="text-xs px-3 py-2">Auditoria</TabsTrigger>
+              </TabsList>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Documentos e Avisos</span>
+                <Separator className="flex-1" />
+              </div>
+              <TabsList className="flex-wrap h-auto gap-1 p-1 bg-muted/50">
+                <TabsTrigger value="documentos-internos" data-testid="tab-documentos-internos" className="text-xs px-3 py-2">Docs Internos</TabsTrigger>
+                <TabsTrigger value="documentacao" data-testid="tab-documentacao" className="text-xs px-3 py-2">Documentação</TabsTrigger>
+                <TabsTrigger value="avisos" data-testid="tab-avisos" className="text-xs px-3 py-2">Avisos</TabsTrigger>
+              </TabsList>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sistema</span>
+                <Separator className="flex-1" />
+              </div>
+              <TabsList className="flex-wrap h-auto gap-1 p-1 bg-muted/50">
+                <TabsTrigger value="manutencao" data-testid="tab-manutencao" className="text-xs px-3 py-2">Manutenção</TabsTrigger>
+              </TabsList>
+            </div>
+          </div>
 
           <TabsContent value="aprovacoes" className="space-y-4">
             <div className="flex justify-between items-center">
