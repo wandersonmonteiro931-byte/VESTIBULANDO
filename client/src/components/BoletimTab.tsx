@@ -411,8 +411,8 @@ export function BoletimTab() {
   }), [boletins]);
 
   const renderBoletimForm = () => (
-    <ScrollArea className="max-h-[70vh]">
-      <div className="space-y-6 pr-4">
+    <div className="overflow-y-auto max-h-[60vh] pr-2">
+      <div className="space-y-6">
         {!selectedBoletim && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -578,7 +578,7 @@ export function BoletimTab() {
           </div>
         </div>
       </div>
-    </ScrollArea>
+    </div>
   );
 
   return (
@@ -846,8 +846,8 @@ export function BoletimTab() {
           </DialogHeader>
           
           {selectedBoletim && (
-            <ScrollArea className="max-h-[70vh]">
-              <div className="space-y-4 pr-4">
+            <div className="overflow-y-auto max-h-[60vh] pr-2">
+              <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
                   <div>
                     <p className="text-sm text-muted-foreground">Aluno</p>
@@ -923,7 +923,7 @@ export function BoletimTab() {
                   </div>
                 )}
               </div>
-            </ScrollArea>
+            </div>
           )}
 
           <DialogFooter className="gap-2">
