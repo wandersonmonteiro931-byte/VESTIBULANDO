@@ -51,6 +51,8 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const pressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const ignoreNextClickRef = useRef(false);
+  const contextMenuRef = useRef<HTMLDivElement>(null);
 
   const otherParticipant =
     conversation.participante1Id === userData?.uid
@@ -152,6 +154,7 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
       setSelectedMessageId(messageId);
       setContextMenuPosition({ x: clientX, y: clientY });
       setShowContextMenu(true);
+      ignoreNextClickRef.current = true;
     }, 500);
   };
 
@@ -216,7 +219,16 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      if (ignoreNextClickRef.current) {
+        ignoreNextClickRef.current = false;
+        return;
+      }
+      
       if (showContextMenu) {
+        const target = event.target as Node;
+        if (contextMenuRef.current && contextMenuRef.current.contains(target)) {
+          return;
+        }
         setShowContextMenu(false);
         setSelectedMessageId(null);
       }
@@ -558,6 +570,7 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
       )}
 
       <MessageContextMenu
+        ref={contextMenuRef}
         isVisible={showContextMenu}
         position={contextMenuPosition}
         onDeleteForMe={handleDeleteForMe}

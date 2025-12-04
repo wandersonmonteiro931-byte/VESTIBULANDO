@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -10,17 +11,18 @@ interface MessageContextMenuProps {
   isVisible: boolean;
 }
 
-export function MessageContextMenu({
+export const MessageContextMenu = forwardRef<HTMLDivElement, MessageContextMenuProps>(({
   onDeleteForMe,
   onDeleteForEveryone,
   position,
   canDeleteForEveryone,
   isVisible,
-}: MessageContextMenuProps) {
+}, ref) => {
   if (!isVisible) return null;
 
   return (
     <div
+      ref={ref}
       className="fixed z-50 bg-background border border-border rounded-lg shadow-lg overflow-hidden min-w-[200px]"
       style={{
         left: `${position.x}px`,
@@ -62,4 +64,6 @@ export function MessageContextMenu({
       </div>
     </div>
   );
-}
+});
+
+MessageContextMenu.displayName = "MessageContextMenu";
