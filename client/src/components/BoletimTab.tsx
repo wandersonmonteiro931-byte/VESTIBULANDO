@@ -51,6 +51,7 @@ export function BoletimTab() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterTurma, setFilterTurma] = useState<string>("todas");
   const [filterSituacao, setFilterSituacao] = useState<string>("todas");
+  const [filterBimestre, setFilterBimestre] = useState<string>("todos");
   
   const [selectedAlunoId, setSelectedAlunoId] = useState("");
   const [selectedTurmaId, setSelectedTurmaId] = useState("");
@@ -145,9 +146,16 @@ export function BoletimTab() {
                          b.turmaNome.toLowerCase().includes(searchTerm.toLowerCase());
       const matchTurma = filterTurma === "todas" || b.turmaId === filterTurma;
       const matchSituacao = filterSituacao === "todas" || b.situacao === filterSituacao;
-      return matchSearch && matchTurma && matchSituacao;
+      
+      let matchBimestre = true;
+      if (filterBimestre !== "todos") {
+        const bimestreKey = `${filterBimestre}º Bimestre`;
+        matchBimestre = b.materias?.some(m => m.notas && m.notas[bimestreKey] !== null && m.notas[bimestreKey] !== undefined);
+      }
+      
+      return matchSearch && matchTurma && matchSituacao && matchBimestre;
     });
-  }, [boletins, searchTerm, filterTurma, filterSituacao]);
+  }, [boletins, searchTerm, filterTurma, filterSituacao, filterBimestre]);
 
   const initializeMateriasNotas = () => {
     const materias: BoletimNota[] = MATERIAS_BOLETIM.map(materia => ({
@@ -1384,6 +1392,18 @@ export function BoletimTab() {
             <SelectItem value="cursando">Cursando</SelectItem>
             <SelectItem value="aprovado">Aprovado</SelectItem>
             <SelectItem value="reprovado">Reprovado</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={filterBimestre} onValueChange={setFilterBimestre}>
+          <SelectTrigger className="w-[180px]" data-testid="filter-bimestre">
+            <SelectValue placeholder="Filtrar por bimestre" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos os bimestres</SelectItem>
+            <SelectItem value="1">1º Bimestre</SelectItem>
+            <SelectItem value="2">2º Bimestre</SelectItem>
+            <SelectItem value="3">3º Bimestre</SelectItem>
+            <SelectItem value="4">4º Bimestre</SelectItem>
           </SelectContent>
         </Select>
       </div>

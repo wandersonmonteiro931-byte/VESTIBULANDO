@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { where } from "firebase/firestore";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -7,9 +7,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { 
   GraduationCap, FileText, Printer, Eye, 
-  CheckCircle, AlertCircle, Clock
+  CheckCircle, AlertCircle, Clock, Search
 } from "lucide-react";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 import type { Boletim } from "@shared/schema";
@@ -26,6 +28,8 @@ export function AlunoBoletimTab() {
   const { userData } = useAuth();
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedBoletim, setSelectedBoletim] = useState<Boletim | null>(null);
+  const [filterAno, setFilterAno] = useState<string>("todos");
+  const [filterBimestre, setFilterBimestre] = useState<string>("todos");
 
   const { data: boletins, isLoading: loadingBoletins } = useRealtimeQuery<Boletim>({
     collectionName: "boletins",
@@ -34,6 +38,28 @@ export function AlunoBoletimTab() {
     transform: (docs) => docs as Boletim[],
     enabled: !!userData?.uid,
   });
+
+  const anosDisponiveis = useMemo(() => {
+    if (!boletins) return [];
+    const anosSet = new Set(boletins.map(b => b.anoLetivo));
+    const anos = Array.from(anosSet);
+    return anos.sort((a, b) => parseInt(b) - parseInt(a));
+  }, [boletins]);
+
+  const filteredBoletins = useMemo(() => {
+    if (!boletins) return [];
+    return boletins.filter(b => {
+      const matchAno = filterAno === "todos" || b.anoLetivo === filterAno;
+      
+      let matchBimestre = true;
+      if (filterBimestre !== "todos") {
+        const bimestreKey = `${filterBimestre}º Bimestre`;
+        matchBimestre = b.materias?.some(m => m.notas && m.notas[bimestreKey] !== null && m.notas[bimestreKey] !== undefined);
+      }
+      
+      return matchAno && matchBimestre;
+    });
+  }, [boletins, filterAno, filterBimestre]);
 
   const handlePrintBoletim = (boletim: Boletim) => {
     const doc = new jsPDF();
@@ -148,15 +174,45 @@ export function AlunoBoletimTab() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <GraduationCap className="h-6 w-6 text-primary" />
-        <div>
-          <h2 className="text-xl font-bold">Meu Boletim Escolar</h2>
-          <p className="text-sm text-muted-foreground">
-            Visualize suas notas e situação acadêmica
-          </p>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-2">
+          <GraduationCap className="h-6 w-6 text-primary" />
+          <div>
+            <h2 className="text-xl font-bold">Meu Boletim Escolar</h2>
+            <p className="text-sm text-muted-foreground">
+              Visualize suas notas e situação acadêmica
+            </p>
+          </div>
         </div>
       </div>
+
+      {boletins && boletins.length > 0 && (
+        <div className="flex flex-wrap gap-4 items-center">
+          <Select value={filterAno} onValueChange={setFilterAno}>
+            <SelectTrigger className="w-[160px]" data-testid="filter-ano-aluno">
+              <SelectValue placeholder="Filtrar por ano" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os anos</SelectItem>
+              {anosDisponiveis.map(ano => (
+                <SelectItem key={ano} value={ano}>{ano}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={filterBimestre} onValueChange={setFilterBimestre}>
+            <SelectTrigger className="w-[180px]" data-testid="filter-bimestre-aluno">
+              <SelectValue placeholder="Filtrar por bimestre" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os bimestres</SelectItem>
+              <SelectItem value="1">1º Bimestre</SelectItem>
+              <SelectItem value="2">2º Bimestre</SelectItem>
+              <SelectItem value="3">3º Bimestre</SelectItem>
+              <SelectItem value="4">4º Bimestre</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {(!boletins || boletins.length === 0) ? (
         <Card>
@@ -168,9 +224,19 @@ export function AlunoBoletimTab() {
             </p>
           </CardContent>
         </Card>
+      ) : filteredBoletins.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <Search className="h-16 w-16 text-muted-foreground mb-4" />
+            <p className="text-lg font-medium mb-2">Nenhum boletim encontrado</p>
+            <p className="text-sm text-muted-foreground">
+              Ajuste os filtros para ver seus boletins
+            </p>
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-4">
-          {boletins.map(boletim => (
+          {filteredBoletins.map(boletim => (
             <Card key={boletim.id} className="hover-elevate" data-testid={`card-boletim-aluno-${boletim.id}`}>
               <CardHeader>
                 <div className="flex items-start justify-between gap-2 flex-wrap">
