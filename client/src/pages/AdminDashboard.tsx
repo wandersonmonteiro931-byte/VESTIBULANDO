@@ -22,6 +22,8 @@ import { DocumentationTab } from "@/components/DocumentationTab";
 import { AnnouncementsTab } from "@/components/AnnouncementsTab";
 import { InternalDocumentsTab } from "@/components/InternalDocumentsTab";
 import { BrasiliaClock } from "@/components/BrasiliaClock";
+import { BimestresTab } from "@/components/BimestresTab";
+import { BoletimTab } from "@/components/BoletimTab";
 import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, ArrowRightLeft, Clock, Search, Eye, AlertTriangle, Settings, Power, PowerOff, Archive, Download, ChevronDown, ChevronUp, MessageCircle, Camera, Upload, X, Copy } from "lucide-react";
 import { Link } from "wouter";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -2442,6 +2444,8 @@ export default function AdminDashboard() {
             <TabsTrigger value="documentos-internos" data-testid="tab-documentos-internos" className="text-xs px-2 py-1.5">Docs Internos</TabsTrigger>
             <TabsTrigger value="documentacao" data-testid="tab-documentacao" className="text-xs px-2 py-1.5">Documentação</TabsTrigger>
             <TabsTrigger value="avisos" data-testid="tab-avisos" className="text-xs px-2 py-1.5">Avisos</TabsTrigger>
+            <TabsTrigger value="bimestres" data-testid="tab-bimestres" className="text-xs px-2 py-1.5">Bimestres</TabsTrigger>
+            <TabsTrigger value="boletins" data-testid="tab-boletins" className="text-xs px-2 py-1.5">Boletins</TabsTrigger>
             <TabsTrigger value="manutencao" data-testid="tab-manutencao" className="text-xs px-2 py-1.5">Manutenção</TabsTrigger>
           </TabsList>
 
@@ -3435,6 +3439,14 @@ export default function AdminDashboard() {
 
           <TabsContent value="avisos" className="space-y-4">
             <AnnouncementsTab />
+          </TabsContent>
+
+          <TabsContent value="bimestres" className="space-y-4">
+            <BimestresTab userType="diretor" />
+          </TabsContent>
+
+          <TabsContent value="boletins" className="space-y-4">
+            <BoletimTab />
           </TabsContent>
 
           <TabsContent value="manutencao" className="space-y-4">

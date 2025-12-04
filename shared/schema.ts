@@ -843,3 +843,72 @@ export const insertFrequenciaSchema = frequenciaSchema.omit({ id: true, dataCria
 
 export type Frequencia = z.infer<typeof frequenciaSchema>;
 export type InsertFrequencia = z.infer<typeof insertFrequenciaSchema>;
+
+// ==================== BIMESTRES E LANÇAMENTO DE NOTAS ====================
+
+// Configuração de bimestre (definido pela diretoria)
+export const bimestreConfigSchema = z.object({
+  id: z.string(),
+  ano: z.string(), // Ex: "2025"
+  numero: z.number().min(1).max(4), // 1, 2, 3 ou 4
+  nome: z.string(), // Ex: "1º Bimestre"
+  dataInicio: z.string(), // Data de início do bimestre
+  dataFim: z.string(), // Data de fim do bimestre
+  prazoLancamentoNotas: z.string(), // Data limite para professores lançarem notas
+  mediaEsperada: z.number().default(7), // Média esperada para aprovação
+  ativo: z.boolean().default(true), // Se o bimestre está ativo
+  
+  // Metadados
+  criadoPor: z.string(),
+  criadoPorNome: z.string(),
+  dataCriacao: z.string(),
+  dataAtualizacao: z.string().optional(),
+});
+
+export const insertBimestreConfigSchema = bimestreConfigSchema.omit({ id: true, dataCriacao: true });
+
+export type BimestreConfig = z.infer<typeof bimestreConfigSchema>;
+export type InsertBimestreConfig = z.infer<typeof insertBimestreConfigSchema>;
+
+// Lançamento de notas por bimestre (professor lança)
+export const notaBimestreSchema = z.object({
+  id: z.string(),
+  
+  // Referências
+  bimestreConfigId: z.string(), // ID do bimestre config
+  ano: z.string(), // Ano letivo
+  bimestreNumero: z.number().min(1).max(4), // Número do bimestre
+  
+  // Turma e matéria
+  turmaId: z.string(),
+  turmaNome: z.string(),
+  materia: z.string(), // Disciplina/matéria
+  
+  // Aluno
+  alunoId: z.string(),
+  alunoNome: z.string(),
+  alunoMatricula: z.string().optional(),
+  
+  // Professor que lançou
+  professorId: z.string(),
+  professorNome: z.string(),
+  
+  // Nota
+  nota: z.number().min(0).max(10).nullable(), // Nota de 0 a 10 (null se não lançada)
+  mediaEsperada: z.number().default(7), // Média esperada
+  observacao: z.string().optional(), // Observação do professor
+  
+  // Status e datas
+  status: z.enum(["rascunho", "entregue"]).default("rascunho"), // rascunho = pode editar, entregue = fechado
+  dataLancamento: z.string().optional(), // Data/hora do lançamento
+  dataEntrega: z.string().optional(), // Data/hora em que foi marcado como entregue
+  
+  // Metadados
+  dataCriacao: z.string(),
+  dataAtualizacao: z.string().optional(),
+});
+
+export const insertNotaBimestreSchema = notaBimestreSchema.omit({ id: true, dataCriacao: true });
+
+export type NotaBimestre = z.infer<typeof notaBimestreSchema>;
+export type InsertNotaBimestre = z.infer<typeof insertNotaBimestreSchema>;
