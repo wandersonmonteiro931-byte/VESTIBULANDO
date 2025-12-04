@@ -204,6 +204,8 @@ export const disciplinaryActionSchema = z.object({
   dataRemocao: z.string().optional(), // Data em que foi removida
   removidoPor: z.string().optional(), // ID do diretor que removeu
   removidoPorNome: z.string().optional(), // Nome do diretor que removeu
+  visualizado: z.boolean().default(false), // se o aluno já visualizou a advertência
+  dataVisualizacao: z.string().optional(), // Data em que o aluno visualizou
 });
 
 export const insertDisciplinaryActionSchema = disciplinaryActionSchema.omit({ id: true });

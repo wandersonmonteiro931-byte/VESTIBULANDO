@@ -6,9 +6,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { SuspensionAlertProvider } from "@/contexts/SuspensionAlertContext";
+import { WarningAlertProvider } from "@/contexts/WarningAlertContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { FirebaseErrorScreen } from "@/components/FirebaseErrorScreen";
 import { SuspensionAlertOverlay } from "@/components/SuspensionAlertOverlay";
+import { WarningAlertOverlay } from "@/components/WarningAlertOverlay";
 import Login from "@/pages/Login";
 import StudentDashboard from "@/pages/StudentDashboard";
 import TeacherDashboard from "@/pages/TeacherDashboard";
@@ -92,13 +94,16 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <SuspensionAlertProvider>
-          <AuthProvider>
-            <TooltipProvider>
-              <Toaster />
-              <SuspensionAlertOverlay />
-              <Router />
-            </TooltipProvider>
-          </AuthProvider>
+          <WarningAlertProvider>
+            <AuthProvider>
+              <TooltipProvider>
+                <Toaster />
+                <SuspensionAlertOverlay />
+                <WarningAlertOverlay />
+                <Router />
+              </TooltipProvider>
+            </AuthProvider>
+          </WarningAlertProvider>
         </SuspensionAlertProvider>
       </ThemeProvider>
     </QueryClientProvider>

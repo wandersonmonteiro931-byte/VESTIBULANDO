@@ -195,8 +195,13 @@ service cloud.firestore {
       allow create: if isAdmin() && isUserActive() &&
                        request.resource.data.aplicadoPor == request.auth.uid;
       
-      // Apenas diretores podem atualizar ações disciplinares (para remover)
-      allow update: if isAdmin() && isUserActive();
+      // Diretores podem atualizar ações disciplinares (para remover)
+      // Alunos podem atualizar apenas o campo visualizado de suas próprias advertências
+      allow update: if (isAdmin() && isUserActive()) ||
+                       (isAluno() && 
+                        resource.data.alunoId == request.auth.uid &&
+                        resource.data.tipo == "advertencia" &&
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['visualizado', 'dataVisualizacao']));
       
       // Apenas diretores podem deletar ações disciplinares
       allow delete: if isAdmin() && isUserActive();
