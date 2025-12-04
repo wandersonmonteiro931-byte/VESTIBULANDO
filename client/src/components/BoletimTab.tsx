@@ -18,10 +18,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { 
   Plus, FileText, Calendar, Eye, Edit, Trash2, Printer, 
   GraduationCap, Users, CheckCircle, Lock, Unlock, Download,
-  ClipboardList, AlertCircle, Search, RefreshCw
+  ClipboardList, AlertCircle, Search, RefreshCw, ChevronDown, ChevronRight, Save, X
 } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
@@ -59,6 +61,10 @@ export function BoletimTab() {
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const [bulkCreating, setBulkCreating] = useState(false);
   const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0 });
+  const [selectedForPrint, setSelectedForPrint] = useState<Set<string>>(new Set());
+  const [expandedAlunos, setExpandedAlunos] = useState<Set<string>>(new Set());
+  const [editingBoletimId, setEditingBoletimId] = useState<string | null>(null);
+  const [bulkEditNotas, setBulkEditNotas] = useState<Record<string, BoletimNota[]>>({});
 
   const { data: turmas } = useRealtimeQuery<Turma>({
     collectionName: "turmas",
@@ -603,6 +609,214 @@ export function BoletimTab() {
     toast({
       title: "Boletins gerados!",
       description: `${boletinsDaTurma.length} PDFs foram gerados.`,
+    });
+  };
+
+  const handlePrintSelected = () => {
+    if (selectedForPrint.size === 0) {
+      toast({
+        title: "Nenhum boletim selecionado",
+        description: "Selecione ao menos um aluno para imprimir.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const boletinsParaImprimir = boletins?.filter(
+      b => b.turmaId === selectedTurmaId && b.anoLetivo === anoLetivo && selectedForPrint.has(b.alunoId)
+    ) || [];
+
+    if (boletinsParaImprimir.length === 0) {
+      toast({
+        title: "Nenhum boletim encontrado",
+        description: "Os alunos selecionados não possuem boletim.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    boletinsParaImprimir.forEach(boletim => {
+      handlePrintBoletim(boletim);
+    });
+
+    toast({
+      title: "Boletins gerados!",
+      description: `${boletinsParaImprimir.length} PDFs foram gerados.`,
+    });
+  };
+
+  const toggleSelectForPrint = (alunoId: string) => {
+    const newSet = new Set(selectedForPrint);
+    if (newSet.has(alunoId)) {
+      newSet.delete(alunoId);
+    } else {
+      newSet.add(alunoId);
+    }
+    setSelectedForPrint(newSet);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedForPrint.size === alunosDaTurma.length) {
+      setSelectedForPrint(new Set());
+    } else {
+      setSelectedForPrint(new Set(alunosDaTurma.map(a => a.uid)));
+    }
+  };
+
+  const toggleExpandAluno = (alunoId: string) => {
+    const newSet = new Set(expandedAlunos);
+    if (newSet.has(alunoId)) {
+      newSet.delete(alunoId);
+    } else {
+      newSet.add(alunoId);
+    }
+    setExpandedAlunos(newSet);
+  };
+
+  const checkBoletimComplete = (boletim: Boletim | undefined): { complete: boolean; missingItems: string[] } => {
+    if (!boletim) return { complete: false, missingItems: ["Boletim não criado"] };
+    
+    const missingItems: string[] = [];
+    
+    const periodoCount = boletim.periodos?.length || (boletim.periodoTipo === "trimestre" ? 3 : 4);
+    const periodoLabel = boletim.periodoTipo === "trimestre" ? "trimestre(s)" : "bimestre(s)";
+    
+    const materiasComNota = boletim.materias.filter(m => {
+      const valores = Object.values(m.notas).filter((n): n is number => n !== null);
+      return valores.length > 0;
+    });
+    
+    if (materiasComNota.length === 0) {
+      missingItems.push("Nenhuma nota lançada");
+    } else if (materiasComNota.length < boletim.materias.length) {
+      missingItems.push(`${boletim.materias.length - materiasComNota.length} matérias sem notas`);
+    }
+    
+    boletim.materias.forEach(m => {
+      const notasCompletas = Object.values(m.notas).filter((n): n is number => n !== null);
+      if (notasCompletas.length > 0 && notasCompletas.length < periodoCount) {
+        missingItems.push(`${m.materia}: faltam ${periodoCount - notasCompletas.length} ${periodoLabel}`);
+      }
+    });
+    
+    if (boletim.presencas === 0 && boletim.faltas === 0) {
+      missingItems.push("Frequência não registrada");
+    }
+    
+    return { complete: missingItems.length === 0, missingItems };
+  };
+
+  const startEditingBoletim = (boletimId: string, materias: BoletimNota[]) => {
+    setEditingBoletimId(boletimId);
+    setBulkEditNotas({ ...bulkEditNotas, [boletimId]: JSON.parse(JSON.stringify(materias)) });
+  };
+
+  const cancelEditingBoletim = () => {
+    setEditingBoletimId(null);
+  };
+
+  const handleBulkNotaChange = (boletimId: string, materiaIndex: number, periodo: string, valor: string) => {
+    const notas = bulkEditNotas[boletimId];
+    if (!notas) return;
+    
+    const novaNotas = [...notas];
+    const nota = valor === "" ? null : parseFloat(valor);
+    novaNotas[materiaIndex].notas[periodo] = nota;
+    novaNotas[materiaIndex].mediaFinal = calcularMediaMateria(novaNotas[materiaIndex].notas);
+    setBulkEditNotas({ ...bulkEditNotas, [boletimId]: novaNotas });
+  };
+
+  const saveEditingBoletim = async (boletimId: string, alunoId?: string) => {
+    const notas = bulkEditNotas[boletimId];
+    if (!notas || !userData) return;
+    
+    try {
+      const mediaGeral = calcularMediaGeral(notas);
+      const updateData: any = {
+        materias: notas,
+        mediaGeral,
+        dataAtualizacao: getNowBrasiliaISO(),
+      };
+      
+      if (alunoId) {
+        const freq = getFrequenciaAluno(alunoId);
+        updateData.presencas = freq.presencas;
+        updateData.faltas = freq.faltas;
+        updateData.percentualPresenca = (freq.presencas + freq.faltas) > 0 
+          ? (freq.presencas / (freq.presencas + freq.faltas)) * 100 
+          : null;
+      }
+      
+      await updateDoc(doc(db, "boletins", boletimId), updateData);
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/boletins"] });
+      setEditingBoletimId(null);
+      
+      toast({
+        title: "Boletim atualizado!",
+        description: "As notas e frequência foram salvas com sucesso.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao salvar",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const refreshAllNotasFromProfessores = async () => {
+    if (!selectedTurmaId || !userData) return;
+    
+    const boletinsDaTurma = boletins?.filter(
+      b => b.turmaId === selectedTurmaId && b.anoLetivo === anoLetivo
+    ) || [];
+    
+    if (boletinsDaTurma.length === 0) {
+      toast({
+        title: "Nenhum boletim para atualizar",
+        description: "Crie os boletins primeiro.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setBulkCreating(true);
+    setBulkProgress({ current: 0, total: boletinsDaTurma.length });
+    
+    let updated = 0;
+    
+    for (const boletim of boletinsDaTurma) {
+      try {
+        const notasAluno = getNotasFromProfessores(boletim.alunoId, selectedTurmaId);
+        const mediaGeral = calcularMediaGeral(notasAluno);
+        const freq = getFrequenciaAluno(boletim.alunoId);
+        const percentualPresenca = (freq.presencas + freq.faltas) > 0 
+          ? (freq.presencas / (freq.presencas + freq.faltas)) * 100 
+          : null;
+        
+        await updateDoc(doc(db, "boletins", boletim.id), {
+          materias: notasAluno,
+          mediaGeral,
+          presencas: freq.presencas,
+          faltas: freq.faltas,
+          percentualPresenca,
+          dataAtualizacao: getNowBrasiliaISO(),
+        });
+        
+        updated++;
+      } catch (error) {
+        console.error(`Erro ao atualizar boletim:`, error);
+      }
+      setBulkProgress({ current: updated, total: boletinsDaTurma.length });
+    }
+    
+    setBulkCreating(false);
+    queryClient.invalidateQueries({ queryKey: ["/api/boletins"] });
+    
+    toast({
+      title: "Notas atualizadas!",
+      description: `${updated} boletins foram atualizados com notas dos professores.`,
     });
   };
 
@@ -1282,25 +1496,32 @@ export function BoletimTab() {
           setBulkDialogOpen(open);
           if (!open) {
             setSelectedAlunoId("");
+            setEditingBoletimId(null);
+            setExpandedAlunos(new Set());
+            setSelectedForPrint(new Set());
           }
         }
       }}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-6xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
               Boletins em Lote - Todos os Alunos
             </DialogTitle>
             <DialogDescription>
-              Gerencie boletins para todos os alunos da turma selecionada
+              Gerencie, edite e imprima boletins para todos os alunos da turma
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4 overflow-y-auto max-h-[65vh]">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Turma</Label>
-                <Select value={selectedTurmaId} onValueChange={setSelectedTurmaId}>
+                <Select value={selectedTurmaId} onValueChange={(v) => {
+                  setSelectedTurmaId(v);
+                  setExpandedAlunos(new Set());
+                  setSelectedForPrint(new Set());
+                }}>
                   <SelectTrigger data-testid="select-turma-bulk">
                     <SelectValue placeholder="Selecione a turma" />
                   </SelectTrigger>
@@ -1321,22 +1542,44 @@ export function BoletimTab() {
                   data-testid="input-ano-letivo-bulk"
                 />
               </div>
+
+              <div className="space-y-2">
+                <Label>Tipo de Período</Label>
+                <Select value={periodoTipo} onValueChange={(v: "bimestre" | "trimestre") => setPeriodoTipo(v)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="bimestre">Bimestral</SelectItem>
+                    <SelectItem value="trimestre">Trimestral</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {selectedTurmaId && (
               <>
                 <div className="p-4 bg-muted rounded-lg space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-semibold">Resumo da Turma</h4>
-                    <Badge variant="secondary">{turmas?.find(t => t.id === selectedTurmaId)?.nome}</Badge>
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <h4 className="font-semibold">Resumo da Turma: {turmas?.find(t => t.id === selectedTurmaId)?.nome}</h4>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={refreshAllNotasFromProfessores}
+                      disabled={bulkCreating}
+                      data-testid="button-refresh-notas"
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Atualizar Notas dos Professores
+                    </Button>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                     <div>
                       <p className="text-muted-foreground">Total de Alunos</p>
                       <p className="text-xl font-bold">{alunosDaTurma.length}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Boletins Existentes</p>
+                      <p className="text-muted-foreground">Boletins Criados</p>
                       <p className="text-xl font-bold text-green-600">
                         {boletins?.filter(b => b.turmaId === selectedTurmaId && b.anoLetivo === anoLetivo).length || 0}
                       </p>
@@ -1353,6 +1596,15 @@ export function BoletimTab() {
                         {boletins?.filter(b => b.turmaId === selectedTurmaId && b.anoLetivo === anoLetivo && b.liberado).length || 0}
                       </p>
                     </div>
+                    <div>
+                      <p className="text-muted-foreground">Completos</p>
+                      <p className="text-xl font-bold text-purple-600">
+                        {boletins?.filter(b => {
+                          if (b.turmaId !== selectedTurmaId || b.anoLetivo !== anoLetivo) return false;
+                          return checkBoletimComplete(b).complete;
+                        }).length || 0}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
@@ -1367,46 +1619,242 @@ export function BoletimTab() {
                 )}
 
                 <div className="border rounded-lg">
-                  <div className="p-3 bg-muted border-b">
-                    <h4 className="font-semibold">Lista de Alunos</h4>
+                  <div className="p-3 bg-muted border-b flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-3">
+                      <Checkbox 
+                        checked={selectedForPrint.size === alunosDaTurma.length && alunosDaTurma.length > 0}
+                        onCheckedChange={toggleSelectAll}
+                        data-testid="checkbox-select-all"
+                      />
+                      <h4 className="font-semibold">Lista de Alunos</h4>
+                      {selectedForPrint.size > 0 && (
+                        <Badge variant="secondary">{selectedForPrint.size} selecionados</Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handlePrintSelected}
+                        disabled={selectedForPrint.size === 0 || bulkCreating}
+                        data-testid="button-print-selected"
+                      >
+                        <Printer className="h-4 w-4 mr-1" />
+                        Imprimir Selecionados ({selectedForPrint.size})
+                      </Button>
+                    </div>
                   </div>
-                  <ScrollArea className="h-64">
-                    <div className="p-2 space-y-1">
+                  <ScrollArea className="max-h-[40vh]">
+                    <div className="divide-y">
                       {alunosDaTurma.map(aluno => {
-                        const temBoletim = boletins?.some(b => b.alunoId === aluno.uid && b.turmaId === selectedTurmaId && b.anoLetivo === anoLetivo);
                         const boletimAluno = boletins?.find(b => b.alunoId === aluno.uid && b.turmaId === selectedTurmaId && b.anoLetivo === anoLetivo);
+                        const temBoletim = !!boletimAluno;
                         const notasCount = countNotasDisponiveis(aluno.uid);
+                        const isExpanded = expandedAlunos.has(aluno.uid);
+                        const isEditing = editingBoletimId === boletimAluno?.id;
+                        const { complete, missingItems } = checkBoletimComplete(boletimAluno);
+                        const freq = getFrequenciaAluno(aluno.uid);
                         
                         return (
-                          <div 
-                            key={aluno.uid} 
-                            className="flex items-center justify-between p-2 rounded-md hover-elevate"
-                          >
-                            <div className="flex items-center gap-2">
-                              <GraduationCap className="h-4 w-4 text-muted-foreground" />
-                              <span>{aluno.nome}</span>
-                              {notasCount > 0 && (
-                                <Badge variant="outline" className="text-xs">
-                                  {notasCount} notas
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              {temBoletim ? (
-                                <>
-                                  <Badge variant={boletimAluno?.liberado ? "default" : "secondary"}>
-                                    {boletimAluno?.liberado ? "Liberado" : "Não liberado"}
-                                  </Badge>
+                          <div key={aluno.uid} className="bg-background">
+                            <div className="flex items-center gap-3 p-3 hover-elevate">
+                              <Checkbox 
+                                checked={selectedForPrint.has(aluno.uid)}
+                                onCheckedChange={() => toggleSelectForPrint(aluno.uid)}
+                                disabled={!temBoletim}
+                                data-testid={`checkbox-aluno-${aluno.uid}`}
+                              />
+                              
+                              <button 
+                                onClick={() => temBoletim && toggleExpandAluno(aluno.uid)}
+                                className="p-1 rounded hover-elevate"
+                                disabled={!temBoletim}
+                              >
+                                {isExpanded ? (
+                                  <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                  <ChevronRight className="h-4 w-4" />
+                                )}
+                              </button>
+                              
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <GraduationCap className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                  <span className="font-medium truncate">{aluno.nome}</span>
+                                  {aluno.matricula && (
+                                    <span className="text-xs text-muted-foreground">({aluno.matricula})</span>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {notasCount > 0 && (
                                   <Badge variant="outline" className="text-xs">
-                                    Média: {boletimAluno?.mediaGeral?.toFixed(1) || "-"}
+                                    {notasCount} notas prof.
                                   </Badge>
-                                </>
-                              ) : (
-                                <Badge variant="secondary" className="text-amber-600">
-                                  Sem boletim
-                                </Badge>
-                              )}
+                                )}
+                                
+                                {temBoletim ? (
+                                  <>
+                                    {complete ? (
+                                      <Badge variant="default" className="bg-green-600">
+                                        <CheckCircle className="h-3 w-3 mr-1" />
+                                        Completo
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="secondary" className="text-amber-600">
+                                        <AlertCircle className="h-3 w-3 mr-1" />
+                                        Incompleto
+                                      </Badge>
+                                    )}
+                                    <Badge variant={boletimAluno?.liberado ? "default" : "secondary"}>
+                                      {boletimAluno?.liberado ? "Liberado" : "Não liberado"}
+                                    </Badge>
+                                    <Badge variant="outline" className="text-xs">
+                                      Média: {boletimAluno?.mediaGeral?.toFixed(1) || "-"}
+                                    </Badge>
+                                    <Badge variant="outline" className="text-xs">
+                                      Freq: {boletimAluno?.percentualPresenca?.toFixed(0) || "-"}%
+                                    </Badge>
+                                  </>
+                                ) : (
+                                  <Badge variant="destructive">
+                                    Sem boletim
+                                  </Badge>
+                                )}
+                              </div>
+                              
+                              <div className="flex items-center gap-1">
+                                {temBoletim && (
+                                  <>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handlePrintBoletim(boletimAluno!)}
+                                      data-testid={`button-print-${aluno.uid}`}
+                                    >
+                                      <Printer className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => toggleReleaseMutation.mutate({ 
+                                        boletimId: boletimAluno!.id, 
+                                        liberar: !boletimAluno!.liberado 
+                                      })}
+                                      data-testid={`button-toggle-release-${aluno.uid}`}
+                                    >
+                                      {boletimAluno?.liberado ? (
+                                        <Lock className="h-4 w-4" />
+                                      ) : (
+                                        <Unlock className="h-4 w-4" />
+                                      )}
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
                             </div>
+                            
+                            {isExpanded && temBoletim && (
+                              <div className="px-12 pb-4 space-y-4 bg-muted/30">
+                                <div className="flex items-center justify-between flex-wrap gap-2">
+                                  <div className="flex items-center gap-4 text-sm">
+                                    <span><strong>Presenças:</strong> {boletimAluno?.presencas || freq.presencas}</span>
+                                    <span><strong>Faltas:</strong> {boletimAluno?.faltas || freq.faltas}</span>
+                                    <span><strong>Frequência:</strong> {boletimAluno?.percentualPresenca?.toFixed(1) || "-"}%</span>
+                                    <span><strong>Situação:</strong> {boletimAluno?.situacao}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    {isEditing ? (
+                                      <>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={cancelEditingBoletim}
+                                        >
+                                          <X className="h-4 w-4 mr-1" />
+                                          Cancelar
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          onClick={() => saveEditingBoletim(boletimAluno!.id, aluno.uid)}
+                                        >
+                                          <Save className="h-4 w-4 mr-1" />
+                                          Salvar
+                                        </Button>
+                                      </>
+                                    ) : (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => startEditingBoletim(boletimAluno!.id, boletimAluno!.materias)}
+                                      >
+                                        <Edit className="h-4 w-4 mr-1" />
+                                        Editar Notas
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                {!complete && missingItems.length > 0 && (
+                                  <div className="p-2 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800">
+                                    <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Itens pendentes:</p>
+                                    <ul className="text-xs text-amber-700 dark:text-amber-300 list-disc list-inside">
+                                      {missingItems.slice(0, 5).map((item, i) => (
+                                        <li key={i}>{item}</li>
+                                      ))}
+                                      {missingItems.length > 5 && <li>...e mais {missingItems.length - 5}</li>}
+                                    </ul>
+                                  </div>
+                                )}
+                                
+                                <div className="border rounded-lg overflow-hidden bg-background">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead className="w-32">Matéria</TableHead>
+                                        {(boletimAluno?.periodos || periodos).map(p => (
+                                          <TableHead key={p} className="text-center w-20 text-xs">{p}</TableHead>
+                                        ))}
+                                        <TableHead className="text-center w-20">Média</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {(isEditing ? bulkEditNotas[boletimAluno!.id] || boletimAluno?.materias : boletimAluno?.materias)?.map((m, idx) => (
+                                        <TableRow key={m.materia}>
+                                          <TableCell className="font-medium text-xs">{m.materia}</TableCell>
+                                          {(boletimAluno?.periodos || periodos).map(p => (
+                                            <TableCell key={p} className="p-1">
+                                              {isEditing ? (
+                                                <Input
+                                                  type="number"
+                                                  min="0"
+                                                  max="10"
+                                                  step="0.1"
+                                                  className="w-full text-center h-7 text-xs"
+                                                  value={bulkEditNotas[boletimAluno!.id]?.[idx]?.notas[p] ?? ""}
+                                                  onChange={(e) => handleBulkNotaChange(boletimAluno!.id, idx, p, e.target.value)}
+                                                />
+                                              ) : (
+                                                <div className="text-center text-xs">
+                                                  {m.notas[p]?.toFixed(1) || "-"}
+                                                </div>
+                                              )}
+                                            </TableCell>
+                                          ))}
+                                          <TableCell className="text-center font-semibold text-xs">
+                                            {isEditing 
+                                              ? bulkEditNotas[boletimAluno!.id]?.[idx]?.mediaFinal?.toFixed(1) || "-"
+                                              : m.mediaFinal?.toFixed(1) || "-"
+                                            }
+                                          </TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -1417,16 +1865,17 @@ export function BoletimTab() {
             )}
           </div>
 
-          <DialogFooter className="flex flex-wrap gap-2">
+          <DialogFooter className="flex flex-wrap gap-2 border-t pt-4">
             <Button 
               variant="outline" 
               onClick={() => {
                 setBulkDialogOpen(false);
                 setSelectedAlunoId("");
+                setEditingBoletimId(null);
               }}
               disabled={bulkCreating}
             >
-              Cancelar
+              Fechar
             </Button>
             
             <Button
