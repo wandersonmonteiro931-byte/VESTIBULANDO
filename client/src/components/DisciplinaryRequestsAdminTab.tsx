@@ -32,7 +32,9 @@ export function DisciplinaryRequestsAdminTab() {
   const [selectedRequest, setSelectedRequest] = useState<DisciplinaryRequest | null>(null);
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [comentarioDiretor, setComentarioDiretor] = useState("");
+  const [motivoRemocao, setMotivoRemocao] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
   const { data: requests, isLoading: loadingRequests } = useRealtimeQuery<DisciplinaryRequest>({
@@ -222,6 +224,44 @@ export function DisciplinaryRequestsAdminTab() {
     }
   };
 
+  const handleRemove = async () => {
+    if (!selectedRequest || !userData || !firebaseAuth.currentUser) return;
+    
+    setIsProcessing(true);
+    try {
+      const directorUid = userData.uid || firebaseAuth.currentUser.uid;
+      const directorNome = userData.nome;
+      
+      await updateDoc(doc(db, "disciplinaryRequests", selectedRequest.id), {
+        status: "removido",
+        dataRemocao: getNowBrasiliaISO(),
+        motivoRemocao: motivoRemocao || null,
+        analisadoPor: directorUid,
+        analisadoPorNome: directorNome,
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/disciplinary-requests"] });
+      
+      toast({
+        title: "Ação removida",
+        description: "A ação disciplinar foi removida e o professor será notificado.",
+      });
+      
+      setRemoveDialogOpen(false);
+      setSelectedRequest(null);
+      setMotivoRemocao("");
+    } catch (error: any) {
+      console.error("Erro ao remover ação:", error);
+      toast({
+        title: "Erro",
+        description: error.message || "Não foi possível remover a ação.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "pendente":
@@ -230,6 +270,8 @@ export function DisciplinaryRequestsAdminTab() {
         return <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30"><CheckCircle className="h-3 w-3 mr-1" />Aprovado</Badge>;
       case "rejeitado":
         return <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/30"><XCircle className="h-3 w-3 mr-1" />Rejeitado</Badge>;
+      case "removido":
+        return <Badge variant="outline" className="bg-gray-500/10 text-gray-600 border-gray-500/30"><XCircle className="h-3 w-3 mr-1" />Removido</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -310,6 +352,7 @@ export function DisciplinaryRequestsAdminTab() {
                       </CardTitle>
                       <CardDescription>
                         Matrícula: {request.alunoMatricula} | Turma: {request.alunoTurmaNome || request.alunoTurma}
+                        {request.materia && <> | Matéria: {request.materia}</>}
                       </CardDescription>
                     </div>
                     {getTipoBadge(request.tipo)}
@@ -381,6 +424,7 @@ export function DisciplinaryRequestsAdminTab() {
                       <CardTitle className="text-lg">{request.alunoNome}</CardTitle>
                       <CardDescription>
                         Matrícula: {request.alunoMatricula} | Turma: {request.alunoTurmaNome || request.alunoTurma}
+                        {request.materia && <> | Matéria: {request.materia}</>}
                       </CardDescription>
                     </div>
                     <div className="flex flex-col items-end gap-2">
@@ -403,10 +447,16 @@ export function DisciplinaryRequestsAdminTab() {
                   {request.dataAnalise && (
                     <div className="pt-3 border-t">
                       <div className="text-xs text-muted-foreground">
-                        {request.status === "aprovado" ? "Aprovado" : "Rejeitado"} por <strong>{request.analisadoPorNome}</strong> em{" "}
-                        {format(parseISO(request.dataAnalise), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                        {request.status === "aprovado" ? "Aprovado" : request.status === "removido" ? "Removido" : "Rejeitado"} por <strong>{request.analisadoPorNome}</strong> em{" "}
+                        {format(parseISO(request.status === "removido" && request.dataRemocao ? request.dataRemocao : request.dataAnalise), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                       </div>
-                      {request.comentarioDiretor && (
+                      {request.status === "removido" && request.motivoRemocao && (
+                        <div className="mt-2 p-2 bg-gray-500/10 border border-gray-500/30 rounded">
+                          <Label className="text-xs text-muted-foreground">Motivo da remoção</Label>
+                          <p className="text-sm mt-1">{request.motivoRemocao}</p>
+                        </div>
+                      )}
+                      {request.comentarioDiretor && request.status !== "removido" && (
                         <div className="mt-2 p-2 bg-muted/50 rounded">
                           <Label className="text-xs text-muted-foreground">Comentário</Label>
                           <p className="text-sm mt-1">{request.comentarioDiretor}</p>
@@ -415,6 +465,23 @@ export function DisciplinaryRequestsAdminTab() {
                     </div>
                   )}
                 </CardContent>
+                {request.status === "aprovado" && (
+                  <CardFooter>
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedRequest(request);
+                        setMotivoRemocao("");
+                        setRemoveDialogOpen(true);
+                      }}
+                      data-testid={`button-remover-${request.id}`}
+                    >
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Remover Ação
+                    </Button>
+                  </CardFooter>
+                )}
               </Card>
             ))
           )}
@@ -509,6 +576,50 @@ export function DisciplinaryRequestsAdminTab() {
             </Button>
             <Button variant="destructive" onClick={handleReject} disabled={isProcessing} data-testid="button-confirmar-rejeitar">
               {isProcessing ? "Processando..." : "Confirmar Rejeição"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <XCircle className="h-5 w-5 text-gray-500" />
+              Remover Ação Disciplinar
+            </DialogTitle>
+            <DialogDescription>
+              Você está removendo a {selectedRequest?.tipo === "advertencia" ? "advertência" : "suspensão"} de{" "}
+              <strong>{selectedRequest?.alunoNome}</strong>. O professor que solicitou será notificado da remoção.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="p-3 bg-muted/50 rounded space-y-2">
+              <div className="text-sm">
+                <strong>Motivo original da ação:</strong>
+              </div>
+              <p className="text-sm whitespace-pre-wrap">{selectedRequest?.motivo}</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Motivo da remoção (opcional)</Label>
+              <Textarea
+                value={motivoRemocao}
+                onChange={(e) => setMotivoRemocao(e.target.value)}
+                placeholder="Explique por que a ação disciplinar está sendo removida..."
+                className="min-h-[80px]"
+                data-testid="textarea-motivo-remover"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRemoveDialogOpen(false)} disabled={isProcessing}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleRemove} disabled={isProcessing} data-testid="button-confirmar-remover">
+              {isProcessing ? "Processando..." : "Confirmar Remoção"}
             </Button>
           </DialogFooter>
         </DialogContent>

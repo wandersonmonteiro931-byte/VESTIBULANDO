@@ -30,6 +30,7 @@ export function DisciplinaryRequestsTab() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedTurma, setSelectedTurma] = useState<string>("");
   const [selectedAluno, setSelectedAluno] = useState<string>("");
+  const [selectedMateria, setSelectedMateria] = useState<string>("");
   const [tipoAcao, setTipoAcao] = useState<"advertencia" | "suspensao">("advertencia");
   const [motivo, setMotivo] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -99,7 +100,7 @@ export function DisciplinaryRequestsTab() {
   }, [requests]);
 
   const handleCreateRequest = async () => {
-    if (!userData || !selectedAlunoData || !selectedTurmaData || !motivo.trim()) {
+    if (!userData || !selectedAlunoData || !selectedTurmaData || !motivo.trim() || !selectedMateria) {
       toast({
         title: "Erro",
         description: "Preencha todos os campos obrigatórios.",
@@ -117,6 +118,7 @@ export function DisciplinaryRequestsTab() {
         alunoTurma: selectedTurma,
         alunoTurmaNome: selectedTurmaData.nome,
         tipo: tipoAcao,
+        materia: selectedMateria,
         motivo: motivo.trim(),
         solicitadoPor: userData.uid,
         solicitadoPorNome: userData.nome,
@@ -134,6 +136,7 @@ export function DisciplinaryRequestsTab() {
       setCreateDialogOpen(false);
       setSelectedTurma("");
       setSelectedAluno("");
+      setSelectedMateria("");
       setTipoAcao("advertencia");
       setMotivo("");
       
@@ -158,6 +161,8 @@ export function DisciplinaryRequestsTab() {
         return <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30"><CheckCircle className="h-3 w-3 mr-1" />Aprovado</Badge>;
       case "rejeitado":
         return <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/30"><XCircle className="h-3 w-3 mr-1" />Rejeitado</Badge>;
+      case "removido":
+        return <Badge variant="outline" className="bg-gray-500/10 text-gray-600 border-gray-500/30"><XCircle className="h-3 w-3 mr-1" />Removido</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -246,6 +251,7 @@ export function DisciplinaryRequestsTab() {
                     <CardTitle className="text-lg">{request.alunoNome}</CardTitle>
                     <CardDescription>
                       Matrícula: {request.alunoMatricula} | Turma: {request.alunoTurmaNome || request.alunoTurma}
+                      {request.materia && <> | Matéria: {request.materia}</>}
                     </CardDescription>
                   </div>
                   <div className="flex flex-col items-end gap-2">
@@ -267,10 +273,16 @@ export function DisciplinaryRequestsTab() {
                 {request.status !== "pendente" && request.dataAnalise && (
                   <div className="pt-3 border-t">
                     <div className="text-xs text-muted-foreground mb-1">
-                      Analisado por <strong>{request.analisadoPorNome}</strong> em{" "}
-                      {format(parseISO(request.dataAnalise), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                      {request.status === "removido" ? "Removido" : "Analisado"} por <strong>{request.analisadoPorNome}</strong> em{" "}
+                      {format(parseISO(request.status === "removido" && request.dataRemocao ? request.dataRemocao : request.dataAnalise), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                     </div>
-                    {request.comentarioDiretor && (
+                    {request.status === "removido" && request.motivoRemocao && (
+                      <div className="mt-2 p-2 bg-gray-500/10 border border-gray-500/30 rounded">
+                        <Label className="text-xs text-muted-foreground">Motivo da remoção</Label>
+                        <p className="text-sm mt-1">{request.motivoRemocao}</p>
+                      </div>
+                    )}
+                    {request.comentarioDiretor && request.status !== "removido" && (
                       <div className="mt-2 p-2 bg-muted/50 rounded">
                         <Label className="text-xs text-muted-foreground">Comentário da diretoria</Label>
                         <p className="text-sm mt-1">{request.comentarioDiretor}</p>
@@ -333,6 +345,41 @@ export function DisciplinaryRequestsTab() {
             </div>
 
             <div className="space-y-2">
+              <Label>Matéria *</Label>
+              <Select value={selectedMateria} onValueChange={setSelectedMateria}>
+                <SelectTrigger data-testid="select-materia">
+                  <SelectValue placeholder="Selecione a matéria" />
+                </SelectTrigger>
+                <SelectContent>
+                  {userData?.materias && userData.materias.length > 0 ? (
+                    userData.materias.map((materia) => (
+                      <SelectItem key={materia} value={materia}>
+                        {materia}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <>
+                      <SelectItem value="Matemática">Matemática</SelectItem>
+                      <SelectItem value="Português">Português</SelectItem>
+                      <SelectItem value="História">História</SelectItem>
+                      <SelectItem value="Geografia">Geografia</SelectItem>
+                      <SelectItem value="Física">Física</SelectItem>
+                      <SelectItem value="Química">Química</SelectItem>
+                      <SelectItem value="Biologia">Biologia</SelectItem>
+                      <SelectItem value="Inglês">Inglês</SelectItem>
+                      <SelectItem value="Educação Física">Educação Física</SelectItem>
+                      <SelectItem value="Artes">Artes</SelectItem>
+                      <SelectItem value="Filosofia">Filosofia</SelectItem>
+                      <SelectItem value="Sociologia">Sociologia</SelectItem>
+                      <SelectItem value="Redação">Redação</SelectItem>
+                      <SelectItem value="Outro">Outro</SelectItem>
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <Label>Tipo de Ação *</Label>
               <Select value={tipoAcao} onValueChange={(value: "advertencia" | "suspensao") => setTipoAcao(value)}>
                 <SelectTrigger data-testid="select-tipo">
@@ -376,7 +423,7 @@ export function DisciplinaryRequestsTab() {
             </Button>
             <Button 
               onClick={handleCreateRequest} 
-              disabled={isSubmitting || !selectedAluno || !motivo.trim()}
+              disabled={isSubmitting || !selectedAluno || !selectedMateria || !motivo.trim()}
               data-testid="button-enviar-solicitacao"
             >
               {isSubmitting ? "Enviando..." : "Enviar Solicitação"}

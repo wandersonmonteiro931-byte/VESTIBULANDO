@@ -222,15 +222,18 @@ export const disciplinaryRequestSchema = z.object({
   alunoTurma: z.string(),
   alunoTurmaNome: z.string().optional(),
   tipo: z.enum(["advertencia", "suspensao"]),
+  materia: z.string().optional(), // Matéria em que ocorreu a situação
   motivo: z.string(), // Motivo/justificativa do professor
   solicitadoPor: z.string(), // ID do professor que solicitou
   solicitadoPorNome: z.string(), // Nome do professor
   dataSolicitacao: z.string(), // ISO datetime
-  status: z.enum(["pendente", "aprovado", "rejeitado"]).default("pendente"),
+  status: z.enum(["pendente", "aprovado", "rejeitado", "removido"]).default("pendente"),
   analisadoPor: z.string().optional(), // ID do diretor que analisou
   analisadoPorNome: z.string().optional(), // Nome do diretor
   dataAnalise: z.string().optional(), // Data da análise
   comentarioDiretor: z.string().optional(), // Comentário do diretor (opcional)
+  dataRemocao: z.string().optional(), // Data em que a ação foi removida
+  motivoRemocao: z.string().optional(), // Motivo da remoção
 });
 
 export const insertDisciplinaryRequestSchema = disciplinaryRequestSchema.omit({ id: true });
