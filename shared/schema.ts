@@ -213,6 +213,31 @@ export const insertDisciplinaryActionSchema = disciplinaryActionSchema.omit({ id
 export type DisciplinaryAction = z.infer<typeof disciplinaryActionSchema>;
 export type InsertDisciplinaryAction = z.infer<typeof insertDisciplinaryActionSchema>;
 
+// Disciplinary Action Request schema - solicitações de advertências e suspensões por professores
+export const disciplinaryRequestSchema = z.object({
+  id: z.string(),
+  alunoId: z.string(),
+  alunoNome: z.string(),
+  alunoMatricula: z.string(),
+  alunoTurma: z.string(),
+  alunoTurmaNome: z.string().optional(),
+  tipo: z.enum(["advertencia", "suspensao"]),
+  motivo: z.string(), // Motivo/justificativa do professor
+  solicitadoPor: z.string(), // ID do professor que solicitou
+  solicitadoPorNome: z.string(), // Nome do professor
+  dataSolicitacao: z.string(), // ISO datetime
+  status: z.enum(["pendente", "aprovado", "rejeitado"]).default("pendente"),
+  analisadoPor: z.string().optional(), // ID do diretor que analisou
+  analisadoPorNome: z.string().optional(), // Nome do diretor
+  dataAnalise: z.string().optional(), // Data da análise
+  comentarioDiretor: z.string().optional(), // Comentário do diretor (opcional)
+});
+
+export const insertDisciplinaryRequestSchema = disciplinaryRequestSchema.omit({ id: true });
+
+export type DisciplinaryRequest = z.infer<typeof disciplinaryRequestSchema>;
+export type InsertDisciplinaryRequest = z.infer<typeof insertDisciplinaryRequestSchema>;
+
 // Maintenance schema - manutenção do sistema
 export const maintenanceSchema = z.object({
   id: z.string(),
