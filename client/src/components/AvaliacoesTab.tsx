@@ -235,6 +235,20 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
     return [...MATERIAS];
   }, [userData, userType]);
 
+  // Verificar se o professor pode modificar uma avaliação (baseado na matéria)
+  const canModifyAvaliacao = (avaliacao: Avaliacao): boolean => {
+    if (!userData) return false;
+    // Diretor pode modificar qualquer avaliação
+    if (userType === "diretor") return true;
+    // Professor: verificar se a matéria da avaliação está nas suas matérias cadastradas
+    // Se professor não tem matérias cadastradas, permite modificar qualquer uma (retrocompatibilidade)
+    if (!userData.materias || userData.materias.length === 0) return true;
+    // Se a avaliação não tem matéria definida (registro antigo), permite modificar (retrocompatibilidade)
+    if (!avaliacao.materia) return true;
+    // Verificar se a matéria da avaliação está nas matérias do professor
+    return userData.materias.includes(avaliacao.materia);
+  };
+
   const createMutation = useMutation({
     mutationFn: async (data: z.infer<typeof avaliacaoFormSchema>) => {
       if (!userData) throw new Error("Usuário não autenticado");
@@ -1656,6 +1670,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
             getTipoIcon={getTipoIcon}
             getTipoLabel={getTipoLabel}
             getEntregas={getEntregasForAvaliacao}
+            canModify={canModifyAvaliacao}
           />
         </TabsContent>
 
@@ -1672,6 +1687,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
             getTipoIcon={getTipoIcon}
             getTipoLabel={getTipoLabel}
             getEntregas={getEntregasForAvaliacao}
+            canModify={canModifyAvaliacao}
           />
         </TabsContent>
 
@@ -1688,6 +1704,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
             getTipoIcon={getTipoIcon}
             getTipoLabel={getTipoLabel}
             getEntregas={getEntregasForAvaliacao}
+            canModify={canModifyAvaliacao}
           />
         </TabsContent>
 
@@ -1704,6 +1721,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
             getTipoIcon={getTipoIcon}
             getTipoLabel={getTipoLabel}
             getEntregas={getEntregasForAvaliacao}
+            canModify={canModifyAvaliacao}
           />
         </TabsContent>
 
@@ -3579,6 +3597,7 @@ interface AvaliacaoListProps {
   getTipoIcon: (tipo: string) => JSX.Element;
   getTipoLabel: (tipo: string) => string;
   getEntregas: (id: string) => AvaliacaoEntrega[];
+  canModify: (avaliacao: Avaliacao) => boolean;
 }
 
 function AvaliacaoList({ 
@@ -3592,7 +3611,8 @@ function AvaliacaoList({
   getStatus, 
   getTipoIcon, 
   getTipoLabel,
-  getEntregas 
+  getEntregas,
+  canModify
 }: AvaliacaoListProps) {
   if (loading) {
     return (
@@ -3680,11 +3700,13 @@ function AvaliacaoList({
                 <Eye className="h-4 w-4 mr-1" />
                 Ver
               </Button>
-              <Button variant="outline" size="sm" onClick={() => onEdit(avaliacao)} data-testid="button-edit-avaliacao">
-                <Edit className="h-4 w-4 mr-1" />
-                Editar
-              </Button>
-              {avaliacao.modeloTipo === "questoes" && (
+              {canModify(avaliacao) && (
+                <Button variant="outline" size="sm" onClick={() => onEdit(avaliacao)} data-testid="button-edit-avaliacao">
+                  <Edit className="h-4 w-4 mr-1" />
+                  Editar
+                </Button>
+              )}
+              {canModify(avaliacao) && avaliacao.modeloTipo === "questoes" && (
                 <Button variant="outline" size="sm" onClick={() => onEditQuestoes(avaliacao)} data-testid="button-edit-questoes">
                   <ListOrdered className="h-4 w-4 mr-1" />
                   Editar questões
@@ -3694,16 +3716,18 @@ function AvaliacaoList({
                 <Printer className="h-4 w-4 mr-1" />
                 PDF
               </Button>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-destructive hover:text-destructive"
-                onClick={() => onCancel(avaliacao)}
-                data-testid={`button-cancel-avaliacao-${avaliacao.id}`}
-              >
-                <X className="h-4 w-4 mr-1" />
-                Cancelar
-              </Button>
+              {canModify(avaliacao) && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => onCancel(avaliacao)}
+                  data-testid={`button-cancel-avaliacao-${avaliacao.id}`}
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Cancelar
+                </Button>
+              )}
             </CardFooter>
           </Card>
         );

@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -38,6 +39,7 @@ import { getNowBrasiliaISO } from "@/lib/brasiliaTime";
 const tarefaFormSchema = z.object({
   titulo: z.string().min(1, "Título é obrigatório"),
   descricao: z.string().min(1, "Descrição é obrigatória"),
+  materia: z.string().min(1, "Matéria é obrigatória"),
   turma: z.string().min(1, "Turma é obrigatória"),
   prazo: z.string().min(1, "Prazo é obrigatório"),
 });
@@ -73,6 +75,7 @@ export default function TeacherDashboard() {
     defaultValues: {
       titulo: "",
       descricao: "",
+      materia: "",
       turma: "",
       prazo: "",
     },
@@ -415,6 +418,37 @@ export default function TeacherDashboard() {
                         data-testid="input-descricao"
                       />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={tarefaForm.control}
+                name="materia"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Matéria *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-materia">
+                          <SelectValue placeholder="Selecione a matéria" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {userData?.materias && userData.materias.length > 0 ? (
+                          userData.materias.map((materia: string) => (
+                            <SelectItem key={materia} value={materia}>
+                              {materia}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="_no_materias" disabled>
+                            Nenhuma matéria atribuída
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

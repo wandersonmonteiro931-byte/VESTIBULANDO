@@ -190,6 +190,7 @@ export default function AdminDashboard() {
   const [selectedProfessorDetails, setSelectedProfessorDetails] = useState<User | null>(null);
   const [isEditingProfessor, setIsEditingProfessor] = useState(false);
   const [editProfessorTurmas, setEditProfessorTurmas] = useState<string[]>([]);
+  const [editProfessorMaterias, setEditProfessorMaterias] = useState<string[]>([]);
   const [isEditingStudent, setIsEditingStudent] = useState(false);
   const [editStudentDisponibilidade, setEditStudentDisponibilidade] = useState<string[]>([]);
   const [editStudentHorarioEspecialObs, setEditStudentHorarioEspecialObs] = useState<string>("");
@@ -6094,6 +6095,19 @@ export default function AdminDashboard() {
               </div>
 
               <div>
+                <Label className="text-muted-foreground">Matérias Atribuídas</Label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {selectedProfessorDetails.materias && selectedProfessorDetails.materias.length > 0 ? (
+                    selectedProfessorDetails.materias.map((materia: string, index: number) => (
+                      <Badge key={index} variant="secondary">{materia}</Badge>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Nenhuma matéria atribuída</p>
+                  )}
+                </div>
+              </div>
+
+              <div>
                 <Label className="text-muted-foreground">Disponibilidade</Label>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {selectedProfessorDetails.disponibilidade && selectedProfessorDetails.disponibilidade.length > 0 ? (
@@ -6112,7 +6126,7 @@ export default function AdminDashboard() {
             <div className="space-y-4">
               <div>
                 <Label>Turmas Atribuídas</Label>
-                <div className="grid grid-cols-2 gap-2 mt-2 p-4 border rounded-lg max-h-[300px] overflow-y-auto">
+                <div className="grid grid-cols-2 gap-2 mt-2 p-4 border rounded-lg max-h-[200px] overflow-y-auto">
                   {turmas?.map((turma) => (
                     <div key={turma.id} className="flex items-center space-x-2">
                       <Checkbox
@@ -6137,6 +6151,35 @@ export default function AdminDashboard() {
                   ))}
                 </div>
               </div>
+
+              <div>
+                <Label>Matérias Atribuídas</Label>
+                <p className="text-xs text-muted-foreground mb-2">O professor só poderá criar e editar conteúdo das matérias selecionadas</p>
+                <div className="grid grid-cols-2 gap-2 mt-2 p-4 border rounded-lg max-h-[200px] overflow-y-auto">
+                  {MATERIAS_DISPONIVEIS.map((materia) => (
+                    <div key={materia} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`prof-materia-${materia}`}
+                        checked={editProfessorMaterias.includes(materia)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setEditProfessorMaterias([...editProfessorMaterias, materia]);
+                          } else {
+                            setEditProfessorMaterias(editProfessorMaterias.filter(m => m !== materia));
+                          }
+                        }}
+                        data-testid={`checkbox-prof-materia-${materia}`}
+                      />
+                      <label 
+                        htmlFor={`prof-materia-${materia}`}
+                        className="text-sm cursor-pointer"
+                      >
+                        {materia}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
@@ -6151,7 +6194,11 @@ export default function AdminDashboard() {
                   Fechar
                 </Button>
                 <Button
-                  onClick={() => setIsEditingProfessor(true)}
+                  onClick={() => {
+                    setEditProfessorTurmas(selectedProfessorDetails?.turmas || []);
+                    setEditProfessorMaterias(selectedProfessorDetails?.materias || []);
+                    setIsEditingProfessor(true);
+                  }}
                   data-testid="button-edit-professor"
                 >
                   <Edit className="h-4 w-4 mr-2" />
@@ -6175,10 +6222,11 @@ export default function AdminDashboard() {
                       await updateDoc(userRef, {
                         turmas: editProfessorTurmas,
                         turma: editProfessorTurmas.join(","),
+                        materias: editProfessorMaterias,
                       });
                       toast({
                         title: "Professor atualizado!",
-                        description: "As turmas foram atualizadas com sucesso.",
+                        description: "As turmas e matérias foram atualizadas com sucesso.",
                       });
                       queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
                       queryClient.invalidateQueries({ queryKey: ["/api/usuarios/all"] });

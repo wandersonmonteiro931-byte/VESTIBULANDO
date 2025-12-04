@@ -114,6 +114,7 @@ export const tarefaSchema = z.object({
   id: z.string(),
   titulo: z.string().min(1, "Título é obrigatório"),
   descricao: z.string().min(1, "Descrição é obrigatória"),
+  materia: z.string().min(1, "Matéria é obrigatória"), // Matéria da tarefa (professor só pode criar em suas matérias)
   professorId: z.string(),
   professorNome: z.string(),
   turma: z.string().min(1, "Turma é obrigatória"),
