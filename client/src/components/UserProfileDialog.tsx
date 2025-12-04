@@ -153,6 +153,19 @@ export default function UserProfileDialog({ userId, onClose }: UserProfileDialog
                 <p className="text-sm mt-1">{turmaName}</p>
               </div>
             )}
+
+            {user.tipo === "professor" && user.materias && user.materias.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Matérias que leciona</p>
+                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                  {user.materias.map((materia) => (
+                    <Badge key={materia} variant="secondary" className="text-xs">
+                      {materia}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

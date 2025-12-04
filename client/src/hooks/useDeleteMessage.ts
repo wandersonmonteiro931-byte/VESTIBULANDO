@@ -25,15 +25,42 @@ export function useDeleteMessage() {
     try {
       const now = getNowBrasiliaISO();
       const messageRef = doc(db, "chatMessages", params.messageId);
+      const messageDoc = await getDoc(messageRef);
 
       if (params.deleteForEveryone) {
-        await updateDoc(messageRef, {
-          deletadaParaTodos: true,
-          dataDeletadaParaTodos: now,
-          deletadaParaTodosPorId: userData.uid,
-        });
+        if (messageDoc.exists()) {
+          const messageData = messageDoc.data();
+          const conversationId = messageData.conversationId;
+          
+          await updateDoc(messageRef, {
+            deletadaParaTodos: true,
+            dataDeletadaParaTodos: now,
+            deletadaParaTodosPorId: userData.uid,
+          });
+          
+          if (conversationId) {
+            const conversationRef = doc(db, "chatConversations", conversationId);
+            const conversationDoc = await getDoc(conversationRef);
+            
+            if (conversationDoc.exists()) {
+              const conversationData = conversationDoc.data();
+              const messageTimestamp = messageData.timestamp;
+              
+              if (conversationData.ultimaMensagemTimestamp === messageTimestamp) {
+                await updateDoc(conversationRef, {
+                  ultimaMensagem: "Mensagem apagada",
+                });
+              }
+            }
+          }
+        } else {
+          await updateDoc(messageRef, {
+            deletadaParaTodos: true,
+            dataDeletadaParaTodos: now,
+            deletadaParaTodosPorId: userData.uid,
+          });
+        }
       } else {
-        const messageDoc = await getDoc(messageRef);
         if (messageDoc.exists()) {
           const messageData = messageDoc.data();
           const isSender = messageData.remetenteId === userData.uid;

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { ArrowLeft, Send, Mic, Paperclip, Smile, Ban, Unlock } from "lucide-react";
+import { ArrowLeft, Send, Paperclip, Smile, Ban, Unlock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -538,26 +538,15 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
             data-testid="input-message"
           />
 
-          {message.trim() ? (
-            <Button
-              size="icon"
-              className="bg-[#00a884] hover:bg-[#008069] text-white shrink-0 h-9 w-9"
-              onClick={handleSendMessage}
-              disabled={isSending}
-              data-testid="button-send"
-            >
-              <Send className="h-4 w-4" />
-            </Button>
-          ) : (
-            <Button
-              size="icon"
-              variant="ghost"
-              className="text-muted-foreground hover:text-foreground shrink-0 h-9 w-9"
-              data-testid="button-voice"
-            >
-              <Mic className="h-5 w-5" />
-            </Button>
-          )}
+          <Button
+            size="icon"
+            className="bg-[#00a884] hover:bg-[#008069] text-white shrink-0 h-9 w-9"
+            onClick={handleSendMessage}
+            disabled={isSending || !message.trim()}
+            data-testid="button-send"
+          >
+            <Send className="h-4 w-4" />
+          </Button>
         </div>
       )}
 

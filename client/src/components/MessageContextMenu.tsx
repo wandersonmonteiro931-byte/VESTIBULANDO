@@ -26,13 +26,19 @@ export function MessageContextMenu({
         left: `${position.x}px`,
         top: `${position.y}px`,
       }}
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
       data-testid="message-context-menu"
     >
       <div className="flex flex-col">
         <Button
           variant="ghost"
           className="justify-start gap-2 rounded-none hover-elevate"
-          onClick={onDeleteForMe}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDeleteForMe();
+          }}
           data-testid="button-delete-for-me"
         >
           <Trash2 className="h-4 w-4" />
@@ -43,7 +49,10 @@ export function MessageContextMenu({
           <Button
             variant="ghost"
             className="justify-start gap-2 rounded-none text-destructive hover:text-destructive hover-elevate"
-            onClick={onDeleteForEveryone}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeleteForEveryone();
+            }}
             data-testid="button-delete-for-everyone"
           >
             <Trash2 className="h-4 w-4" />
