@@ -925,7 +925,7 @@ export function BoletimTab() {
     yPos = (doc as any).lastAutoTable.finalY + 10;
 
     doc.setFont("helvetica", "bold");
-    doc.text(`Média Geral: ${boletim.mediaGeral?.toFixed(2) || "-"}`, margin, yPos);
+    doc.text(`Média Final Anual: ${boletim.mediaGeral?.toFixed(1).replace(".", ",") || "-"}`, margin, yPos);
     doc.text(`Situação: ${boletim.situacao.toUpperCase()}`, pageWidth - margin - 50, yPos);
     yPos += 8;
 
