@@ -4,6 +4,7 @@ import { doc, getDoc, onSnapshot, collection, query, where } from "firebase/fire
 import { auth, db, firebaseError } from "@/lib/firebase";
 import type { User } from "@shared/schema";
 import { useUserPresence } from "@/hooks/useUserPresence";
+import { triggerGlobalSuspensionAlert } from "@/contexts/SuspensionAlertContext";
 
 interface AuthContextType {
   currentUser: FirebaseUser | null;
@@ -168,14 +169,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!snapshot.empty) {
           const activeSuspension = snapshot.docs[0].data();
           const dataTermino = new Date(activeSuspension.dataTerminoSuspensao);
+          const dataAplicacao = new Date(activeSuspension.dataAplicacao);
           const agora = new Date();
           
-          // Se a suspensão ainda está ativa, fazer logout
+          // Se a suspensão ainda está ativa, mostrar alerta e fazer logout
           if (agora < dataTermino) {
-            console.log("🚫 Suspensão ativa detectada - fazendo logout");
-            await firebaseSignOut(auth);
-            setUserData(null);
-            setCurrentUser(null);
+            console.log("🚫 Suspensão ativa detectada enquanto logado - exibindo alerta");
+            
+            // Calcular duração em dias
+            const duracaoDias = Math.ceil((dataTermino.getTime() - dataAplicacao.getTime()) / (1000 * 60 * 60 * 24));
+            
+            // Mostrar o alerta de suspensão antes de fazer logout
+            triggerGlobalSuspensionAlert({
+              alunoNome: activeSuspension.alunoNome || userData.nome || "",
+              comentario: activeSuspension.comentario,
+              dataAplicacao: activeSuspension.dataAplicacao,
+              dataTerminoSuspensao: activeSuspension.dataTerminoSuspensao,
+              duracaoDias,
+              aplicadoPorNome: activeSuspension.aplicadoPorNome || "Diretoria",
+            });
+            
+            // O logout será feito pelo componente SuspensionAlertOverlay quando o usuário clicar em "Entendi"
+            // Não fazemos logout aqui para que o usuário possa ver a mensagem antes
           }
         }
       },

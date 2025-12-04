@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from "react";
+import { createContext, useContext, useState, useCallback, useEffect } from "react";
 
 export interface SuspensionAlertData {
   alunoNome: string;
@@ -25,6 +25,21 @@ const getAlertContext = () => {
 
 const SuspensionAlertContext = getAlertContext();
 
+type SuspensionAlertCallback = (data: SuspensionAlertData) => void;
+let globalSuspensionAlertCallback: SuspensionAlertCallback | null = null;
+
+export function registerSuspensionAlertCallback(callback: SuspensionAlertCallback | null) {
+  globalSuspensionAlertCallback = callback;
+}
+
+export function triggerGlobalSuspensionAlert(data: SuspensionAlertData) {
+  if (globalSuspensionAlertCallback) {
+    globalSuspensionAlertCallback(data);
+  } else {
+    console.warn("⚠️ Suspension alert callback not registered");
+  }
+}
+
 export function SuspensionAlertProvider({ children }: { children: React.ReactNode }) {
   const [showAlert, setShowAlert] = useState(false);
   const [suspensionData, setSuspensionData] = useState<SuspensionAlertData | null>(null);
@@ -40,6 +55,13 @@ export function SuspensionAlertProvider({ children }: { children: React.ReactNod
     setShowAlert(false);
     setSuspensionData(null);
   }, []);
+
+  useEffect(() => {
+    registerSuspensionAlertCallback(triggerSuspensionAlert);
+    return () => {
+      registerSuspensionAlertCallback(null);
+    };
+  }, [triggerSuspensionAlert]);
 
   return (
     <SuspensionAlertContext.Provider value={{ showAlert, suspensionData, triggerSuspensionAlert, dismissAlert }}>
