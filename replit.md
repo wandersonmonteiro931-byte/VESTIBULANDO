@@ -139,6 +139,28 @@ The platform utilizes a consistent violet/purple color scheme across all dashboa
   - `WarningAlertOverlay.tsx` - Modal de exibição da advertência
   - Integrado no StudentDashboard para verificar advertências não visualizadas
 
+#### Sistema de Solicitação de Ações Disciplinares (NOVO - Dezembro 2025)
+- **Fluxo de Aprovação**: Professores solicitam advertências/suspensões, diretoria aprova ou rejeita
+- **Interface do Professor**:
+  - Aba "Ações Disciplinares" no painel do professor
+  - Selecionar turma, aluno e tipo de ação (advertência ou suspensão)
+  - Campo de motivo/justificativa obrigatório
+  - Histórico de solicitações com status (pendente, aprovado, rejeitado)
+- **Interface da Diretoria**:
+  - Aba "Pedidos Professores" no painel administrativo
+  - Lista de solicitações pendentes com informações do aluno e professor
+  - Botões para aprovar (aplica a ação) ou rejeitar
+  - Campo para comentário adicional da diretoria
+  - Histórico de solicitações processadas
+- **Segurança**:
+  - Professores só podem ver e criar solicitações próprias
+  - Diretoria tem acesso total para aprovar/rejeitar
+  - Quando aprovado, a ação disciplinar é aplicada automaticamente
+- **Componentes**:
+  - `DisciplinaryRequestsTab.tsx` - Interface do professor
+  - `DisciplinaryRequestsAdminTab.tsx` - Interface da diretoria
+- **Coleção Firestore**: `disciplinaryRequests` com campos: alunoId, alunoNome, alunoMatricula, alunoTurma, tipo, motivo, status, solicitadoPor, dataSolicitacao, analisadoPor, dataAnalise, comentarioDiretor
+
 #### Data Model
 The core data model includes `Usuarios` (users with `aluno`, `professor`, `admin` types, CPF, matricula, address via ViaCEP), `Tarefas` (assignments with title, description, professor, class, deadline, attachments), `Entregas` (submissions with student info, file, grade, feedback, status), and `Turmas` (classes with name, year, activity status, vacancies, enrollment period, WhatsApp link). Additional collections: `announcements` (system notices), `chatMessages` (chat messages), `chatConversations` (conversations), `userBlocks` (user blocks), `chatReports` (conversation reports).
 
@@ -182,7 +204,7 @@ As regras de segurança do Firestore estão no arquivo `firestore.rules`. Após 
 5. Cole no editor do Firebase Console
 6. Clique em **Publicar**
 
-**IMPORTANTE**: As regras do Firestore foram atualizadas em 04/12/2025 para incluir suporte às novas coleções do sistema de avaliações, boletins e bimestres:
+**IMPORTANTE**: As regras do Firestore foram atualizadas em 04/12/2025 para incluir suporte às novas coleções do sistema de avaliações, boletins, bimestres e solicitações disciplinares:
 - `avaliacoes` - provas, simulados, atividades, trabalhos
 - `avaliacaoQuestoes` - questões das avaliações
 - `avaliacaoTemplates` - modelos de prova
@@ -193,5 +215,6 @@ As regras de segurança do Firestore estão no arquivo `firestore.rules`. Após 
 - `frequencias` - registros de frequência/presença
 - `bimestresConfig` - configuração dos bimestres por ano letivo
 - `notasBimestre` - notas lançadas por bimestre/turma/matéria
+- `disciplinaryRequests` - solicitações de ações disciplinares dos professores
 
-É necessário implantar essas regras no Firebase Console para que o sistema de avaliações e bimestres funcione corretamente.
+É necessário implantar essas regras no Firebase Console para que o sistema de avaliações, bimestres e solicitações disciplinares funcione corretamente.
