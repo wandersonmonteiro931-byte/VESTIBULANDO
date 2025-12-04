@@ -20,11 +20,11 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   Plus, FileText, Calendar, Eye, Edit, Trash2, Printer, 
   GraduationCap, Users, CheckCircle, Lock, Unlock, Download,
-  ClipboardList, AlertCircle, Search
+  ClipboardList, AlertCircle, Search, RefreshCw
 } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
-import type { Boletim, BoletimNota, User, Turma, BoletimConfig, Frequencia } from "@shared/schema";
+import type { Boletim, BoletimNota, User, Turma, BoletimConfig, Frequencia, NotaBimestre } from "@shared/schema";
 import { MATERIAS_BOLETIM } from "@shared/schema";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -87,6 +87,13 @@ export function BoletimTab() {
     transform: (docs) => docs as Frequencia[],
   });
 
+  const { data: notasBimestre } = useRealtimeQuery<NotaBimestre>({
+    collectionName: "notasBimestre",
+    queryKey: ["/api/notas-bimestre", anoLetivo],
+    constraints: [where("ano", "==", anoLetivo)],
+    transform: (docs) => docs as NotaBimestre[],
+  });
+
   const periodos = periodoTipo === "bimestre" ? PERIODOS_BIMESTRE : PERIODOS_TRIMESTRE;
 
   const frequenciaDoAluno = useMemo(() => {
@@ -123,6 +130,101 @@ export function BoletimTab() {
       mediaEsperada: 7,
     }));
     setMateriasNotas(materias);
+  };
+
+  const bimestreToNomePeriodo = (numero: number): string => {
+    return `${numero}º Bimestre`;
+  };
+
+  const carregarNotasProfessores = (alunoId: string) => {
+    if (!notasBimestre || !alunoId || !selectedTurmaId) return;
+
+    const notasAluno = notasBimestre.filter(n => 
+      n.alunoId === alunoId && 
+      n.status === "entregue" &&
+      n.turmaId === selectedTurmaId &&
+      n.ano === anoLetivo
+    );
+
+    const materias: BoletimNota[] = MATERIAS_BOLETIM.map(materia => {
+      const notas: Record<string, number | null> = {};
+      periodos.forEach(periodo => {
+        notas[periodo] = null;
+      });
+
+      notasAluno
+        .filter(n => n.materia === materia)
+        .forEach(n => {
+          const periodoNome = periodoTipo === "bimestre" 
+            ? `${n.bimestreNumero}º Bimestre` 
+            : `${n.bimestreNumero}º Trimestre`;
+          if (notas.hasOwnProperty(periodoNome)) {
+            notas[periodoNome] = n.nota;
+          }
+        });
+
+      const valores = Object.values(notas).filter((n): n is number => n !== null);
+      const mediaFinal = valores.length > 0 ? valores.reduce((a, b) => a + b, 0) / valores.length : null;
+
+      return {
+        materia,
+        notas,
+        mediaFinal,
+        mediaEsperada: 7,
+      };
+    });
+
+    setMateriasNotas(materias);
+    return materias;
+  };
+
+  const getNotasFromProfessores = (alunoId: string, turmaId: string): BoletimNota[] => {
+    if (!notasBimestre || !alunoId || !turmaId) return [];
+
+    const notasAluno = notasBimestre.filter(n => 
+      n.alunoId === alunoId && 
+      n.status === "entregue" &&
+      n.turmaId === turmaId &&
+      n.ano === anoLetivo
+    );
+
+    return MATERIAS_BOLETIM.map(materia => {
+      const notas: Record<string, number | null> = {};
+      periodos.forEach(periodo => {
+        notas[periodo] = null;
+      });
+
+      notasAluno
+        .filter(n => n.materia === materia)
+        .forEach(n => {
+          const periodoNome = periodoTipo === "bimestre" 
+            ? `${n.bimestreNumero}º Bimestre` 
+            : `${n.bimestreNumero}º Trimestre`;
+          if (notas.hasOwnProperty(periodoNome)) {
+            notas[periodoNome] = n.nota;
+          }
+        });
+
+      const valores = Object.values(notas).filter((n): n is number => n !== null);
+      const mediaFinal = valores.length > 0 ? valores.reduce((a, b) => a + b, 0) / valores.length : null;
+
+      return {
+        materia,
+        notas,
+        mediaFinal,
+        mediaEsperada: 7,
+      };
+    });
+  };
+
+  const countNotasDisponiveis = (alunoId: string): number => {
+    if (!notasBimestre || !alunoId || !selectedTurmaId) return 0;
+    return notasBimestre.filter(n => 
+      n.alunoId === alunoId && 
+      n.status === "entregue" &&
+      n.turmaId === selectedTurmaId &&
+      n.ano === anoLetivo
+    ).length;
   };
 
   const calcularMediaMateria = (notas: Record<string, number | null>): number | null => {
@@ -450,16 +552,40 @@ export function BoletimTab() {
 
             <div className="space-y-2">
               <Label>Aluno</Label>
-              <Select value={selectedAlunoId} onValueChange={setSelectedAlunoId} disabled={!selectedTurmaId}>
+              <Select 
+                value={selectedAlunoId} 
+                onValueChange={(id) => {
+                  setSelectedAlunoId(id);
+                  if (id && notasBimestre) {
+                    carregarNotasProfessores(id);
+                  }
+                }} 
+                disabled={!selectedTurmaId}
+              >
                 <SelectTrigger data-testid="select-aluno-boletim">
                   <SelectValue placeholder={selectedTurmaId ? "Selecione o aluno" : "Selecione a turma primeiro"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {alunosDaTurma.map(aluno => (
-                    <SelectItem key={aluno.uid} value={aluno.uid}>{aluno.nome}</SelectItem>
-                  ))}
+                  {alunosDaTurma.map(aluno => {
+                    const notasCount = countNotasDisponiveis(aluno.uid);
+                    return (
+                      <SelectItem key={aluno.uid} value={aluno.uid}>
+                        {aluno.nome}
+                        {notasCount > 0 && (
+                          <Badge variant="secondary" className="ml-2 text-xs">
+                            {notasCount} notas
+                          </Badge>
+                        )}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
+              {selectedAlunoId && countNotasDisponiveis(selectedAlunoId) > 0 && (
+                <p className="text-xs text-green-600">
+                  {countNotasDisponiveis(selectedAlunoId)} notas de professores carregadas automaticamente
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -491,7 +617,20 @@ export function BoletimTab() {
         )}
 
         <div className="space-y-2">
-          <Label className="text-lg font-semibold">Notas por Matéria</Label>
+          <div className="flex items-center justify-between">
+            <Label className="text-lg font-semibold">Notas por Matéria</Label>
+            {selectedAlunoId && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => carregarNotasProfessores(selectedAlunoId)}
+                data-testid="button-recarregar-notas"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Recarregar Notas dos Professores
+              </Button>
+            )}
+          </div>
           <div className="border rounded-lg overflow-hidden">
             <Table>
               <TableHeader>

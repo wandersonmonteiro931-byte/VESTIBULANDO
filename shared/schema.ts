@@ -903,6 +903,13 @@ export const notaBimestreSchema = z.object({
   dataLancamento: z.string().optional(), // Data/hora do lançamento
   dataEntrega: z.string().optional(), // Data/hora em que foi marcado como entregue
   
+  // Autorização para edição (após notas entregues)
+  edicaoAutorizada: z.boolean().default(false), // Se diretor autorizou edição
+  edicaoAutorizadaPor: z.string().optional(), // ID do diretor que autorizou
+  edicaoAutorizadaPorNome: z.string().optional(), // Nome do diretor
+  dataAutorizacaoEdicao: z.string().optional(), // Data/hora da autorização
+  motivoSolicitacaoEdicao: z.string().optional(), // Motivo enviado pelo professor
+  
   // Metadados
   dataCriacao: z.string(),
   dataAtualizacao: z.string().optional(),
@@ -912,3 +919,43 @@ export const insertNotaBimestreSchema = notaBimestreSchema.omit({ id: true, data
 
 export type NotaBimestre = z.infer<typeof notaBimestreSchema>;
 export type InsertNotaBimestre = z.infer<typeof insertNotaBimestreSchema>;
+
+// ==================== SOLICITAÇÃO DE AUTORIZAÇÃO PARA EDIÇÃO DE NOTAS ====================
+
+// Solicitação de autorização para editar nota já entregue
+export const solicitacaoEdicaoNotaSchema = z.object({
+  id: z.string(),
+  
+  // Referências da nota
+  notaBimestreId: z.string(), // ID da nota que quer editar
+  alunoId: z.string(),
+  alunoNome: z.string(),
+  alunoMatricula: z.string().optional(),
+  turmaId: z.string(),
+  turmaNome: z.string(),
+  materia: z.string(),
+  bimestreNumero: z.number().min(1).max(4),
+  bimestreNome: z.string(),
+  ano: z.string(),
+  
+  // Nota atual
+  notaAtual: z.number().min(0).max(10).nullable(),
+  
+  // Solicitação
+  professorId: z.string(), // Professor que solicitou
+  professorNome: z.string(),
+  motivo: z.string().min(1, "Motivo é obrigatório"), // Justificativa para alteração
+  dataSolicitacao: z.string(),
+  
+  // Resposta do diretor
+  status: z.enum(["pendente", "autorizado", "negado"]).default("pendente"),
+  diretorId: z.string().optional(), // Diretor que respondeu
+  diretorNome: z.string().optional(),
+  dataResposta: z.string().optional(),
+  comentarioDiretor: z.string().optional(), // Comentário do diretor na resposta
+});
+
+export const insertSolicitacaoEdicaoNotaSchema = solicitacaoEdicaoNotaSchema.omit({ id: true });
+
+export type SolicitacaoEdicaoNota = z.infer<typeof solicitacaoEdicaoNotaSchema>;
+export type InsertSolicitacaoEdicaoNota = z.infer<typeof insertSolicitacaoEdicaoNotaSchema>;

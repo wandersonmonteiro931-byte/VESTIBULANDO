@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { doc, where, setDoc, getDoc } from "firebase/firestore";
+import { doc, where, setDoc, getDoc, addDoc, collection, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -13,14 +13,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Save, Calendar, Edit, AlertCircle, CheckCircle, Clock,
-  CalendarClock, Users, BookOpen, AlertTriangle, Lock, Send
+  CalendarClock, Users, BookOpen, AlertTriangle, Lock, Send,
+  KeyRound, MessageSquare
 } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
-import type { BimestreConfig, Turma, User, NotaBimestre } from "@shared/schema";
+import type { BimestreConfig, Turma, User, NotaBimestre, SolicitacaoEdicaoNota } from "@shared/schema";
 import { MATERIAS_BOLETIM } from "@shared/schema";
 import { format, isBefore, isAfter, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -40,6 +42,7 @@ interface NotaLocal {
   observacao: string;
   existingId?: string;
   status: "rascunho" | "entregue";
+  edicaoAutorizada?: boolean;
 }
 
 export function BimestresNotasTab() {
@@ -53,6 +56,10 @@ export function BimestresNotasTab() {
   const [notasLocais, setNotasLocais] = useState<NotaLocal[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [confirmSubmitDialogOpen, setConfirmSubmitDialogOpen] = useState(false);
+  
+  const [requestAuthDialogOpen, setRequestAuthDialogOpen] = useState(false);
+  const [selectedNotaForAuth, setSelectedNotaForAuth] = useState<NotaLocal | null>(null);
+  const [motivoSolicitacao, setMotivoSolicitacao] = useState("");
 
   const { data: bimestresConfigs, isLoading: loadingBimestres } = useRealtimeQuery<BimestreConfig>({
     collectionName: "bimestresConfig",
@@ -85,6 +92,19 @@ export function BimestresNotasTab() {
     ] : [],
     transform: (docs) => docs as NotaBimestre[],
     enabled: !!(selectedBimestre && selectedTurma && selectedMateria),
+  });
+
+  const { data: solicitacoesEdicao } = useRealtimeQuery<SolicitacaoEdicaoNota>({
+    collectionName: "solicitacoesEdicaoNota",
+    queryKey: ["/api/solicitacoes-edicao-nota", selectedAno, selectedTurma, selectedMateria, userData?.uid],
+    constraints: selectedTurma && selectedMateria && userData ? [
+      where("ano", "==", selectedAno),
+      where("turmaId", "==", selectedTurma),
+      where("materia", "==", selectedMateria),
+      where("professorId", "==", userData.uid),
+    ] : [],
+    transform: (docs) => docs as SolicitacaoEdicaoNota[],
+    enabled: !!(selectedTurma && selectedMateria && userData),
   });
 
   const notasDataLoaded = useMemo(() => {
@@ -138,6 +158,7 @@ export function BimestresNotasTab() {
           observacao: notaExistente?.observacao || "",
           existingId: notaExistente?.id,
           status: notaExistente?.status || "rascunho",
+          edicaoAutorizada: notaExistente?.edicaoAutorizada || false,
         };
       });
       setNotasLocais(novasNotas);
@@ -145,6 +166,76 @@ export function BimestresNotasTab() {
       setNotasLocais([]);
     }
   }, [alunosTurma, notasBimestre, selectedMateria, selectedBimestre]);
+
+  const getSolicitacaoParaAluno = (alunoId: string) => {
+    if (!solicitacoesEdicao || !selectedBimestreData || !selectedMateria) return null;
+    return solicitacoesEdicao.find(s => 
+      s.alunoId === alunoId && 
+      s.bimestreNumero === selectedBimestreData.numero &&
+      s.materia === selectedMateria
+    );
+  };
+
+  const openRequestAuthDialog = (nota: NotaLocal) => {
+    setSelectedNotaForAuth(nota);
+    setMotivoSolicitacao("");
+    setRequestAuthDialogOpen(true);
+  };
+
+  const requestAuthMutation = useMutation({
+    mutationFn: async () => {
+      if (!userData || !selectedNotaForAuth || !selectedBimestreData || !selectedTurma || !selectedMateria) {
+        throw new Error("Dados incompletos");
+      }
+      if (!motivoSolicitacao.trim()) {
+        throw new Error("Informe o motivo da solicitação");
+      }
+
+      const turma = turmas?.find(t => t.id === selectedTurma);
+      if (!turma) throw new Error("Turma não encontrada");
+
+      const notaId = generateNotaId(selectedNotaForAuth.alunoId, selectedBimestre, selectedTurma, selectedMateria);
+
+      const solicitacaoData = {
+        notaBimestreId: notaId,
+        alunoId: selectedNotaForAuth.alunoId,
+        alunoNome: selectedNotaForAuth.alunoNome,
+        alunoMatricula: selectedNotaForAuth.alunoMatricula || "",
+        turmaId: selectedTurma,
+        turmaNome: turma.nome,
+        materia: selectedMateria,
+        bimestreNumero: selectedBimestreData.numero,
+        bimestreNome: selectedBimestreData.nome,
+        ano: selectedAno,
+        notaAtual: selectedNotaForAuth.nota,
+        professorId: userData.uid,
+        professorNome: userData.nome,
+        motivo: motivoSolicitacao.trim(),
+        dataSolicitacao: getNowBrasiliaISO(),
+        status: "pendente" as const,
+      };
+
+      await addDoc(collection(db, "solicitacoesEdicaoNota"), solicitacaoData);
+      return solicitacaoData;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/solicitacoes-edicao-nota"] });
+      toast({
+        title: "Solicitação enviada!",
+        description: "Sua solicitação foi enviada para o diretor.",
+      });
+      setRequestAuthDialogOpen(false);
+      setSelectedNotaForAuth(null);
+      setMotivoSolicitacao("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao enviar solicitação",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleNotaChange = (alunoId: string, nota: string) => {
     const parsedNota = nota === "" ? null : parseFloat(nota);
@@ -200,7 +291,9 @@ export function BimestresNotasTab() {
 
       const prazo = parseISO(bimestre.prazoLancamentoNotas);
       const isPrazoExpiradoNow = isAfter(new Date(), prazo);
-      if (isPrazoExpiradoNow && userData.tipo !== "diretor") {
+      
+      const hasAuthorizedEdits = notasLocais.some(n => n.edicaoAutorizada);
+      if (isPrazoExpiradoNow && userData.tipo !== "diretor" && !hasAuthorizedEdits) {
         throw new Error("O prazo para lançamento de notas expirou");
       }
 
@@ -211,15 +304,41 @@ export function BimestresNotasTab() {
       }
 
       setIsSaving(true);
+      const isDiretor = userData.tipo === "diretor";
 
-      for (const notaLocal of notasLocais) {
+      const notasToUpdate = notasLocais.filter(notaLocal => {
+        const isEntregue = notaLocal.status === "entregue";
+        const isAutorizado = notaLocal.edicaoAutorizada;
+        
+        if (isDiretor) return true;
+        if (isAutorizado) return true;
+        if (isPrazoExpiradoNow) return false;
+        if (isEntregue) return false;
+        return true;
+      });
+
+      if (notasToUpdate.length === 0) {
+        throw new Error("Nenhuma nota disponível para salvar");
+      }
+
+      for (const notaLocal of notasToUpdate) {
         const notaId = generateNotaId(notaLocal.alunoId, selectedBimestre, selectedTurma, selectedMateria);
         const notaRef = doc(db, "notasBimestre", notaId);
         
         const existingDoc = await getDoc(notaRef);
         const isUpdate = existingDoc.exists();
+        const existingData = existingDoc.data();
 
-        const notaData = {
+        const isAutorizado = notaLocal.edicaoAutorizada || existingData?.edicaoAutorizada;
+        
+        let newStatus = notaLocal.status;
+        if (submitFinal) {
+          newStatus = "entregue";
+        } else if (isAutorizado) {
+          newStatus = "rascunho";
+        }
+        
+        const notaData: any = {
           id: notaId,
           bimestreConfigId: selectedBimestre,
           ano: selectedAno,
@@ -235,11 +354,21 @@ export function BimestresNotasTab() {
           nota: notaLocal.nota,
           mediaEsperada: bimestre.mediaEsperada,
           observacao: notaLocal.observacao || "",
-          status: submitFinal ? "entregue" : "rascunho",
+          status: newStatus,
           dataLancamento: getNowBrasiliaISO(),
           ...(submitFinal ? { dataEntrega: getNowBrasiliaISO() } : {}),
           ...(isUpdate ? { dataAtualizacao: getNowBrasiliaISO() } : { dataCriacao: getNowBrasiliaISO() }),
         };
+
+        if (isAutorizado) {
+          if (existingData?.edicaoAutorizadaPor) {
+            notaData.edicaoAutorizadaPor = existingData.edicaoAutorizadaPor;
+            notaData.edicaoAutorizadaPorNome = existingData.edicaoAutorizadaPorNome;
+            notaData.dataAutorizacaoEdicao = existingData.dataAutorizacaoEdicao;
+            notaData.motivoSolicitacaoEdicao = existingData.motivoSolicitacaoEdicao;
+          }
+          notaData.edicaoAutorizada = submitFinal ? false : true;
+        }
 
         await setDoc(notaRef, notaData, { merge: true });
       }
@@ -284,6 +413,14 @@ export function BimestresNotasTab() {
   };
 
   const allNotasEntregues = notasLocais.every(n => n.status === "entregue");
+  const hasAuthorizedEdits = useMemo(() => {
+    return notasLocais.some(n => n.edicaoAutorizada);
+  }, [notasLocais]);
+  const canSave = useMemo(() => {
+    if (userData?.tipo === "diretor") return true;
+    if (hasAuthorizedEdits) return true;
+    return canEdit;
+  }, [userData, hasAuthorizedEdits, canEdit]);
   const hasChanges = useMemo(() => {
     return notasLocais.some(n => {
       const original = notasBimestre?.find(nb => nb.alunoId === n.alunoId);
@@ -503,7 +640,7 @@ export function BimestresNotasTab() {
                 <Button
                   variant="outline"
                   onClick={() => saveMutation.mutate(false)}
-                  disabled={isSaving || !canEdit || !hasChanges || !isDataReady}
+                  disabled={isSaving || !canSave || !hasChanges || !isDataReady}
                   data-testid="button-save-rascunho"
                 >
                   <Save className="h-4 w-4 mr-2" />
@@ -511,11 +648,11 @@ export function BimestresNotasTab() {
                 </Button>
                 <Button
                   onClick={() => setConfirmSubmitDialogOpen(true)}
-                  disabled={isSaving || !canEdit || allNotasEntregues || !isDataReady}
+                  disabled={isSaving || !canSave || (allNotasEntregues && !hasAuthorizedEdits) || !isDataReady}
                   data-testid="button-entregar"
                 >
                   <Send className="h-4 w-4 mr-2" />
-                  Entregar Notas
+                  {hasAuthorizedEdits ? "Re-entregar Notas" : "Entregar Notas"}
                 </Button>
               </div>
             </CardHeader>
@@ -541,13 +678,21 @@ export function BimestresNotasTab() {
                         <TableHead className="w-32 text-center">Nota (0-10)</TableHead>
                         <TableHead className="w-48">Observação</TableHead>
                         <TableHead className="w-24 text-center">Status</TableHead>
+                        <TableHead className="w-32 text-center">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {notasLocais.map((nota, idx) => {
                         const abaixoMedia = nota.nota !== null && selectedBimestreData && nota.nota < selectedBimestreData.mediaEsperada;
                         const isEntregue = nota.status === "entregue";
-                        const canEditNota = canEdit && !isEntregue;
+                        const isAutorizado = nota.edicaoAutorizada;
+                        const isDiretor = userData?.tipo === "diretor";
+                        const canEditNota = isDiretor 
+                          ? true 
+                          : isAutorizado 
+                            ? true 
+                            : (canEdit && !isEntregue);
+                        const solicitacao = getSolicitacaoParaAluno(nota.alunoId);
 
                         return (
                           <TableRow key={nota.alunoId} className={abaixoMedia ? "bg-orange-50 dark:bg-orange-950/20" : ""}>
@@ -563,7 +708,7 @@ export function BimestresNotasTab() {
                                 value={nota.nota ?? ""}
                                 onChange={(e) => handleNotaChange(nota.alunoId, e.target.value)}
                                 disabled={!canEditNota}
-                                className={`text-center ${abaixoMedia ? "border-orange-500" : ""}`}
+                                className={`text-center ${abaixoMedia ? "border-orange-500" : ""} ${isAutorizado ? "border-green-500" : ""}`}
                                 data-testid={`input-nota-${nota.alunoId}`}
                               />
                             </TableCell>
@@ -578,7 +723,12 @@ export function BimestresNotasTab() {
                               />
                             </TableCell>
                             <TableCell className="text-center">
-                              {isEntregue ? (
+                              {isAutorizado ? (
+                                <Badge variant="default" className="bg-green-600">
+                                  <KeyRound className="h-3 w-3 mr-1" />
+                                  Autorizado
+                                </Badge>
+                              ) : isEntregue ? (
                                 <Badge variant="default">
                                   <CheckCircle className="h-3 w-3 mr-1" />
                                   Entregue
@@ -587,6 +737,40 @@ export function BimestresNotasTab() {
                                 <Badge variant="secondary">Rascunho</Badge>
                               ) : (
                                 <Badge variant="outline">Pendente</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {isEntregue && !isAutorizado && !isDiretor && (
+                                <>
+                                  {solicitacao ? (
+                                    <Badge 
+                                      variant={
+                                        solicitacao.status === "pendente" ? "outline" : 
+                                        solicitacao.status === "autorizado" ? "default" : "destructive"
+                                      }
+                                      className="text-xs"
+                                    >
+                                      {solicitacao.status === "pendente" && <Clock className="h-3 w-3 mr-1" />}
+                                      {solicitacao.status === "autorizado" && <CheckCircle className="h-3 w-3 mr-1" />}
+                                      {solicitacao.status === "negado" && <AlertCircle className="h-3 w-3 mr-1" />}
+                                      {solicitacao.status === "pendente" ? "Aguardando" : 
+                                       solicitacao.status === "autorizado" ? "Autorizado" : "Negado"}
+                                    </Badge>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => openRequestAuthDialog(nota)}
+                                      data-testid={`button-request-auth-${nota.alunoId}`}
+                                    >
+                                      <KeyRound className="h-3 w-3 mr-1" />
+                                      Solicitar
+                                    </Button>
+                                  )}
+                                </>
+                              )}
+                              {isAutorizado && !isDiretor && (
+                                <span className="text-xs text-muted-foreground">Editável</span>
                               )}
                             </TableCell>
                           </TableRow>
@@ -663,6 +847,69 @@ export function BimestresNotasTab() {
               data-testid="button-confirm-submit"
             >
               {saveMutation.isPending ? "Entregando..." : "Confirmar Entrega"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={requestAuthDialogOpen} onOpenChange={setRequestAuthDialogOpen}>
+        <DialogContent data-testid="dialog-request-auth">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5" />
+              Solicitar Autorização para Edição
+            </DialogTitle>
+            <DialogDescription>
+              Solicite autorização ao diretor para alterar a nota já entregue deste aluno.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedNotaForAuth && (
+            <div className="space-y-4">
+              <div className="p-4 bg-muted rounded-lg space-y-2">
+                <p><strong>Aluno:</strong> {selectedNotaForAuth.alunoNome}</p>
+                <p><strong>Matrícula:</strong> {selectedNotaForAuth.alunoMatricula || "-"}</p>
+                <p><strong>Matéria:</strong> {selectedMateria}</p>
+                <p><strong>Bimestre:</strong> {selectedBimestreData?.nome}</p>
+                <p><strong>Nota atual:</strong> {selectedNotaForAuth.nota !== null ? selectedNotaForAuth.nota.toFixed(1) : "-"}</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="motivo">Motivo da solicitação *</Label>
+                <Textarea
+                  id="motivo"
+                  value={motivoSolicitacao}
+                  onChange={(e) => setMotivoSolicitacao(e.target.value)}
+                  placeholder="Explique o motivo pelo qual precisa alterar esta nota..."
+                  className="min-h-[100px]"
+                  data-testid="input-motivo-solicitacao"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Descreva de forma clara o motivo da alteração. O diretor avaliará sua solicitação.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setRequestAuthDialogOpen(false);
+                setSelectedNotaForAuth(null);
+                setMotivoSolicitacao("");
+              }}
+              data-testid="button-cancel-auth"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => requestAuthMutation.mutate()}
+              disabled={requestAuthMutation.isPending || !motivoSolicitacao.trim()}
+              data-testid="button-submit-auth"
+            >
+              <MessageSquare className="h-4 w-4 mr-2" />
+              {requestAuthMutation.isPending ? "Enviando..." : "Enviar Solicitação"}
             </Button>
           </DialogFooter>
         </DialogContent>
