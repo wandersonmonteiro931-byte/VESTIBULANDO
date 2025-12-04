@@ -44,40 +44,29 @@ export function AlunoBoletimTab() {
     const margin = 15;
     let yPos = 20;
 
-    doc.setFontSize(18);
+    doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
     doc.text("BOLETIM ESCOLAR", pageWidth / 2, yPos, { align: "center" });
-    yPos += 10;
+    yPos += 8;
 
-    doc.setFontSize(14);
+    doc.setFontSize(12);
     doc.text(boletim.escola || "Preparatório Vestibulando", pageWidth / 2, yPos, { align: "center" });
     yPos += 15;
 
-    doc.setDrawColor(41, 128, 185);
-    doc.setLineWidth(0.5);
-    doc.line(margin, yPos, pageWidth - margin, yPos);
-    yPos += 10;
-
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.text("DADOS DO ALUNO", margin, yPos);
-    yPos += 8;
-
-    doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
     
-    doc.text(`Nome: ${boletim.alunoNome}`, margin, yPos);
+    doc.text(`Aluno: ${boletim.alunoNome}`, margin, yPos);
+    doc.text(`Matrícula: ${boletim.alunoMatricula || "-"}`, pageWidth - margin - 50, yPos);
     yPos += 6;
-    doc.text(`Matrícula: ${boletim.alunoMatricula || "-"}`, margin, yPos);
-    doc.text(`Turma: ${boletim.turmaNome}`, margin + 80, yPos);
-    yPos += 6;
-    doc.text(`Ano Letivo: ${boletim.anoLetivo}`, margin, yPos);
-    doc.text(`Período: ${boletim.periodoTipo === "bimestre" ? "Bimestral" : "Trimestral"}`, margin + 80, yPos);
-    yPos += 12;
+    
+    doc.text(`Turma: ${boletim.turmaNome}`, margin, yPos);
+    doc.text(`Ano Letivo: ${boletim.anoLetivo}`, pageWidth - margin - 50, yPos);
+    yPos += 10;
 
     const periodos = boletim.periodos || (boletim.periodoTipo === "bimestre" ? PERIODOS_BIMESTRE : PERIODOS_TRIMESTRE);
     
-    const tableHead = [["MATÉRIA", ...periodos, "MÉDIA", "MÍN. ESP."]];
+    const tableHead = [["Matéria", ...periodos, "Média Final", "Média Mínima Esperada"]];
     const tableBody = boletim.materias.map(m => [
       m.materia,
       ...periodos.map(p => m.notas[p]?.toFixed(1) || "-"),
@@ -90,83 +79,49 @@ export function AlunoBoletimTab() {
       head: tableHead,
       body: tableBody,
       margin: { left: margin, right: margin },
-      styles: { 
-        fontSize: 8, 
-        cellPadding: 3,
-        halign: "center"
-      },
-      headStyles: { 
-        fillColor: [41, 128, 185], 
-        textColor: 255,
-        fontStyle: "bold"
-      },
-      columnStyles: {
-        0: { halign: "left", cellWidth: 35 }
-      },
-      alternateRowStyles: { fillColor: [245, 248, 250] },
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 12;
-
-    doc.setFillColor(245, 248, 250);
-    doc.rect(margin, yPos - 4, pageWidth - 2 * margin, 28, "F");
+    yPos = (doc as any).lastAutoTable.finalY + 10;
 
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.text("RESUMO", margin + 5, yPos + 3);
-    
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    yPos += 10;
-    doc.text(`Média Anual: ${boletim.mediaGeral?.toFixed(1).replace(".", ",") || "-"}`, margin + 5, yPos);
-    doc.text(`Média Mínima Esperada: ${(boletim.mediaGeralEsperada || 7).toFixed(1).replace(".", ",")}`, margin + 55, yPos);
-    
-    const situacaoLabel = boletim.situacao.charAt(0).toUpperCase() + boletim.situacao.slice(1);
-    const situacaoColor = boletim.situacao === "aprovado" ? [34, 139, 34] : 
-                          boletim.situacao === "reprovado" ? [220, 20, 60] : [255, 165, 0];
-    doc.setTextColor(...situacaoColor as [number, number, number]);
-    doc.setFont("helvetica", "bold");
-    doc.text(`Situação: ${situacaoLabel.toUpperCase()}`, margin + 115, yPos);
-    doc.setTextColor(0, 0, 0);
-    doc.setFont("helvetica", "normal");
-    
+    doc.text(`Média Final Anual: ${boletim.mediaGeral?.toFixed(1).replace(".", ",") || "-"}`, margin, yPos);
+    doc.text(`Situação: ${boletim.situacao.toUpperCase()}`, pageWidth - margin - 50, yPos);
     yPos += 8;
-    doc.text(`Presenças: ${boletim.presencas}`, margin + 5, yPos);
+
+    doc.setFont("helvetica", "normal");
+    doc.text(`Presenças: ${boletim.presencas}`, margin, yPos);
     doc.text(`Faltas: ${boletim.faltas}`, margin + 50, yPos);
-    doc.text(`Frequência: ${boletim.percentualPresenca?.toFixed(1) || "-"}%`, margin + 90, yPos);
-    yPos += 15;
+    doc.text(`Frequência: ${boletim.percentualPresenca?.toFixed(1) || "-"}%`, margin + 100, yPos);
+    yPos += 10;
 
     if (boletim.observacoes) {
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(11);
-      doc.text("OBSERVAÇÕES", margin, yPos);
-      yPos += 7;
+      doc.text("Observações:", margin, yPos);
+      yPos += 5;
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(9);
       const obsLines = doc.splitTextToSize(boletim.observacoes, pageWidth - 2 * margin);
       doc.text(obsLines, margin, yPos);
-      yPos += obsLines.length * 5 + 15;
+      yPos += obsLines.length * 5 + 10;
     }
 
-    yPos = Math.max(yPos + 10, 250);
-    
-    doc.setDrawColor(100, 100, 100);
+    yPos = Math.max(yPos, 250);
     const lineWidth = 70;
     const lineX = (pageWidth - lineWidth) / 2;
     doc.line(lineX, yPos, lineX + lineWidth, yPos);
-    doc.setFontSize(9);
-    doc.text("Assinatura da Diretoria", pageWidth / 2, yPos + 6, { align: "center" });
+    doc.text("Assinatura da Diretoria", pageWidth / 2, yPos + 5, { align: "center" });
 
     doc.setFontSize(8);
-    doc.setTextColor(128, 128, 128);
     doc.text(
-      `Documento gerado em: ${format(new Date(), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}`,
+      `Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`,
       pageWidth / 2,
       285,
       { align: "center" }
     );
 
-    doc.save(`Boletim_${boletim.alunoNome.replace(/\s+/g, "_")}_${boletim.anoLetivo}.pdf`);
+    doc.save(`boletim_${boletim.alunoNome.replace(/\s+/g, "_")}_${boletim.anoLetivo}.pdf`);
   };
 
   const getSituacaoBadgeVariant = (situacao: string) => {
