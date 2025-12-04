@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, signOut as firebaseSignOut, User as FirebaseUser } from "firebase/auth";
-import { doc, getDoc, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, collection, query, where } from "firebase/firestore";
 import { auth, db, firebaseError } from "@/lib/firebase";
 import type { User } from "@shared/schema";
 import { useUserPresence } from "@/hooks/useUserPresence";
@@ -150,6 +150,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return unsubscribe;
   }, [currentUser]);
+
+  // Listener em tempo real para suspensões disciplinares (apenas alunos)
+  useEffect(() => {
+    if (!currentUser || !userData || userData.tipo !== "aluno") return;
+
+    const suspensionsQuery = query(
+      collection(db, "disciplinaryActions"),
+      where("alunoId", "==", currentUser.uid),
+      where("tipo", "==", "suspensao"),
+      where("ativo", "==", true)
+    );
+
+    const unsubscribe = onSnapshot(
+      suspensionsQuery,
+      async (snapshot) => {
+        if (!snapshot.empty) {
+          const activeSuspension = snapshot.docs[0].data();
+          const dataTermino = new Date(activeSuspension.dataTerminoSuspensao);
+          const agora = new Date();
+          
+          // Se a suspensão ainda está ativa, fazer logout
+          if (agora < dataTermino) {
+            console.log("🚫 Suspensão ativa detectada - fazendo logout");
+            await firebaseSignOut(auth);
+            setUserData(null);
+            setCurrentUser(null);
+          }
+        }
+      },
+      (error) => {
+        console.error("Error listening to suspensions:", error);
+      }
+    );
+
+    return unsubscribe;
+  }, [currentUser, userData]);
 
   const signOut = async () => {
     if (!auth) return;
