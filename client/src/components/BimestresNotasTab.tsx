@@ -94,8 +94,11 @@ export function BimestresNotasTab() {
 
   const professorTurmas = useMemo(() => {
     if (!turmas || !userData) return [];
-    if (userData.tipo === "diretor") return turmas.filter(t => t.ativa);
-    return turmas.filter(t => t.ativa && userData.turmas?.includes(t.id));
+    // Diretores e professores podem ver todas as turmas ativas
+    if (userData.tipo === "diretor" || userData.tipo === "professor") {
+      return turmas.filter(t => t.ativa);
+    }
+    return [];
   }, [turmas, userData]);
 
   const sortedBimestres = useMemo(() => {
