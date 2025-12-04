@@ -124,6 +124,21 @@ The platform utilizes a consistent violet/purple color scheme across all dashboa
 - **Implementação**: Uso de `.sort((a, b) => a.nome.localeCompare(b.nome))` em todas as listas
 - **Componentes afetados**: AdminDashboard, BimestresNotasTab, BoletimTab, MonitoringTab
 
+#### Sistema de Alerta de Advertência (NOVO - Dezembro 2025)
+- **Modal de Notificação**: Quando uma advertência é aplicada ao aluno, ele vê um modal ao fazer login
+- **Mensagem de Aviso**: O modal informa:
+  - Quantidade de advertências ativas (X de 3)
+  - Data e motivo da advertência
+  - Que será registrada permanentemente no histórico escolar
+  - Que práticas continuadas podem resultar em novas correções disciplinares (incluindo suspensão)
+- **Controle de Visualização**: 
+  - Campo `visualizado` no documento da advertência para evitar exibição repetida
+  - Aluno marca como visualizado ao clicar em "Estou ciente"
+- **Componentes**:
+  - `WarningAlertContext.tsx` - Contexto global para gerenciar alertas
+  - `WarningAlertOverlay.tsx` - Modal de exibição da advertência
+  - Integrado no StudentDashboard para verificar advertências não visualizadas
+
 #### Data Model
 The core data model includes `Usuarios` (users with `aluno`, `professor`, `admin` types, CPF, matricula, address via ViaCEP), `Tarefas` (assignments with title, description, professor, class, deadline, attachments), `Entregas` (submissions with student info, file, grade, feedback, status), and `Turmas` (classes with name, year, activity status, vacancies, enrollment period, WhatsApp link). Additional collections: `announcements` (system notices), `chatMessages` (chat messages), `chatConversations` (conversations), `userBlocks` (user blocks), `chatReports` (conversation reports).
 
