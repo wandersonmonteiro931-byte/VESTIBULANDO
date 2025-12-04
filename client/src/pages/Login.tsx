@@ -229,6 +229,12 @@ export default function Login() {
   const [showMaintenanceOverlay, setShowMaintenanceOverlay] = useState(false);
   const [maintenanceData, setMaintenanceData] = useState<any>(null);
   
+  // Estados para conta bloqueada
+  const [showBlockedOverlay, setShowBlockedOverlay] = useState(false);
+  
+  // Estados para conta desativada
+  const [showDeactivatedOverlay, setShowDeactivatedOverlay] = useState(false);
+  
   // Estados para troca de senha obrigatória no primeiro acesso
   const [showPasswordChangeDialog, setShowPasswordChangeDialog] = useState(false);
   const [newPassword, setNewPassword] = useState("");
@@ -250,7 +256,7 @@ export default function Login() {
   }, [formData.cpf, mode]);
 
   useEffect(() => {
-    if (userData && !showCodeDialog && !showSuspensionOverlay && !showMaintenanceOverlay && !showPasswordChangeDialog) {
+    if (userData && !showCodeDialog && !showSuspensionOverlay && !showMaintenanceOverlay && !showBlockedOverlay && !showDeactivatedOverlay && !showPasswordChangeDialog) {
       // Verificar se é primeiro acesso (aluno ou professor)
       if ((userData.tipo === "aluno" || userData.tipo === "professor") && userData.primeiroAcesso !== false) {
         console.log("🔒 Primeiro acesso detectado - exigindo troca de senha");
@@ -864,6 +870,22 @@ export default function Login() {
             description: "Email não encontrado para este usuário",
             variant: "destructive",
           });
+          setLoading(false);
+          return;
+        }
+        
+        // VERIFICAR SE A CONTA ESTÁ BLOQUEADA (exceto para diretores)
+        if (userData.tipo !== "diretor" && userData.bloqueado === true) {
+          console.log("🚫 BLOQUEANDO LOGIN - Conta bloqueada");
+          setShowBlockedOverlay(true);
+          setLoading(false);
+          return;
+        }
+        
+        // VERIFICAR SE A CONTA ESTÁ DESATIVADA (exceto para diretores)
+        if (userData.tipo !== "diretor" && userData.ativo === false) {
+          console.log("🚫 BLOQUEANDO LOGIN - Conta desativada");
+          setShowDeactivatedOverlay(true);
           setLoading(false);
           return;
         }
@@ -2498,6 +2520,134 @@ export default function Login() {
                 variant="outline"
                 className="w-full"
                 data-testid="button-close-maintenance"
+              >
+                Voltar
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+      )}
+
+      {/* Overlay de Conta Bloqueada */}
+      {showBlockedOverlay && (
+        <div 
+          className="fixed inset-0 bg-background/95 backdrop-blur-sm flex items-center justify-center p-3"
+          style={{ zIndex: 999999 }}
+          data-testid="overlay-blocked"
+        >
+          <Card className="w-full max-w-md border-orange-500 max-h-[90vh] overflow-auto">
+            <CardHeader className="space-y-2 text-center pb-3">
+              <div className="mx-auto w-12 h-12 rounded-full bg-orange-500/10 flex items-center justify-center">
+                <Shield className="h-6 w-6 text-orange-600" />
+              </div>
+              <CardTitle className="text-xl font-bold text-orange-600">
+                Acesso Bloqueado
+              </CardTitle>
+            </CardHeader>
+            
+            <CardContent className="space-y-3">
+              <div className="text-sm space-y-3">
+                <p className="font-medium">Seu acesso ao sistema foi bloqueado.</p>
+                
+                <ul className="space-y-2 text-muted-foreground text-xs">
+                  <li className="flex items-start gap-2">
+                    <span className="text-orange-600 mt-0.5">•</span>
+                    <span>Você não possui permissão para entrar neste momento.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-orange-600 mt-0.5">•</span>
+                    <span>Para mais informações ou regularização, entre em contato com a diretoria ou suporte técnico.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-orange-600 mt-0.5">•</span>
+                    <span>Caso o bloqueio seja temporário, aguarde o prazo informado pela instituição para nova tentativa de login.</span>
+                  </li>
+                </ul>
+              </div>
+              
+              <div className="p-2 bg-orange-500/10 border border-orange-500/20 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-orange-600">
+                    Entre em contato com a diretoria para mais informações.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+            
+            <CardFooter className="pt-3">
+              <Button
+                onClick={() => {
+                  console.log("🔘 Fechando overlay de bloqueio");
+                  setShowBlockedOverlay(false);
+                }}
+                variant="outline"
+                className="w-full"
+                data-testid="button-close-blocked"
+              >
+                Voltar
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+      )}
+
+      {/* Overlay de Conta Desativada */}
+      {showDeactivatedOverlay && (
+        <div 
+          className="fixed inset-0 bg-background/95 backdrop-blur-sm flex items-center justify-center p-3"
+          style={{ zIndex: 999999 }}
+          data-testid="overlay-deactivated"
+        >
+          <Card className="w-full max-w-md border-red-500 max-h-[90vh] overflow-auto">
+            <CardHeader className="space-y-2 text-center pb-3">
+              <div className="mx-auto w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center">
+                <XCircle className="h-6 w-6 text-red-600" />
+              </div>
+              <CardTitle className="text-xl font-bold text-red-600">
+                Acesso Bloqueado
+              </CardTitle>
+            </CardHeader>
+            
+            <CardContent className="space-y-3">
+              <div className="text-sm space-y-3">
+                <p className="font-medium">Sua conta foi desativada pelo sistema Vestibulando.</p>
+                
+                <ul className="space-y-2 text-muted-foreground text-xs">
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-600 mt-0.5">•</span>
+                    <span>Você não possui mais acesso às funcionalidades do portal.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-600 mt-0.5">•</span>
+                    <span>Para esclarecimentos, entre em contato com a secretaria ou direção.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-600 mt-0.5">•</span>
+                    <span>Caso haja necessidade de reativação, siga os procedimentos administrativos estabelecidos pela instituição.</span>
+                  </li>
+                </ul>
+              </div>
+              
+              <div className="p-2 bg-red-500/10 border border-red-500/20 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-red-600">
+                    Entre em contato com a secretaria ou direção para mais informações.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+            
+            <CardFooter className="pt-3">
+              <Button
+                onClick={() => {
+                  console.log("🔘 Fechando overlay de desativação");
+                  setShowDeactivatedOverlay(false);
+                }}
+                variant="outline"
+                className="w-full"
+                data-testid="button-close-deactivated"
               >
                 Voltar
               </Button>

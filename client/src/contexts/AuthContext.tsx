@@ -47,6 +47,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return false;
         }
         
+        // Verificar se usuário está bloqueado ou desativado (exceto diretores)
+        if (data.tipo !== "diretor" && (data.bloqueado === true || data.ativo === false)) {
+          await firebaseSignOut(auth);
+          setUserData(null);
+          setCurrentUser(null);
+          return false;
+        }
+        
         // Atualizar o documento se o campo uid estiver faltando
         // Isso é feito de forma silenciosa, ignorando erros de permissão
         if (!data.uid) {
@@ -122,6 +130,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUserData(data);
           
           if (data.status === "reprovado" || data.status === "pendente") {
+            await firebaseSignOut(auth);
+            setUserData(null);
+            setCurrentUser(null);
+          }
+          
+          // Verificar se usuário foi bloqueado ou desativado (exceto diretores)
+          if (data.tipo !== "diretor" && (data.bloqueado === true || data.ativo === false)) {
             await firebaseSignOut(auth);
             setUserData(null);
             setCurrentUser(null);
