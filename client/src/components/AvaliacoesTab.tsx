@@ -228,10 +228,13 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
       return [...MATERIAS];
     }
     // Professor só vê as matérias que está cadastrado
-    if (userType === "professor" && userData.materias && userData.materias.length > 0) {
-      return MATERIAS.filter(m => userData.materias?.includes(m));
+    if (userType === "professor") {
+      if (userData.materias && userData.materias.length > 0) {
+        return MATERIAS.filter(m => userData.materias?.includes(m));
+      }
+      // Se professor não tem matérias cadastradas, retorna lista vazia
+      return [];
     }
-    // Se professor não tem matérias cadastradas, mostra todas (para retrocompatibilidade)
     return [...MATERIAS];
   }, [userData, userType]);
 
@@ -241,8 +244,8 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
     // Diretor pode modificar qualquer avaliação
     if (userType === "diretor") return true;
     // Professor: verificar se a matéria da avaliação está nas suas matérias cadastradas
-    // Se professor não tem matérias cadastradas, permite modificar qualquer uma (retrocompatibilidade)
-    if (!userData.materias || userData.materias.length === 0) return true;
+    // Se professor não tem matérias cadastradas, não pode modificar nenhuma
+    if (!userData.materias || userData.materias.length === 0) return false;
     // Se a avaliação não tem matéria definida (registro antigo), permite modificar (retrocompatibilidade)
     if (!avaliacao.materia) return true;
     // Verificar se a matéria da avaliação está nas matérias do professor

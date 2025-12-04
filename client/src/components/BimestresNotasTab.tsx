@@ -130,10 +130,13 @@ export function BimestresNotasTab() {
       return [...MATERIAS_BOLETIM];
     }
     // Professor só vê as matérias que está cadastrado
-    if (userData.tipo === "professor" && userData.materias && userData.materias.length > 0) {
-      return MATERIAS_BOLETIM.filter(m => userData.materias?.includes(m));
+    if (userData.tipo === "professor") {
+      if (userData.materias && userData.materias.length > 0) {
+        return MATERIAS_BOLETIM.filter(m => userData.materias?.includes(m));
+      }
+      // Se professor não tem matérias cadastradas, retorna lista vazia
+      return [];
     }
-    // Se professor não tem matérias cadastradas, mostra todas (para retrocompatibilidade)
     return [...MATERIAS_BOLETIM];
   }, [userData]);
 
