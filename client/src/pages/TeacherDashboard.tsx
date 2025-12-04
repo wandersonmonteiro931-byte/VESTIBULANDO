@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -27,7 +26,8 @@ import { BoletimTab } from "@/components/BoletimTab";
 import { BimestresNotasTab } from "@/components/BimestresNotasTab";
 import { DisciplinaryRequestsTab } from "@/components/DisciplinaryRequestsTab";
 import { PendingIndicator } from "@/components/PendingIndicator";
-import { Separator } from "@/components/ui/separator";
+import { DashboardSidebar } from "@/components/DashboardSidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Link } from "wouter";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
@@ -60,6 +60,7 @@ export default function TeacherDashboard() {
   const [gradeDialogOpen, setGradeDialogOpen] = useState(false);
   const [selectedEntrega, setSelectedEntrega] = useState<Entrega | null>(null);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [selectedSection, setSelectedSection] = useState("avaliacoes");
 
   useEffect(() => {
     const handleFileError = (event: any) => {
@@ -189,247 +190,208 @@ export default function TeacherDashboard() {
     return entregas?.filter(e => e.tarefaId === tarefaId) || [];
   };
 
-  const pendingGradings = entregas?.filter(e => e.status === "entregue" || e.status === "atrasado").length || 0;
+  const pendingCount = entregas?.filter(e => e.status === "entregue" || e.status === "atrasado").length || 0;
 
   const stats = {
     tarefas: tarefas?.length || 0,
-    pendentes: pendingGradings,
+    pendentes: pendingCount,
     avaliadas: entregas?.filter(e => e.status === "avaliado").length || 0,
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 w-full border-b bg-gradient-to-r from-card via-card to-card/95 backdrop-blur-xl shadow-sm">
-        <div className="container flex h-20 items-center justify-between px-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-gradient-to-br from-primary to-primary/80 rounded-xl shadow-md shadow-primary/20">
-              <FileText className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">Vestibulando</h1>
-              <p className="text-xs text-muted-foreground font-medium">Área do Professor</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <div className="text-right mr-2 hidden sm:block">
-              <p className="text-sm font-semibold">{userData?.nome}</p>
-              <p className="text-xs text-muted-foreground">Professor</p>
-            </div>
-            <ThemeToggle />
-            <BrasiliaClock />
-            <Link href="/chat">
-              <Button 
-                variant="outline" 
-                size="icon"
-                className="flex flex-col h-auto py-2 px-3 gap-1"
-                data-testid="button-chat-header"
-              >
-                <MessageCircle className="h-4 w-4" />
-                <span className="text-xs font-normal">Chat</span>
-              </Button>
-            </Link>
-            <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout">
-              <LogOut className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      <main className="container px-6 py-10 max-w-7xl mx-auto">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-10">
-          <div>
-            <h2 className="text-4xl font-bold mb-3 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-              Painel do Professor
-            </h2>
-            <p className="text-muted-foreground text-lg">Gerencie atividades e avalie entregas</p>
-          </div>
-        </div>
-
-        <div className="mb-10">
-          <AnnouncementsCarousel userType="professor" />
-        </div>
-
-        {(!userData?.materias || userData.materias.length === 0) && (
-          <Alert variant="destructive" className="mb-10" data-testid="alert-no-subjects">
-            <AlertTriangle className="h-5 w-5" />
-            <AlertTitle>Nenhuma matéria atribuída</AlertTitle>
-            <AlertDescription>
-              Você ainda não possui matérias atribuídas ao seu perfil. Entre em contato com a diretoria para que realizem o cadastro das suas matérias. 
-              Sem matérias cadastradas, você não poderá criar atividades, provas ou lançar notas.
-            </AlertDescription>
-          </Alert>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-          <Card className="border-primary/20 bg-gradient-to-br from-card to-primary/5 hover-elevate">
-            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
-              <CardTitle className="text-sm font-semibold">Total de Tarefas</CardTitle>
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <FileText className="h-5 w-5 text-primary" />
+    <SidebarProvider style={{ "--sidebar-width": "280px" } as React.CSSProperties}>
+      <div className="flex min-h-screen w-full">
+        <DashboardSidebar
+          role="professor"
+          selectedItem={selectedSection}
+          onSelectItem={setSelectedSection}
+          pendingCounts={{ correcoes: pendingCount }}
+          userName={userData?.nome}
+          userRole="Professor"
+        />
+        <div className="flex-1 flex flex-col">
+          <header className="sticky top-0 z-50 w-full border-b bg-gradient-to-r from-card via-card to-card/95 backdrop-blur-xl shadow-sm">
+            <div className="flex h-16 items-center justify-between px-4 gap-4">
+              <div className="flex items-center gap-3">
+                <SidebarTrigger data-testid="button-sidebar-toggle" />
+                <div className="hidden sm:flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-br from-primary to-primary/80 rounded-xl shadow-md shadow-primary/20">
+                    <FileText className="h-5 w-5 text-primary-foreground" />
+                  </div>
+                  <div>
+                    <h1 className="text-lg font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">Vestibulando</h1>
+                    <p className="text-xs text-muted-foreground font-medium">Área do Professor</p>
+                  </div>
+                </div>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-primary" data-testid="stat-tarefas">{stats.tarefas}</div>
-              <p className="text-xs text-muted-foreground mt-1">Tarefas criadas</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-amber-200/50 dark:border-amber-900/50 bg-gradient-to-br from-card to-amber-50/30 dark:to-amber-950/10 hover-elevate">
-            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
-              <CardTitle className="text-sm font-semibold">Pendentes</CardTitle>
-              <div className="p-2 bg-amber-100 dark:bg-amber-900/40 rounded-lg">
-                <Users className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              
+              <div className="flex items-center gap-3">
+                <div className="text-right mr-2 hidden md:block">
+                  <p className="text-sm font-semibold">{userData?.nome}</p>
+                  <p className="text-xs text-muted-foreground">Professor</p>
+                </div>
+                <ThemeToggle />
+                <BrasiliaClock />
+                <Link href="/chat">
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    className="flex flex-col h-auto py-2 px-3 gap-1"
+                    data-testid="button-chat-header"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    <span className="text-xs font-normal">Chat</span>
+                  </Button>
+                </Link>
+                <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout">
+                  <LogOut className="h-5 w-5" />
+                </Button>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-amber-600 dark:text-amber-400" data-testid="stat-pendentes">{stats.pendentes}</div>
-              <p className="text-xs text-muted-foreground mt-1">Aguardando correção</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-green-200/50 dark:border-green-900/50 bg-gradient-to-br from-card to-green-50/30 dark:to-green-950/10 hover-elevate">
-            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
-              <CardTitle className="text-sm font-semibold">Avaliadas</CardTitle>
-              <div className="p-2 bg-green-100 dark:bg-green-900/40 rounded-lg">
-                <Award className="h-5 w-5 text-green-600 dark:text-green-400" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-green-600 dark:text-green-400" data-testid="stat-avaliadas">{stats.avaliadas}</div>
-              <p className="text-xs text-muted-foreground mt-1">Já corrigidas</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Tabs defaultValue="avaliacoes" className="space-y-6">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Atividades</span>
-                <Separator className="flex-1" />
-              </div>
-              <TabsList className="flex-wrap h-auto gap-1 p-1 bg-muted/50">
-                <TabsTrigger value="avaliacoes" data-testid="tab-avaliacoes" className="text-xs px-3 py-2 gap-1">
-                  <ClipboardList className="h-4 w-4" />
-                  Atividades e Avaliações
-                </TabsTrigger>
-                <TabsTrigger value="correcoes" data-testid="tab-correcoes" className="text-xs px-3 py-2 gap-2">
-                  Correções Pendentes
-                  {pendingGradings > 0 && (
-                    <>
-                      <Badge variant="destructive" className="text-[10px] px-1.5">{pendingGradings}</Badge>
-                      <PendingIndicator size="sm" />
-                    </>
-                  )}
-                </TabsTrigger>
-              </TabsList>
             </div>
+          </header>
 
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Notas e Boletins</span>
-                <Separator className="flex-1" />
+          <main className="flex-1 overflow-auto p-6">
+            <div className="max-w-7xl mx-auto">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+                <div>
+                  <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                    Painel do Professor
+                  </h2>
+                  <p className="text-muted-foreground">Gerencie atividades e avalie entregas</p>
+                </div>
               </div>
-              <TabsList className="flex-wrap h-auto gap-1 p-1 bg-muted/50">
-                <TabsTrigger value="bimestres" data-testid="tab-bimestres" className="text-xs px-3 py-2 gap-1">
-                  <CalendarClock className="h-4 w-4" />
-                  Notas Bimestre
-                </TabsTrigger>
-                {userData?.tipo === "diretor" && (
-                  <TabsTrigger value="boletins" data-testid="tab-boletins" className="text-xs px-3 py-2 gap-1">
-                    <GraduationCap className="h-4 w-4" />
-                    Boletins
-                  </TabsTrigger>
-                )}
-              </TabsList>
-            </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Disciplinar</span>
-                <Separator className="flex-1" />
+              <div className="mb-8">
+                <AnnouncementsCarousel userType="professor" />
               </div>
-              <TabsList className="flex-wrap h-auto gap-1 p-1 bg-muted/50">
-                <TabsTrigger value="disciplinar" data-testid="tab-disciplinar" className="text-xs px-3 py-2 gap-1">
-                  <ShieldAlert className="h-4 w-4" />
-                  Ações Disciplinares
-                </TabsTrigger>
-              </TabsList>
-            </div>
-          </div>
 
-          <TabsContent value="avaliacoes" className="space-y-4">
-            <AvaliacoesTab userType="professor" />
-          </TabsContent>
+              {(!userData?.materias || userData.materias.length === 0) && (
+                <Alert variant="destructive" className="mb-8" data-testid="alert-no-subjects">
+                  <AlertTriangle className="h-5 w-5" />
+                  <AlertTitle>Nenhuma matéria atribuída</AlertTitle>
+                  <AlertDescription>
+                    Você ainda não possui matérias atribuídas ao seu perfil. Entre em contato com a diretoria para que realizem o cadastro das suas matérias. 
+                    Sem matérias cadastradas, você não poderá criar atividades, provas ou lançar notas.
+                  </AlertDescription>
+                </Alert>
+              )}
 
-          <TabsContent value="bimestres" className="space-y-4">
-            <BimestresNotasTab />
-          </TabsContent>
-
-          <TabsContent value="disciplinar" className="space-y-4">
-            <DisciplinaryRequestsTab />
-          </TabsContent>
-
-          <TabsContent value="correcoes" className="space-y-4">
-            {entregas?.filter(e => e.status === "entregue" || e.status === "atrasado").length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                  <Award className="h-16 w-16 text-muted-foreground mb-4" />
-                  <p className="text-lg font-medium mb-2">Nenhuma correção pendente</p>
-                  <p className="text-sm text-muted-foreground">Todas as entregas foram avaliadas</p>
-                </CardContent>
-              </Card>
-            ) : (
-              entregas?.filter(e => e.status === "entregue" || e.status === "atrasado").map(entrega => (
-                <Card key={entrega.id} className="hover-elevate">
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1">
-                        <CardTitle>{entrega.tarefaTitulo}</CardTitle>
-                        <CardDescription>
-                          Aluno: {entrega.alunoNome} ({entrega.alunoEmail})
-                        </CardDescription>
-                      </div>
-                      <StatusBadge status={entrega.status} />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <Card className="border-primary/20 bg-gradient-to-br from-card to-primary/5 hover-elevate">
+                  <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
+                    <CardTitle className="text-sm font-semibold">Total de Tarefas</CardTitle>
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <FileText className="h-5 w-5 text-primary" />
                     </div>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="text-sm text-muted-foreground">
-                      Entregue em {format(new Date(entrega.dataEnvio), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                    </div>
-                    
-                    <Button variant="outline" size="sm" asChild>
-                      <a href={entrega.arquivo} target="_blank" rel="noopener noreferrer">
-                        <Download className="h-4 w-4 mr-2" />
-                        Baixar arquivo ({entrega.arquivoNome})
-                      </a>
-                    </Button>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-primary" data-testid="stat-tarefas">{stats.tarefas}</div>
+                    <p className="text-xs text-muted-foreground mt-1">Tarefas criadas</p>
                   </CardContent>
-                  <CardFooter>
-                    <Button
-                      onClick={() => {
-                        setSelectedEntrega(entrega);
-                        setGradeDialogOpen(true);
-                      }}
-                      data-testid="button-avaliar"
-                    >
-                      <Edit className="h-4 w-4 mr-2" />
-                      Avaliar
-                    </Button>
-                  </CardFooter>
                 </Card>
-              ))
-            )}
-          </TabsContent>
 
-          {userData?.tipo === "diretor" && (
-            <TabsContent value="boletins" className="space-y-4">
-              <BoletimTab />
-            </TabsContent>
-          )}
-        </Tabs>
-      </main>
+                <Card className="border-amber-200/50 dark:border-amber-900/50 bg-gradient-to-br from-card to-amber-50/30 dark:to-amber-950/10 hover-elevate">
+                  <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
+                    <CardTitle className="text-sm font-semibold">Pendentes</CardTitle>
+                    <div className="p-2 bg-amber-100 dark:bg-amber-900/40 rounded-lg">
+                      <Users className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-amber-600 dark:text-amber-400" data-testid="stat-pendentes">{stats.pendentes}</div>
+                    <p className="text-xs text-muted-foreground mt-1">Aguardando correção</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-green-200/50 dark:border-green-900/50 bg-gradient-to-br from-card to-green-50/30 dark:to-green-950/10 hover-elevate">
+                  <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
+                    <CardTitle className="text-sm font-semibold">Avaliadas</CardTitle>
+                    <div className="p-2 bg-green-100 dark:bg-green-900/40 rounded-lg">
+                      <Award className="h-5 w-5 text-green-600 dark:text-green-400" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-green-600 dark:text-green-400" data-testid="stat-avaliadas">{stats.avaliadas}</div>
+                    <p className="text-xs text-muted-foreground mt-1">Já corrigidas</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="space-y-6">
+                {selectedSection === "avaliacoes" && (
+                  <AvaliacoesTab userType="professor" />
+                )}
+
+                {selectedSection === "bimestres" && (
+                  <BimestresNotasTab />
+                )}
+
+                {selectedSection === "disciplinar" && (
+                  <DisciplinaryRequestsTab />
+                )}
+
+                {selectedSection === "correcoes" && (
+                  <div className="space-y-4">
+                    {entregas?.filter(e => e.status === "entregue" || e.status === "atrasado").length === 0 ? (
+                      <Card>
+                        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                          <Award className="h-16 w-16 text-muted-foreground mb-4" />
+                          <p className="text-lg font-medium mb-2">Nenhuma correção pendente</p>
+                          <p className="text-sm text-muted-foreground">Todas as entregas foram avaliadas</p>
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      entregas?.filter(e => e.status === "entregue" || e.status === "atrasado").map(entrega => (
+                        <Card key={entrega.id} className="hover-elevate">
+                          <CardHeader>
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1">
+                                <CardTitle>{entrega.tarefaTitulo}</CardTitle>
+                                <CardDescription>
+                                  Aluno: {entrega.alunoNome} ({entrega.alunoEmail})
+                                </CardDescription>
+                              </div>
+                              <StatusBadge status={entrega.status} />
+                            </div>
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            <div className="text-sm text-muted-foreground">
+                              Entregue em {format(new Date(entrega.dataEnvio), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                            </div>
+                            
+                            <Button variant="outline" size="sm" asChild>
+                              <a href={entrega.arquivo} target="_blank" rel="noopener noreferrer">
+                                <Download className="h-4 w-4 mr-2" />
+                                Baixar arquivo ({entrega.arquivoNome})
+                              </a>
+                            </Button>
+                          </CardContent>
+                          <CardFooter>
+                            <Button
+                              onClick={() => {
+                                setSelectedEntrega(entrega);
+                                setGradeDialogOpen(true);
+                              }}
+                              data-testid="button-avaliar"
+                            >
+                              <Edit className="h-4 w-4 mr-2" />
+                              Avaliar
+                            </Button>
+                          </CardFooter>
+                        </Card>
+                      ))
+                    )}
+                  </div>
+                )}
+
+                {selectedSection === "boletins" && userData?.tipo === "diretor" && (
+                  <BoletimTab />
+                )}
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
 
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
         <DialogContent className="max-w-2xl" data-testid="dialog-create-tarefa">
@@ -647,6 +609,6 @@ export default function TeacherDashboard() {
           </Form>
         </DialogContent>
       </Dialog>
-    </div>
+    </SidebarProvider>
   );
 }
