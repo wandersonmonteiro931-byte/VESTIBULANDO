@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
-  GraduationCap, FileText, Printer, Eye, Lock, 
+  GraduationCap, FileText, Printer, Eye, 
   CheckCircle, AlertCircle, Clock
 } from "lucide-react";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
@@ -30,13 +30,10 @@ export function AlunoBoletimTab() {
   const { data: boletins, isLoading: loadingBoletins } = useRealtimeQuery<Boletim>({
     collectionName: "boletins",
     queryKey: ["/api/boletins/aluno", userData?.uid],
-    constraints: userData?.uid ? [where("alunoId", "==", userData.uid)] : [],
+    constraints: userData?.uid ? [where("alunoId", "==", userData.uid), where("liberado", "==", true)] : [],
     transform: (docs) => docs as Boletim[],
     enabled: !!userData?.uid,
   });
-
-  const boletinsLiberados = boletins?.filter(b => b.liberado) || [];
-  const boletinsNaoLiberados = boletins?.filter(b => !b.liberado) || [];
 
   const handlePrintBoletim = (boletim: Boletim) => {
     const doc = new jsPDF();
@@ -161,23 +158,7 @@ export function AlunoBoletimTab() {
         </div>
       </div>
 
-      {boletinsNaoLiberados.length > 0 && (
-        <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <Lock className="h-5 w-5 text-amber-600" />
-              <CardTitle className="text-amber-800 dark:text-amber-200">
-                Boletins Pendentes de Liberação
-              </CardTitle>
-            </div>
-            <CardDescription className="text-amber-700 dark:text-amber-300">
-              {boletinsNaoLiberados.length} boletim(ns) ainda não foram liberados pela diretoria
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      )}
-
-      {boletinsLiberados.length === 0 ? (
+      {(!boletins || boletins.length === 0) ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <FileText className="h-16 w-16 text-muted-foreground mb-4" />
@@ -189,7 +170,7 @@ export function AlunoBoletimTab() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {boletinsLiberados.map(boletim => (
+          {boletins.map(boletim => (
             <Card key={boletim.id} className="hover-elevate" data-testid={`card-boletim-aluno-${boletim.id}`}>
               <CardHeader>
                 <div className="flex items-start justify-between gap-2 flex-wrap">
