@@ -699,3 +699,147 @@ export const insertAutorizacaoAtrasoSchema = autorizacaoAtrasoSchema.omit({ id: 
 
 export type AutorizacaoAtraso = z.infer<typeof autorizacaoAtrasoSchema>;
 export type InsertAutorizacaoAtraso = z.infer<typeof insertAutorizacaoAtrasoSchema>;
+
+// ==================== BOLETIM ESCOLAR ====================
+
+// Lista de matérias padrão
+export const MATERIAS_BOLETIM = [
+  "Português",
+  "Matemática",
+  "História",
+  "Geografia",
+  "Ciências",
+  "Inglês",
+  "Educação Física",
+  "Artes",
+  "Redação",
+  "Literatura",
+  "Física",
+  "Química",
+  "Biologia",
+  "Filosofia",
+  "Sociologia",
+] as const;
+
+// Notas por período (bimestre ou trimestre)
+export const boletimNotaSchema = z.object({
+  materia: z.string(),
+  notas: z.record(z.string(), z.number().nullable()), // { "1º Bimestre": 8.5, "2º Bimestre": null, ... }
+  mediaFinal: z.number().nullable().optional(),
+  mediaEsperada: z.number().optional().default(7),
+});
+
+export type BoletimNota = z.infer<typeof boletimNotaSchema>;
+
+// Boletim Escolar completo
+export const boletimSchema = z.object({
+  id: z.string(),
+  
+  // Informações do aluno
+  alunoId: z.string(),
+  alunoNome: z.string(),
+  alunoMatricula: z.string().optional(),
+  
+  // Informações da escola/turma
+  escola: z.string().default("Preparatório Vestibulando"),
+  turmaId: z.string().optional(),
+  turmaNome: z.string(),
+  anoLetivo: z.string(), // Ex: "2025"
+  
+  // Configuração do período
+  periodoTipo: z.enum(["bimestre", "trimestre"]).default("bimestre"),
+  periodos: z.array(z.string()).optional(), // Ex: ["1º Bimestre", "2º Bimestre", ...]
+  
+  // Notas por matéria
+  materias: z.array(boletimNotaSchema),
+  
+  // Médias gerais
+  mediaGeral: z.number().nullable().optional(), // Média de todas as matérias
+  mediaGeralEsperada: z.number().optional().default(7),
+  
+  // Situação
+  situacao: z.enum(["cursando", "aprovado", "reprovado"]).default("cursando"),
+  
+  // Frequência
+  presencas: z.number().default(0),
+  faltas: z.number().default(0),
+  percentualPresenca: z.number().nullable().optional(), // Calculado: (presencas / (presencas + faltas)) * 100
+  
+  // Observações
+  observacoes: z.string().optional(),
+  observacoesProfessor: z.string().optional(),
+  
+  // Controle de liberação (diretoria libera para alunos)
+  liberado: z.boolean().default(false),
+  liberadoEm: z.string().optional(),
+  liberadoPor: z.string().optional(),
+  liberadoPorNome: z.string().optional(),
+  
+  // Personalização
+  logoUrl: z.string().optional(),
+  
+  // Metadados
+  criadoPor: z.string(),
+  criadoPorNome: z.string(),
+  dataCriacao: z.string(),
+  dataAtualizacao: z.string().optional(),
+});
+
+export const insertBoletimSchema = boletimSchema.omit({ id: true, dataCriacao: true });
+
+export type Boletim = z.infer<typeof boletimSchema>;
+export type InsertBoletim = z.infer<typeof insertBoletimSchema>;
+
+// Configurações globais de liberação de boletins
+export const boletimConfigSchema = z.object({
+  id: z.string(),
+  anoLetivo: z.string(),
+  turmaId: z.string().optional(), // Se não especificado, aplica a todas as turmas
+  turmaNome: z.string().optional(),
+  
+  // Controle de liberação global
+  liberacaoGlobal: z.boolean().default(false), // Se true, todos os boletins desta turma/ano ficam visíveis
+  liberadoEm: z.string().optional(),
+  liberadoPor: z.string().optional(),
+  liberadoPorNome: z.string().optional(),
+  
+  // Configurações de período
+  periodoTipo: z.enum(["bimestre", "trimestre"]).default("bimestre"),
+  periodosAtivos: z.array(z.string()).optional(), // Quais períodos estão liberados para visualização
+  
+  // Metadados
+  dataCriacao: z.string(),
+  dataAtualizacao: z.string().optional(),
+});
+
+export const insertBoletimConfigSchema = boletimConfigSchema.omit({ id: true, dataCriacao: true });
+
+export type BoletimConfig = z.infer<typeof boletimConfigSchema>;
+export type InsertBoletimConfig = z.infer<typeof insertBoletimConfigSchema>;
+
+// Registro de frequência/presença
+export const frequenciaSchema = z.object({
+  id: z.string(),
+  alunoId: z.string(),
+  alunoNome: z.string(),
+  turmaId: z.string().optional(),
+  turmaNome: z.string().optional(),
+  
+  // Data e tipo
+  data: z.string(), // Data da aula
+  materia: z.string().optional(),
+  tipo: z.enum(["presente", "ausente", "justificada"]).default("presente"),
+  
+  // Justificativa (se ausência justificada)
+  justificativa: z.string().optional(),
+  
+  // Quem registrou
+  registradoPor: z.string(),
+  registradoPorNome: z.string(),
+  dataCriacao: z.string(),
+});
+
+export const insertFrequenciaSchema = frequenciaSchema.omit({ id: true, dataCriacao: true });
+
+export type Frequencia = z.infer<typeof frequenciaSchema>;
+export type InsertFrequencia = z.infer<typeof insertFrequenciaSchema>;

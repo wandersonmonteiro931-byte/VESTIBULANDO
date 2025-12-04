@@ -16,8 +16,9 @@ import { BrasiliaClock } from "@/components/BrasiliaClock";
 import { StatusBadge } from "@/components/StatusBadge";
 import { FileUploadZone } from "@/components/FileUploadZone";
 import { AnnouncementsCarousel } from "@/components/AnnouncementsCarousel";
-import { LogOut, FileText, Upload, Download, Calendar, Award, CheckCircle2, Clock, AlertTriangle, MessageCircle, ClipboardList } from "lucide-react";
+import { LogOut, FileText, Upload, Download, Calendar, Award, CheckCircle2, Clock, AlertTriangle, MessageCircle, ClipboardList, GraduationCap } from "lucide-react";
 import { AlunoAvaliacoesTab } from "@/components/AlunoAvaliacoesTab";
+import { AlunoBoletimTab } from "@/components/AlunoBoletimTab";
 import { Link } from "wouter";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
@@ -397,6 +398,10 @@ export default function StudentDashboard() {
                 )}
               </div>
             </TabsTrigger>
+            <TabsTrigger value="boletim" data-testid="tab-boletim">
+              <GraduationCap className="h-4 w-4 mr-1" />
+              Boletim
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="todas" className="space-y-4">
@@ -750,6 +755,10 @@ export default function StudentDashboard() {
                 </>
               )}
             </div>
+          </TabsContent>
+
+          <TabsContent value="boletim" className="space-y-4">
+            <AlunoBoletimTab />
           </TabsContent>
         </Tabs>
       </main>

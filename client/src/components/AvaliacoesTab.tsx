@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { collection, addDoc, updateDoc, doc, where, deleteDoc } from "firebase/firestore";
+import { collection, addDoc, updateDoc, doc, where, deleteDoc, getDocs, query, writeBatch } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -122,6 +122,10 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
   const [editQuestoesDialogOpen, setEditQuestoesDialogOpen] = useState(false);
   const [detailedCorrectionDialogOpen, setDetailedCorrectionDialogOpen] = useState(false);
   const [correcaoMarcacoes, setCorrecaoMarcacoes] = useState<Record<string, "certo" | "errado" | "parcial">>({});
+  
+  // Estados para cancelamento de avaliação
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [avaliacaoToCancel, setAvaliacaoToCancel] = useState<Avaliacao | null>(null);
   
   // Estados para criação de questões
   const [questoes, setQuestoes] = useState<QuestaoTemp[]>([]);
@@ -353,20 +357,45 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
     },
   });
 
-  const deleteMutation = useMutation({
+  const cancelMutation = useMutation({
     mutationFn: async (avaliacaoId: string) => {
-      await deleteDoc(doc(db, "avaliacoes", avaliacaoId));
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/avaliacoes"] });
-      toast({
-        title: "Avaliação excluída",
-        description: "A avaliação foi removida com sucesso.",
+      const batch = writeBatch(db);
+      
+      // 1. Buscar todas as entregas relacionadas a esta avaliação
+      const entregasQuery = query(
+        collection(db, "avaliacaoEntregas"),
+        where("avaliacaoId", "==", avaliacaoId)
+      );
+      const entregasSnapshot = await getDocs(entregasQuery);
+      
+      // 2. Adicionar todas as entregas ao batch para exclusão
+      entregasSnapshot.docs.forEach((docSnapshot) => {
+        batch.delete(doc(db, "avaliacaoEntregas", docSnapshot.id));
       });
+      
+      // 3. Adicionar a avaliação ao batch para exclusão
+      batch.delete(doc(db, "avaliacoes", avaliacaoId));
+      
+      // 4. Executar o batch (todas as exclusões de uma vez)
+      await batch.commit();
+      
+      return { entregasRemovidas: entregasSnapshot.docs.length };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/avaliacoes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/avaliacao-entregas"] });
+      toast({
+        title: "Avaliação cancelada",
+        description: data.entregasRemovidas > 0 
+          ? `A avaliação e ${data.entregasRemovidas} entrega(s) foram removidas do sistema.`
+          : "A avaliação foi removida do sistema.",
+      });
+      setCancelDialogOpen(false);
+      setAvaliacaoToCancel(null);
     },
     onError: (error: any) => {
       toast({
-        title: "Erro ao excluir",
+        title: "Erro ao cancelar",
         description: error.message,
         variant: "destructive",
       });
@@ -1607,7 +1636,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
             onEdit={handleOpenEditDialog}
             onEditQuestoes={handleOpenEditQuestoesDialog}
             onPrint={handlePrintPDF}
-            onDelete={(id) => deleteMutation.mutate(id)}
+            onCancel={(avaliacao) => { setAvaliacaoToCancel(avaliacao); setCancelDialogOpen(true); }}
             getStatus={getStatusAvaliacao}
             getTipoIcon={getTipoIcon}
             getTipoLabel={getTipoLabel}
@@ -1623,7 +1652,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
             onEdit={handleOpenEditDialog}
             onEditQuestoes={handleOpenEditQuestoesDialog}
             onPrint={handlePrintPDF}
-            onDelete={(id) => deleteMutation.mutate(id)}
+            onCancel={(avaliacao) => { setAvaliacaoToCancel(avaliacao); setCancelDialogOpen(true); }}
             getStatus={getStatusAvaliacao}
             getTipoIcon={getTipoIcon}
             getTipoLabel={getTipoLabel}
@@ -1639,7 +1668,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
             onEdit={handleOpenEditDialog}
             onEditQuestoes={handleOpenEditQuestoesDialog}
             onPrint={handlePrintPDF}
-            onDelete={(id) => deleteMutation.mutate(id)}
+            onCancel={(avaliacao) => { setAvaliacaoToCancel(avaliacao); setCancelDialogOpen(true); }}
             getStatus={getStatusAvaliacao}
             getTipoIcon={getTipoIcon}
             getTipoLabel={getTipoLabel}
@@ -1655,7 +1684,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
             onEdit={handleOpenEditDialog}
             onEditQuestoes={handleOpenEditQuestoesDialog}
             onPrint={handlePrintPDF}
-            onDelete={(id) => deleteMutation.mutate(id)}
+            onCancel={(avaliacao) => { setAvaliacaoToCancel(avaliacao); setCancelDialogOpen(true); }}
             getStatus={getStatusAvaliacao}
             getTipoIcon={getTipoIcon}
             getTipoLabel={getTipoLabel}
@@ -3453,6 +3482,66 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog de confirmação de cancelamento */}
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="h-5 w-5" />
+              Cancelar Avaliação
+            </DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja cancelar esta avaliação?
+            </DialogDescription>
+          </DialogHeader>
+          
+          {avaliacaoToCancel && (
+            <div className="py-4 space-y-3">
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="font-medium">{avaliacaoToCancel.titulo}</p>
+                <p className="text-sm text-muted-foreground">
+                  {avaliacaoToCancel.tipo.charAt(0).toUpperCase() + avaliacaoToCancel.tipo.slice(1)} de {avaliacaoToCancel.materia}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Turma: {avaliacaoToCancel.turmaNome || "-"}
+                </p>
+              </div>
+              
+              <div className="p-3 border border-destructive/20 bg-destructive/5 rounded-lg text-sm">
+                <p className="font-medium text-destructive mb-1">Atenção:</p>
+                <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                  <li>Esta ação é irreversível</li>
+                  <li>A avaliação será removida do sistema</li>
+                  <li>Todas as entregas dos alunos serão excluídas</li>
+                  <li>Mesmo entregas já corrigidas serão removidas</li>
+                </ul>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCancelDialogOpen(false);
+                setAvaliacaoToCancel(null);
+              }}
+              disabled={cancelMutation.isPending}
+            >
+              Voltar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => avaliacaoToCancel && cancelMutation.mutate(avaliacaoToCancel.id)}
+              disabled={cancelMutation.isPending}
+              data-testid="button-confirm-cancel"
+            >
+              {cancelMutation.isPending ? "Cancelando..." : "Sim, Cancelar Avaliação"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -3464,7 +3553,7 @@ interface AvaliacaoListProps {
   onEdit: (avaliacao: Avaliacao) => void;
   onEditQuestoes: (avaliacao: Avaliacao) => void;
   onPrint: (avaliacao: Avaliacao) => void;
-  onDelete: (id: string) => void;
+  onCancel: (avaliacao: Avaliacao) => void;
   getStatus: (avaliacao: Avaliacao) => { label: string; variant: "default" | "secondary" | "destructive" | "outline" };
   getTipoIcon: (tipo: string) => JSX.Element;
   getTipoLabel: (tipo: string) => string;
@@ -3478,7 +3567,7 @@ function AvaliacaoList({
   onEdit,
   onEditQuestoes,
   onPrint, 
-  onDelete, 
+  onCancel, 
   getStatus, 
   getTipoIcon, 
   getTipoLabel,
@@ -3588,10 +3677,11 @@ function AvaliacaoList({
                 variant="ghost" 
                 size="sm" 
                 className="text-destructive hover:text-destructive"
-                onClick={() => onDelete(avaliacao.id)}
+                onClick={() => onCancel(avaliacao)}
+                data-testid={`button-cancel-avaliacao-${avaliacao.id}`}
               >
-                <Trash2 className="h-4 w-4 mr-1" />
-                Excluir
+                <X className="h-4 w-4 mr-1" />
+                Cancelar
               </Button>
             </CardFooter>
           </Card>

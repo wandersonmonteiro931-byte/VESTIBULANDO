@@ -19,8 +19,9 @@ import { BrasiliaClock } from "@/components/BrasiliaClock";
 import { StatusBadge } from "@/components/StatusBadge";
 import { FileUploadZone } from "@/components/FileUploadZone";
 import { AnnouncementsCarousel } from "@/components/AnnouncementsCarousel";
-import { LogOut, Plus, FileText, Users, Download, Edit, Calendar, Award, MessageCircle, ClipboardList } from "lucide-react";
+import { LogOut, Plus, FileText, Users, Download, Edit, Calendar, Award, MessageCircle, ClipboardList, GraduationCap } from "lucide-react";
 import { AvaliacoesTab } from "@/components/AvaliacoesTab";
+import { BoletimTab } from "@/components/BoletimTab";
 import { Link } from "wouter";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
@@ -294,6 +295,12 @@ export default function TeacherDashboard() {
                 <Badge variant="destructive" className="ml-2">{pendingGradings}</Badge>
               )}
             </TabsTrigger>
+            {userData?.tipo === "diretor" && (
+              <TabsTrigger value="boletins" data-testid="tab-boletins">
+                <GraduationCap className="h-4 w-4 mr-1" />
+                Boletins
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="avaliacoes" className="space-y-4">
@@ -351,6 +358,12 @@ export default function TeacherDashboard() {
               ))
             )}
           </TabsContent>
+
+          {userData?.tipo === "diretor" && (
+            <TabsContent value="boletins" className="space-y-4">
+              <BoletimTab />
+            </TabsContent>
+          )}
         </Tabs>
       </main>
 
