@@ -485,6 +485,58 @@ service cloud.firestore {
       allow delete: if isAdmin() && isUserActive();
     }
     
+    // ==================== BOLETIM ESCOLAR ====================
+    
+    // Boletins collection - boletins escolares
+    match /boletins/{boletimId} {
+      // Alunos só podem ver seus próprios boletins liberados
+      // Professores e diretores podem ver todos os boletins
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        isProfessor() ||
+        (isAluno() && resource.data.alunoId == request.auth.uid && resource.data.liberado == true)
+      );
+      
+      // Apenas diretores podem criar boletins
+      allow create: if isAdmin() && isUserActive();
+      
+      // Apenas diretores podem atualizar boletins
+      allow update: if isAdmin() && isUserActive();
+      
+      // Apenas diretores podem deletar boletins
+      allow delete: if isAdmin() && isUserActive();
+    }
+    
+    // Boletim Configs collection - configurações de liberação
+    match /boletimConfigs/{configId} {
+      // Diretores podem ler e gerenciar configurações
+      // Professores podem apenas ler
+      allow read: if isAuthenticated() && (isAdmin() || isProfessor());
+      
+      // Apenas diretores podem criar/atualizar/deletar
+      allow create, update, delete: if isAdmin() && isUserActive();
+    }
+    
+    // Frequencias collection - registros de presença
+    match /frequencias/{frequenciaId} {
+      // Alunos podem ver apenas suas próprias frequências
+      // Professores e diretores podem ver todas
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        isProfessor() ||
+        (isAluno() && resource.data.alunoId == request.auth.uid)
+      );
+      
+      // Professores e diretores podem registrar frequência
+      allow create: if isAuthenticated() && isUserActive() && (isAdmin() || isProfessor());
+      
+      // Professores e diretores podem atualizar frequência
+      allow update: if isAuthenticated() && isUserActive() && (isAdmin() || isProfessor());
+      
+      // Apenas diretores podem deletar frequências
+      allow delete: if isAdmin() && isUserActive();
+    }
+    
     // System collection - for counters and system-wide settings
     match /system/{documentId} {
       // Matricula counter can be read by anyone (needed for transactions)

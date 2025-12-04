@@ -69,9 +69,22 @@ The platform utilizes a consistent violet/purple color scheme across all dashboa
   - Notas numéricas com feedback textual
   - Visualização de gabarito (configurável)
 - **PDF/Impressão**: Geração de PDF para impressão com cabeçalho padrão
+- **Cancelamento de Avaliações**: Exclusão atômica de avaliação e todas as entregas relacionadas usando Firebase batch operations
 - **Componentes**:
   - `AvaliacoesTab.tsx` - Interface do professor/diretor
   - `AlunoAvaliacoesTab.tsx` - Interface do aluno
+
+#### Sistema de Boletim Escolar (NOVO - Dezembro 2025)
+- **Notas por Período**: Suporte para sistema bimestral (4 períodos) ou trimestral (3 períodos)
+- **Matérias Padrão**: 15 matérias configuráveis (Português, Matemática, História, etc.)
+- **Cálculo Automático**: Médias por matéria e média geral calculadas automaticamente
+- **Controle de Frequência**: Registro de presenças e faltas com percentual de frequência
+- **Liberação Controlada**: Diretoria deve liberar boletins antes que alunos possam visualizar
+- **Situação do Aluno**: Cursando, Aprovado ou Reprovado
+- **Impressão PDF**: Geração de PDF profissional com layout para assinaturas
+- **Componentes**:
+  - `BoletimTab.tsx` - Interface da diretoria para criar/editar/liberar boletins
+  - `AlunoBoletimTab.tsx` - Interface do aluno para visualizar boletins liberados
 
 #### Data Model
 The core data model includes `Usuarios` (users with `aluno`, `professor`, `admin` types, CPF, matricula, address via ViaCEP), `Tarefas` (assignments with title, description, professor, class, deadline, attachments), `Entregas` (submissions with student info, file, grade, feedback, status), and `Turmas` (classes with name, year, activity status, vacancies, enrollment period, WhatsApp link). Additional collections: `announcements` (system notices), `chatMessages` (chat messages), `chatConversations` (conversations), `userBlocks` (user blocks), `chatReports` (conversation reports).
@@ -116,11 +129,14 @@ As regras de segurança do Firestore estão no arquivo `firestore.rules`. Após 
 5. Cole no editor do Firebase Console
 6. Clique em **Publicar**
 
-**IMPORTANTE**: As regras do Firestore foram atualizadas em 03/12/2025 para incluir suporte às novas coleções do sistema de avaliações:
+**IMPORTANTE**: As regras do Firestore foram atualizadas em 04/12/2025 para incluir suporte às novas coleções do sistema de avaliações e boletins:
 - `avaliacoes` - provas, simulados, atividades, trabalhos
 - `avaliacaoQuestoes` - questões das avaliações
 - `avaliacaoTemplates` - modelos de prova
 - `avaliacaoEntregas` - entregas dos alunos
 - `avaliacaoAutorizacoesAtraso` - autorizações para entregas atrasadas
+- `boletins` - boletins escolares dos alunos
+- `boletimConfigs` - configurações de liberação de boletins
+- `frequencias` - registros de frequência/presença
 
 É necessário implantar essas regras no Firebase Console para que o sistema de avaliações funcione corretamente.
