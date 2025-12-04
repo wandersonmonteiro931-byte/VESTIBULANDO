@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { collection, where, addDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
+import { useWarningAlert } from "@/contexts/WarningAlertContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -22,7 +23,7 @@ import { AlunoBoletimTab } from "@/components/AlunoBoletimTab";
 import { Link } from "wouter";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
-import type { Tarefa, Entrega } from "@shared/schema";
+import type { Tarefa, Entrega, DisciplinaryAction } from "@shared/schema";
 import { format, formatDistanceToNow, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import jsPDF from "jspdf";
@@ -31,9 +32,11 @@ import assinaturaDeclaracaoUrl from "@assets/Captura de tela 2025-10-23 011843_1
 export default function StudentDashboard() {
   const { userData, signOut } = useAuth();
   const { toast } = useToast();
+  const { triggerWarningAlert } = useWarningAlert();
   const [selectedTarefa, setSelectedTarefa] = useState<Tarefa | null>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [submissionDialogOpen, setSubmissionDialogOpen] = useState(false);
+  const warningAlertShownRef = useRef(false);
 
   useEffect(() => {
     const handleFileError = (event: any) => {
@@ -77,6 +80,28 @@ export default function StudentDashboard() {
     constraints: userData?.uid ? [where("alunoId", "==", userData.uid)] : [],
     enabled: !!userData?.uid,
   });
+
+  useEffect(() => {
+    if (!disciplinaryActions || loadingDisciplinary || warningAlertShownRef.current) return;
+    
+    const activeWarnings = (disciplinaryActions as DisciplinaryAction[]).filter(
+      (action) => action.tipo === "advertencia" && action.ativo === true
+    );
+    
+    const unviewedWarning = activeWarnings.find((action) => !action.visualizado);
+    
+    if (unviewedWarning && userData) {
+      warningAlertShownRef.current = true;
+      triggerWarningAlert({
+        id: unviewedWarning.id,
+        alunoNome: userData.nome,
+        comentario: unviewedWarning.comentario,
+        dataAplicacao: unviewedWarning.dataAplicacao,
+        aplicadoPorNome: unviewedWarning.aplicadoPorNome,
+        warningsCount: activeWarnings.length,
+      });
+    }
+  }, [disciplinaryActions, loadingDisciplinary, userData, triggerWarningAlert]);
 
   const submitMutation = useMutation({
     mutationFn: async ({ tarefaId, file }: { tarefaId: string; file: File }) => {
