@@ -20,11 +20,12 @@ import { BrasiliaClock } from "@/components/BrasiliaClock";
 import { StatusBadge } from "@/components/StatusBadge";
 import { FileUploadZone } from "@/components/FileUploadZone";
 import { AnnouncementsCarousel } from "@/components/AnnouncementsCarousel";
-import { LogOut, Plus, FileText, Users, Download, Edit, Calendar, Award, MessageCircle, ClipboardList, GraduationCap, CalendarClock, AlertTriangle } from "lucide-react";
+import { LogOut, Plus, FileText, Users, Download, Edit, Calendar, Award, MessageCircle, ClipboardList, GraduationCap, CalendarClock, AlertTriangle, ShieldAlert } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AvaliacoesTab } from "@/components/AvaliacoesTab";
 import { BoletimTab } from "@/components/BoletimTab";
 import { BimestresNotasTab } from "@/components/BimestresNotasTab";
+import { DisciplinaryRequestsTab } from "@/components/DisciplinaryRequestsTab";
 import { Link } from "wouter";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
@@ -315,6 +316,10 @@ export default function TeacherDashboard() {
               <CalendarClock className="h-4 w-4 mr-1" />
               Notas Bimestre
             </TabsTrigger>
+            <TabsTrigger value="disciplinar" data-testid="tab-disciplinar">
+              <ShieldAlert className="h-4 w-4 mr-1" />
+              Ações Disciplinares
+            </TabsTrigger>
             {userData?.tipo === "diretor" && (
               <TabsTrigger value="boletins" data-testid="tab-boletins">
                 <GraduationCap className="h-4 w-4 mr-1" />
@@ -329,6 +334,10 @@ export default function TeacherDashboard() {
 
           <TabsContent value="bimestres" className="space-y-4">
             <BimestresNotasTab />
+          </TabsContent>
+
+          <TabsContent value="disciplinar" className="space-y-4">
+            <DisciplinaryRequestsTab />
           </TabsContent>
 
           <TabsContent value="correcoes" className="space-y-4">
