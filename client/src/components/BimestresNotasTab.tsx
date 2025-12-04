@@ -27,6 +27,7 @@ import { MATERIAS_BOLETIM } from "@shared/schema";
 import { format, isBefore, isAfter, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { getNowBrasiliaISO } from "@/lib/brasiliaTime";
+import { formatNota } from "@/lib/utils";
 
 const ANOS_DISPONIVEIS = [
   (new Date().getFullYear() - 1).toString(),
@@ -242,7 +243,8 @@ export function BimestresNotasTab() {
   });
 
   const handleNotaChange = (alunoId: string, nota: string) => {
-    const parsedNota = nota === "" ? null : parseFloat(nota);
+    const normalized = nota.replace(",", ".");
+    const parsedNota = normalized === "" ? null : parseFloat(normalized);
     if (parsedNota !== null && (isNaN(parsedNota) || parsedNota < 0 || parsedNota > 10)) {
       return;
     }
@@ -705,13 +707,12 @@ export function BimestresNotasTab() {
                             <TableCell className="text-muted-foreground">{nota.alunoMatricula || "-"}</TableCell>
                             <TableCell>
                               <Input
-                                type="number"
-                                min="0"
-                                max="10"
-                                step="0.1"
-                                value={nota.nota ?? ""}
+                                type="text"
+                                inputMode="decimal"
+                                value={nota.nota !== null ? formatNota(nota.nota) : ""}
                                 onChange={(e) => handleNotaChange(nota.alunoId, e.target.value)}
                                 disabled={!canEditNota}
+                                placeholder="0,0"
                                 className={`text-center ${abaixoMedia ? "border-orange-500" : ""} ${isAutorizado ? "border-green-500" : ""}`}
                                 data-testid={`input-nota-${nota.alunoId}`}
                               />

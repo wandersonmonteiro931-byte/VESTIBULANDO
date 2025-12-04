@@ -5,6 +5,19 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+export function formatNota(nota: number | null | undefined): string {
+  if (nota === null || nota === undefined) return "-";
+  return nota.toFixed(1).replace(".", ",");
+}
+
+export function parseNota(value: string): number | null {
+  if (!value || value.trim() === "") return null;
+  const normalized = value.replace(",", ".");
+  const parsed = parseFloat(normalized);
+  if (isNaN(parsed) || parsed < 0 || parsed > 10) return null;
+  return parsed;
+}
+
 export function getTipoAlunoGenero(sexo?: string): string {
   if (!sexo) return "Aluno(a)";
   
