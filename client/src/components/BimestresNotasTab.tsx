@@ -762,17 +762,6 @@ export function BimestresNotasTab() {
                                          solicitacao.status === "autorizado" ? "Autorizado" : "Negado"}
                                       </Badge>
                                       
-                                      {solicitacao.comentarioDiretor && (
-                                        <div className={`text-xs p-2 rounded max-w-[200px] ${
-                                          solicitacao.status === "negado" 
-                                            ? "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300" 
-                                            : "bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300"
-                                        }`}>
-                                          <MessageSquare className="h-3 w-3 inline mr-1" />
-                                          {solicitacao.comentarioDiretor}
-                                        </div>
-                                      )}
-                                      
                                       {(solicitacao.status === "negado" || solicitacao.status === "autorizado") && !isAutorizado && (
                                         <Button
                                           size="sm"
@@ -805,14 +794,6 @@ export function BimestresNotasTab() {
                                     <CheckCircle className="h-3 w-3 mr-1" />
                                     Autorizado
                                   </Badge>
-                                  
-                                  {solicitacao?.comentarioDiretor && (
-                                    <div className="text-xs p-2 rounded max-w-[200px] bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300">
-                                      <MessageSquare className="h-3 w-3 inline mr-1" />
-                                      {solicitacao.comentarioDiretor}
-                                    </div>
-                                  )}
-                                  
                                   <span className="text-xs text-muted-foreground">Editável</span>
                                   <Button
                                     size="sm"
