@@ -169,11 +169,15 @@ export function BimestresNotasTab() {
 
   const getSolicitacaoParaAluno = (alunoId: string) => {
     if (!solicitacoesEdicao || !selectedBimestreData || !selectedMateria) return null;
-    return solicitacoesEdicao.find(s => 
+    const solicitacoesDoAluno = solicitacoesEdicao.filter(s => 
       s.alunoId === alunoId && 
       s.bimestreNumero === selectedBimestreData.numero &&
       s.materia === selectedMateria
     );
+    if (solicitacoesDoAluno.length === 0) return null;
+    return solicitacoesDoAluno.sort((a, b) => 
+      new Date(b.dataSolicitacao).getTime() - new Date(a.dataSolicitacao).getTime()
+    )[0];
   };
 
   const openRequestAuthDialog = (nota: NotaLocal) => {
@@ -743,19 +747,45 @@ export function BimestresNotasTab() {
                               {isEntregue && !isAutorizado && !isDiretor && (
                                 <>
                                   {solicitacao ? (
-                                    <Badge 
-                                      variant={
-                                        solicitacao.status === "pendente" ? "outline" : 
-                                        solicitacao.status === "autorizado" ? "default" : "destructive"
-                                      }
-                                      className="text-xs"
-                                    >
-                                      {solicitacao.status === "pendente" && <Clock className="h-3 w-3 mr-1" />}
-                                      {solicitacao.status === "autorizado" && <CheckCircle className="h-3 w-3 mr-1" />}
-                                      {solicitacao.status === "negado" && <AlertCircle className="h-3 w-3 mr-1" />}
-                                      {solicitacao.status === "pendente" ? "Aguardando" : 
-                                       solicitacao.status === "autorizado" ? "Autorizado" : "Negado"}
-                                    </Badge>
+                                    <div className="flex flex-col items-center gap-1">
+                                      <Badge 
+                                        variant={
+                                          solicitacao.status === "pendente" ? "outline" : 
+                                          solicitacao.status === "autorizado" ? "default" : "destructive"
+                                        }
+                                        className="text-xs"
+                                      >
+                                        {solicitacao.status === "pendente" && <Clock className="h-3 w-3 mr-1" />}
+                                        {solicitacao.status === "autorizado" && <CheckCircle className="h-3 w-3 mr-1" />}
+                                        {solicitacao.status === "negado" && <AlertCircle className="h-3 w-3 mr-1" />}
+                                        {solicitacao.status === "pendente" ? "Aguardando" : 
+                                         solicitacao.status === "autorizado" ? "Autorizado" : "Negado"}
+                                      </Badge>
+                                      
+                                      {solicitacao.comentarioDiretor && (
+                                        <div className={`text-xs p-2 rounded max-w-[200px] ${
+                                          solicitacao.status === "negado" 
+                                            ? "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300" 
+                                            : "bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300"
+                                        }`}>
+                                          <MessageSquare className="h-3 w-3 inline mr-1" />
+                                          {solicitacao.comentarioDiretor}
+                                        </div>
+                                      )}
+                                      
+                                      {(solicitacao.status === "negado" || solicitacao.status === "autorizado") && !isAutorizado && (
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => openRequestAuthDialog(nota)}
+                                          className="text-xs mt-1"
+                                          data-testid={`button-retry-auth-${nota.alunoId}`}
+                                        >
+                                          <KeyRound className="h-3 w-3 mr-1" />
+                                          {solicitacao.status === "negado" ? "Tentar novamente" : "Nova solicitação"}
+                                        </Button>
+                                      )}
+                                    </div>
                                   ) : (
                                     <Button
                                       size="sm"
@@ -770,7 +800,31 @@ export function BimestresNotasTab() {
                                 </>
                               )}
                               {isAutorizado && !isDiretor && (
-                                <span className="text-xs text-muted-foreground">Editável</span>
+                                <div className="flex flex-col items-center gap-1">
+                                  <Badge variant="default" className="bg-green-600 text-xs">
+                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                    Autorizado
+                                  </Badge>
+                                  
+                                  {solicitacao?.comentarioDiretor && (
+                                    <div className="text-xs p-2 rounded max-w-[200px] bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300">
+                                      <MessageSquare className="h-3 w-3 inline mr-1" />
+                                      {solicitacao.comentarioDiretor}
+                                    </div>
+                                  )}
+                                  
+                                  <span className="text-xs text-muted-foreground">Editável</span>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => openRequestAuthDialog(nota)}
+                                    className="text-xs"
+                                    data-testid={`button-new-auth-${nota.alunoId}`}
+                                  >
+                                    <KeyRound className="h-3 w-3 mr-1" />
+                                    Nova solicitação
+                                  </Button>
+                                </div>
                               )}
                             </TableCell>
                           </TableRow>
