@@ -65,6 +65,7 @@ export function BoletimTab() {
   const [expandedAlunos, setExpandedAlunos] = useState<Set<string>>(new Set());
   const [editingBoletimId, setEditingBoletimId] = useState<string | null>(null);
   const [bulkEditNotas, setBulkEditNotas] = useState<Record<string, BoletimNota[]>>({});
+  const [editingBoletimData, setEditingBoletimData] = useState<Boletim | null>(null);
 
   const { data: turmas } = useRealtimeQuery<Turma>({
     collectionName: "turmas",
@@ -286,6 +287,7 @@ export function BoletimTab() {
   };
 
   const openEditDialog = (boletim: Boletim) => {
+    setEditingBoletimData(boletim);
     setSelectedBoletim(boletim);
     setSelectedAlunoId(boletim.alunoId);
     setSelectedTurmaId(boletim.turmaId || "");
@@ -294,7 +296,7 @@ export function BoletimTab() {
     setMateriasNotas(boletim.materias);
     setObservacoes(boletim.observacoes || "");
     setSituacao(boletim.situacao);
-    setEditDialogOpen(true);
+    setCreateDialogOpen(true);
   };
 
   const createMutation = useMutation({
@@ -1199,7 +1201,7 @@ export function BoletimTab() {
         </div>
         <Button onClick={openCreateDialog} data-testid="button-create-boletim">
           <Plus className="h-4 w-4 mr-2" />
-          Novo Boletim
+          Emitir Boletim Escolar
         </Button>
       </div>
 
@@ -1393,25 +1395,50 @@ export function BoletimTab() {
         </div>
       )}
 
-      {/* Dialog de Criação */}
-      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+      {/* Dialog de Emissão/Edição de Boletim */}
+      <Dialog open={createDialogOpen} onOpenChange={(open) => {
+        setCreateDialogOpen(open);
+        if (!open) {
+          setEditingBoletimData(null);
+        }
+      }}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>Novo Boletim</DialogTitle>
-            <DialogDescription>Crie um novo boletim escolar para um aluno</DialogDescription>
+            <DialogTitle>
+              {editingBoletimData ? "Editar/Ver Boletim" : "Emitir Boletim Escolar"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingBoletimData 
+                ? `${editingBoletimData.alunoNome} - ${editingBoletimData.turmaNome}` 
+                : "Crie um novo boletim escolar para um aluno"
+              }
+            </DialogDescription>
           </DialogHeader>
           {renderBoletimForm()}
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
+            <Button variant="outline" onClick={() => {
+              setCreateDialogOpen(false);
+              setEditingBoletimData(null);
+            }}>
               Cancelar
             </Button>
-            <Button 
-              onClick={() => createMutation.mutate()}
-              disabled={createMutation.isPending || !selectedAlunoId}
-              data-testid="button-save-boletim"
-            >
-              {createMutation.isPending ? "Salvando..." : "Criar Boletim"}
-            </Button>
+            {editingBoletimData ? (
+              <Button 
+                onClick={() => updateMutation.mutate()}
+                disabled={updateMutation.isPending}
+                data-testid="button-save-boletim"
+              >
+                {updateMutation.isPending ? "Salvando..." : "Salvar Alterações"}
+              </Button>
+            ) : (
+              <Button 
+                onClick={() => createMutation.mutate()}
+                disabled={createMutation.isPending || !selectedAlunoId}
+                data-testid="button-save-boletim"
+              >
+                {createMutation.isPending ? "Salvando..." : "Emitir Boletim"}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1784,8 +1811,11 @@ export function BoletimTab() {
                                     <Button
                                       variant="ghost"
                                       size="icon"
-                                      onClick={() => toggleExpandAluno(aluno.uid)}
-                                      title="Ver/Editar boletim"
+                                      onClick={() => {
+                                        setBulkDialogOpen(false);
+                                        openEditDialog(boletimAluno!);
+                                      }}
+                                      title="Editar/Ver boletim"
                                       data-testid={`button-view-${aluno.uid}`}
                                     >
                                       <Eye className="h-4 w-4" />
@@ -1841,34 +1871,17 @@ export function BoletimTab() {
                                     <span><strong>Situação:</strong> {boletimAluno?.situacao}</span>
                                   </div>
                                   <div className="flex items-center gap-2">
-                                    {isEditing ? (
-                                      <>
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={cancelEditingBoletim}
-                                        >
-                                          <X className="h-4 w-4 mr-1" />
-                                          Cancelar
-                                        </Button>
-                                        <Button
-                                          size="sm"
-                                          onClick={() => saveEditingBoletim(boletimAluno!.id, aluno.uid)}
-                                        >
-                                          <Save className="h-4 w-4 mr-1" />
-                                          Salvar
-                                        </Button>
-                                      </>
-                                    ) : (
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => startEditingBoletim(boletimAluno!.id, boletimAluno!.materias)}
-                                      >
-                                        <Edit className="h-4 w-4 mr-1" />
-                                        Editar Notas
-                                      </Button>
-                                    )}
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        setBulkDialogOpen(false);
+                                        openEditDialog(boletimAluno!);
+                                      }}
+                                    >
+                                      <Edit className="h-4 w-4 mr-1" />
+                                      Editar/Ver Notas
+                                    </Button>
                                   </div>
                                 </div>
                                 
