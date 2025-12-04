@@ -590,6 +590,26 @@ service cloud.firestore {
       allow delete: if isAdmin() && isUserActive();
     }
     
+    // Solicitações de Edição de Nota - solicitações dos professores para alterar notas já entregues
+    match /solicitacoesEdicaoNota/{solicitacaoId} {
+      // Professores podem ver suas próprias solicitações
+      // Diretores podem ver todas as solicitações
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        (isProfessor() && resource.data.professorId == request.auth.uid)
+      );
+      
+      // Apenas professores podem criar solicitações para si mesmos
+      allow create: if isProfessor() && isUserActive() &&
+                       request.resource.data.professorId == request.auth.uid;
+      
+      // Apenas diretores podem atualizar solicitações (aprovar/rejeitar)
+      allow update: if isAdmin() && isUserActive();
+      
+      // Apenas diretores podem deletar solicitações
+      allow delete: if isAdmin() && isUserActive();
+    }
+    
     // System collection - for counters and system-wide settings
     match /system/{documentId} {
       // Matricula counter can be read by anyone (needed for transactions)
