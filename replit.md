@@ -86,6 +86,24 @@ The platform utilizes a consistent violet/purple color scheme across all dashboa
   - `BoletimTab.tsx` - Interface da diretoria para criar/editar/liberar boletins
   - `AlunoBoletimTab.tsx` - Interface do aluno para visualizar boletins liberados
 
+#### Sistema de Bimestres e Lançamento de Notas (NOVO - Dezembro 2025)
+- **Configuração de Bimestres**:
+  - Diretoria define 4 bimestres por ano letivo
+  - Data de início e fim de cada bimestre
+  - Prazo para lançamento de notas pelos professores
+  - Média esperada configurável por bimestre
+  - Status ativo/inativo para controle
+- **Lançamento de Notas**:
+  - Professores lançam notas por turma, matéria e bimestre
+  - Notas numéricas de 0 a 10 com validação
+  - Campo de observação opcional por aluno
+  - Status de rascunho ou entregue
+  - Bloqueio automático após prazo expirado (exceto para diretoria)
+  - IDs únicos por (aluno, bimestre, turma, matéria) para evitar duplicatas
+- **Componentes**:
+  - `BimestresTab.tsx` - Interface da diretoria para configurar bimestres
+  - `BimestresNotasTab.tsx` - Interface dos professores para lançar notas
+
 #### Data Model
 The core data model includes `Usuarios` (users with `aluno`, `professor`, `admin` types, CPF, matricula, address via ViaCEP), `Tarefas` (assignments with title, description, professor, class, deadline, attachments), `Entregas` (submissions with student info, file, grade, feedback, status), and `Turmas` (classes with name, year, activity status, vacancies, enrollment period, WhatsApp link). Additional collections: `announcements` (system notices), `chatMessages` (chat messages), `chatConversations` (conversations), `userBlocks` (user blocks), `chatReports` (conversation reports).
 
@@ -129,7 +147,7 @@ As regras de segurança do Firestore estão no arquivo `firestore.rules`. Após 
 5. Cole no editor do Firebase Console
 6. Clique em **Publicar**
 
-**IMPORTANTE**: As regras do Firestore foram atualizadas em 04/12/2025 para incluir suporte às novas coleções do sistema de avaliações e boletins:
+**IMPORTANTE**: As regras do Firestore foram atualizadas em 04/12/2025 para incluir suporte às novas coleções do sistema de avaliações, boletins e bimestres:
 - `avaliacoes` - provas, simulados, atividades, trabalhos
 - `avaliacaoQuestoes` - questões das avaliações
 - `avaliacaoTemplates` - modelos de prova
@@ -138,5 +156,7 @@ As regras de segurança do Firestore estão no arquivo `firestore.rules`. Após 
 - `boletins` - boletins escolares dos alunos
 - `boletimConfigs` - configurações de liberação de boletins
 - `frequencias` - registros de frequência/presença
+- `bimestresConfig` - configuração dos bimestres por ano letivo
+- `notasBimestre` - notas lançadas por bimestre/turma/matéria
 
-É necessário implantar essas regras no Firebase Console para que o sistema de avaliações funcione corretamente.
+É necessário implantar essas regras no Firebase Console para que o sistema de avaliações e bimestres funcione corretamente.
