@@ -31,7 +31,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 import type { User, Turma, Maintenance, DiretorQuickAddAluno } from "@shared/schema";
-import { HORARIOS_DISPONIVEIS, diretorQuickAddAlunoSchema } from "@shared/schema";
+import { HORARIOS_DISPONIVEIS, MATERIAS_DISPONIVEIS, diretorQuickAddAlunoSchema } from "@shared/schema";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -66,6 +66,7 @@ const professorDiretorFormSchema = z.object({
   escolaridade: z.string().min(1, "Escolaridade é obrigatória"),
   tipo: z.enum(["professor", "diretor"]),
   turmas: z.array(z.string()).optional(),
+  materias: z.array(z.string()).optional(),
 });
 
 const editStudentFormSchema = z.object({
@@ -290,8 +291,11 @@ export default function AdminDashboard() {
       escolaridade: "",
       tipo: "professor",
       turmas: [],
+      materias: [],
     },
   });
+  
+  const [selectedMaterias, setSelectedMaterias] = useState<string[]>([]);
 
   const editStudentForm = useForm<z.infer<typeof editStudentFormSchema>>({
     resolver: zodResolver(editStudentFormSchema),
@@ -971,6 +975,7 @@ export default function AdminDashboard() {
         tipo: data.tipo,
         turma: data.tipo === "professor" ? (turmasSelecionadas.join(",") || "") : "",
         turmas: data.tipo === "professor" ? turmasSelecionadas : [],
+        materias: data.tipo === "professor" ? selectedMaterias : [],
         telefone: data.telefone,
         cep: data.cep,
         rua: data.rua || "",
@@ -998,6 +1003,7 @@ export default function AdminDashboard() {
       professorDiretorForm.reset();
       setDisponibilidadeHorario([]);
       setTurmasSelecionadas([]);
+      setSelectedMaterias([]);
     },
     onError: (error: any) => {
       let message = error.message;
@@ -2668,14 +2674,16 @@ export default function AdminDashboard() {
                   </div>
                 ) : (() => {
                   const alunos = users?.filter((u) => u.tipo === "aluno") || [];
-                  const filteredAlunos = alunos.filter((user) => {
-                    if (!studentSearchTerm) return true;
-                    const searchLower = studentSearchTerm.toLowerCase();
-                    return (
-                      user.nome?.toLowerCase().includes(searchLower) ||
-                      user.matricula?.toLowerCase().includes(searchLower)
-                    );
-                  });
+                  const filteredAlunos = alunos
+                    .filter((user) => {
+                      if (!studentSearchTerm) return true;
+                      const searchLower = studentSearchTerm.toLowerCase();
+                      return (
+                        user.nome?.toLowerCase().includes(searchLower) ||
+                        user.matricula?.toLowerCase().includes(searchLower)
+                      );
+                    })
+                    .sort((a, b) => a.nome.localeCompare(b.nome)); // Ordenação alfabética
                   
                   return filteredAlunos.length > 0 ? (
                   <div className="overflow-x-auto">
@@ -5124,28 +5132,58 @@ export default function AdminDashboard() {
               </div>
 
               {professorDiretorForm.watch('tipo') === 'professor' && (
-                <div className="space-y-2">
-                  <Label>Turmas (Professor pode ter várias)</Label>
-                  <div className="border rounded-lg p-4 space-y-2">
-                    {turmas && turmas.length > 0 ? (
-                      turmas.map((turma) => (
-                        <div key={turma.id} className="flex items-center space-x-2">
+                <>
+                  <div className="space-y-2">
+                    <Label>Turmas (Professor pode ter várias)</Label>
+                    <div className="border rounded-lg p-4 space-y-2">
+                      {turmas && turmas.length > 0 ? (
+                        turmas.map((turma) => (
+                          <div key={turma.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`turma-${turma.id}`}
+                              checked={turmasSelecionadas.includes(turma.nome)}
+                              onCheckedChange={() => toggleTurmaSelecionada(turma.nome)}
+                              data-testid={`checkbox-turma-${turma.nome}`}
+                            />
+                            <Label htmlFor={`turma-${turma.id}`} className="font-normal cursor-pointer">
+                              {turma.nome} - {turma.ano}
+                            </Label>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Nenhuma turma disponível</p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Matérias que leciona *</Label>
+                    <FormDescription className="text-xs">
+                      O professor só poderá fazer alterações no sistema nas matérias selecionadas
+                    </FormDescription>
+                    <div className="border rounded-lg p-4 space-y-2 max-h-60 overflow-y-auto">
+                      {MATERIAS_DISPONIVEIS.map((materia) => (
+                        <div key={materia} className="flex items-center space-x-2">
                           <Checkbox
-                            id={`turma-${turma.id}`}
-                            checked={turmasSelecionadas.includes(turma.nome)}
-                            onCheckedChange={() => toggleTurmaSelecionada(turma.nome)}
-                            data-testid={`checkbox-turma-${turma.nome}`}
+                            id={`materia-${materia}`}
+                            checked={selectedMaterias.includes(materia)}
+                            onCheckedChange={() => {
+                              if (selectedMaterias.includes(materia)) {
+                                setSelectedMaterias(selectedMaterias.filter(m => m !== materia));
+                              } else {
+                                setSelectedMaterias([...selectedMaterias, materia]);
+                              }
+                            }}
+                            data-testid={`checkbox-materia-${materia}`}
                           />
-                          <Label htmlFor={`turma-${turma.id}`} className="font-normal cursor-pointer">
-                            {turma.nome} - {turma.ano}
+                          <Label htmlFor={`materia-${materia}`} className="font-normal cursor-pointer">
+                            {materia}
                           </Label>
                         </div>
-                      ))
-                    ) : (
-                      <p className="text-sm text-muted-foreground">Nenhuma turma disponível</p>
-                    )}
+                      ))}
+                    </div>
                   </div>
-                </div>
+                </>
               )}
 
               <div className="space-y-2">
@@ -5185,6 +5223,7 @@ export default function AdminDashboard() {
                     professorDiretorForm.reset();
                     setDisponibilidadeHorario([]);
                     setTurmasSelecionadas([]);
+                    setSelectedMaterias([]);
                   }}
                   data-testid="button-cancel-prof"
                 >
@@ -6622,6 +6661,7 @@ export default function AdminDashboard() {
                     <TableBody>
                       {users
                         .filter(u => u.turma === selectedTurmaForStudents.id && u.tipo === "aluno")
+                        .sort((a, b) => a.nome.localeCompare(b.nome)) // Ordenação alfabética
                         .map((student) => (
                           <TableRow key={student.uid}>
                             <TableCell>

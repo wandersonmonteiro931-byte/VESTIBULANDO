@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { collection, addDoc, updateDoc, doc, where, deleteDoc, getDocs, query, writeBatch } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -219,6 +219,21 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
     constraints: [where("tipo", "==", "aluno"), where("status", "==", "aprovado")],
     transform: (docs) => docs as User[],
   });
+
+  // Filtrar matérias disponíveis: diretor vê todas, professor vê apenas suas matérias cadastradas
+  const materiasDisponiveis = useMemo(() => {
+    if (!userData) return [];
+    // Diretor pode ver todas as matérias
+    if (userType === "diretor") {
+      return [...MATERIAS];
+    }
+    // Professor só vê as matérias que está cadastrado
+    if (userType === "professor" && userData.materias && userData.materias.length > 0) {
+      return MATERIAS.filter(m => userData.materias?.includes(m));
+    }
+    // Se professor não tem matérias cadastradas, mostra todas (para retrocompatibilidade)
+    return [...MATERIAS];
+  }, [userData, userType]);
 
   const createMutation = useMutation({
     mutationFn: async (data: z.infer<typeof avaliacaoFormSchema>) => {
@@ -1933,18 +1948,21 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Matéria</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={materiasDisponiveis.length === 0}>
                         <FormControl>
                           <SelectTrigger data-testid="select-materia">
-                            <SelectValue placeholder="Selecione a matéria" />
+                            <SelectValue placeholder={materiasDisponiveis.length === 0 ? "Nenhuma matéria cadastrada" : "Selecione a matéria"} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {MATERIAS.map((materia) => (
+                          {materiasDisponiveis.map((materia) => (
                             <SelectItem key={materia} value={materia}>{materia}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                      {userType === "professor" && materiasDisponiveis.length === 0 && (
+                        <p className="text-xs text-destructive">Você não possui matérias cadastradas. Entre em contato com a diretoria.</p>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}
@@ -2464,18 +2482,21 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Matéria</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={materiasDisponiveis.length === 0}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Selecione a matéria" />
+                            <SelectValue placeholder={materiasDisponiveis.length === 0 ? "Nenhuma matéria cadastrada" : "Selecione a matéria"} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {MATERIAS.map((materia) => (
+                          {materiasDisponiveis.map((materia) => (
                             <SelectItem key={materia} value={materia}>{materia}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                      {userType === "professor" && materiasDisponiveis.length === 0 && (
+                        <p className="text-xs text-destructive">Você não possui matérias cadastradas. Entre em contato com a diretoria.</p>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}

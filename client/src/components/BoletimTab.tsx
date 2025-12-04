@@ -965,7 +965,9 @@ export function BoletimTab() {
 
   const alunosDaTurma = useMemo(() => {
     if (!selectedTurmaId || !alunos) return [];
-    return alunos.filter(a => a.turma === selectedTurmaId);
+    return alunos
+      .filter(a => a.turma === selectedTurmaId)
+      .sort((a, b) => a.nome.localeCompare(b.nome)); // Ordenação alfabética
   }, [selectedTurmaId, alunos]);
 
   const stats = useMemo(() => ({

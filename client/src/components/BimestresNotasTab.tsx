@@ -122,6 +122,21 @@ export function BimestresNotasTab() {
     return [];
   }, [turmas, userData]);
 
+  // Filtrar matérias disponíveis: diretor vê todas, professor vê apenas suas matérias cadastradas
+  const materiasDisponiveis = useMemo(() => {
+    if (!userData) return [];
+    // Diretor pode ver todas as matérias
+    if (userData.tipo === "diretor") {
+      return [...MATERIAS_BOLETIM];
+    }
+    // Professor só vê as matérias que está cadastrado
+    if (userData.tipo === "professor" && userData.materias && userData.materias.length > 0) {
+      return MATERIAS_BOLETIM.filter(m => userData.materias?.includes(m));
+    }
+    // Se professor não tem matérias cadastradas, mostra todas (para retrocompatibilidade)
+    return [...MATERIAS_BOLETIM];
+  }, [userData]);
+
   const sortedBimestres = useMemo(() => {
     if (!bimestresConfigs) return [];
     return [...bimestresConfigs].filter(b => b.ativo).sort((a, b) => a.numero - b.numero);
@@ -129,7 +144,9 @@ export function BimestresNotasTab() {
 
   const alunosTurma = useMemo(() => {
     if (!alunos || !selectedTurma) return [];
-    return alunos.filter(a => a.turma === selectedTurma);
+    return alunos
+      .filter(a => a.turma === selectedTurma)
+      .sort((a, b) => a.nome.localeCompare(b.nome)); // Ordenação alfabética
   }, [alunos, selectedTurma]);
 
   const selectedBimestreData = useMemo(() => {
@@ -526,16 +543,19 @@ export function BimestresNotasTab() {
 
             <div className="space-y-2">
               <Label>Matéria</Label>
-              <Select value={selectedMateria} onValueChange={setSelectedMateria}>
+              <Select value={selectedMateria} onValueChange={setSelectedMateria} disabled={materiasDisponiveis.length === 0}>
                 <SelectTrigger data-testid="select-materia">
-                  <SelectValue placeholder="Selecione a matéria" />
+                  <SelectValue placeholder={materiasDisponiveis.length === 0 ? "Nenhuma matéria cadastrada" : "Selecione a matéria"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {MATERIAS_BOLETIM.map(materia => (
+                  {materiasDisponiveis.map(materia => (
                     <SelectItem key={materia} value={materia}>{materia}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {userData?.tipo === "professor" && materiasDisponiveis.length === 0 && (
+                <p className="text-xs text-destructive">Você não possui matérias cadastradas. Entre em contato com a diretoria.</p>
+              )}
             </div>
           </div>
         </CardContent>
