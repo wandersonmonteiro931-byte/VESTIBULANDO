@@ -884,6 +884,32 @@ export default function Login() {
         
         // VERIFICAR SE A CONTA ESTÁ DESATIVADA (exceto para diretores)
         if (userData.tipo !== "diretor" && userData.ativo === false) {
+          // Verificar se é uma suspensão ativa
+          if (userData.suspensaoAtiva === true && userData.suspensaoDataTermino) {
+            const dataTermino = new Date(userData.suspensaoDataTermino);
+            const dataAplicacao = new Date(userData.suspensaoDataAplicacao || new Date());
+            const agora = new Date();
+            
+            // Se a suspensão ainda está ativa, mostrar overlay de suspensão
+            if (agora < dataTermino) {
+              const duracaoDias = Math.ceil((dataTermino.getTime() - dataAplicacao.getTime()) / (1000 * 60 * 60 * 24));
+              
+              console.log("🚫 BLOQUEANDO LOGIN - Conta suspensa");
+              setSuspensionData({
+                alunoNome: userData.nome || "",
+                comentario: userData.suspensaoMotivo,
+                dataAplicacao: userData.suspensaoDataAplicacao,
+                dataTerminoSuspensao: userData.suspensaoDataTermino,
+                duracaoDias,
+                aplicadoPorNome: userData.suspensaoAplicadoPorNome || "Diretoria",
+              });
+              setShowSuspensionOverlay(true);
+              setLoading(false);
+              return;
+            }
+          }
+          
+          // Se não é suspensão ou a suspensão expirou, mostrar overlay de desativação
           console.log("🚫 BLOQUEANDO LOGIN - Conta desativada");
           setShowDeactivatedOverlay(true);
           setLoading(false);
@@ -979,66 +1005,7 @@ export default function Login() {
           }
         }
         
-        // VERIFICAR SUSPENSÃO ANTES DE AUTENTICAR
-        if (userData.tipo === "aluno") {
-          try {
-            console.log("🔍 Verificando suspensões para aluno:", userId);
-            const { collection, getDocs, query, where } = await import("firebase/firestore");
-            const suspensionsQuery = query(
-              collection(db, "disciplinaryActions"),
-              where("alunoId", "==", userId),
-              where("tipo", "==", "suspensao"),
-              where("ativo", "==", true)
-            );
-            const suspensionsSnapshot = await getDocs(suspensionsQuery);
-            console.log("✅ Suspensões encontradas:", suspensionsSnapshot.docs.length);
-            
-            if (!suspensionsSnapshot.empty) {
-              const activeSuspension = suspensionsSnapshot.docs[0].data();
-              const dataTermino = new Date(activeSuspension.dataTerminoSuspensao);
-              const dataAplicacao = new Date(activeSuspension.dataAplicacao);
-              const agora = new Date();
-              
-              console.log("📅 Data atual:", agora);
-              console.log("📅 Data término suspensão:", dataTermino);
-              console.log("⏰ Suspensão ativa?", agora < dataTermino);
-              
-              if (agora < dataTermino) {
-                // Suspensão ativa - BLOQUEAR LOGIN E MOSTRAR OVERLAY
-                const duracaoDias = Math.ceil((dataTermino.getTime() - dataAplicacao.getTime()) / (1000 * 60 * 60 * 24));
-                
-                console.log("🚫 BLOQUEANDO LOGIN - Suspensão ativa");
-                console.log("📋 Dados da suspensão:", activeSuspension);
-                
-                // Configurar overlay com dados da suspensão
-                setSuspensionData({
-                  ...activeSuspension,
-                  duracaoDias,
-                  dataTerminoSuspensao: activeSuspension.dataTerminoSuspensao,
-                  dataAplicacao: activeSuspension.dataAplicacao,
-                });
-                setShowSuspensionOverlay(true);
-                setLoading(false);
-                
-                console.log("✅ Overlay configurado - NÃO AUTENTICAR");
-                
-                // RETORNAR AQUI - NÃO AUTENTICAR NO FIREBASE
-                return;
-              } else {
-                console.log("⚠️ Suspensão expirada - permitir login");
-              }
-            } else {
-              console.log("✅ Nenhuma suspensão ativa");
-            }
-          } catch (suspensionError: any) {
-            console.error('❌ Erro ao verificar suspensões:', suspensionError);
-            if (suspensionError?.code === 'permission-denied') {
-              console.warn('⚠️ AVISO: Erro de permissão ao verificar suspensões');
-            }
-          }
-        }
-        
-        // Autenticar no Firebase APENAS se não estiver suspenso ou em manutenção
+        // Autenticar no Firebase APENAS se não estiver suspenso, bloqueado ou em manutenção
         const userCredential = await signInWithEmailAndPassword(auth, userEmail, formData.password);
         
         // Verificar status da conta

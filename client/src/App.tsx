@@ -5,8 +5,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { SuspensionAlertProvider } from "@/contexts/SuspensionAlertContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { FirebaseErrorScreen } from "@/components/FirebaseErrorScreen";
+import { SuspensionAlertOverlay } from "@/components/SuspensionAlertOverlay";
 import Login from "@/pages/Login";
 import StudentDashboard from "@/pages/StudentDashboard";
 import TeacherDashboard from "@/pages/TeacherDashboard";
@@ -89,12 +91,15 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <AuthProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Router />
-          </TooltipProvider>
-        </AuthProvider>
+        <SuspensionAlertProvider>
+          <AuthProvider>
+            <TooltipProvider>
+              <Toaster />
+              <SuspensionAlertOverlay />
+              <Router />
+            </TooltipProvider>
+          </AuthProvider>
+        </SuspensionAlertProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

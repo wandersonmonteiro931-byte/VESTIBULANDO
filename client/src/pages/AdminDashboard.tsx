@@ -1298,9 +1298,14 @@ export default function AdminDashboard() {
       
       await addDoc(collection(db, "disciplinaryActions"), actionData);
       
-      // Desativar a conta do aluno
+      // Desativar a conta do aluno e salvar dados da suspensão no documento do usuário
       await updateDoc(doc(db, "usuarios", student.uid), {
         ativo: false,
+        suspensaoAtiva: true,
+        suspensaoDataAplicacao: actionData.dataAplicacao,
+        suspensaoDataTermino: actionData.dataTerminoSuspensao,
+        suspensaoMotivo: actionData.comentario || null,
+        suspensaoAplicadoPorNome: String(directorNome),
       });
     },
     onSuccess: () => {
@@ -1338,10 +1343,15 @@ export default function AdminDashboard() {
         removidoPorNome: directorNome,
       });
       
-      // Se for uma suspensão, reativar a conta do aluno
+      // Se for uma suspensão, reativar a conta do aluno e limpar dados da suspensão
       if (tipo === "suspensao") {
         await updateDoc(doc(db, "usuarios", alunoId), {
           ativo: true,
+          suspensaoAtiva: false,
+          suspensaoDataAplicacao: null,
+          suspensaoDataTermino: null,
+          suspensaoMotivo: null,
+          suspensaoAplicadoPorNome: null,
         });
       }
     },

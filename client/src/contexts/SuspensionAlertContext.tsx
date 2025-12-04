@@ -26,17 +26,33 @@ const getAlertContext = () => {
 const SuspensionAlertContext = getAlertContext();
 
 type SuspensionAlertCallback = (data: SuspensionAlertData) => void;
-let globalSuspensionAlertCallback: SuspensionAlertCallback | null = null;
+
+interface GlobalSuspensionAlertState {
+  callback: SuspensionAlertCallback | null;
+  pendingData: SuspensionAlertData | null;
+}
+
+const globalState: GlobalSuspensionAlertState = {
+  callback: null,
+  pendingData: null,
+};
 
 export function registerSuspensionAlertCallback(callback: SuspensionAlertCallback | null) {
-  globalSuspensionAlertCallback = callback;
+  globalState.callback = callback;
+  
+  if (callback && globalState.pendingData) {
+    console.log("🔔 Processing pending suspension alert");
+    callback(globalState.pendingData);
+    globalState.pendingData = null;
+  }
 }
 
 export function triggerGlobalSuspensionAlert(data: SuspensionAlertData) {
-  if (globalSuspensionAlertCallback) {
-    globalSuspensionAlertCallback(data);
+  if (globalState.callback) {
+    globalState.callback(data);
   } else {
-    console.warn("⚠️ Suspension alert callback not registered");
+    console.log("⏳ Queueing suspension alert - callback not yet registered");
+    globalState.pendingData = data;
   }
 }
 
