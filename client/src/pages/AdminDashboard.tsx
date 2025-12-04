@@ -12,7 +12,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -26,8 +25,8 @@ import { BimestresTab } from "@/components/BimestresTab";
 import { BoletimTab } from "@/components/BoletimTab";
 import { AutorizacaoNotasTab } from "@/components/AutorizacaoNotasTab";
 import { DisciplinaryRequestsAdminTab } from "@/components/DisciplinaryRequestsAdminTab";
-import { PendingIndicator } from "@/components/PendingIndicator";
-import { Separator } from "@/components/ui/separator";
+import { DashboardSidebar } from "@/components/DashboardSidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, ArrowRightLeft, Clock, Search, Eye, AlertTriangle, Settings, Power, PowerOff, Archive, Download, ChevronDown, ChevronUp, MessageCircle, Camera, Upload, X, Copy, Shield } from "lucide-react";
 import { Link } from "wouter";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -160,6 +159,7 @@ function MaintenanceTimer({ startTime, onFinalize }: { startTime: string; onFina
 export default function AdminDashboard() {
   const { userData, signOut, refreshUserData } = useAuth();
   const { toast } = useToast();
+  const [selectedSection, setSelectedSection] = useState("aprovacoes");
   const [createTurmaDialogOpen, setCreateTurmaDialogOpen] = useState(false);
   const [createAlunoDialogOpen, setCreateAlunoDialogOpen] = useState(false);
   const [createProfessorDiretorDialogOpen, setCreateProfessorDiretorDialogOpen] = useState(false);
@@ -2473,203 +2473,110 @@ export default function AdminDashboard() {
     });
   };
 
+  const pendingCounts = {
+    aprovacoes: pendingUsers?.length || 0,
+    "pedidos-disciplinares": pendingDisciplinaryRequests,
+    "autorizacoes-notas": pendingGradeAuthorizations,
+  };
+
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 w-full border-b bg-gradient-to-r from-card via-card to-card/95 backdrop-blur-xl shadow-sm">
-        <div className="container flex h-20 items-center justify-between px-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-gradient-to-br from-primary to-primary/80 rounded-xl shadow-md shadow-primary/20">
-              <GraduationCap className="h-6 w-6 text-primary-foreground" />
+    <SidebarProvider style={{ "--sidebar-width": "280px" } as React.CSSProperties}>
+      <>
+      <div className="flex min-h-screen w-full">
+        <DashboardSidebar
+          role="diretor"
+          selectedItem={selectedSection}
+          onSelectItem={setSelectedSection}
+          pendingCounts={pendingCounts}
+          userName={userData?.nome}
+          userRole="Diretoria"
+        />
+        
+        <div className="flex-1 flex flex-col">
+          <header className="sticky top-0 z-50 w-full border-b bg-gradient-to-r from-card via-card to-card/95 backdrop-blur-xl shadow-sm">
+            <div className="flex h-16 items-center justify-between px-4 gap-4">
+              <div className="flex items-center gap-3">
+                <SidebarTrigger data-testid="button-sidebar-toggle" />
+                {maintenanceData && maintenanceData.some(m => m.ativa) && (
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-red-600 dark:bg-red-700 rounded-full text-sm blink-red" data-testid="maintenance-warning-badge">
+                    <AlertTriangle className="h-4 w-4 text-white animate-pulse" />
+                    <span className="font-bold text-white uppercase text-xs">EM MANUTENÇÃO</span>
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <div className="text-right mr-2 hidden sm:block">
+                  <p className="text-sm font-semibold">{userData?.nome}</p>
+                  <p className="text-xs text-muted-foreground">Diretoria</p>
+                </div>
+                <ThemeToggle />
+                <BrasiliaClock />
+                <Link href="/chat">
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    className="flex flex-col h-auto py-2 px-3 gap-1"
+                    data-testid="button-chat-header"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    <span className="text-xs font-normal">Chat</span>
+                  </Button>
+                </Link>
+                <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout">
+                  <LogOut className="h-5 w-5" />
+                </Button>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">Vestibulando</h1>
-              <p className="text-xs text-muted-foreground font-medium">Painel da Diretoria</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            {maintenanceData && maintenanceData.some(m => m.ativa) && (
-              <div className="flex items-center gap-3 px-4 py-2 bg-red-600 dark:bg-red-700 rounded-full border-4 border-red-700 dark:border-red-900 shadow-lg blink-red" data-testid="maintenance-warning-badge">
-                <AlertTriangle className="h-5 w-5 text-white animate-pulse" />
-                <p className="text-base font-extrabold text-white uppercase tracking-wide">
-                  SISTEMA EM MANUTENÇÃO - TODOS USUÁRIOS BLOQUEADOS
-                </p>
+          </header>
+
+          <main className="flex-1 overflow-auto p-6">
+            <div className="max-w-7xl mx-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                <Card className="border-primary/20 bg-gradient-to-br from-card to-primary/5 hover-elevate">
+                  <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
+                    <CardTitle className="text-sm font-semibold">Total de Alunos</CardTitle>
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <Users className="h-5 w-5 text-primary" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-primary" data-testid="stat-users">{stats.totalUsers}</div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {stats.alunos} alunos, {stats.professores} professores
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-blue-200/50 dark:border-blue-900/50 bg-gradient-to-br from-card to-blue-50/30 dark:to-blue-950/10 hover-elevate">
+                  <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
+                    <CardTitle className="text-sm font-semibold">Turmas</CardTitle>
+                    <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg">
+                      <BookOpen className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-blue-600 dark:text-blue-400" data-testid="stat-turmas">{stats.turmas}</div>
+                    <p className="text-xs text-muted-foreground mt-1">Turmas ativas</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-green-200/50 dark:border-green-900/50 bg-gradient-to-br from-card to-green-50/30 dark:to-green-950/10 hover-elevate">
+                  <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
+                    <CardTitle className="text-sm font-semibold">Atividades</CardTitle>
+                    <div className="p-2 bg-green-100 dark:bg-green-900/40 rounded-lg">
+                      <FileText className="h-5 w-5 text-green-600 dark:text-green-400" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-green-600 dark:text-green-400" data-testid="stat-atividades">{stats.tarefas}</div>
+                    <p className="text-xs text-muted-foreground mt-1">{stats.entregas} entregas</p>
+                  </CardContent>
+                </Card>
               </div>
-            )}
-            <div className="text-right mr-2 hidden sm:block">
-              <p className="text-sm font-semibold">{userData?.nome}</p>
-              <p className="text-xs text-muted-foreground">Diretoria</p>
-            </div>
-            <ThemeToggle />
-            <BrasiliaClock />
-            <Link href="/chat">
-              <Button 
-                variant="outline" 
-                size="icon"
-                className="flex flex-col h-auto py-2 px-3 gap-1"
-                data-testid="button-chat-header"
-              >
-                <MessageCircle className="h-4 w-4" />
-                <span className="text-xs font-normal">Chat</span>
-              </Button>
-            </Link>
-            <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout">
-              <LogOut className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
-      </header>
 
-      <main className="container px-6 py-10 max-w-7xl mx-auto">
-        <div className="mb-10">
-          <h2 className="text-4xl font-bold mb-3 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-            Painel da Diretoria
-          </h2>
-          <p className="text-muted-foreground text-lg">Gerencie alunos, turmas e acompanhe estatísticas</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-          <Card className="border-primary/20 bg-gradient-to-br from-card to-primary/5 hover-elevate">
-            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
-              <CardTitle className="text-sm font-semibold">Total de Alunos</CardTitle>
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <Users className="h-5 w-5 text-primary" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-primary" data-testid="stat-users">{stats.totalUsers}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {stats.alunos} alunos, {stats.professores} professores
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-blue-200/50 dark:border-blue-900/50 bg-gradient-to-br from-card to-blue-50/30 dark:to-blue-950/10 hover-elevate">
-            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
-              <CardTitle className="text-sm font-semibold">Turmas</CardTitle>
-              <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg">
-                <BookOpen className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-blue-600 dark:text-blue-400" data-testid="stat-turmas">{stats.turmas}</div>
-              <p className="text-xs text-muted-foreground mt-1">Turmas ativas</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-green-200/50 dark:border-green-900/50 bg-gradient-to-br from-card to-green-50/30 dark:to-green-950/10 hover-elevate">
-            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
-              <CardTitle className="text-sm font-semibold">Atividades</CardTitle>
-              <div className="p-2 bg-green-100 dark:bg-green-900/40 rounded-lg">
-                <FileText className="h-5 w-5 text-green-600 dark:text-green-400" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-green-600 dark:text-green-400" data-testid="stat-atividades">{stats.tarefas}</div>
-              <p className="text-xs text-muted-foreground mt-1">{stats.entregas} entregas</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Tabs defaultValue="aprovacoes" className="space-y-6">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Gestão de Usuários</span>
-                <Separator className="flex-1" />
-              </div>
-              <TabsList className="flex-wrap h-auto gap-1 p-1 bg-muted/50">
-                <TabsTrigger value="aprovacoes" data-testid="tab-aprovacoes" className="text-xs px-3 py-2 gap-2">
-                  Aprovações
-                  {pendingUsers && pendingUsers.length > 0 && (
-                    <>
-                      <Badge variant="destructive" className="text-[10px] px-1.5">{pendingUsers.length}</Badge>
-                      <PendingIndicator size="sm" />
-                    </>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="usuarios" data-testid="tab-usuarios" className="text-xs px-3 py-2">Alunos</TabsTrigger>
-                <TabsTrigger value="professores" data-testid="tab-professores" className="text-xs px-3 py-2">Professores</TabsTrigger>
-                <TabsTrigger value="senhas-logins" data-testid="tab-senhas-logins" className="text-xs px-3 py-2">Senhas</TabsTrigger>
-                <TabsTrigger value="turmas" data-testid="tab-turmas" className="text-xs px-3 py-2">Turmas</TabsTrigger>
-              </TabsList>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Disciplinar</span>
-                <Separator className="flex-1" />
-              </div>
-              <TabsList className="flex-wrap h-auto gap-1 p-1 bg-muted/50">
-                <TabsTrigger value="disciplinares" data-testid="tab-disciplinares" className="text-xs px-3 py-2">Advertências</TabsTrigger>
-                <TabsTrigger value="pedidos-disciplinares" data-testid="tab-pedidos-disciplinares" className="text-xs px-3 py-2 gap-2">
-                  Pedidos Professores
-                  {pendingDisciplinaryRequests > 0 && (
-                    <>
-                      <Badge variant="destructive" className="text-[10px] px-1.5">{pendingDisciplinaryRequests}</Badge>
-                      <PendingIndicator size="sm" />
-                    </>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="denuncias" data-testid="tab-denuncias" className="text-xs px-3 py-2">Denúncias</TabsTrigger>
-              </TabsList>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Acadêmico</span>
-                <Separator className="flex-1" />
-              </div>
-              <TabsList className="flex-wrap h-auto gap-1 p-1 bg-muted/50">
-                <TabsTrigger value="bimestres" data-testid="tab-bimestres" className="text-xs px-3 py-2">Bimestres</TabsTrigger>
-                <TabsTrigger value="boletins" data-testid="tab-boletins" className="text-xs px-3 py-2">Boletins</TabsTrigger>
-                <TabsTrigger value="autorizacoes-notas" data-testid="tab-autorizacoes-notas" className="text-xs px-3 py-2 gap-2">
-                  Autorizações
-                  {pendingGradeAuthorizations > 0 && (
-                    <>
-                      <Badge variant="destructive" className="text-[10px] px-1.5">{pendingGradeAuthorizations}</Badge>
-                      <PendingIndicator size="sm" />
-                    </>
-                  )}
-                </TabsTrigger>
-              </TabsList>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Monitoramento</span>
-                <Separator className="flex-1" />
-              </div>
-              <TabsList className="flex-wrap h-auto gap-1 p-1 bg-muted/50">
-                <TabsTrigger value="monitoramento" data-testid="tab-monitoramento" className="text-xs px-3 py-2">Frequência</TabsTrigger>
-                <TabsTrigger value="auditoria-chat" data-testid="tab-auditoria-chat" className="text-xs px-3 py-2">Auditoria</TabsTrigger>
-              </TabsList>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Documentos e Avisos</span>
-                <Separator className="flex-1" />
-              </div>
-              <TabsList className="flex-wrap h-auto gap-1 p-1 bg-muted/50">
-                <TabsTrigger value="documentos-internos" data-testid="tab-documentos-internos" className="text-xs px-3 py-2">Docs Internos</TabsTrigger>
-                <TabsTrigger value="documentacao" data-testid="tab-documentacao" className="text-xs px-3 py-2">Documentação</TabsTrigger>
-                <TabsTrigger value="avisos" data-testid="tab-avisos" className="text-xs px-3 py-2">Avisos</TabsTrigger>
-              </TabsList>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sistema</span>
-                <Separator className="flex-1" />
-              </div>
-              <TabsList className="flex-wrap h-auto gap-1 p-1 bg-muted/50">
-                <TabsTrigger value="manutencao" data-testid="tab-manutencao" className="text-xs px-3 py-2">Manutenção</TabsTrigger>
-              </TabsList>
-            </div>
-          </div>
-
-          <TabsContent value="aprovacoes" className="space-y-4">
+              {selectedSection === "aprovacoes" && (
+                <div className="space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-xl font-semibold">Aprovar Contas Pendentes</h3>
               <div className="flex items-center gap-2">
@@ -2854,9 +2761,11 @@ export default function AdminDashboard() {
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
+            </div>
+          )}
 
-          <TabsContent value="usuarios" className="space-y-4">
+          {selectedSection === "usuarios" && (
+            <div className="space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-xl font-semibold">Gerenciar Alunos</h3>
               <Button onClick={() => setCreateAlunoDialogOpen(true)} data-testid="button-create-user">
@@ -3035,9 +2944,11 @@ export default function AdminDashboard() {
                 )})()}
               </CardContent>
             </Card>
-          </TabsContent>
+            </div>
+          )}
 
-          <TabsContent value="professores" className="space-y-4">
+          {selectedSection === "professores" && (
+            <div className="space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-xl font-semibold">Gerenciar Professores</h3>
               <Button onClick={() => setCreateProfessorDiretorDialogOpen(true)} data-testid="button-create-professor">
@@ -3207,9 +3118,11 @@ export default function AdminDashboard() {
                 })()}
               </CardContent>
             </Card>
-          </TabsContent>
+            </div>
+          )}
 
-          <TabsContent value="senhas-logins" className="space-y-4">
+          {selectedSection === "senhas-logins" && (
+            <div className="space-y-4">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-semibold">Gerenciamento de Senhas e Logins</h3>
             </div>
@@ -3316,9 +3229,11 @@ export default function AdminDashboard() {
                 </Table>
               </CardContent>
             </Card>
-          </TabsContent>
+            </div>
+          )}
 
-          <TabsContent value="turmas" className="space-y-4">
+          {selectedSection === "turmas" && (
+            <div className="space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-xl font-semibold">Gerenciar Turmas</h3>
               <div className="flex gap-2">
@@ -3533,9 +3448,11 @@ export default function AdminDashboard() {
                 </Card>
               )}
             </div>
-          </TabsContent>
+            </div>
+          )}
 
-          <TabsContent value="disciplinares" className="space-y-4">
+          {selectedSection === "disciplinares" && (
+            <div className="space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-xl font-semibold">Advertências e Suspensões Disciplinares</h3>
             </div>
@@ -3667,59 +3584,61 @@ export default function AdminDashboard() {
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
+            </div>
+          )}
 
-          <TabsContent value="pedidos-disciplinares" className="space-y-4">
+          {selectedSection === "pedidos-disciplinares" && (
             <DisciplinaryRequestsAdminTab />
-          </TabsContent>
+          )}
 
-          <TabsContent value="monitoramento" className="space-y-4">
+          {selectedSection === "monitoramento" && (
             <MonitoringTab />
-          </TabsContent>
+          )}
 
-          <TabsContent value="auditoria-chat" className="space-y-4">
+          {selectedSection === "auditoria-chat" && (
             <Card>
               <CardHeader>
                 <CardTitle>Auditoria do Chat</CardTitle>
                 <CardDescription>Funcionalidade em reconstrução</CardDescription>
               </CardHeader>
             </Card>
-          </TabsContent>
+          )}
 
-          <TabsContent value="denuncias" className="space-y-4">
+          {selectedSection === "denuncias" && (
             <Card>
               <CardHeader>
                 <CardTitle>Denúncias</CardTitle>
                 <CardDescription>Funcionalidade em reconstrução</CardDescription>
               </CardHeader>
             </Card>
-          </TabsContent>
+          )}
 
-          <TabsContent value="documentos-internos" className="space-y-4">
+          {selectedSection === "documentos-internos" && (
             <InternalDocumentsTab />
-          </TabsContent>
+          )}
 
-          <TabsContent value="documentacao" className="space-y-4">
+          {selectedSection === "documentacao" && (
             <DocumentationTab />
-          </TabsContent>
+          )}
 
-          <TabsContent value="avisos" className="space-y-4">
+          {selectedSection === "avisos" && (
             <AnnouncementsTab />
-          </TabsContent>
+          )}
 
-          <TabsContent value="bimestres" className="space-y-4">
+          {selectedSection === "bimestres" && (
             <BimestresTab userType="diretor" />
-          </TabsContent>
+          )}
 
-          <TabsContent value="boletins" className="space-y-4">
+          {selectedSection === "boletins" && (
             <BoletimTab />
-          </TabsContent>
+          )}
 
-          <TabsContent value="autorizacoes-notas" className="space-y-4">
+          {selectedSection === "autorizacoes-notas" && (
             <AutorizacaoNotasTab />
-          </TabsContent>
+          )}
 
-          <TabsContent value="manutencao" className="space-y-4">
+          {selectedSection === "manutencao" && (
+            <div className="space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-xl font-semibold">Manutenção do Sistema</h3>
             </div>
@@ -4117,9 +4036,12 @@ export default function AdminDashboard() {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
-      </main>
+            </div>
+          )}
+          </div>
+        </main>
+      </div>
+    </div>
 
       <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
         <DialogContent data-testid="dialog-reject-user">
@@ -8789,6 +8711,7 @@ export default function AdminDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </>
+    </SidebarProvider>
   );
 }
