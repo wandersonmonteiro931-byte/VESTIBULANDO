@@ -268,12 +268,39 @@ export function BoletimTab() {
     return medias.reduce((a, b) => a + b, 0) / medias.length;
   };
 
+  const [notasTextoBoletim, setNotasTextoBoletim] = useState<Record<string, string>>({});
+
   const handleNotaChange = (materiaIndex: number, periodo: string, valor: string) => {
+    const cleanValue = valor.replace(/[^0-9,\.]/g, "");
+    const key = `${materiaIndex}-${periodo}`;
+    
+    setNotasTextoBoletim(prev => ({ ...prev, [key]: cleanValue }));
+    
     const novaNotas = [...materiasNotas];
-    const nota = valor === "" ? null : parseFloat(valor);
-    novaNotas[materiaIndex].notas[periodo] = nota;
-    novaNotas[materiaIndex].mediaFinal = calcularMediaMateria(novaNotas[materiaIndex].notas);
-    setMateriasNotas(novaNotas);
+    
+    if (cleanValue === "") {
+      novaNotas[materiaIndex].notas[periodo] = null;
+      novaNotas[materiaIndex].mediaFinal = calcularMediaMateria(novaNotas[materiaIndex].notas);
+      setMateriasNotas(novaNotas);
+      return;
+    }
+    
+    const normalized = cleanValue.replace(",", ".");
+    const parsedNota = parseFloat(normalized);
+    
+    if (!isNaN(parsedNota) && parsedNota >= 0 && parsedNota <= 10) {
+      novaNotas[materiaIndex].notas[periodo] = parsedNota;
+      novaNotas[materiaIndex].mediaFinal = calcularMediaMateria(novaNotas[materiaIndex].notas);
+      setMateriasNotas(novaNotas);
+    }
+  };
+
+  const getNotaBoletimDisplayValue = (materiaIndex: number, periodo: string, notaValue: number | null): string => {
+    const key = `${materiaIndex}-${periodo}`;
+    if (notasTextoBoletim[key] !== undefined) {
+      return notasTextoBoletim[key];
+    }
+    return notaValue !== null ? formatNota(notaValue) : "";
   };
 
   const openCreateDialog = () => {
@@ -284,6 +311,7 @@ export function BoletimTab() {
     initializeMateriasNotas();
     setObservacoes("");
     setSituacao("cursando");
+    setNotasTextoBoletim({});
     setCreateDialogOpen(true);
   };
 
@@ -297,6 +325,7 @@ export function BoletimTab() {
     setMateriasNotas(boletim.materias);
     setObservacoes(boletim.observacoes || "");
     setSituacao(boletim.situacao);
+    setNotasTextoBoletim({});
     setCreateDialogOpen(true);
   };
 
@@ -1107,12 +1136,11 @@ export function BoletimTab() {
                     {periodos.map(p => (
                       <TableCell key={p} className="p-1">
                         <Input
-                          type="number"
-                          min="0"
-                          max="10"
-                          step="0.1"
+                          type="text"
+                          inputMode="decimal"
                           className="w-full text-center h-8"
-                          value={materia.notas[p] ?? ""}
+                          placeholder="0,0"
+                          value={getNotaBoletimDisplayValue(idx, p, materia.notas[p])}
                           onChange={(e) => handleNotaChange(idx, p, e.target.value)}
                           data-testid={`input-nota-${idx}-${p}`}
                         />

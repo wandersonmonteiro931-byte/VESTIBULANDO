@@ -176,6 +176,7 @@ export function BimestresNotasTab() {
   }, [userData, isPrazoExpirado]);
 
   useEffect(() => {
+    setNotasTexto({});
     if (alunosTurma.length > 0 && selectedMateria && selectedBimestre) {
       const novasNotas: NotaLocal[] = alunosTurma.map(aluno => {
         const notaExistente = notasBimestre?.find(n => n.alunoId === aluno.uid);
@@ -270,17 +271,39 @@ export function BimestresNotasTab() {
     },
   });
 
+  const [notasTexto, setNotasTexto] = useState<Record<string, string>>({});
+
   const handleNotaChange = (alunoId: string, nota: string) => {
-    const normalized = nota.replace(",", ".");
-    const parsedNota = normalized === "" ? null : parseFloat(normalized);
-    if (parsedNota !== null && (isNaN(parsedNota) || parsedNota < 0 || parsedNota > 10)) {
+    const cleanValue = nota.replace(/[^0-9,\.]/g, "");
+    
+    setNotasTexto(prev => ({ ...prev, [alunoId]: cleanValue }));
+    
+    if (cleanValue === "") {
+      setNotasLocais(prev => prev.map(n => 
+        n.alunoId === alunoId 
+          ? { ...n, nota: null }
+          : n
+      ));
       return;
     }
-    setNotasLocais(prev => prev.map(n => 
-      n.alunoId === alunoId 
-        ? { ...n, nota: parsedNota }
-        : n
-    ));
+    
+    const normalized = cleanValue.replace(",", ".");
+    const parsedNota = parseFloat(normalized);
+    
+    if (!isNaN(parsedNota) && parsedNota >= 0 && parsedNota <= 10) {
+      setNotasLocais(prev => prev.map(n => 
+        n.alunoId === alunoId 
+          ? { ...n, nota: parsedNota }
+          : n
+      ));
+    }
+  };
+
+  const getNotaDisplayValue = (alunoId: string, notaValue: number | null): string => {
+    if (notasTexto[alunoId] !== undefined) {
+      return notasTexto[alunoId];
+    }
+    return notaValue !== null ? formatNota(notaValue) : "";
   };
 
   const handleObservacaoChange = (alunoId: string, observacao: string) => {
@@ -743,7 +766,7 @@ export function BimestresNotasTab() {
                               <Input
                                 type="text"
                                 inputMode="decimal"
-                                value={nota.nota !== null ? formatNota(nota.nota) : ""}
+                                value={getNotaDisplayValue(nota.alunoId, nota.nota)}
                                 onChange={(e) => handleNotaChange(nota.alunoId, e.target.value)}
                                 disabled={!canEditNota}
                                 placeholder="0,0"
