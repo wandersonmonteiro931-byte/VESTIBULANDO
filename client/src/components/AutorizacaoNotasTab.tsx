@@ -24,6 +24,7 @@ import type { SolicitacaoEdicaoNota } from "@shared/schema";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { getNowBrasiliaISO } from "@/lib/brasiliaTime";
+import { formatNota } from "@/lib/utils";
 
 const ANOS_DISPONIVEIS = [
   (new Date().getFullYear() - 1).toString(),
@@ -271,7 +272,7 @@ export function AutorizacaoNotasTab() {
                       <TableCell>{solicitacao.materia}</TableCell>
                       <TableCell>{solicitacao.bimestreNome}</TableCell>
                       <TableCell className="text-center">
-                        {solicitacao.notaAtual !== null ? solicitacao.notaAtual.toFixed(1) : "-"}
+                        {formatNota(solicitacao.notaAtual)}
                       </TableCell>
                       <TableCell className="text-center">
                         {solicitacao.status === "pendente" ? (
@@ -365,7 +366,7 @@ export function AutorizacaoNotasTab() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Nota Atual</p>
-                  <p className="font-medium">{selectedSolicitacao.notaAtual !== null ? selectedSolicitacao.notaAtual.toFixed(1) : "-"}</p>
+                  <p className="font-medium">{formatNota(selectedSolicitacao.notaAtual)}</p>
                 </div>
               </div>
 
@@ -433,7 +434,7 @@ export function AutorizacaoNotasTab() {
                 <p><strong>Turma:</strong> {selectedSolicitacao.turmaNome}</p>
                 <p><strong>Matéria:</strong> {selectedSolicitacao.materia}</p>
                 <p><strong>Bimestre:</strong> {selectedSolicitacao.bimestreNome}</p>
-                <p><strong>Nota Atual:</strong> {selectedSolicitacao.notaAtual !== null ? selectedSolicitacao.notaAtual.toFixed(1) : "-"}</p>
+                <p><strong>Nota Atual:</strong> {formatNota(selectedSolicitacao.notaAtual)}</p>
               </div>
 
               <div className="space-y-2">

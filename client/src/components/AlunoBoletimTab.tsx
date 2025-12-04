@@ -15,6 +15,7 @@ import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 import type { Boletim } from "@shared/schema";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { formatNota } from "@/lib/utils";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -65,9 +66,9 @@ export function AlunoBoletimTab() {
     const tableHead = [["Matéria", ...periodos, "Média Final", "Média Mínima Esperada"]];
     const tableBody = boletim.materias.map(m => [
       m.materia,
-      ...periodos.map(p => m.notas[p]?.toFixed(1) || "-"),
-      m.mediaFinal?.toFixed(1) || "-",
-      (m.mediaEsperada || 7).toFixed(1),
+      ...periodos.map(p => formatNota(m.notas[p])),
+      formatNota(m.mediaFinal),
+      formatNota(m.mediaEsperada || 7),
     ]);
 
     autoTable(doc, {
@@ -83,14 +84,14 @@ export function AlunoBoletimTab() {
     yPos = (doc as any).lastAutoTable.finalY + 10;
 
     doc.setFont("helvetica", "bold");
-    doc.text(`Média Final Anual: ${boletim.mediaGeral?.toFixed(1).replace(".", ",") || "-"}`, margin, yPos);
+    doc.text(`Média Final Anual: ${formatNota(boletim.mediaGeral)}`, margin, yPos);
     doc.text(`Situação: ${boletim.situacao.toUpperCase()}`, pageWidth - margin - 50, yPos);
     yPos += 8;
 
     doc.setFont("helvetica", "normal");
     doc.text(`Presenças: ${boletim.presencas}`, margin, yPos);
     doc.text(`Faltas: ${boletim.faltas}`, margin + 50, yPos);
-    doc.text(`Frequência: ${boletim.percentualPresenca?.toFixed(1) || "-"}%`, margin + 100, yPos);
+    doc.text(`Frequência: ${boletim.percentualPresenca !== null && boletim.percentualPresenca !== undefined ? boletim.percentualPresenca.toFixed(1).replace(".", ",") + "%" : "-"}`, margin + 100, yPos);
     yPos += 10;
 
     if (boletim.observacoes) {
@@ -197,15 +198,15 @@ export function AlunoBoletimTab() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="p-3 bg-muted rounded-lg text-center">
                     <p className="text-xs text-muted-foreground">Média Anual</p>
-                    <p className="text-xl font-bold">{boletim.mediaGeral?.toFixed(1).replace(".", ",") || "-"}</p>
+                    <p className="text-xl font-bold">{formatNota(boletim.mediaGeral)}</p>
                   </div>
                   <div className="p-3 bg-muted rounded-lg text-center">
                     <p className="text-xs text-muted-foreground">Média Mínima Esperada</p>
-                    <p className="text-xl font-bold">{(boletim.mediaGeralEsperada || 7).toFixed(1).replace(".", ",")}</p>
+                    <p className="text-xl font-bold">{formatNota(boletim.mediaGeralEsperada || 7)}</p>
                   </div>
                   <div className="p-3 bg-muted rounded-lg text-center">
                     <p className="text-xs text-muted-foreground">Frequência</p>
-                    <p className="text-xl font-bold">{boletim.percentualPresenca?.toFixed(1) || "-"}%</p>
+                    <p className="text-xl font-bold">{boletim.percentualPresenca !== null && boletim.percentualPresenca !== undefined ? boletim.percentualPresenca.toFixed(1).replace(".", ",") + "%" : "-"}</p>
                   </div>
                   <div className="p-3 bg-muted rounded-lg text-center">
                     <p className="text-xs text-muted-foreground">Presenças/Faltas</p>
@@ -299,14 +300,14 @@ export function AlunoBoletimTab() {
                             <TableCell className="font-medium">{m.materia}</TableCell>
                             {(selectedBoletim.periodos || PERIODOS_BIMESTRE).map(p => (
                               <TableCell key={p} className="text-center">
-                                {m.notas[p]?.toFixed(1) || "-"}
+                                {formatNota(m.notas[p])}
                               </TableCell>
                             ))}
                             <TableCell className={`text-center font-bold ${abaixoMedia ? "text-red-600" : "text-green-600"}`}>
-                              {m.mediaFinal?.toFixed(1) || "-"}
+                              {formatNota(m.mediaFinal)}
                             </TableCell>
                             <TableCell className="text-center text-muted-foreground">
-                              {(m.mediaEsperada || 7).toFixed(1)}
+                              {formatNota(m.mediaEsperada || 7)}
                             </TableCell>
                           </TableRow>
                         );
@@ -324,12 +325,12 @@ export function AlunoBoletimTab() {
                       selectedBoletim.mediaGeral < (selectedBoletim.mediaGeralEsperada || 7) 
                         ? "text-red-600" : "text-green-600"
                     }`}>
-                      {selectedBoletim.mediaGeral?.toFixed(1).replace(".", ",") || "-"}
+                      {formatNota(selectedBoletim.mediaGeral)}
                     </p>
                   </div>
                   <div className="p-4 bg-muted rounded-lg text-center">
                     <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Média Mínima Esperada</p>
-                    <p className="text-3xl font-bold">{(selectedBoletim.mediaGeralEsperada || 7).toFixed(1).replace(".", ",")}</p>
+                    <p className="text-3xl font-bold">{formatNota(selectedBoletim.mediaGeralEsperada || 7)}</p>
                   </div>
                   <div className="p-4 bg-muted rounded-lg text-center">
                     <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Frequência</p>
@@ -338,7 +339,7 @@ export function AlunoBoletimTab() {
                       selectedBoletim.percentualPresenca < 75 
                         ? "text-red-600" : "text-green-600"
                     }`}>
-                      {selectedBoletim.percentualPresenca?.toFixed(1) || "-"}%
+                      {selectedBoletim.percentualPresenca !== null && selectedBoletim.percentualPresenca !== undefined ? selectedBoletim.percentualPresenca.toFixed(1).replace(".", ",") + "%" : "-"}
                     </p>
                   </div>
                   <div className="p-4 bg-muted rounded-lg text-center">

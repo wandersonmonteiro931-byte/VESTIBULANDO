@@ -28,6 +28,7 @@ import type { Avaliacao, AvaliacaoEntrega, Turma, User } from "@shared/schema";
 import { format, formatDistanceToNow, isPast, isFuture, isWithinInterval, differenceInMinutes } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { getNowBrasiliaISO } from "@/lib/brasiliaTime";
+import { formatNota } from "@/lib/utils";
 
 interface Resposta {
   questaoId: string;
@@ -366,7 +367,6 @@ export function AlunoAvaliacoesTab() {
   const filterAvaliacoesComNota = (tab: string) => filterByTab(avaliacoesComNota, tab);
 
   const calcularMedia = () => {
-    // Só calcula média de entregas liberadas para aluno e que não são atividades (atividades não têm nota)
     const entregasCorrigidas = minhasEntregas?.filter(e => 
       e.status === "corrigida" && 
       e.liberadoParaAluno === true && 
@@ -376,7 +376,7 @@ export function AlunoAvaliacoesTab() {
     if (!entregasCorrigidas || entregasCorrigidas.length === 0) return null;
     
     const soma = entregasCorrigidas.reduce((acc, e) => acc + (e.nota || 0), 0);
-    return (soma / entregasCorrigidas.length).toFixed(1);
+    return formatNota(soma / entregasCorrigidas.length);
   };
 
   const handleExportCorrectionPDF = (avaliacao: Avaliacao, entrega: AvaliacaoEntrega) => {

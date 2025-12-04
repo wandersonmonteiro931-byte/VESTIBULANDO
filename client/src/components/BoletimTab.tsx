@@ -32,6 +32,7 @@ import { MATERIAS_BOLETIM } from "@shared/schema";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { getNowBrasiliaISO } from "@/lib/brasiliaTime";
+import { formatNota } from "@/lib/utils";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -907,9 +908,9 @@ export function BoletimTab() {
     const tableHead = [["Matéria", ...periodos, "Média Final", "Média Mínima Esperada"]];
     const tableBody = boletim.materias.map(m => [
       m.materia,
-      ...periodos.map(p => m.notas[p]?.toFixed(1) || "-"),
-      m.mediaFinal?.toFixed(1) || "-",
-      (m.mediaEsperada || 7).toFixed(1),
+      ...periodos.map(p => formatNota(m.notas[p])),
+      formatNota(m.mediaFinal),
+      formatNota(m.mediaEsperada || 7),
     ]);
 
     autoTable(doc, {
@@ -925,14 +926,14 @@ export function BoletimTab() {
     yPos = (doc as any).lastAutoTable.finalY + 10;
 
     doc.setFont("helvetica", "bold");
-    doc.text(`Média Final Anual: ${boletim.mediaGeral?.toFixed(1).replace(".", ",") || "-"}`, margin, yPos);
+    doc.text(`Média Final Anual: ${formatNota(boletim.mediaGeral)}`, margin, yPos);
     doc.text(`Situação: ${boletim.situacao.toUpperCase()}`, pageWidth - margin - 50, yPos);
     yPos += 8;
 
     doc.setFont("helvetica", "normal");
     doc.text(`Presenças: ${boletim.presencas}`, margin, yPos);
     doc.text(`Faltas: ${boletim.faltas}`, margin + 50, yPos);
-    doc.text(`Frequência: ${boletim.percentualPresenca?.toFixed(1) || "-"}%`, margin + 100, yPos);
+    doc.text(`Frequência: ${boletim.percentualPresenca !== null && boletim.percentualPresenca !== undefined ? boletim.percentualPresenca.toFixed(1).replace(".", ",") + "%" : "-"}`, margin + 100, yPos);
     yPos += 10;
 
     if (boletim.observacoes) {
@@ -1116,7 +1117,7 @@ export function BoletimTab() {
                       </TableCell>
                     ))}
                     <TableCell className="text-center font-semibold">
-                      {materia.mediaFinal?.toFixed(1) || "-"}
+                      {formatNota(materia.mediaFinal)}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -1144,7 +1145,7 @@ export function BoletimTab() {
             <Label>Frequência</Label>
             <div className="h-9 px-3 py-2 bg-muted rounded-md border flex items-center font-medium" data-testid="display-frequencia">
               {(frequenciaDoAluno.presencas + frequenciaDoAluno.faltas) > 0 
-                ? ((frequenciaDoAluno.presencas / (frequenciaDoAluno.presencas + frequenciaDoAluno.faltas)) * 100).toFixed(1) + "%" 
+                ? ((frequenciaDoAluno.presencas / (frequenciaDoAluno.presencas + frequenciaDoAluno.faltas)) * 100).toFixed(1).replace(".", ",") + "%" 
                 : "-"}
             </div>
           </div>
@@ -1179,7 +1180,7 @@ export function BoletimTab() {
             <div>
               <p className="font-medium">Média Anual</p>
               <p className="text-2xl font-bold">
-                {calcularMediaGeral(materiasNotas)?.toFixed(1).replace(".", ",") || "-"}
+                {formatNota(calcularMediaGeral(materiasNotas))}
               </p>
             </div>
           </div>
@@ -1341,11 +1342,11 @@ export function BoletimTab() {
                 <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                   <div>
                     <span className="font-medium">Média Anual:</span>{" "}
-                    <span className="font-bold text-foreground">{boletim.mediaGeral?.toFixed(1).replace(".", ",") || "-"}</span>
+                    <span className="font-bold text-foreground">{formatNota(boletim.mediaGeral)}</span>
                   </div>
                   <div>
                     <span className="font-medium">Frequência:</span>{" "}
-                    <span className="font-bold text-foreground">{boletim.percentualPresenca?.toFixed(1) || "-"}%</span>
+                    <span className="font-bold text-foreground">{boletim.percentualPresenca !== null && boletim.percentualPresenca !== undefined ? boletim.percentualPresenca.toFixed(1).replace(".", ",") + "%" : "-"}</span>
                   </div>
                   <div>
                     <span className="font-medium">Presenças/Faltas:</span>{" "}
@@ -1521,11 +1522,11 @@ export function BoletimTab() {
                           <TableCell className="font-medium">{m.materia}</TableCell>
                           {(selectedBoletim.periodos || PERIODOS_BIMESTRE).map(p => (
                             <TableCell key={p} className="text-center">
-                              {m.notas[p]?.toFixed(1) || "-"}
+                              {formatNota(m.notas[p])}
                             </TableCell>
                           ))}
                           <TableCell className="text-center font-bold">
-                            {m.mediaFinal?.toFixed(1) || "-"}
+                            {formatNota(m.mediaFinal)}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1536,7 +1537,7 @@ export function BoletimTab() {
                 <div className="grid grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
                   <div className="text-center">
                     <p className="text-sm text-muted-foreground">Média Anual</p>
-                    <p className="text-2xl font-bold">{selectedBoletim.mediaGeral?.toFixed(1).replace(".", ",") || "-"}</p>
+                    <p className="text-2xl font-bold">{formatNota(selectedBoletim.mediaGeral)}</p>
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-muted-foreground">Presenças/Faltas</p>
@@ -1544,7 +1545,7 @@ export function BoletimTab() {
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-muted-foreground">Frequência</p>
-                    <p className="text-2xl font-bold">{selectedBoletim.percentualPresenca?.toFixed(1) || "-"}%</p>
+                    <p className="text-2xl font-bold">{selectedBoletim.percentualPresenca !== null && selectedBoletim.percentualPresenca !== undefined ? selectedBoletim.percentualPresenca.toFixed(1).replace(".", ",") + "%" : "-"}</p>
                   </div>
                 </div>
 
@@ -1791,10 +1792,10 @@ export function BoletimTab() {
                                       {boletimAluno?.liberado ? "Liberado" : "Não liberado"}
                                     </Badge>
                                     <Badge variant="outline" className="text-xs">
-                                      Média: {boletimAluno?.mediaGeral?.toFixed(1) || "-"}
+                                      Média: {formatNota(boletimAluno?.mediaGeral)}
                                     </Badge>
                                     <Badge variant="outline" className="text-xs">
-                                      Freq: {boletimAluno?.percentualPresenca?.toFixed(0) || "-"}%
+                                      Freq: {boletimAluno?.percentualPresenca !== null && boletimAluno?.percentualPresenca !== undefined ? Math.round(boletimAluno.percentualPresenca) + "%" : "-"}
                                     </Badge>
                                   </>
                                 ) : (
@@ -1866,7 +1867,7 @@ export function BoletimTab() {
                                   <div className="flex items-center gap-4 text-sm">
                                     <span><strong>Presenças:</strong> {boletimAluno?.presencas || freq.presencas}</span>
                                     <span><strong>Faltas:</strong> {boletimAluno?.faltas || freq.faltas}</span>
-                                    <span><strong>Frequência:</strong> {boletimAluno?.percentualPresenca?.toFixed(1) || "-"}%</span>
+                                    <span><strong>Frequência:</strong> {boletimAluno?.percentualPresenca !== null && boletimAluno?.percentualPresenca !== undefined ? boletimAluno.percentualPresenca.toFixed(1).replace(".", ",") + "%" : "-"}</span>
                                     <span><strong>Situação:</strong> {boletimAluno?.situacao}</span>
                                   </div>
                                   <div className="flex items-center gap-2">
@@ -1925,15 +1926,15 @@ export function BoletimTab() {
                                                 />
                                               ) : (
                                                 <div className="text-center text-xs">
-                                                  {m.notas[p]?.toFixed(1) || "-"}
+                                                  {formatNota(m.notas[p])}
                                                 </div>
                                               )}
                                             </TableCell>
                                           ))}
                                           <TableCell className="text-center font-semibold text-xs">
                                             {isEditing 
-                                              ? bulkEditNotas[boletimAluno!.id]?.[idx]?.mediaFinal?.toFixed(1) || "-"
-                                              : m.mediaFinal?.toFixed(1) || "-"
+                                              ? formatNota(bulkEditNotas[boletimAluno!.id]?.[idx]?.mediaFinal)
+                                              : formatNota(m.mediaFinal)
                                             }
                                           </TableCell>
                                         </TableRow>

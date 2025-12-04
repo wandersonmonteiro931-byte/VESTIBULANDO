@@ -907,7 +907,7 @@ export function BimestresNotasTab() {
                 <p><strong>Matrícula:</strong> {selectedNotaForAuth.alunoMatricula || "-"}</p>
                 <p><strong>Matéria:</strong> {selectedMateria}</p>
                 <p><strong>Bimestre:</strong> {selectedBimestreData?.nome}</p>
-                <p><strong>Nota atual:</strong> {selectedNotaForAuth.nota !== null ? selectedNotaForAuth.nota.toFixed(1) : "-"}</p>
+                <p><strong>Nota atual:</strong> {formatNota(selectedNotaForAuth.nota)}</p>
               </div>
 
               <div className="space-y-2">

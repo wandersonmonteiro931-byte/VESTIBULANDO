@@ -26,6 +26,7 @@ import { MATERIAS_BOLETIM } from "@shared/schema";
 import { format, isBefore, isAfter, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { getNowBrasiliaISO } from "@/lib/brasiliaTime";
+import { formatNota } from "@/lib/utils";
 
 const ANOS_DISPONIVEIS = [
   (new Date().getFullYear() - 1).toString(),
@@ -746,12 +747,12 @@ export function BimestresTab({ userType = "diretor" }: BimestresTabProps) {
                                     const nota = notasAluno.find(n => n.materia === materia);
                                     return (
                                       <TableCell key={materia} className="text-center text-sm">
-                                        {nota?.nota?.toFixed(1) || "-"}
+                                        {formatNota(nota?.nota)}
                                       </TableCell>
                                     );
                                   })}
                                   <TableCell className="text-center font-semibold">
-                                    {media?.toFixed(1) || "-"}
+                                    {formatNota(media)}
                                   </TableCell>
                                 </TableRow>
                               );
