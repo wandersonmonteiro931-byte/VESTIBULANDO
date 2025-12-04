@@ -906,6 +906,59 @@ export function BoletimTab() {
     });
   };
 
+  const refreshAllBoletinsNotas = async () => {
+    if (!userData) return;
+    
+    const todosBoletins = boletins?.filter(b => b.anoLetivo === anoLetivo) || [];
+    
+    if (todosBoletins.length === 0) {
+      toast({
+        title: "Nenhum boletim para atualizar",
+        description: "Não há boletins cadastrados para este ano.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setBulkCreating(true);
+    setBulkProgress({ current: 0, total: todosBoletins.length });
+    
+    let updated = 0;
+    
+    for (const boletim of todosBoletins) {
+      try {
+        const notasAluno = getNotasFromProfessores(boletim.alunoId, boletim.turmaId || "");
+        const mediaGeral = calcularMediaGeral(notasAluno);
+        const freq = getFrequenciaAluno(boletim.alunoId);
+        const percentualPresenca = (freq.presencas + freq.faltas) > 0 
+          ? (freq.presencas / (freq.presencas + freq.faltas)) * 100 
+          : null;
+        
+        await updateDoc(doc(db, "boletins", boletim.id), {
+          materias: notasAluno,
+          mediaGeral,
+          presencas: freq.presencas,
+          faltas: freq.faltas,
+          percentualPresenca,
+          dataAtualizacao: getNowBrasiliaISO(),
+        });
+        
+        updated++;
+      } catch (error) {
+        console.error(`Erro ao atualizar boletim:`, error);
+      }
+      setBulkProgress({ current: updated, total: todosBoletins.length });
+    }
+    
+    setBulkCreating(false);
+    queryClient.invalidateQueries({ queryKey: ["/api/boletins"] });
+    
+    toast({
+      title: "Notas atualizadas!",
+      description: `${updated} boletins foram atualizados com notas dos professores.`,
+    });
+  };
+
   const handlePrintBoletim = (boletim: Boletim) => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -1229,10 +1282,21 @@ export function BoletimTab() {
           </h2>
           <p className="text-muted-foreground">Gerencie os boletins dos alunos</p>
         </div>
-        <Button onClick={openCreateDialog} data-testid="button-create-boletim">
-          <Plus className="h-4 w-4 mr-2" />
-          Emitir Boletim Escolar
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={refreshAllBoletinsNotas}
+            disabled={bulkCreating}
+            data-testid="button-refresh-all-notas"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${bulkCreating ? "animate-spin" : ""}`} />
+            Recarregar Notas dos Professores
+          </Button>
+          <Button onClick={openCreateDialog} data-testid="button-create-boletim">
+            <Plus className="h-4 w-4 mr-2" />
+            Emitir Boletim Escolar
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
