@@ -1,7 +1,7 @@
-# ENEM+ Platform
+# Vestibulando Platform
 
 ## Overview
-ENEM+ is a comprehensive educational platform designed for ENEM exam preparation. It supports task management, assignment submissions, evaluations, and student progress tracking. The system is multi-user, offering distinct access levels for Students, Teachers, and Administrators, aiming to streamline educational workflows and enhance the learning experience.
+Vestibulando is a comprehensive educational platform designed for vestibular and ENEM exam preparation. It supports task management, assignment submissions, evaluations, and student progress tracking. The system is multi-user, offering distinct access levels for Students, Teachers, and Administrators, aiming to streamline educational workflows and enhance the learning experience.
 
 ## User Preferences
 I prefer simple language and clear explanations. I want iterative development with frequent, small updates. Please ask for my approval before making any major architectural changes or significant modifications to existing features. I expect the agent to prioritize robust, secure, and maintainable code. Do not make changes to the `lib/firebase.ts` file without explicit instruction.

@@ -391,6 +391,166 @@ export function AlunoAvaliacoesTab() {
     }
 
     const isAtividade = avaliacao.tipo === "atividade";
+
+    const getMarcacaoIcon = (marcacao?: string) => {
+      switch (marcacao) {
+        case "certo": return '<span style="color: #16a34a; font-weight: bold;">CERTO</span>';
+        case "errado": return '<span style="color: #dc2626; font-weight: bold;">ERRADO</span>';
+        case "parcial": return '<span style="color: #f59e0b; font-weight: bold;">PARCIAL</span>';
+        default: return '<span style="color: #9ca3af;">-</span>';
+      }
+    };
+
+    const getMarcacaoBackground = (marcacao?: string) => {
+      switch (marcacao) {
+        case "certo": return '#dcfce7';
+        case "errado": return '#fee2e2';
+        case "parcial": return '#fef3c7';
+        default: return '#f3f4f6';
+      }
+    };
+
+    const generateQuestoesCorrigidasHTML = () => {
+      let html = "";
+      
+      if (avaliacao.questoes && avaliacao.questoes.length > 0) {
+        html += `
+          <div class="questoes-section">
+            <h3 style="margin-top: 30px; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; font-size: 18px;">
+              Questões e Correções
+            </h3>
+            ${avaliacao.questoes.map((q: any, index: number) => {
+              const resposta = entrega.respostas?.find(r => r.questaoId === q.id);
+              const marcacao = resposta?.marcacao;
+              const valorObtido = resposta?.valorObtido || 0;
+              const feedbackQuestao = resposta?.feedback;
+              
+              return `
+              <div class="questao" style="margin-bottom: 25px; page-break-inside: avoid; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+                <div style="background: ${getMarcacaoBackground(marcacao)}; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e7eb;">
+                  <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-weight: bold; background: #374151; color: white; padding: 6px 12px; border-radius: 6px; font-size: 14px;">
+                      Questão ${index + 1}
+                    </span>
+                    <span style="font-size: 12px; color: #666; background: white; padding: 4px 10px; border-radius: 4px; border: 1px solid #e5e7eb;">
+                      ${getTipoQuestaoLabel(q.tipo)}
+                    </span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 15px;">
+                    ${getMarcacaoIcon(marcacao)}
+                    ${!isAtividade ? `<span style="font-weight: bold; font-size: 14px;">${valorObtido}/${q.valor} pts</span>` : ''}
+                  </div>
+                </div>
+                
+                <div style="padding: 15px;">
+                  <p style="margin: 0 0 15px; line-height: 1.6; font-size: 14px;"><strong>Enunciado:</strong> ${q.enunciado || "(Sem enunciado)"}</p>
+                  
+                  ${(q.tipo === "multipla_escolha" || q.tipo === "objetiva") && q.opcoes ? `
+                    <div style="margin: 15px 0;">
+                      <p style="font-weight: bold; margin-bottom: 8px; font-size: 13px;">Opções:</p>
+                      ${q.opcoes.map((op: any) => {
+                        const isRespostaAluno = resposta?.resposta === op.letra;
+                        const isCorreta = op.correta && avaliacao.mostrarGabarito;
+                        let bgColor = 'transparent';
+                        let border = '1px solid #e5e7eb';
+                        if (isRespostaAluno && isCorreta) {
+                          bgColor = '#dcfce7';
+                          border = '2px solid #16a34a';
+                        } else if (isRespostaAluno && !isCorreta && avaliacao.mostrarGabarito) {
+                          bgColor = '#fee2e2';
+                          border = '2px solid #dc2626';
+                        } else if (isRespostaAluno) {
+                          bgColor = '#e0f2fe';
+                          border = '2px solid #3b82f6';
+                        } else if (isCorreta) {
+                          bgColor = '#f0fdf4';
+                          border = '1px solid #86efac';
+                        }
+                        return `
+                          <div style="margin: 6px 0; padding: 8px 12px; background: ${bgColor}; border: ${border}; border-radius: 6px; display: flex; align-items: center; gap: 10px;">
+                            <span style="font-weight: bold; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: ${isCorreta && avaliacao.mostrarGabarito ? '#16a34a' : isRespostaAluno ? '#3b82f6' : '#e5e7eb'}; color: ${(isCorreta && avaliacao.mostrarGabarito) || isRespostaAluno ? 'white' : '#374151'}; font-size: 12px;">
+                              ${op.letra}
+                            </span>
+                            <span style="font-size: 13px;">${op.texto || ""}</span>
+                            ${isRespostaAluno ? '<span style="margin-left: auto; font-size: 11px; color: #3b82f6; font-weight: bold;">(Sua resposta)</span>' : ''}
+                            ${isCorreta && avaliacao.mostrarGabarito ? '<span style="margin-left: auto; font-size: 11px; color: #16a34a; font-weight: bold;">(Gabarito)</span>' : ''}
+                          </div>
+                        `;
+                      }).join("")}
+                    </div>
+                  ` : ""}
+
+                  ${q.tipo === "verdadeiro_falso" ? `
+                    <div style="margin: 15px 0;">
+                      <p style="font-weight: bold; margin-bottom: 8px; font-size: 13px;">Sua resposta: <span style="color: #3b82f6;">${resposta?.resposta === "verdadeiro" ? "Verdadeiro" : resposta?.resposta === "falso" ? "Falso" : "Não respondeu"}</span></p>
+                      ${avaliacao.mostrarGabarito && q.respostaCorreta ? `<p style="font-size: 13px;">Gabarito: <span style="color: #16a34a; font-weight: bold;">${q.respostaCorreta === "verdadeiro" ? "Verdadeiro" : "Falso"}</span></p>` : ''}
+                    </div>
+                  ` : ""}
+
+                  ${(q.tipo === "dissertativa" || q.tipo === "redacao") ? `
+                    <div style="margin: 15px 0;">
+                      <p style="font-weight: bold; margin-bottom: 8px; font-size: 13px;">Sua resposta:</p>
+                      <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; white-space: pre-wrap; font-size: 13px; line-height: 1.6;">
+                        ${resposta?.resposta || "<em style='color: #9ca3af;'>Não respondeu</em>"}
+                      </div>
+                    </div>
+                  ` : ""}
+
+                  ${feedbackQuestao ? `
+                    <div style="margin-top: 15px; padding: 12px; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 6px;">
+                      <p style="font-weight: bold; margin-bottom: 5px; font-size: 13px; color: #92400e;">Comentário do Professor:</p>
+                      <p style="margin: 0; font-size: 13px; color: #78350f;">${feedbackQuestao}</p>
+                    </div>
+                  ` : ""}
+                </div>
+              </div>
+            `;
+            }).join("")}
+          </div>
+        `;
+        return html;
+      }
+      
+      if (entrega.respostas && entrega.respostas.length > 0) {
+        html += `
+          <div class="respostas-section" style="margin-top: 30px;">
+            <h3 style="margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; font-size: 18px;">
+              Respostas e Correções
+            </h3>
+            ${entrega.respostas.map((r: any, index: number) => `
+              <div style="margin-bottom: 20px; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+                <div style="background: ${getMarcacaoBackground(r.marcacao)}; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e7eb;">
+                  <span style="font-weight: bold; font-size: 14px;">Resposta ${index + 1}</span>
+                  <div style="display: flex; align-items: center; gap: 15px;">
+                    ${getMarcacaoIcon(r.marcacao)}
+                    ${!isAtividade && r.valorObtido !== undefined ? `<span style="font-weight: bold; font-size: 14px;">${r.valorObtido} pts</span>` : ''}
+                  </div>
+                </div>
+                <div style="padding: 15px;">
+                  ${r.resposta ? `
+                    <div style="margin-bottom: 10px;">
+                      <p style="font-weight: bold; margin-bottom: 5px; font-size: 13px;">Sua resposta:</p>
+                      <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; white-space: pre-wrap; font-size: 13px;">
+                        ${r.resposta}
+                      </div>
+                    </div>
+                  ` : ""}
+                  ${r.feedback ? `
+                    <div style="padding: 12px; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 6px;">
+                      <p style="font-weight: bold; margin-bottom: 5px; font-size: 13px; color: #92400e;">Comentário:</p>
+                      <p style="margin: 0; font-size: 13px; color: #78350f;">${r.feedback}</p>
+                    </div>
+                  ` : ""}
+                </div>
+              </div>
+            `).join("")}
+          </div>
+        `;
+        return html;
+      }
+      
+      return html;
+    };
     
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -399,37 +559,53 @@ export function AlunoAvaliacoesTab() {
         <meta charset="UTF-8">
         <title>Correção - ${avaliacao.titulo}</title>
         <style>
-          body { font-family: Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
-          .header { border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 25px; }
-          .header h1 { margin: 0; font-size: 20px; color: #333; }
-          .header p { margin: 5px 0 0; color: #666; font-size: 14px; }
-          .title { font-size: 24px; font-weight: bold; margin-bottom: 20px; }
-          .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
-          .info-item { padding: 12px; background: #f5f5f5; border-radius: 6px; }
-          .info-label { font-weight: bold; font-size: 12px; color: #666; text-transform: uppercase; }
-          .info-value { font-size: 14px; margin-top: 4px; }
-          .grade-box { background: #d4edda; border: 2px solid #28a745; border-radius: 8px; padding: 20px; margin: 25px 0; text-align: center; }
-          .grade-box.activity { background: #cce5ff; border-color: #007bff; }
-          .grade-title { font-size: 14px; color: #666; margin-bottom: 8px; }
-          .grade-value { font-size: 36px; font-weight: bold; color: #28a745; }
-          .grade-value.activity { color: #007bff; }
-          .grade-percent { font-size: 18px; color: #666; margin-top: 5px; }
-          .feedback-section { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 20px; margin-top: 25px; }
-          .feedback-title { font-weight: bold; margin-bottom: 10px; color: #856404; }
-          .feedback-text { white-space: pre-wrap; line-height: 1.6; }
-          .submission-info { margin-top: 25px; padding: 15px; background: #f8f9fa; border-radius: 6px; }
-          .submission-info h4 { margin: 0 0 10px; font-size: 14px; color: #666; }
-          .footer { margin-top: 40px; text-align: center; color: #999; font-size: 12px; border-top: 1px solid #ddd; padding-top: 20px; }
+          body { font-family: Arial, sans-serif; padding: 40px; max-width: 900px; margin: 0 auto; color: #1f2937; }
+          .header { border-bottom: 3px solid #3b82f6; padding-bottom: 20px; margin-bottom: 25px; }
+          .header h1 { margin: 0; font-size: 22px; color: #1e40af; }
+          .header p { margin: 5px 0 0; color: #6b7280; font-size: 14px; }
+          .title { font-size: 26px; font-weight: bold; margin-bottom: 25px; color: #111827; }
+          .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 25px; }
+          .info-item { padding: 12px 15px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb; }
+          .info-label { font-weight: bold; font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
+          .info-value { font-size: 14px; margin-top: 4px; color: #111827; }
+          .dates-section { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 20px; margin: 25px 0; }
+          .dates-section h4 { margin: 0 0 15px; color: #1e40af; font-size: 14px; }
+          .dates-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+          .date-item { text-align: center; }
+          .date-label { font-size: 11px; color: #3b82f6; font-weight: bold; text-transform: uppercase; }
+          .date-value { font-size: 13px; margin-top: 4px; color: #1e3a8a; }
+          .grade-box { background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border: 2px solid #22c55e; border-radius: 12px; padding: 25px; margin: 25px 0; text-align: center; }
+          .grade-box.activity { background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border-color: #3b82f6; }
+          .grade-title { font-size: 14px; color: #166534; margin-bottom: 8px; font-weight: bold; }
+          .grade-title.activity { color: #1e40af; }
+          .grade-value { font-size: 42px; font-weight: bold; color: #15803d; }
+          .grade-value.activity { color: #1e40af; font-size: 28px; }
+          .grade-percent { font-size: 18px; color: #166534; margin-top: 5px; }
+          .feedback-section { background: #fffbeb; border: 2px solid #fbbf24; border-radius: 12px; padding: 20px; margin-top: 25px; }
+          .feedback-title { font-weight: bold; margin-bottom: 10px; color: #92400e; font-size: 14px; }
+          .feedback-text { white-space: pre-wrap; line-height: 1.6; color: #78350f; font-size: 14px; }
+          .summary-box { background: #f3f4f6; border-radius: 8px; padding: 20px; margin: 25px 0; }
+          .summary-title { font-weight: bold; margin-bottom: 15px; font-size: 14px; color: #374151; }
+          .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center; }
+          .summary-item { padding: 10px; background: white; border-radius: 6px; border: 1px solid #e5e7eb; }
+          .summary-item .value { font-size: 24px; font-weight: bold; }
+          .summary-item .label { font-size: 11px; color: #6b7280; margin-top: 4px; }
+          .summary-item.correct .value { color: #16a34a; }
+          .summary-item.wrong .value { color: #dc2626; }
+          .summary-item.partial .value { color: #f59e0b; }
+          .summary-item.total .value { color: #3b82f6; }
+          .footer { margin-top: 50px; text-align: center; color: #9ca3af; font-size: 12px; border-top: 1px solid #e5e7eb; padding-top: 20px; }
           @media print { 
             body { padding: 20px; } 
+            .questao { page-break-inside: avoid; }
             .grade-box { page-break-inside: avoid; }
           }
         </style>
       </head>
       <body>
         <div class="header">
-          <h1>ENEM+ Preparatório</h1>
-          <p>Comprovante de Correção</p>
+          <h1>Vestibulando Preparatório</h1>
+          <p>Documento de Correção - Aluno</p>
         </div>
         
         <div class="title">${avaliacao.titulo}</div>
@@ -437,7 +613,15 @@ export function AlunoAvaliacoesTab() {
         <div class="info-grid">
           <div class="info-item">
             <div class="info-label">Aluno(a)</div>
-            <div class="info-value">${userData?.name || "Aluno"}</div>
+            <div class="info-value">${userData?.nome || "Aluno"}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Matrícula</div>
+            <div class="info-value">${userData?.matricula || "-"}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Turma</div>
+            <div class="info-value">${entrega.turmaNome || "-"}</div>
           </div>
           <div class="info-item">
             <div class="info-label">Tipo</div>
@@ -451,28 +635,64 @@ export function AlunoAvaliacoesTab() {
             <div class="info-label">Professor(a)</div>
             <div class="info-value">${avaliacao.professorNome}</div>
           </div>
-          <div class="info-item">
-            <div class="info-label">Data de Entrega</div>
-            <div class="info-value">${entrega.dataEntrega ? format(new Date(entrega.dataEntrega), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : "-"}</div>
-          </div>
-          <div class="info-item">
-            <div class="info-label">Status</div>
-            <div class="info-value">Corrigido</div>
+        </div>
+
+        <div class="dates-section">
+          <h4>Cronologia</h4>
+          <div class="dates-grid">
+            <div class="date-item">
+              <div class="date-label">Disponibilizada em</div>
+              <div class="date-value">${avaliacao.dataInicio ? format(new Date(avaliacao.dataInicio), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : "-"}</div>
+            </div>
+            <div class="date-item">
+              <div class="date-label">Sua Entrega</div>
+              <div class="date-value">${entrega.dataEnvio ? format(new Date(entrega.dataEnvio), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : "-"}</div>
+            </div>
+            <div class="date-item">
+              <div class="date-label">Correção</div>
+              <div class="date-value">${entrega.dataCorrecao ? format(new Date(entrega.dataCorrecao), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : "-"}</div>
+            </div>
           </div>
         </div>
         
         ${!isAtividade ? `
         <div class="grade-box">
-          <div class="grade-title">Nota Obtida</div>
+          <div class="grade-title">Sua Nota</div>
           <div class="grade-value">${entrega.nota !== undefined ? entrega.nota : "-"} / ${avaliacao.valorTotal}</div>
           ${entrega.nota !== undefined ? `<div class="grade-percent">${((entrega.nota / avaliacao.valorTotal) * 100).toFixed(0)}%</div>` : ""}
         </div>
         ` : `
         <div class="grade-box activity">
-          <div class="grade-title">Status da Atividade</div>
+          <div class="grade-title activity">Status da Atividade</div>
           <div class="grade-value activity">Corrigida</div>
         </div>
         `}
+
+        ${avaliacao.questoes && avaliacao.questoes.length > 0 && entrega.respostas ? `
+        <div class="summary-box">
+          <div class="summary-title">Resumo do seu Desempenho</div>
+          <div class="summary-grid">
+            <div class="summary-item correct">
+              <div class="value">${entrega.respostas.filter(r => r.marcacao === "certo").length}</div>
+              <div class="label">Corretas</div>
+            </div>
+            <div class="summary-item wrong">
+              <div class="value">${entrega.respostas.filter(r => r.marcacao === "errado").length}</div>
+              <div class="label">Erradas</div>
+            </div>
+            <div class="summary-item partial">
+              <div class="value">${entrega.respostas.filter(r => r.marcacao === "parcial").length}</div>
+              <div class="label">Parciais</div>
+            </div>
+            <div class="summary-item total">
+              <div class="value">${avaliacao.questoes.length}</div>
+              <div class="label">Total</div>
+            </div>
+          </div>
+        </div>
+        ` : ""}
+        
+        ${generateQuestoesCorrigidasHTML()}
         
         ${entrega.feedback ? `
         <div class="feedback-section">
@@ -482,15 +702,15 @@ export function AlunoAvaliacoesTab() {
         ` : ""}
 
         ${entrega.arquivoUrl ? `
-        <div class="submission-info">
-          <h4>Arquivo Enviado</h4>
-          <p>${entrega.arquivoNome || "Arquivo da entrega"}</p>
+        <div style="margin-top: 25px; padding: 15px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+          <p style="margin: 0; font-size: 13px;"><strong>Arquivo Enviado:</strong> ${entrega.arquivoNome || "Arquivo da entrega"}</p>
         </div>
         ` : ""}
         
         <div class="footer">
           <p>Documento gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
-          <p>Este documento é um comprovante de correção da avaliação.</p>
+          <p>Corrigido por: ${entrega.corrigidoPorNome || avaliacao.professorNome || "Professor"}</p>
+          <p style="margin-top: 10px; font-style: italic;">Este documento é um comprovante oficial de correção da sua avaliação.</p>
         </div>
       </body>
       </html>

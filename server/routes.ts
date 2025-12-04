@@ -41,7 +41,7 @@ export async function registerRoutes(expressApp: Express): Promise<Server> {
   
   // Health check endpoint
   expressApp.get("/api/health", (req, res) => {
-    res.json({ status: "ok", message: "ENEM+ Platform API" });
+    res.json({ status: "ok", message: "Vestibulando Platform API" });
   });
 
   // Endpoint para atualizar senha no Firebase Authentication

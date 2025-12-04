@@ -2241,7 +2241,7 @@ export default function AdminDashboard() {
     );
 
     doc.setFontSize(18);
-    doc.text("Histórico de Auditoria - Sistema ENEM+", 14, 20);
+    doc.text("Histórico de Auditoria - Sistema Vestibulando", 14, 20);
     
     doc.setFontSize(10);
     doc.text(`Data de geração: ${formatBrasiliaDateTime(getNowBrasiliaISO())}`, 14, 28);
@@ -2334,7 +2334,7 @@ export default function AdminDashboard() {
               <GraduationCap className="h-6 w-6 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">ENEM+</h1>
+              <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">Vestibulando</h1>
               <p className="text-xs text-muted-foreground font-medium">Painel da Diretoria</p>
             </div>
           </div>

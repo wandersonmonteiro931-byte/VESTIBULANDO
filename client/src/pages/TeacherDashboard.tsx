@@ -197,7 +197,7 @@ export default function TeacherDashboard() {
               <FileText className="h-6 w-6 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">ENEM+</h1>
+              <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">Vestibulando</h1>
               <p className="text-xs text-muted-foreground font-medium">Área do Professor</p>
             </div>
           </div>

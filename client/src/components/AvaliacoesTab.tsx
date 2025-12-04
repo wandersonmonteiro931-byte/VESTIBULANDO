@@ -931,7 +931,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
       </head>
       <body>
         <div class="header">
-          <h1>ENEM+ Preparatório</h1>
+          <h1>Vestibulando Preparatório</h1>
           <p>${getTipoLabel(avaliacao.tipo).toUpperCase()}</p>
         </div>
         
@@ -1380,7 +1380,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
       </head>
       <body>
         <div class="header">
-          <h1>ENEM+ Preparatório</h1>
+          <h1>Vestibulando Preparatório</h1>
           <p>Documento de Correção - Professor</p>
         </div>
         

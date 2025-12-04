@@ -1,6 +1,6 @@
-# ENEM+ Platform
+# Vestibulando Platform
 
-Plataforma educacional completa para preparação do ENEM com gerenciamento de tarefas, submissões e avaliações.
+Plataforma educacional completa para preparação de vestibulares e ENEM com gerenciamento de tarefas, submissões e avaliações.
 
 ## 🚀 Configuração Rápida (Para Remix)
 

@@ -1,4 +1,4 @@
-# ENEM+ Platform Design Guidelines
+# Vestibulando Platform Design Guidelines
 
 ## Design Approach
 
