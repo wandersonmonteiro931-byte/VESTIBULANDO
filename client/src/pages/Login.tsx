@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { PhotoUpload } from "@/components/PhotoUpload";
 import { Badge } from "@/components/ui/badge";
-import { GraduationCap, Loader2, Copy, Check, Search, AlertCircle, Shield, Users, CheckCircle, XCircle, Clock, Calendar, FileText, AlertTriangle, Wrench } from "lucide-react";
+import { GraduationCap, Loader2, Copy, Check, Search, AlertCircle, Shield, Users, CheckCircle, XCircle, Clock, Calendar, FileText, AlertTriangle, Wrench, PowerOff } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -2599,41 +2599,41 @@ export default function Login() {
           style={{ zIndex: 999999 }}
           data-testid="overlay-deactivated"
         >
-          <Card className="w-full max-w-md border-red-500 max-h-[90vh] overflow-auto">
+          <Card className="w-full max-w-md border-slate-500 max-h-[90vh] overflow-auto">
             <CardHeader className="space-y-2 text-center pb-3">
-              <div className="mx-auto w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center">
-                <XCircle className="h-6 w-6 text-red-600" />
+              <div className="mx-auto w-12 h-12 rounded-full bg-slate-500/10 flex items-center justify-center">
+                <PowerOff className="h-6 w-6 text-slate-600" />
               </div>
-              <CardTitle className="text-xl font-bold text-red-600">
-                Acesso Bloqueado
+              <CardTitle className="text-xl font-bold text-slate-600">
+                Conta Desativada
               </CardTitle>
             </CardHeader>
             
             <CardContent className="space-y-3">
               <div className="text-sm space-y-3">
-                <p className="font-medium">Sua conta foi desativada pelo sistema Vestibulando.</p>
+                <p className="font-medium">Sua conta foi desativada pela instituição.</p>
                 
                 <ul className="space-y-2 text-muted-foreground text-xs">
                   <li className="flex items-start gap-2">
-                    <span className="text-red-600 mt-0.5">•</span>
-                    <span>Você não possui mais acesso às funcionalidades do portal.</span>
+                    <span className="text-slate-600 mt-0.5">•</span>
+                    <span>Seu cadastro não está mais ativo no sistema Vestibulando.</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-red-600 mt-0.5">•</span>
-                    <span>Para esclarecimentos, entre em contato com a secretaria ou direção.</span>
+                    <span className="text-slate-600 mt-0.5">•</span>
+                    <span>Isso pode ocorrer por término de vínculo, transferência ou solicitação administrativa.</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-red-600 mt-0.5">•</span>
-                    <span>Caso haja necessidade de reativação, siga os procedimentos administrativos estabelecidos pela instituição.</span>
+                    <span className="text-slate-600 mt-0.5">•</span>
+                    <span>Se você acredita que isso é um erro, entre em contato com a secretaria.</span>
                   </li>
                 </ul>
               </div>
               
-              <div className="p-2 bg-red-500/10 border border-red-500/20 rounded-lg">
+              <div className="p-2 bg-slate-500/10 border border-slate-500/20 rounded-lg">
                 <div className="flex items-start gap-2">
-                  <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-red-600">
-                    Entre em contato com a secretaria ou direção para mais informações.
+                  <AlertTriangle className="h-4 w-4 text-slate-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-slate-600">
+                    Para reativação, procure a secretaria com documentação necessária.
                   </p>
                 </div>
               </div>
