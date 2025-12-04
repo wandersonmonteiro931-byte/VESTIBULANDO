@@ -104,6 +104,26 @@ The platform utilizes a consistent violet/purple color scheme across all dashboa
   - `BimestresTab.tsx` - Interface da diretoria para configurar bimestres
   - `BimestresNotasTab.tsx` - Interface dos professores para lançar notas
 
+#### Controle de Matérias por Professor (NOVO - Dezembro 2025)
+- **Atribuição de Matérias**:
+  - Cada professor possui um campo `materias` (array) com as matérias que leciona
+  - Diretoria configura as matérias do professor no cadastro/edição
+  - Suporte para múltiplas matérias por professor
+- **Controle de Permissões**:
+  - Professores só visualizam e editam notas das suas matérias atribuídas
+  - Professores só criam avaliações para suas matérias atribuídas
+  - Diretoria tem acesso total a todas as matérias
+  - Retrocompatibilidade: professores sem matérias cadastradas veem todas (temporário)
+- **Interface**:
+  - Dropdowns de matérias filtrados automaticamente por permissão
+  - Mensagem de aviso quando professor não tem matérias cadastradas
+  - Componentes afetados: BimestresNotasTab, AvaliacoesTab
+
+#### Ordenação Alfabética de Alunos (NOVO - Dezembro 2025)
+- **Regra Universal**: Todas as listagens de alunos no sistema exibem nomes em ordem alfabética
+- **Implementação**: Uso de `.sort((a, b) => a.nome.localeCompare(b.nome))` em todas as listas
+- **Componentes afetados**: AdminDashboard, BimestresNotasTab, BoletimTab, MonitoringTab
+
 #### Data Model
 The core data model includes `Usuarios` (users with `aluno`, `professor`, `admin` types, CPF, matricula, address via ViaCEP), `Tarefas` (assignments with title, description, professor, class, deadline, attachments), `Entregas` (submissions with student info, file, grade, feedback, status), and `Turmas` (classes with name, year, activity status, vacancies, enrollment period, WhatsApp link). Additional collections: `announcements` (system notices), `chatMessages` (chat messages), `chatConversations` (conversations), `userBlocks` (user blocks), `chatReports` (conversation reports).
 
