@@ -337,76 +337,78 @@ export default function StudentDashboard() {
           </header>
 
           <main className="container px-6 py-10 max-w-7xl mx-auto flex-1">
-            <div className="mb-10">
-              <h2 className="text-4xl font-bold mb-3 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                {(() => {
-                  const now = new Date();
-                  const brasiliaOffset = -3;
-                  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-                  const brasiliaTime = new Date(utc + (3600000 * brasiliaOffset));
-                  const hour = brasiliaTime.getHours();
-                  
-                  let greeting = "";
-                  if (hour >= 5 && hour < 12) {
-                    greeting = "Bom dia";
-                  } else if (hour >= 12 && hour < 18) {
-                    greeting = "Boa tarde";
-                  } else {
-                    greeting = "Boa noite";
-                  }
-                  
-                  return `${greeting}, ${userData?.nome?.split(' ')[0]}!`;
-                })()}
-              </h2>
-              <p className="text-muted-foreground text-lg">Acompanhe suas tarefas e progresso</p>
-            </div>
-
             {selectedSection === "inicio" && (
-              <div className="mb-10">
-                <AnnouncementsCarousel userType="aluno" userTurma={userData?.turma} />
-              </div>
+              <>
+                <div className="mb-10">
+                  <h2 className="text-4xl font-bold mb-3 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                    {(() => {
+                      const now = new Date();
+                      const brasiliaOffset = -3;
+                      const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+                      const brasiliaTime = new Date(utc + (3600000 * brasiliaOffset));
+                      const hour = brasiliaTime.getHours();
+                      
+                      let greeting = "";
+                      if (hour >= 5 && hour < 12) {
+                        greeting = "Bom dia";
+                      } else if (hour >= 12 && hour < 18) {
+                        greeting = "Boa tarde";
+                      } else {
+                        greeting = "Boa noite";
+                      }
+                      
+                      return `${greeting}, ${userData?.nome?.split(' ')[0]}!`;
+                    })()}
+                  </h2>
+                  <p className="text-muted-foreground text-lg">Acompanhe suas tarefas e progresso</p>
+                </div>
+
+                <div className="mb-10">
+                  <AnnouncementsCarousel userType="aluno" userTurma={userData?.turma} />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                  <Card className="border-amber-200/50 dark:border-amber-900/50 bg-gradient-to-br from-card to-amber-50/30 dark:to-amber-950/10 hover-elevate">
+                    <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
+                      <CardTitle className="text-sm font-semibold">Pendentes</CardTitle>
+                      <div className="p-2 bg-amber-100 dark:bg-amber-900/40 rounded-lg">
+                        <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold text-amber-600 dark:text-amber-400" data-testid="stat-pendentes">{stats.pendentes}</div>
+                      <p className="text-xs text-muted-foreground mt-1">Tarefas para fazer</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-blue-200/50 dark:border-blue-900/50 bg-gradient-to-br from-card to-blue-50/30 dark:to-blue-950/10 hover-elevate">
+                    <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
+                      <CardTitle className="text-sm font-semibold">Entregues</CardTitle>
+                      <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg">
+                        <Upload className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold text-blue-600 dark:text-blue-400" data-testid="stat-entregues">{stats.entregues}</div>
+                      <p className="text-xs text-muted-foreground mt-1">Aguardando avaliação</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-green-200/50 dark:border-green-900/50 bg-gradient-to-br from-card to-green-50/30 dark:to-green-950/10 hover-elevate">
+                    <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
+                      <CardTitle className="text-sm font-semibold">Avaliadas</CardTitle>
+                      <div className="p-2 bg-green-100 dark:bg-green-900/40 rounded-lg">
+                        <Award className="h-5 w-5 text-green-600 dark:text-green-400" />
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold text-green-600 dark:text-green-400" data-testid="stat-avaliadas">{stats.avaliadas}</div>
+                      <p className="text-xs text-muted-foreground mt-1">Com nota</p>
+                    </CardContent>
+                  </Card>
+                </div>
+              </>
             )}
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-              <Card className="border-amber-200/50 dark:border-amber-900/50 bg-gradient-to-br from-card to-amber-50/30 dark:to-amber-950/10 hover-elevate">
-                <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
-                  <CardTitle className="text-sm font-semibold">Pendentes</CardTitle>
-                  <div className="p-2 bg-amber-100 dark:bg-amber-900/40 rounded-lg">
-                    <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-amber-600 dark:text-amber-400" data-testid="stat-pendentes">{stats.pendentes}</div>
-                  <p className="text-xs text-muted-foreground mt-1">Tarefas para fazer</p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-blue-200/50 dark:border-blue-900/50 bg-gradient-to-br from-card to-blue-50/30 dark:to-blue-950/10 hover-elevate">
-                <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
-                  <CardTitle className="text-sm font-semibold">Entregues</CardTitle>
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg">
-                    <Upload className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-blue-600 dark:text-blue-400" data-testid="stat-entregues">{stats.entregues}</div>
-                  <p className="text-xs text-muted-foreground mt-1">Aguardando avaliação</p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-green-200/50 dark:border-green-900/50 bg-gradient-to-br from-card to-green-50/30 dark:to-green-950/10 hover-elevate">
-                <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
-                  <CardTitle className="text-sm font-semibold">Avaliadas</CardTitle>
-                  <div className="p-2 bg-green-100 dark:bg-green-900/40 rounded-lg">
-                    <Award className="h-5 w-5 text-green-600 dark:text-green-400" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-green-600 dark:text-green-400" data-testid="stat-avaliadas">{stats.avaliadas}</div>
-                  <p className="text-xs text-muted-foreground mt-1">Com nota</p>
-                </CardContent>
-              </Card>
-            </div>
 
             <div className="space-y-6">
               {selectedSection === "todas" && (

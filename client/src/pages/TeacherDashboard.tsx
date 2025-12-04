@@ -252,72 +252,74 @@ export default function TeacherDashboard() {
 
           <main className="flex-1 overflow-auto p-6">
             <div className="max-w-7xl mx-auto">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
-                <div>
-                  <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                    Painel do Professor
-                  </h2>
-                  <p className="text-muted-foreground">Gerencie atividades e avalie entregas</p>
-                </div>
-              </div>
-
               {selectedSection === "inicio" && (
-                <div className="mb-8">
-                  <AnnouncementsCarousel userType="professor" />
-                </div>
+                <>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+                    <div>
+                      <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                        Painel do Professor
+                      </h2>
+                      <p className="text-muted-foreground">Gerencie atividades e avalie entregas</p>
+                    </div>
+                  </div>
+
+                  <div className="mb-8">
+                    <AnnouncementsCarousel userType="professor" />
+                  </div>
+
+                  {(!userData?.materias || userData.materias.length === 0) && (
+                    <Alert variant="destructive" className="mb-8" data-testid="alert-no-subjects">
+                      <AlertTriangle className="h-5 w-5" />
+                      <AlertTitle>Nenhuma matéria atribuída</AlertTitle>
+                      <AlertDescription>
+                        Você ainda não possui matérias atribuídas ao seu perfil. Entre em contato com a diretoria para que realizem o cadastro das suas matérias. 
+                        Sem matérias cadastradas, você não poderá criar atividades, provas ou lançar notas.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <Card className="border-primary/20 bg-gradient-to-br from-card to-primary/5 hover-elevate">
+                      <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
+                        <CardTitle className="text-sm font-semibold">Total de Tarefas</CardTitle>
+                        <div className="p-2 bg-primary/10 rounded-lg">
+                          <FileText className="h-5 w-5 text-primary" />
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-3xl font-bold text-primary" data-testid="stat-tarefas">{stats.tarefas}</div>
+                        <p className="text-xs text-muted-foreground mt-1">Tarefas criadas</p>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-amber-200/50 dark:border-amber-900/50 bg-gradient-to-br from-card to-amber-50/30 dark:to-amber-950/10 hover-elevate">
+                      <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
+                        <CardTitle className="text-sm font-semibold">Pendentes</CardTitle>
+                        <div className="p-2 bg-amber-100 dark:bg-amber-900/40 rounded-lg">
+                          <Users className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-3xl font-bold text-amber-600 dark:text-amber-400" data-testid="stat-pendentes">{stats.pendentes}</div>
+                        <p className="text-xs text-muted-foreground mt-1">Aguardando correção</p>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-green-200/50 dark:border-green-900/50 bg-gradient-to-br from-card to-green-50/30 dark:to-green-950/10 hover-elevate">
+                      <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
+                        <CardTitle className="text-sm font-semibold">Avaliadas</CardTitle>
+                        <div className="p-2 bg-green-100 dark:bg-green-900/40 rounded-lg">
+                          <Award className="h-5 w-5 text-green-600 dark:text-green-400" />
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-3xl font-bold text-green-600 dark:text-green-400" data-testid="stat-avaliadas">{stats.avaliadas}</div>
+                        <p className="text-xs text-muted-foreground mt-1">Já corrigidas</p>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </>
               )}
-
-              {(!userData?.materias || userData.materias.length === 0) && (
-                <Alert variant="destructive" className="mb-8" data-testid="alert-no-subjects">
-                  <AlertTriangle className="h-5 w-5" />
-                  <AlertTitle>Nenhuma matéria atribuída</AlertTitle>
-                  <AlertDescription>
-                    Você ainda não possui matérias atribuídas ao seu perfil. Entre em contato com a diretoria para que realizem o cadastro das suas matérias. 
-                    Sem matérias cadastradas, você não poderá criar atividades, provas ou lançar notas.
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <Card className="border-primary/20 bg-gradient-to-br from-card to-primary/5 hover-elevate">
-                  <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
-                    <CardTitle className="text-sm font-semibold">Total de Tarefas</CardTitle>
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                      <FileText className="h-5 w-5 text-primary" />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold text-primary" data-testid="stat-tarefas">{stats.tarefas}</div>
-                    <p className="text-xs text-muted-foreground mt-1">Tarefas criadas</p>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-amber-200/50 dark:border-amber-900/50 bg-gradient-to-br from-card to-amber-50/30 dark:to-amber-950/10 hover-elevate">
-                  <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
-                    <CardTitle className="text-sm font-semibold">Pendentes</CardTitle>
-                    <div className="p-2 bg-amber-100 dark:bg-amber-900/40 rounded-lg">
-                      <Users className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold text-amber-600 dark:text-amber-400" data-testid="stat-pendentes">{stats.pendentes}</div>
-                    <p className="text-xs text-muted-foreground mt-1">Aguardando correção</p>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-green-200/50 dark:border-green-900/50 bg-gradient-to-br from-card to-green-50/30 dark:to-green-950/10 hover-elevate">
-                  <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
-                    <CardTitle className="text-sm font-semibold">Avaliadas</CardTitle>
-                    <div className="p-2 bg-green-100 dark:bg-green-900/40 rounded-lg">
-                      <Award className="h-5 w-5 text-green-600 dark:text-green-400" />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold text-green-600 dark:text-green-400" data-testid="stat-avaliadas">{stats.avaliadas}</div>
-                    <p className="text-xs text-muted-foreground mt-1">Já corrigidas</p>
-                  </CardContent>
-                </Card>
-              </div>
 
               <div className="space-y-6">
                 {selectedSection === "avaliacoes" && (
