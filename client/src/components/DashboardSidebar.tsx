@@ -88,6 +88,8 @@ const diretorCategories: MenuCategory[] = [
     icon: GraduationCap,
     items: [
       { id: "horarios", label: "Grade Horária", icon: Clock },
+      { id: "calendario", label: "Calendário", icon: Calendar },
+      { id: "config-horarios", label: "Configurar Horários", icon: Settings },
       { id: "presencas", label: "Registro de Presenças", icon: UserCheck },
       { id: "bimestres", label: "Bimestres", icon: Calendar },
       { id: "boletins", label: "Boletins", icon: FileCheck },

@@ -2,10 +2,11 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { 
   DIAS_SEMANA, 
-  HORARIOS_AULAS, 
+  HORARIOS_AULAS,
   type DiaSemana, 
   type SlotAula,
-  type GradeHoraria 
+  type GradeHoraria,
+  type HorarioAula
 } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,7 @@ interface ScheduleGridProps {
   highlightProfessorId?: string;
   diasExibidos?: DiaSemana[];
   horariosExibidos?: string[];
+  horariosCustom?: HorarioAula[];
 }
 
 function getMateriaColor(materia: string): string {
@@ -77,10 +79,12 @@ export function ScheduleGrid({
   highlightProfessorId,
   diasExibidos = DIAS_SEMANA as unknown as DiaSemana[],
   horariosExibidos,
+  horariosCustom,
 }: ScheduleGridProps) {
+  const baseHorarios = horariosCustom && horariosCustom.length > 0 ? horariosCustom : HORARIOS_AULAS;
   const horarios = horariosExibidos 
-    ? HORARIOS_AULAS.filter(h => horariosExibidos.includes(h.id))
-    : HORARIOS_AULAS;
+    ? baseHorarios.filter(h => horariosExibidos.includes(h.id))
+    : baseHorarios;
 
   const getSlot = (dia: DiaSemana, horarioId: string): SlotAula | undefined => {
     return slots.find(s => s.diaSemana === dia && s.horarioId === horarioId);
@@ -236,6 +240,7 @@ interface SlotEditDialogProps {
   onSave: (slot: Omit<SlotAula, "diaSemana" | "horarioId">) => void;
   onRemove?: () => void;
   conflictCheck?: (professorId: string) => SlotAula | undefined;
+  horariosCustom?: HorarioAula[];
 }
 
 export function SlotEditDialog({
@@ -249,12 +254,14 @@ export function SlotEditDialog({
   onSave,
   onRemove,
   conflictCheck,
+  horariosCustom,
 }: SlotEditDialogProps) {
   const [selectedMateria, setSelectedMateria] = useState(existingSlot?.materia || "");
   const [selectedProfessorId, setSelectedProfessorId] = useState(existingSlot?.professorId || "");
   const [conflict, setConflict] = useState<SlotAula | undefined>();
 
-  const horario = HORARIOS_AULAS.find(h => h.id === horarioId);
+  const baseHorarios = horariosCustom && horariosCustom.length > 0 ? horariosCustom : HORARIOS_AULAS;
+  const horario = baseHorarios.find(h => h.id === horarioId);
   const selectedProfessor = professores.find(p => p.uid === selectedProfessorId);
 
   const handleProfessorChange = (professorId: string) => {

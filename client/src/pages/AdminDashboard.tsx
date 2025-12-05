@@ -26,6 +26,8 @@ import { BoletimTab } from "@/components/BoletimTab";
 import { AutorizacaoNotasTab } from "@/components/AutorizacaoNotasTab";
 import { DisciplinaryRequestsAdminTab } from "@/components/DisciplinaryRequestsAdminTab";
 import { HorariosTab } from "@/components/HorariosTab";
+import { ConfiguracaoHorariosTab } from "@/components/ConfiguracaoHorariosTab";
+import { CalendarioProgramacaoTab } from "@/components/CalendarioProgramacaoTab";
 import { PresencasTab } from "@/components/PresencasTab";
 import { ChatNotificationBubble } from "@/components/ChatNotificationBubble";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
@@ -3885,6 +3887,14 @@ export default function AdminDashboard() {
               turmas={turmas || []}
               professores={(users || []).filter((u: User) => u.tipo === "professor")}
             />
+          )}
+
+          {selectedSection === "calendario" && (
+            <CalendarioProgramacaoTab turmas={turmas || []} />
+          )}
+
+          {selectedSection === "config-horarios" && (
+            <ConfiguracaoHorariosTab />
           )}
 
           {selectedSection === "presencas" && (

@@ -1316,3 +1316,108 @@ export const insertDisponibilidadeProfessorSchema = disponibilidadeProfessorSche
 
 export type DisponibilidadeProfessor = z.infer<typeof disponibilidadeProfessorSchema>;
 export type InsertDisponibilidadeProfessor = z.infer<typeof insertDisponibilidadeProfessorSchema>;
+
+// ==================== CONFIGURAÇÃO DE HORÁRIOS PERSONALIZADOS ====================
+
+// Schema para um horário de aula individual (personalizável pelo diretor)
+export const horarioAulaSchema = z.object({
+  id: z.string(), // ID único do horário (ex: "1", "2", etc.)
+  nome: z.string(), // Nome do horário (ex: "1ª Aula", "Intervalo")
+  inicio: z.string(), // Hora de início (ex: "07:00")
+  fim: z.string(), // Hora de fim (ex: "07:50")
+  tipo: z.enum(["aula", "intervalo"]).default("aula"), // Tipo: aula normal ou intervalo
+  ativo: z.boolean().default(true), // Se está ativo ou não
+});
+
+export type HorarioAula = z.infer<typeof horarioAulaSchema>;
+
+// Schema para configuração geral de horários da escola (salvo no Firestore)
+export const configuracaoHorariosSchema = z.object({
+  id: z.string(),
+  
+  // Lista de horários configurados
+  horarios: z.array(horarioAulaSchema).default([]),
+  
+  // Dias da semana ativos
+  diasAtivos: z.array(z.enum(DIAS_SEMANA)).default(["segunda", "terca", "quarta", "quinta", "sexta"]),
+  
+  // Metadados
+  criadoPor: z.string(),
+  criadoPorNome: z.string(),
+  dataCriacao: z.string(),
+  dataAtualizacao: z.string().optional(),
+  
+  // Nome da configuração (para permitir múltiplas configurações futuras)
+  nome: z.string().default("Padrão"),
+  ativo: z.boolean().default(true),
+});
+
+export const insertConfiguracaoHorariosSchema = configuracaoHorariosSchema.omit({ id: true, dataCriacao: true });
+
+export type ConfiguracaoHorarios = z.infer<typeof configuracaoHorariosSchema>;
+export type InsertConfiguracaoHorarios = z.infer<typeof insertConfiguracaoHorariosSchema>;
+
+// ==================== CALENDÁRIO DE PROGRAMAÇÃO ====================
+
+// Schema para evento no calendário de programação
+export const eventoCalendarioSchema = z.object({
+  id: z.string(),
+  
+  // Dados do evento
+  titulo: z.string(),
+  descricao: z.string().optional(),
+  tipo: z.enum(["aula", "reuniao", "feriado", "recesso", "evento", "prova", "outro"]),
+  
+  // Data e horário
+  dataInicio: z.string(), // YYYY-MM-DD ou ISO string
+  dataFim: z.string().optional(), // Para eventos de múltiplos dias
+  horarioInicio: z.string().optional(), // HH:mm
+  horarioFim: z.string().optional(), // HH:mm
+  diaInteiro: z.boolean().default(false),
+  
+  // Associações
+  turmaId: z.string().optional(),
+  turmaNome: z.string().optional(),
+  professorId: z.string().optional(),
+  professorNome: z.string().optional(),
+  materia: z.string().optional(),
+  
+  // Recorrência
+  recorrente: z.boolean().default(false),
+  tipoRecorrencia: z.enum(["diario", "semanal", "mensal"]).optional(),
+  diasRecorrencia: z.array(z.enum(DIAS_SEMANA)).optional(),
+  
+  // Cor para exibição no calendário
+  cor: z.string().optional(),
+  
+  // Status
+  status: z.enum(["agendado", "confirmado", "cancelado", "concluido"]).default("agendado"),
+  
+  // Metadados
+  criadoPor: z.string(),
+  criadoPorNome: z.string(),
+  dataCriacao: z.string(),
+  dataAtualizacao: z.string().optional(),
+});
+
+export const insertEventoCalendarioSchema = eventoCalendarioSchema.omit({ id: true, dataCriacao: true });
+
+export type EventoCalendario = z.infer<typeof eventoCalendarioSchema>;
+export type InsertEventoCalendario = z.infer<typeof insertEventoCalendarioSchema>;
+
+// Horários padrão para inicialização (usado quando não há configuração salva)
+export const HORARIOS_AULAS_PADRAO: HorarioAula[] = [
+  { id: "1", inicio: "07:00", fim: "07:50", nome: "1ª Aula", tipo: "aula", ativo: true },
+  { id: "2", inicio: "07:50", fim: "08:40", nome: "2ª Aula", tipo: "aula", ativo: true },
+  { id: "3", inicio: "08:40", fim: "09:30", nome: "3ª Aula", tipo: "aula", ativo: true },
+  { id: "i1", inicio: "09:30", fim: "09:45", nome: "Intervalo", tipo: "intervalo", ativo: true },
+  { id: "4", inicio: "09:45", fim: "10:35", nome: "4ª Aula", tipo: "aula", ativo: true },
+  { id: "5", inicio: "10:35", fim: "11:25", nome: "5ª Aula", tipo: "aula", ativo: true },
+  { id: "6", inicio: "11:25", fim: "12:15", nome: "6ª Aula", tipo: "aula", ativo: true },
+  { id: "i2", inicio: "12:15", fim: "13:30", nome: "Almoço", tipo: "intervalo", ativo: true },
+  { id: "7", inicio: "13:30", fim: "14:20", nome: "7ª Aula", tipo: "aula", ativo: true },
+  { id: "8", inicio: "14:20", fim: "15:10", nome: "8ª Aula", tipo: "aula", ativo: true },
+  { id: "9", inicio: "15:10", fim: "16:00", nome: "9ª Aula", tipo: "aula", ativo: true },
+  { id: "i3", inicio: "16:00", fim: "16:15", nome: "Intervalo", tipo: "intervalo", ativo: true },
+  { id: "10", inicio: "16:15", fim: "17:05", nome: "10ª Aula", tipo: "aula", ativo: true },
+];

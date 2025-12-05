@@ -12,7 +12,8 @@ import {
   type SlotAula,
   type GradeHoraria,
   type ConfiguracaoMateria,
-  type User
+  type User,
+  type HorarioAula
 } from "@shared/schema";
 import { ScheduleGrid, SlotEditDialog, ScheduleViewCard } from "./ScheduleGrid";
 import { Button } from "@/components/ui/button";
@@ -79,6 +80,22 @@ export function HorariosTab({ turmas, professores }: HorariosTabProps) {
     collectionName: "gradesHorarias",
     queryKey: ["gradesHorarias"],
   });
+
+  const { data: horariosConfig } = useRealtimeQuery<{ id: string; ativo?: boolean; horarios: HorarioAula[] }>({
+    collectionName: "configuracaoHorarios",
+    queryKey: ["configuracaoHorarios"],
+  });
+
+  const horariosCustom = useMemo(() => {
+    if (horariosConfig && horariosConfig.length > 0) {
+      const activeConfig = horariosConfig.find(c => c.ativo) ?? horariosConfig[0];
+      if (activeConfig.horarios && activeConfig.horarios.length > 0) {
+        const activeHorarios = activeConfig.horarios.filter(h => h.ativo !== false);
+        return [...activeHorarios].sort((a, b) => a.inicio.localeCompare(b.inicio));
+      }
+    }
+    return HORARIOS_AULAS;
+  }, [horariosConfig]);
 
   const selectedTurma = turmas.find(t => t.id === selectedTurmaId);
   
@@ -261,7 +278,7 @@ export function HorariosTab({ turmas, professores }: HorariosTabProps) {
         for (const dia of diasShuffled) {
           if (aulasAlocadas >= config.aulasPorSemana) break;
           
-          const horariosShuffled = [...HORARIOS_AULAS].sort(() => Math.random() - 0.5);
+          const horariosShuffled = [...horariosCustom].sort(() => Math.random() - 0.5);
           
           for (const horario of horariosShuffled) {
             if (aulasAlocadas >= config.aulasPorSemana) break;
@@ -374,7 +391,7 @@ export function HorariosTab({ turmas, professores }: HorariosTabProps) {
     
     const tableData: string[][] = [];
     
-    HORARIOS_AULAS.forEach(horario => {
+    horariosCustom.forEach(horario => {
       const row = [`${horario.nome}\n${horario.inicio}-${horario.fim}`];
       DIAS_SEMANA.forEach(dia => {
         const slot = grade.slots.find(s => s.diaSemana === dia && s.horarioId === horario.id);
@@ -439,7 +456,7 @@ export function HorariosTab({ turmas, professores }: HorariosTabProps) {
           <tbody>
     `;
     
-    HORARIOS_AULAS.forEach(horario => {
+    horariosCustom.forEach(horario => {
       html += `<tr><td>${horario.nome}<br><small>${horario.inicio}-${horario.fim}</small></td>`;
       DIAS_SEMANA.forEach(dia => {
         const slot = grade.slots.find(s => s.diaSemana === dia && s.horarioId === horario.id);
@@ -538,6 +555,7 @@ export function HorariosTab({ turmas, professores }: HorariosTabProps) {
                       slots={grade.slots} 
                       compact
                       showLegend={false}
+                      horariosCustom={horariosCustom}
                     />
                   </CardContent>
                   <CardFooter className="flex justify-end gap-2 flex-wrap">
@@ -775,6 +793,7 @@ export function HorariosTab({ turmas, professores }: HorariosTabProps) {
                   onSlotRemove={handleSlotRemove}
                   professores={professoresFiltrados}
                   materias={[...MATERIAS_DISPONIVEIS]}
+                  horariosCustom={horariosCustom}
                 />
               </CardContent>
             </Card>
@@ -818,6 +837,7 @@ export function HorariosTab({ turmas, professores }: HorariosTabProps) {
         onSave={handleSlotSave}
         onRemove={editSlotDialog.existingSlot ? () => handleSlotRemove(editSlotDialog.dia, editSlotDialog.horarioId) : undefined}
         conflictCheck={checkProfessorConflict}
+        horariosCustom={horariosCustom}
       />
 
       <Dialog open={autoGenDialogOpen} onOpenChange={setAutoGenDialogOpen}>
