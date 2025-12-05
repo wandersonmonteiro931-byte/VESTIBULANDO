@@ -809,6 +809,21 @@ service cloud.firestore {
       allow delete: if isAdmin() && isUserActive();
     }
     
+    // Matérias Customizadas - matérias adicionais cadastradas pelo diretor
+    match /materiasCustomizadas/{materiaId} {
+      // Usuários ativos podem ler matérias customizadas
+      allow read: if isAuthenticated() && isUserActive();
+      
+      // Apenas diretores podem criar matérias
+      allow create: if isAdmin() && isUserActive();
+      
+      // Apenas diretores podem atualizar matérias
+      allow update: if isAdmin() && isUserActive();
+      
+      // Apenas diretores podem deletar matérias
+      allow delete: if isAdmin() && isUserActive();
+    }
+    
     // Eventos do Calendário - eventos para o calendário de programação
     match /eventosCalendario/{eventoId} {
       // Usuários ativos podem ler eventos
