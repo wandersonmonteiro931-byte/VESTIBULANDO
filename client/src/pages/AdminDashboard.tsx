@@ -2642,7 +2642,7 @@ export default function AdminDashboard() {
                     <Skeleton className="h-12 w-full" />
                   </div>
                 ) : pendingUsers && pendingUsers.length > 0 ? (
-                  <div className="w-full">
+                  <div className="w-full overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -2842,7 +2842,7 @@ export default function AdminDashboard() {
                     .sort((a, b) => a.nome.localeCompare(b.nome)); // Ordenação alfabética
                   
                   return filteredAlunos.length > 0 ? (
-                  <div className="w-full">
+                  <div className="w-full overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -3035,7 +3035,7 @@ export default function AdminDashboard() {
                   });
                   
                   return filteredProfessores.length > 0 ? (
-                    <div className="w-full">
+                    <div className="w-full overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -3207,7 +3207,7 @@ export default function AdminDashboard() {
                   />
                 </div>
               </CardHeader>
-              <CardContent className="p-0 sm:p-6">
+              <CardContent className="p-0 sm:p-6 overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -3555,7 +3555,7 @@ export default function AdminDashboard() {
                     <Skeleton className="h-12 w-full" />
                   </div>
                 ) : users && users.length > 0 ? (
-                  <div className="w-full">
+                  <div className="w-full overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -7218,7 +7218,7 @@ export default function AdminDashboard() {
               )}
 
               {users && users.filter(u => u.turma === selectedTurmaForStudents.id && u.tipo === "aluno").length > 0 ? (
-                <div className="border rounded-lg overflow-hidden">
+                <div className="border rounded-lg overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -7343,7 +7343,7 @@ export default function AdminDashboard() {
           
           <div className="space-y-4">
             {users && users.filter(u => u.tipo === "aluno" && u.status === "aprovado").length > 0 ? (
-              <div className="border rounded-lg overflow-hidden">
+              <div className="border rounded-lg overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
