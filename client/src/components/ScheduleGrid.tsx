@@ -201,10 +201,10 @@ export function ScheduleGrid({
                                     compact ? "text-xs" : "text-sm"
                                   )}>
                                     <div className="font-medium truncate">{slot.materia}</div>
-                                    {!compact && (
+                                    {!compact && slot.professorNome && (
                                       <div className="text-xs opacity-80 truncate flex items-center justify-center gap-1">
                                         <User className="h-3 w-3" />
-                                        {slot.professorNome.split(" ")[0]}
+                                        Prof. {slot.professorNome.split(" ")[0]}
                                       </div>
                                     )}
                                     {editable && onSlotRemove && (

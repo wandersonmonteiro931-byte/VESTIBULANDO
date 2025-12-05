@@ -205,7 +205,9 @@ export function HorarioViewer({ userType, turmaId, turmaNome, professorId }: Hor
         const row = [`${horario.nome}\n${horario.inicio}-${horario.fim}`];
         diasAtivos.forEach(dia => {
           const slot = grade.slots.find(s => s.diaSemana === dia && s.horarioId === horario.id);
-          row.push(slot ? `${slot.materia}\n${slot.professorNome}` : "");
+          const professorFirstName = slot?.professorNome?.split(" ")[0] || "";
+          const professorLabel = professorFirstName ? `Prof. ${professorFirstName}` : "";
+          row.push(slot ? `${slot.materia}\n${professorLabel}` : "");
         });
         tableData.push(row);
       }
@@ -273,7 +275,9 @@ export function HorarioViewer({ userType, turmaId, turmaNome, professorId }: Hor
         html += `<tr><td>${horario.nome}<br><small>${horario.inicio}-${horario.fim}</small></td>`;
         diasAtivos.forEach(dia => {
           const slot = grade.slots.find(s => s.diaSemana === dia && s.horarioId === horario.id);
-          html += `<td>${slot ? `<div class="slot">${slot.materia}</div><div class="professor">${slot.professorNome}</div>` : ""}</td>`;
+          const professorFirstName = slot?.professorNome?.split(" ")[0] || "";
+          const professorLabel = professorFirstName ? `Prof. ${professorFirstName}` : "";
+          html += `<td>${slot ? `<div class="slot">${slot.materia}</div><div class="professor">${professorLabel}</div>` : ""}</td>`;
         });
         html += "</tr>";
       }
