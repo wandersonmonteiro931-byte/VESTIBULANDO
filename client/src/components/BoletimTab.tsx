@@ -1501,22 +1501,6 @@ export function BoletimTab() {
                 data-testid="input-ano-letivo"
               />
             </div>
-
-            <div className="space-y-2">
-              <Label>Tipo de Período</Label>
-              <Select value={periodoTipo} onValueChange={(v: "bimestre" | "trimestre") => {
-                setPeriodoTipo(v);
-                initializeMateriasNotas();
-              }}>
-                <SelectTrigger data-testid="select-periodo-tipo">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="bimestre">Bimestral</SelectItem>
-                  <SelectItem value="trimestre">Trimestral</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
 
           {/* Seletor de Bimestre */}
