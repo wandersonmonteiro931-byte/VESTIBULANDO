@@ -521,6 +521,28 @@ export const MATERIAS_DISPONIVEIS = [
   "Interdisciplinar",
 ] as const;
 
+// Matérias especiais que não precisam de professor (atividades gerais)
+export const MATERIAS_SEM_PROFESSOR = [
+  "Revisão",
+  "Corujão",
+] as const;
+
+// Schema para matérias customizadas (cadastradas pelo diretor)
+export const materiaCustomizadaSchema = z.object({
+  id: z.string(),
+  nome: z.string().min(1, "Nome da matéria é obrigatório"),
+  requerProfessor: z.boolean().default(true), // Se precisa ou não de professor
+  cor: z.string().optional(), // Cor personalizada para exibição
+  ativo: z.boolean().default(true),
+  criadoPor: z.string().optional(),
+  criadoEm: z.string().optional(),
+});
+
+export const insertMateriaCustomizadaSchema = materiaCustomizadaSchema.omit({ id: true });
+
+export type MateriaCustomizada = z.infer<typeof materiaCustomizadaSchema>;
+export type InsertMateriaCustomizada = z.infer<typeof insertMateriaCustomizadaSchema>;
+
 // Tipos de questão disponíveis
 export const TIPOS_QUESTAO = [
   { value: "multipla_escolha", label: "Múltipla Escolha (uma correta)" },
