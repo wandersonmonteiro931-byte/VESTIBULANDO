@@ -1272,7 +1272,7 @@ export const notificacaoHorarioSchema = z.object({
   destinatarioTipo: z.enum(["aluno", "professor"]),
   
   // Tipo de notificação
-  tipo: z.enum(["novo_horario", "alteracao_horario", "cancelamento_aula", "lembrete_aula"]),
+  tipo: z.enum(["novo_horario", "alteracao_horario", "cancelamento_aula", "lembrete_aula", "confirmacao_presenca"]),
   
   // Referências
   gradeHorariaId: z.string().optional(),
@@ -1444,3 +1444,120 @@ export const HORARIOS_AULAS_PADRAO: HorarioAula[] = [
   { id: "i3", inicio: "16:00", fim: "16:15", nome: "Intervalo", tipo: "intervalo", ativo: true },
   { id: "10", inicio: "16:15", fim: "17:05", nome: "10ª Aula", tipo: "aula", ativo: true },
 ];
+
+// ==================== SISTEMA DE CHAMADA AUTOMÁTICA ====================
+
+// Chamada diária (sessão de presença do dia)
+export const chamadaDiariaSchema = z.object({
+  id: z.string(),
+  
+  // Data e turma
+  data: z.string(), // YYYY-MM-DD
+  turmaId: z.string(),
+  turmaNome: z.string(),
+  
+  // Horário da aula
+  horarioId: z.string(),
+  horarioNome: z.string(),
+  horarioInicio: z.string(), // HH:mm
+  horarioFim: z.string(), // HH:mm
+  
+  // Matéria e professor
+  materia: z.string(),
+  professorId: z.string(),
+  professorNome: z.string(),
+  
+  // Status da chamada
+  status: z.enum(["aguardando", "em_andamento", "finalizada"]).default("aguardando"),
+  
+  // Limite para confirmação (5 minutos após início)
+  limiteConfirmacao: z.string(), // ISO datetime
+  
+  // Confirmação do professor
+  professorConfirmou: z.boolean().default(false),
+  professorConfirmouEm: z.string().optional(),
+  professorAusente: z.boolean().default(false),
+  
+  // Metadados
+  dataCriacao: z.string(),
+  dataFinalizacao: z.string().optional(),
+});
+
+export const insertChamadaDiariaSchema = chamadaDiariaSchema.omit({ id: true, dataCriacao: true });
+
+export type ChamadaDiaria = z.infer<typeof chamadaDiariaSchema>;
+export type InsertChamadaDiaria = z.infer<typeof insertChamadaDiariaSchema>;
+
+// Registro individual de presença na chamada
+export const registroPresencaChamadaSchema = z.object({
+  id: z.string(),
+  
+  // Referência à chamada
+  chamadaId: z.string(),
+  data: z.string(), // YYYY-MM-DD
+  turmaId: z.string(),
+  horarioId: z.string(),
+  
+  // Dados do aluno
+  alunoId: z.string(),
+  alunoNome: z.string(),
+  alunoMatricula: z.string().optional(),
+  
+  // Status da presença
+  status: z.enum(["aguardando", "presente", "ausente", "justificado"]).default("aguardando"),
+  
+  // Confirmação pelo aluno
+  confirmadoPeloAluno: z.boolean().default(false),
+  dataConfirmacaoAluno: z.string().optional(),
+  
+  // Se foi marcado como ausente automaticamente
+  ausenteAutomatico: z.boolean().default(false),
+  
+  // Justificativa
+  justificativa: z.string().optional(),
+  justificativaAprovada: z.boolean().optional(),
+  justificativaAprovadaPor: z.string().optional(),
+  justificativaAprovadaPorNome: z.string().optional(),
+  dataAprovacaoJustificativa: z.string().optional(),
+  
+  // Metadados
+  dataCriacao: z.string(),
+  dataAtualizacao: z.string().optional(),
+});
+
+export const insertRegistroPresencaChamadaSchema = registroPresencaChamadaSchema.omit({ id: true, dataCriacao: true });
+
+export type RegistroPresencaChamada = z.infer<typeof registroPresencaChamadaSchema>;
+export type InsertRegistroPresencaChamada = z.infer<typeof insertRegistroPresencaChamadaSchema>;
+
+// Resumo de presenças do dia do aluno
+export const resumoPresencaDiaSchema = z.object({
+  id: z.string(),
+  
+  // Data e aluno
+  data: z.string(), // YYYY-MM-DD
+  alunoId: z.string(),
+  alunoNome: z.string(),
+  alunoMatricula: z.string().optional(),
+  turmaId: z.string(),
+  turmaNome: z.string(),
+  
+  // Contadores (5 presenças por dia)
+  totalAulas: z.number().default(5),
+  presencas: z.number().default(0),
+  ausencias: z.number().default(0),
+  justificadas: z.number().default(0),
+  aguardando: z.number().default(0),
+  
+  // Porcentagem de presença
+  porcentagemPresenca: z.number().default(0),
+  
+  // Metadados
+  dataCriacao: z.string(),
+  dataAtualizacao: z.string().optional(),
+});
+
+export const insertResumoPresencaDiaSchema = resumoPresencaDiaSchema.omit({ id: true, dataCriacao: true });
+
+export type ResumoPresencaDia = z.infer<typeof resumoPresencaDiaSchema>;
+export type InsertResumoPresencaDia = z.infer<typeof insertResumoPresencaDiaSchema>;
