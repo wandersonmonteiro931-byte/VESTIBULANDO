@@ -25,6 +25,8 @@ import { BimestresTab } from "@/components/BimestresTab";
 import { BoletimTab } from "@/components/BoletimTab";
 import { AutorizacaoNotasTab } from "@/components/AutorizacaoNotasTab";
 import { DisciplinaryRequestsAdminTab } from "@/components/DisciplinaryRequestsAdminTab";
+import { HorariosTab } from "@/components/HorariosTab";
+import { PresencasTab } from "@/components/PresencasTab";
 import { ChatNotificationBubble } from "@/components/ChatNotificationBubble";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -3876,6 +3878,17 @@ export default function AdminDashboard() {
 
           {selectedSection === "avisos" && (
             <AnnouncementsTab />
+          )}
+
+          {selectedSection === "horarios" && (
+            <HorariosTab 
+              turmas={turmas || []}
+              professores={(users || []).filter((u: User) => u.tipo === "professor")}
+            />
+          )}
+
+          {selectedSection === "presencas" && (
+            <PresencasTab userType="diretor" />
           )}
 
           {selectedSection === "bimestres" && (

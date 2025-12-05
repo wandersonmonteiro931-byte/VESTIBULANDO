@@ -87,6 +87,8 @@ const diretorCategories: MenuCategory[] = [
     label: "Acadêmico",
     icon: GraduationCap,
     items: [
+      { id: "horarios", label: "Grade Horária", icon: Clock },
+      { id: "presencas", label: "Registro de Presenças", icon: UserCheck },
       { id: "bimestres", label: "Bimestres", icon: Calendar },
       { id: "boletins", label: "Boletins", icon: FileCheck },
       { id: "autorizacoes-notas", label: "Autorizações", icon: CheckSquare },
@@ -140,6 +142,15 @@ const diretorCategories: MenuCategory[] = [
 
 const professorCategories: MenuCategory[] = [
   {
+    id: "academico",
+    label: "Acadêmico",
+    icon: GraduationCap,
+    items: [
+      { id: "horarios", label: "Meus Horários", icon: Clock },
+      { id: "presencas", label: "Registro de Presenças", icon: UserCheck },
+    ],
+  },
+  {
     id: "atividades",
     label: "Atividades",
     icon: ClipboardList,
@@ -168,6 +179,14 @@ const professorCategories: MenuCategory[] = [
 ];
 
 const alunoCategories: MenuCategory[] = [
+  {
+    id: "academico",
+    label: "Acadêmico",
+    icon: GraduationCap,
+    items: [
+      { id: "horarios", label: "Meu Horário", icon: Clock },
+    ],
+  },
   {
     id: "tarefas",
     label: "Tarefas",

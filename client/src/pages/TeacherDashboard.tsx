@@ -26,6 +26,8 @@ import { AvaliacoesTab } from "@/components/AvaliacoesTab";
 import { BoletimTab } from "@/components/BoletimTab";
 import { BimestresNotasTab } from "@/components/BimestresNotasTab";
 import { DisciplinaryRequestsTab } from "@/components/DisciplinaryRequestsTab";
+import { HorarioViewer } from "@/components/HorarioViewer";
+import { PresencasTab } from "@/components/PresencasTab";
 import { PendingIndicator } from "@/components/PendingIndicator";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -348,6 +350,20 @@ export default function TeacherDashboard() {
               <div className="space-y-6">
                 {selectedSection === "avaliacoes" && (
                   <AvaliacoesTab userType="professor" />
+                )}
+
+                {selectedSection === "horarios" && (
+                  <HorarioViewer 
+                    userType="professor"
+                    professorId={userData?.uid}
+                  />
+                )}
+
+                {selectedSection === "presencas" && (
+                  <PresencasTab 
+                    userType="professor"
+                    professorId={userData?.uid}
+                  />
                 )}
 
                 {selectedSection === "bimestres" && (

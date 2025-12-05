@@ -1036,3 +1036,283 @@ export const insertSolicitacaoEdicaoNotaSchema = solicitacaoEdicaoNotaSchema.omi
 
 export type SolicitacaoEdicaoNota = z.infer<typeof solicitacaoEdicaoNotaSchema>;
 export type InsertSolicitacaoEdicaoNota = z.infer<typeof insertSolicitacaoEdicaoNotaSchema>;
+
+// ==================== SISTEMA DE HORÁRIOS E GRADE ====================
+
+// Dias da semana para horários
+export const DIAS_SEMANA = [
+  "segunda",
+  "terca", 
+  "quarta",
+  "quinta",
+  "sexta",
+  "sabado",
+] as const;
+
+export type DiaSemana = typeof DIAS_SEMANA[number];
+
+// Horários padrão das aulas
+export const HORARIOS_AULAS = [
+  { id: "1", inicio: "07:00", fim: "07:50", nome: "1ª Aula" },
+  { id: "2", inicio: "07:50", fim: "08:40", nome: "2ª Aula" },
+  { id: "3", inicio: "08:40", fim: "09:30", nome: "3ª Aula" },
+  { id: "4", inicio: "09:45", fim: "10:35", nome: "4ª Aula" },
+  { id: "5", inicio: "10:35", fim: "11:25", nome: "5ª Aula" },
+  { id: "6", inicio: "11:25", fim: "12:15", nome: "6ª Aula" },
+  { id: "7", inicio: "13:30", fim: "14:20", nome: "7ª Aula" },
+  { id: "8", inicio: "14:20", fim: "15:10", nome: "8ª Aula" },
+  { id: "9", inicio: "15:10", fim: "16:00", nome: "9ª Aula" },
+  { id: "10", inicio: "16:15", fim: "17:05", nome: "10ª Aula" },
+] as const;
+
+// Slot de aula na grade horária
+export const slotAulaSchema = z.object({
+  diaSemana: z.enum(DIAS_SEMANA),
+  horarioId: z.string(), // ID do horário (1-10)
+  materia: z.string(),
+  professorId: z.string(),
+  professorNome: z.string(),
+});
+
+export type SlotAula = z.infer<typeof slotAulaSchema>;
+
+// Configuração de matéria na grade (quantas aulas por semana)
+export const configuracaoMateriaSchema = z.object({
+  materia: z.string(),
+  professorId: z.string(),
+  professorNome: z.string(),
+  aulasPorSemana: z.number().min(1).max(10),
+});
+
+export type ConfiguracaoMateria = z.infer<typeof configuracaoMateriaSchema>;
+
+// Grade Horária completa de uma turma
+export const gradeHorariaSchema = z.object({
+  id: z.string(),
+  turmaId: z.string(),
+  turmaNome: z.string(),
+  anoLetivo: z.string(),
+  
+  // Configuração de matérias
+  configMaterias: z.array(configuracaoMateriaSchema).default([]),
+  
+  // Grade de aulas por dia/horário
+  slots: z.array(slotAulaSchema).default([]),
+  
+  // Status da grade
+  status: z.enum(["rascunho", "publicado"]).default("rascunho"),
+  
+  // Metadados
+  criadoPor: z.string(),
+  criadoPorNome: z.string(),
+  dataCriacao: z.string(),
+  dataPublicacao: z.string().optional(),
+  dataAtualizacao: z.string().optional(),
+  
+  // Histórico de versões
+  versao: z.number().default(1),
+});
+
+export const insertGradeHorariaSchema = gradeHorariaSchema.omit({ id: true, dataCriacao: true });
+
+export type GradeHoraria = z.infer<typeof gradeHorariaSchema>;
+export type InsertGradeHoraria = z.infer<typeof insertGradeHorariaSchema>;
+
+// Aula agendada (instância de uma aula em um dia específico)
+export const aulaAgendadaSchema = z.object({
+  id: z.string(),
+  gradeHorariaId: z.string(),
+  turmaId: z.string(),
+  turmaNome: z.string(),
+  
+  // Dados da aula
+  data: z.string(), // Data específica (YYYY-MM-DD)
+  diaSemana: z.enum(DIAS_SEMANA),
+  horarioId: z.string(),
+  horarioInicio: z.string(),
+  horarioFim: z.string(),
+  
+  // Matéria e professor
+  materia: z.string(),
+  professorId: z.string(),
+  professorNome: z.string(),
+  
+  // Status da aula
+  status: z.enum(["agendada", "em_andamento", "concluida", "cancelada"]).default("agendada"),
+  
+  // Confirmação de presença do professor
+  professorConfirmou: z.boolean().default(false),
+  professorConfirmouEm: z.string().optional(),
+  
+  // Observações
+  observacao: z.string().optional(),
+  motivoCancelamento: z.string().optional(),
+  
+  // Metadados
+  dataCriacao: z.string(),
+});
+
+export const insertAulaAgendadaSchema = aulaAgendadaSchema.omit({ id: true, dataCriacao: true });
+
+export type AulaAgendada = z.infer<typeof aulaAgendadaSchema>;
+export type InsertAulaAgendada = z.infer<typeof insertAulaAgendadaSchema>;
+
+// Presença em aula (registro individual de presença)
+export const presencaAulaSchema = z.object({
+  id: z.string(),
+  aulaAgendadaId: z.string(),
+  turmaId: z.string(),
+  data: z.string(), // Data da aula
+  
+  // Dados do aluno
+  alunoId: z.string(),
+  alunoNome: z.string(),
+  alunoMatricula: z.string().optional(),
+  
+  // Status da presença
+  status: z.enum(["aguardando", "presente", "ausente", "justificado"]).default("aguardando"),
+  
+  // Confirmação pelo aluno
+  alunoConfirmou: z.boolean().default(false),
+  alunoConfirmouEm: z.string().optional(),
+  
+  // Confirmação pelo professor
+  professorConfirmou: z.boolean().default(false),
+  professorConfirmouEm: z.string().optional(),
+  professorConfirmouId: z.string().optional(),
+  
+  // Justificativa (se ausente justificado)
+  justificativa: z.string().optional(),
+  justificativaAprovada: z.boolean().optional(),
+  justificativaAprovadaPor: z.string().optional(),
+  justificativaAprovadaPorNome: z.string().optional(),
+  
+  // Metadados
+  dataCriacao: z.string(),
+  dataAtualizacao: z.string().optional(),
+});
+
+export const insertPresencaAulaSchema = presencaAulaSchema.omit({ id: true, dataCriacao: true });
+
+export type PresencaAula = z.infer<typeof presencaAulaSchema>;
+export type InsertPresencaAula = z.infer<typeof insertPresencaAulaSchema>;
+
+// Registro de presenças em lote (por aula/horário)
+export const registroPresencaItemSchema = z.object({
+  alunoId: z.string(),
+  alunoNome: z.string(),
+  presente: z.boolean(),
+  justificativa: z.string().optional(),
+});
+
+export const registroPresencaTurmaSchema = z.object({
+  id: z.string(),
+  gradeHorariaId: z.string(),
+  turmaId: z.string(),
+  turmaNome: z.string(),
+  horarioId: z.string(),
+  materia: z.string(),
+  professorId: z.string(),
+  professorNome: z.string(),
+  data: z.string(), // YYYY-MM-DD
+  presencas: z.array(registroPresencaItemSchema),
+  registradoPorId: z.string(),
+  registradoPorNome: z.string(),
+  criadoEm: z.string(),
+  atualizadoEm: z.string(),
+});
+
+export const insertRegistroPresencaTurmaSchema = registroPresencaTurmaSchema.omit({ id: true });
+
+export type RegistroPresencaItem = z.infer<typeof registroPresencaItemSchema>;
+export type RegistroPresencaTurma = z.infer<typeof registroPresencaTurmaSchema>;
+export type InsertRegistroPresencaTurma = z.infer<typeof insertRegistroPresencaTurmaSchema>;
+
+// Notificação de alteração de horário
+export const notificacaoHorarioSchema = z.object({
+  id: z.string(),
+  
+  // Destinatário
+  destinatarioId: z.string(),
+  destinatarioTipo: z.enum(["aluno", "professor"]),
+  
+  // Tipo de notificação
+  tipo: z.enum(["novo_horario", "alteracao_horario", "cancelamento_aula", "lembrete_aula"]),
+  
+  // Referências
+  gradeHorariaId: z.string().optional(),
+  aulaAgendadaId: z.string().optional(),
+  turmaId: z.string(),
+  turmaNome: z.string(),
+  
+  // Conteúdo
+  titulo: z.string(),
+  mensagem: z.string(),
+  
+  // Status
+  lida: z.boolean().default(false),
+  lidaEm: z.string().optional(),
+  
+  // Metadados
+  dataCriacao: z.string(),
+});
+
+export const insertNotificacaoHorarioSchema = notificacaoHorarioSchema.omit({ id: true, dataCriacao: true });
+
+export type NotificacaoHorario = z.infer<typeof notificacaoHorarioSchema>;
+export type InsertNotificacaoHorario = z.infer<typeof insertNotificacaoHorarioSchema>;
+
+// Histórico de alterações na grade horária
+export const historicoGradeSchema = z.object({
+  id: z.string(),
+  gradeHorariaId: z.string(),
+  turmaId: z.string(),
+  turmaNome: z.string(),
+  
+  // Tipo de alteração
+  tipoAlteracao: z.enum(["criacao", "publicacao", "alteracao_slot", "remocao_slot", "cancelamento"]),
+  
+  // Descrição
+  descricao: z.string(),
+  
+  // Dados anteriores e novos (para reversão se necessário)
+  dadosAnteriores: z.any().optional(),
+  dadosNovos: z.any().optional(),
+  
+  // Quem fez a alteração
+  alteradoPor: z.string(),
+  alteradoPorNome: z.string(),
+  
+  // Metadados
+  dataAlteracao: z.string(),
+});
+
+export const insertHistoricoGradeSchema = historicoGradeSchema.omit({ id: true });
+
+export type HistoricoGrade = z.infer<typeof historicoGradeSchema>;
+export type InsertHistoricoGrade = z.infer<typeof insertHistoricoGradeSchema>;
+
+// Preferência de disponibilidade do professor
+export const disponibilidadeProfessorSchema = z.object({
+  id: z.string(),
+  professorId: z.string(),
+  professorNome: z.string(),
+  
+  // Disponibilidade por dia e horário
+  disponibilidade: z.record(z.enum(DIAS_SEMANA), z.array(z.string())).default({}), // dia -> array de horarioIds disponíveis
+  
+  // Preferências
+  maxAulasDia: z.number().default(6), // Máximo de aulas por dia
+  maxAulasConsecutivas: z.number().default(3), // Máximo de aulas consecutivas
+  
+  // Observações
+  observacoes: z.string().optional(),
+  
+  // Metadados
+  dataAtualizacao: z.string().optional(),
+});
+
+export const insertDisponibilidadeProfessorSchema = disponibilidadeProfessorSchema.omit({ id: true });
+
+export type DisponibilidadeProfessor = z.infer<typeof disponibilidadeProfessorSchema>;
+export type InsertDisponibilidadeProfessor = z.infer<typeof insertDisponibilidadeProfessorSchema>;

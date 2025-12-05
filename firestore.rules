@@ -691,5 +691,107 @@ service cloud.firestore {
       // Other system documents are admin-only
       allow read, write: if documentId != 'matriculaCounter' && isAdmin();
     }
+    
+    // ==================== SISTEMA DE HORÁRIOS ====================
+    
+    // Grade Horária - grade de horários de uma turma
+    match /gradesHorarias/{gradeId} {
+      // Todos usuários ativos podem ler grades publicadas
+      allow read: if isAuthenticated() && isUserActive();
+      
+      // Apenas diretores podem criar, editar e deletar grades
+      allow create, update, delete: if isAdmin() && isUserActive();
+    }
+    
+    // Aulas Agendadas - instâncias de aulas em datas específicas
+    match /aulasAgendadas/{aulaId} {
+      // Usuários ativos podem ler aulas
+      allow read: if isAuthenticated() && isUserActive();
+      
+      // Diretores podem criar e deletar aulas
+      allow create, delete: if isAdmin() && isUserActive();
+      
+      // Diretores e professores podem atualizar aulas (confirmação de presença)
+      allow update: if (isAdmin() || isProfessor()) && isUserActive();
+    }
+    
+    // Presenças em Aulas - registro de presença de alunos
+    match /presencasAulas/{presencaId} {
+      // Usuários ativos podem ler presenças
+      allow read: if isAuthenticated() && isUserActive();
+      
+      // Diretores podem criar e deletar presenças
+      allow create, delete: if isAdmin() && isUserActive();
+      
+      // Diretores, professores e alunos podem atualizar presenças (confirmar presença)
+      allow update: if isAuthenticated() && isUserActive();
+    }
+    
+    // Registro de Presenças em lote - registro de presença por aula/horário
+    match /registroPresencas/{registroId} {
+      // Usuários ativos podem ler registros de presença
+      allow read: if isAuthenticated() && isUserActive();
+      
+      // Diretores e professores podem criar registros de presença
+      allow create: if (isAdmin() || isProfessor()) && isUserActive();
+      
+      // Diretores e professores podem atualizar registros de presença
+      allow update: if (isAdmin() || isProfessor()) && isUserActive();
+      
+      // Apenas diretores podem deletar registros
+      allow delete: if isAdmin() && isUserActive();
+    }
+    
+    // Notificações de Horário - notificações sobre alterações de horário
+    match /notificacoesHorarios/{notificacaoId} {
+      // Usuários podem ler suas próprias notificações
+      allow read: if isAuthenticated() && isUserActive() && (
+        resource.data.destinatarioId == request.auth.uid ||
+        isAdmin()
+      );
+      
+      // Diretores podem criar notificações
+      allow create: if isAdmin() && isUserActive();
+      
+      // Usuários podem marcar como lida suas próprias notificações
+      allow update: if isAuthenticated() && isUserActive() && 
+                       resource.data.destinatarioId == request.auth.uid;
+      
+      // Diretores podem deletar notificações
+      allow delete: if isAdmin() && isUserActive();
+    }
+    
+    // Histórico de Grades - histórico de alterações em grades horárias
+    match /historicoGrades/{historicoId} {
+      // Diretores podem ler o histórico
+      allow read: if isAdmin() && isUserActive();
+      
+      // Diretores podem criar entradas no histórico
+      allow create: if isAdmin() && isUserActive();
+      
+      // Ninguém pode editar ou deletar histórico
+      allow update, delete: if false;
+    }
+    
+    // Disponibilidade de Professores - preferências de disponibilidade
+    match /disponibilidadeProfessores/{disponibilidadeId} {
+      // Diretores e o próprio professor podem ler
+      allow read: if isAuthenticated() && isUserActive() && (
+        isAdmin() ||
+        resource.data.professorId == request.auth.uid
+      );
+      
+      // Diretores podem criar disponibilidades
+      allow create: if isAdmin() && isUserActive();
+      
+      // Diretores e o próprio professor podem atualizar
+      allow update: if isAuthenticated() && isUserActive() && (
+        isAdmin() ||
+        resource.data.professorId == request.auth.uid
+      );
+      
+      // Diretores podem deletar
+      allow delete: if isAdmin() && isUserActive();
+    }
   }
 }
