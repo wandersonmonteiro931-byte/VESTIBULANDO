@@ -22,6 +22,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Calendar, 
   Clock,
@@ -64,6 +65,7 @@ export function HorarioViewer({ userType, turmaId, turmaNome, professorId }: Hor
   const { toast } = useToast();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedAula, setSelectedAula] = useState<any | null>(null);
+  const [selectedExportTurma, setSelectedExportTurma] = useState<string | null>(null);
 
   const { data: grades, isLoading: loadingGrades, refetch: refetchGrades } = useRealtimeQuery<GradeHoraria>({
     collectionName: "gradesHorarias",
@@ -396,26 +398,54 @@ export function HorarioViewer({ userType, turmaId, turmaNome, professorId }: Hor
               diasExibidos={diasAtivos}
             />
           </CardContent>
-          <CardFooter className="flex justify-end gap-2 flex-wrap border-t pt-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => gradesFiltradas[0] && exportToPDF(gradesFiltradas[0])}
-              data-testid="button-export-pdf-professor"
-            >
-              <FileSpreadsheet className="h-4 w-4 mr-1" />
-              PDF
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => gradesFiltradas[0] && printGrade(gradesFiltradas[0])}
-              data-testid="button-print-professor"
-            >
-              <Printer className="h-4 w-4 mr-1" />
-              Imprimir
-            </Button>
-          </CardFooter>
+          {gradesFiltradas.length > 0 && (
+            <CardFooter className="flex justify-between gap-2 flex-wrap border-t pt-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Exportar turma:</span>
+                <Select 
+                  value={selectedExportTurma || gradesFiltradas[0]?.id}
+                  onValueChange={setSelectedExportTurma}
+                >
+                  <SelectTrigger className="w-32" data-testid="select-export-turma">
+                    <SelectValue placeholder="Selecionar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {gradesFiltradas.map(grade => (
+                      <SelectItem key={grade.id} value={grade.id}>
+                        {grade.turmaNome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const gradeToExport = gradesFiltradas.find(g => g.id === (selectedExportTurma || gradesFiltradas[0]?.id));
+                    if (gradeToExport) exportToPDF(gradeToExport);
+                  }}
+                  data-testid="button-export-pdf-professor"
+                >
+                  <FileSpreadsheet className="h-4 w-4 mr-1" />
+                  PDF
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const gradeToPrint = gradesFiltradas.find(g => g.id === (selectedExportTurma || gradesFiltradas[0]?.id));
+                    if (gradeToPrint) printGrade(gradeToPrint);
+                  }}
+                  data-testid="button-print-professor"
+                >
+                  <Printer className="h-4 w-4 mr-1" />
+                  Imprimir
+                </Button>
+              </div>
+            </CardFooter>
+          )}
         </Card>
       ) : (
         <Tabs defaultValue={gradesFiltradas[0]?.id}>

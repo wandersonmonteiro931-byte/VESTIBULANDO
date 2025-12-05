@@ -922,5 +922,34 @@ service cloud.firestore {
       // Apenas diretores podem deletar
       allow delete: if isAdmin() && isUserActive();
     }
+    
+    // Sessões de Aula ao Vivo - sessões de aula em tempo real para controle de presença
+    match /sessoesAulaAoVivo/{sessaoId} {
+      // Leitura: diretores podem ler todas, professores só suas próprias, alunos só da sua turma
+      allow read: if isAuthenticated() && isUserActive() && (
+        isAdmin() ||
+        (isProfessor() && resource.data.professorId == request.auth.uid) ||
+        (isAluno() && resource.data.turmaId == getUserTurma())
+      );
+      
+      // Criação: diretores podem criar qualquer, professores só podem criar com seu próprio professorId
+      allow create: if isAuthenticated() && isUserActive() && (
+        isAdmin() ||
+        (isProfessor() && request.resource.data.professorId == request.auth.uid)
+      );
+      
+      // Atualização: professores só podem atualizar suas próprias sessões
+      // Campos permitidos para atualização: status, dataFim, dataAtualizacao
+      // Campos imutáveis: turmaId, turmaNome, horarioId, horarioNome, data, professorId, professorNome, materia, dataCriacao, dataInicio, tempoMaxAusencia, tempoInatividade, tempoConfirmacao
+      allow update: if isAuthenticated() && isUserActive() && (
+        isAdmin() ||
+        (isProfessor() && 
+         resource.data.professorId == request.auth.uid &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'dataFim', 'dataAtualizacao']))
+      );
+      
+      // Apenas diretores podem deletar
+      allow delete: if isAdmin() && isUserActive();
+    }
   }
 }

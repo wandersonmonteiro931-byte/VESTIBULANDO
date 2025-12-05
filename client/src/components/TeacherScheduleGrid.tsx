@@ -30,8 +30,9 @@ import {
   query, 
   where, 
   onSnapshot, 
-  addDoc,
-  getDocs
+  doc,
+  setDoc,
+  getDoc
 } from "firebase/firestore";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -209,9 +210,23 @@ export function TeacherScheduleGrid({
     setIsStartingClass(true);
 
     try {
-      const sessionsRef = collection(db, "sessoesAulaAoVivo");
+      const sessionId = `${userData.uid}_${selectedAula.turmaId}_${todayStr}_${selectedAula.horarioId}`;
+      const sessionDocRef = doc(db, "sessoesAulaAoVivo", sessionId);
       
-      await addDoc(sessionsRef, {
+      const existingDoc = await getDoc(sessionDocRef);
+      
+      if (existingDoc.exists()) {
+        toast({
+          title: "Aula já iniciada",
+          description: "Já existe uma sessão de aula para este horário e turma hoje.",
+          variant: "default",
+        });
+        setShowStartDialog(false);
+        setSelectedAula(null);
+        return;
+      }
+      
+      await setDoc(sessionDocRef, {
         chamadaId: "",
         turmaId: selectedAula.turmaId,
         turmaNome: selectedAula.turmaNome,
@@ -222,11 +237,11 @@ export function TeacherScheduleGrid({
         professorId: userData.uid,
         professorNome: userData.nome,
         status: "em_andamento",
-        dataInicio: formatBrasiliaTime(),
+        dataInicio: formatISOTime(),
         tempoMaxAusencia: 300,
         tempoInatividade: 180,
         tempoConfirmacao: 120,
-        dataCriacao: formatBrasiliaTime(),
+        dataCriacao: formatISOTime(),
       });
 
       toast({
