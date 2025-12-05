@@ -396,7 +396,9 @@ export function useWebRTC(config: WebRTCConfig | null) {
     });
     peerConnectionsRef.current.clear();
     processedSignalsRef.current.clear();
+    pendingIceCandidatesRef.current.clear();
     setRemoteStreams(new Map());
+    setParticipants([]);
   }, [stopCamera, stopScreenShare]);
 
   useEffect(() => {
