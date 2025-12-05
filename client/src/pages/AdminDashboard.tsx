@@ -28,7 +28,7 @@ import { DisciplinaryRequestsAdminTab } from "@/components/DisciplinaryRequestsA
 import { ChatNotificationBubble } from "@/components/ChatNotificationBubble";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, ArrowRightLeft, Clock, Search, Eye, AlertTriangle, Settings, Power, PowerOff, Archive, Download, ChevronDown, ChevronUp, MessageCircle, Camera, Upload, X, Copy, Shield } from "lucide-react";
+import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, ArrowRightLeft, Clock, Search, Eye, AlertTriangle, Settings, Power, PowerOff, Archive, Download, ChevronDown, ChevronUp, MessageCircle, Camera, Upload, X, Copy, Shield, RotateCcw } from "lucide-react";
 import { Link } from "wouter";
 import { Checkbox } from "@/components/ui/checkbox";
 import { queryClient } from "@/lib/queryClient";
@@ -417,7 +417,12 @@ export default function AdminDashboard() {
   const pendingDisciplinaryRequests = disciplinaryRequests?.filter((r: any) => r.status === "pendente")?.length || 0;
   const pendingGradeAuthorizations = solicitacoesEdicaoNota?.filter((s: any) => s.status === "pendente")?.length || 0;
 
-  const pendingUsers = solicitacoes?.map((sol: any) => ({
+  const pendingUsers = solicitacoes?.filter((sol: any) => !sol.status || sol.status === "pendente").map((sol: any) => ({
+    ...sol,
+    docId: sol.id
+  }));
+
+  const standbyUsers = solicitacoes?.filter((sol: any) => sol.status === "standby").map((sol: any) => ({
     ...sol,
     docId: sol.id
   }));
@@ -691,6 +696,37 @@ export default function AdminDashboard() {
     onError: (error: any) => {
       toast({
         title: "Erro ao colocar em stand by",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const removeFromWaitingListMutation = useMutation({
+    mutationFn: async ({ solicitacaoId }: { solicitacaoId: string }) => {
+      const solicitacaoDoc = await getDoc(doc(db, "solicitacoes", solicitacaoId));
+      const solicitacao = solicitacaoDoc.data();
+      
+      if (!solicitacao) {
+        throw new Error("Solicitação não encontrada");
+      }
+      
+      // Remover da lista de espera e voltar para pendente
+      await updateDoc(doc(db, "solicitacoes", solicitacaoId), {
+        status: "pendente",
+        dataRetornoListaEspera: getNowBrasiliaISO(),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/solicitacoes"] });
+      toast({
+        title: "Removido da Lista de Espera",
+        description: "O aluno foi movido de volta para aprovações pendentes.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao remover da lista de espera",
         description: error.message,
         variant: "destructive",
       });
@@ -2753,6 +2789,156 @@ export default function AdminDashboard() {
                 )}
               </CardContent>
             </Card>
+            </div>
+          )}
+
+          {selectedSection === "lista-espera" && (
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                <h3 className="text-lg sm:text-xl font-semibold">Lista de Espera</h3>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="text-xs">{standbyUsers?.length || 0} em espera</Badge>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      await refetchSolicitacoes();
+                      toast({
+                        title: "Atualizado!",
+                        description: "Lista de espera atualizada.",
+                      });
+                    }}
+                    data-testid="button-refresh-waiting-list"
+                  >
+                    <RefreshCw className="h-4 w-4 sm:mr-1" />
+                    <span className="hidden sm:inline">Atualizar</span>
+                  </Button>
+                </div>
+              </div>
+
+              <div className="bg-muted/50 border border-border rounded-lg p-4">
+                <p className="text-sm text-muted-foreground">
+                  Alunos em <strong>stand by</strong> aguardando aprovação. 
+                  Use o botão de retorno para mover o aluno de volta para a seção de aprovações pendentes.
+                </p>
+              </div>
+
+              <Card>
+                <CardContent className="p-0">
+                  {loadingSolicitacoes ? (
+                    <div className="p-8">
+                      <Skeleton className="h-12 w-full mb-4" />
+                      <Skeleton className="h-12 w-full mb-4" />
+                      <Skeleton className="h-12 w-full" />
+                    </div>
+                  ) : standbyUsers && standbyUsers.length > 0 ? (
+                    <div className="w-full">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Nome</TableHead>
+                            <TableHead>Tipo</TableHead>
+                            <TableHead className="hidden xl:table-cell">Data Stand By</TableHead>
+                            <TableHead className="text-right">Ações</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {standbyUsers.map((user) => (
+                            <TableRow key={user.uid || user.docId} data-testid={`row-standby-${user.uid || user.docId}`}>
+                              <TableCell className="font-medium">
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="font-medium">{user.nome}</span>
+                                  <span className="text-xs text-muted-foreground">{user.email}</span>
+                                  <div className="flex flex-wrap gap-1">
+                                    <code className="text-xs bg-muted px-1 py-0.5 rounded">{user.cpf || user.matricula || "N/A"}</code>
+                                  </div>
+                                  <span className="text-xs text-muted-foreground">
+                                    {user.tipo === "diretor" ? "Diretoria" : user.turma ? getTurmaNome(user.turma) : "-"}
+                                  </span>
+                                  {user.comentarioStandby && (
+                                    <span className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                                      {user.comentarioStandby}
+                                    </span>
+                                  )}
+                                  <div className="flex items-center gap-1 xl:hidden">
+                                    <Clock className="h-3 w-3 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                                    <span className="text-xs text-muted-foreground">
+                                      {user.dataStandby 
+                                        ? new Date(user.dataStandby).toLocaleDateString('pt-BR')
+                                        : "-"}
+                                    </span>
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="text-xs">{user.tipo}</Badge>
+                              </TableCell>
+                              <TableCell className="hidden xl:table-cell">
+                                <div className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+                                  <span className="text-xs font-mono">
+                                    {user.dataStandby 
+                                      ? new Date(user.dataStandby).toLocaleDateString('pt-BR')
+                                      : "-"}
+                                  </span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end gap-1">
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => {
+                                      setSelectedSolicitacao(user);
+                                      setViewDetailsDialogOpen(true);
+                                    }}
+                                    data-testid="button-view-standby-details"
+                                    title="Ver Detalhes"
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="default"
+                                    size="icon"
+                                    onClick={() => {
+                                      removeFromWaitingListMutation.mutate({ 
+                                        solicitacaoId: user.docId || user.id 
+                                      });
+                                    }}
+                                    disabled={removeFromWaitingListMutation.isPending}
+                                    data-testid="button-remove-from-waiting-list"
+                                    title="Mover para Aprovações"
+                                  >
+                                    <RotateCcw className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="destructive"
+                                    size="icon"
+                                    onClick={() => {
+                                      setUserToDelete(user);
+                                      setDeleteDialogOpen(true);
+                                    }}
+                                    data-testid="button-delete-standby"
+                                    title="Excluir"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <Clock className="h-16 w-16 text-muted-foreground mb-4" />
+                      <p className="text-lg font-medium mb-2">Lista de espera vazia</p>
+                      <p className="text-sm text-muted-foreground">Não há alunos aguardando na fila de espera</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           )}
 
