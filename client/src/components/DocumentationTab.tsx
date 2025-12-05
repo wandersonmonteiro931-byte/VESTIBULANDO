@@ -799,15 +799,23 @@ export function DocumentationTab() {
               </DialogHeader>
 
               <div className="space-y-6">
-                <div className="flex justify-end gap-2">
-                  <Button onClick={generatePDF} data-testid="button-download-pdf">
-                    <Download className="h-4 w-4 mr-2" />
-                    Documentação Completa
-                  </Button>
-                  <Button onClick={generateDeclaracaoMatricula} variant="outline" data-testid="button-download-declaracao">
-                    <FileText className="h-4 w-4 mr-2" />
-                    Declaração de Matrícula
-                  </Button>
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  {userBoletinsLiberados.length > 0 && (
+                    <Badge variant="default" className="no-default-hover-elevate no-default-active-elevate">
+                      <GraduationCap className="h-3 w-3 mr-1" />
+                      {userBoletinsLiberados.length} boletim(ns) liberado(s) - incluso(s) no PDF
+                    </Badge>
+                  )}
+                  <div className="flex gap-2">
+                    <Button onClick={generatePDF} data-testid="button-download-pdf">
+                      <Download className="h-4 w-4 mr-2" />
+                      Documentação Completa
+                    </Button>
+                    <Button onClick={generateDeclaracaoMatricula} variant="outline" data-testid="button-download-declaracao">
+                      <FileText className="h-4 w-4 mr-2" />
+                      Declaração de Matrícula
+                    </Button>
+                  </div>
                 </div>
 
                 <Tabs defaultValue="personal" className="w-full">
@@ -1012,64 +1020,100 @@ export function DocumentationTab() {
                         <CardHeader>
                           <CardTitle className="text-lg flex items-center gap-2">
                             <GraduationCap className="h-5 w-5" />
-                            Boletins Escolares
+                            Boletins Escolares Liberados
                           </CardTitle>
                           <CardDescription>
-                            PDFs dos boletins liberados são anexados automaticamente
+                            Boletins liberados pela diretoria são incluídos automaticamente no PDF de documentação
                           </CardDescription>
                         </CardHeader>
                         <CardContent>
-                          {userBoletimDocumentos.length === 0 ? (
+                          {userBoletinsLiberados.length === 0 ? (
                             <p className="text-sm text-muted-foreground text-center py-8">
-                              Nenhum boletim anexado à documentação
+                              Nenhum boletim liberado pela diretoria
                             </p>
                           ) : (
                             <div className="space-y-4">
-                              {userBoletimDocumentos.map((boletimDoc) => (
+                              {userBoletinsLiberados.map((boletim) => (
                                 <div 
-                                  key={boletimDoc.id} 
-                                  className="flex items-center justify-between p-4 border rounded-lg"
-                                  data-testid={`boletim-doc-${boletimDoc.id}`}
+                                  key={boletim.id} 
+                                  className="p-4 border rounded-lg space-y-3"
+                                  data-testid={`boletim-liberado-${boletim.id}`}
                                 >
-                                  <div className="flex items-center gap-4">
-                                    <div className="p-2 bg-primary/10 rounded-lg">
-                                      <FileText className="h-5 w-5 text-primary" />
-                                    </div>
-                                    <div>
-                                      <p className="font-medium">
-                                        Boletim {boletimDoc.anoLetivo} - {boletimDoc.turmaNome}
-                                      </p>
-                                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                        <span>Média: {boletimDoc.mediaGeral?.toFixed(1).replace(".", ",") || "-"}</span>
-                                        <span>|</span>
-                                        <Badge 
-                                          variant={
-                                            boletimDoc.situacao === "aprovado" ? "default" :
-                                            boletimDoc.situacao === "reprovado" ? "destructive" : "secondary"
-                                          }
-                                          className="no-default-hover-elevate no-default-active-elevate"
-                                        >
-                                          {boletimDoc.situacao.charAt(0).toUpperCase() + boletimDoc.situacao.slice(1)}
-                                        </Badge>
-                                        <span>|</span>
-                                        <span>v{boletimDoc.versao}</span>
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                      <div className="p-2 bg-green-500/10 rounded-lg">
+                                        <GraduationCap className="h-5 w-5 text-green-600" />
+                                      </div>
+                                      <div>
+                                        <p className="font-medium">
+                                          Boletim {boletim.anoLetivo} - {boletim.turmaNome}
+                                        </p>
+                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                          <span>Média: {formatNota(boletim.mediaGeral)}</span>
+                                          <span>|</span>
+                                          <Badge 
+                                            variant={
+                                              boletim.situacao === "aprovado" ? "default" :
+                                              boletim.situacao === "reprovado" ? "destructive" : "secondary"
+                                            }
+                                            className="no-default-hover-elevate no-default-active-elevate"
+                                          >
+                                            {boletim.situacao.charAt(0).toUpperCase() + boletim.situacao.slice(1)}
+                                          </Badge>
+                                        </div>
                                       </div>
                                     </div>
+                                    <Badge variant="outline" className="no-default-hover-elevate no-default-active-elevate text-green-600 border-green-600">
+                                      Incluso no PDF
+                                    </Badge>
                                   </div>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                      const link = document.createElement("a");
-                                      link.href = boletimDoc.pdfBase64;
-                                      link.download = `boletim_${boletimDoc.alunoNome.replace(/\s+/g, "_")}_${boletimDoc.anoLetivo}.pdf`;
-                                      link.click();
-                                    }}
-                                    data-testid={`button-download-boletim-${boletimDoc.id}`}
-                                  >
-                                    <Download className="h-4 w-4 mr-1" />
-                                    Baixar PDF
-                                  </Button>
+                                  
+                                  <div className="border rounded-lg overflow-hidden">
+                                    <Table>
+                                      <TableHeader>
+                                        <TableRow>
+                                          <TableHead className="text-xs">Matéria</TableHead>
+                                          {(boletim.periodos || (boletim.periodoTipo === "bimestre" 
+                                            ? ["1º Bim", "2º Bim", "3º Bim", "4º Bim"] 
+                                            : ["1º Tri", "2º Tri", "3º Tri"])).map((p, i) => (
+                                            <TableHead key={i} className="text-xs text-center">{p.replace("Bimestre", "Bim").replace("Trimestre", "Tri")}</TableHead>
+                                          ))}
+                                          <TableHead className="text-xs text-center">Média</TableHead>
+                                        </TableRow>
+                                      </TableHeader>
+                                      <TableBody>
+                                        {boletim.materias.slice(0, 5).map((m, idx) => {
+                                          const periodos = boletim.periodos || (boletim.periodoTipo === "bimestre" 
+                                            ? ["1º Bimestre", "2º Bimestre", "3º Bimestre", "4º Bimestre"] 
+                                            : ["1º Trimestre", "2º Trimestre", "3º Trimestre"]);
+                                          return (
+                                            <TableRow key={idx}>
+                                              <TableCell className="text-xs">{m.materia}</TableCell>
+                                              {periodos.map((p, i) => (
+                                                <TableCell key={i} className="text-xs text-center">{formatNota(m.notas[p])}</TableCell>
+                                              ))}
+                                              <TableCell className="text-xs text-center font-medium">{formatNota(m.mediaFinal)}</TableCell>
+                                            </TableRow>
+                                          );
+                                        })}
+                                        {boletim.materias.length > 5 && (
+                                          <TableRow>
+                                            <TableCell colSpan={6} className="text-xs text-center text-muted-foreground">
+                                              ... e mais {boletim.materias.length - 5} matérias
+                                            </TableCell>
+                                          </TableRow>
+                                        )}
+                                      </TableBody>
+                                    </Table>
+                                  </div>
+                                  
+                                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                                    <span>Presenças: {boletim.presencas || 0}</span>
+                                    <span>Faltas: {boletim.faltas || 0}</span>
+                                    {boletim.liberadoEm && (
+                                      <span>Liberado em: {formatBrasiliaTime(boletim.liberadoEm).split(" ")[0]}</span>
+                                    )}
+                                  </div>
                                 </div>
                               ))}
                             </div>
