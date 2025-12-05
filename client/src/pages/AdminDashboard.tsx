@@ -2554,9 +2554,9 @@ export default function AdminDashboard() {
             />
           )}
 
-          <main className="flex-1 overflow-auto p-6">
+          <main className="flex-1 overflow-auto p-3 sm:p-6">
             <div className="max-w-7xl mx-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 mb-6 sm:mb-8">
                 <Card className="border-primary/20 bg-gradient-to-br from-card to-primary/5 hover-elevate">
                   <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
                     <CardTitle className="text-sm font-semibold">Total de Alunos</CardTitle>
@@ -2601,10 +2601,10 @@ export default function AdminDashboard() {
 
               {selectedSection === "aprovacoes" && (
                 <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-xl font-semibold">Aprovar Contas Pendentes</h3>
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+              <h3 className="text-lg sm:text-xl font-semibold">Aprovar Contas Pendentes</h3>
               <div className="flex items-center gap-2">
-                <Badge variant="secondary">{pendingUsers?.length || 0} pendente(s)</Badge>
+                <Badge variant="secondary" className="text-xs">{pendingUsers?.length || 0} pendente(s)</Badge>
                 <Button
                   variant="outline"
                   size="sm"
@@ -2617,8 +2617,8 @@ export default function AdminDashboard() {
                   }}
                   data-testid="button-refresh-pending"
                 >
-                  <RefreshCw className="h-4 w-4 mr-1" />
-                  Atualizar
+                  <RefreshCw className="h-4 w-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Atualizar</span>
                 </Button>
               </div>
             </div>
@@ -2642,40 +2642,50 @@ export default function AdminDashboard() {
                     <Skeleton className="h-12 w-full" />
                   </div>
                 ) : pendingUsers && pendingUsers.length > 0 ? (
-                  <div className="overflow-x-auto">
+                  <div className="w-full">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Matrícula</TableHead>
-                          <TableHead>Nome</TableHead>
-                          <TableHead>Email</TableHead>
-                          <TableHead>UID</TableHead>
+                          <TableHead className="hidden md:table-cell">Matrícula</TableHead>
+                          <TableHead className="min-w-[100px]">Nome</TableHead>
+                          <TableHead className="hidden lg:table-cell">Email</TableHead>
+                          <TableHead className="hidden xl:table-cell">UID</TableHead>
                           <TableHead>Tipo</TableHead>
-                          <TableHead>Turma</TableHead>
-                          <TableHead>Data</TableHead>
+                          <TableHead className="hidden md:table-cell">Turma</TableHead>
+                          <TableHead className="hidden lg:table-cell">Data</TableHead>
                           <TableHead className="text-right">Ações</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {pendingUsers.map((user) => (
                           <TableRow key={user.uid} data-testid={`row-pending-${user.uid}`}>
-                            <TableCell>
-                              <code className="text-xs font-mono bg-muted px-2 py-1 rounded" data-testid={`code-${user.uid}`}>
+                            <TableCell className="hidden md:table-cell">
+                              <code className="text-xs font-mono bg-muted px-1 py-0.5 rounded" data-testid={`code-${user.uid}`}>
                                 {user.matricula || "N/A"}
                               </code>
                             </TableCell>
-                            <TableCell className="font-medium">{user.nome}</TableCell>
-                            <TableCell className="text-sm">{user.email}</TableCell>
-                            <TableCell>
+                            <TableCell className="font-medium">
+                              <div className="flex flex-col">
+                                <span className="truncate max-w-[100px] lg:max-w-[150px]">{user.nome}</span>
+                                <span className="text-xs text-muted-foreground lg:hidden truncate max-w-[100px]">{user.email}</span>
+                                <span className="text-xs text-muted-foreground md:hidden">{getTurmaNome(user.turma)}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden lg:table-cell text-sm">
+                              <span className="truncate max-w-[150px] block">{user.email}</span>
+                            </TableCell>
+                            <TableCell className="hidden xl:table-cell">
                               <code className="text-xs font-mono text-muted-foreground">
-                                {user.uid ? user.uid.substring(0, 8) : user.docId?.substring(0, 8) || "N/A"}...
+                                {user.uid ? user.uid.substring(0, 6) : user.docId?.substring(0, 6) || "N/A"}
                               </code>
                             </TableCell>
                             <TableCell>
-                              <Badge variant="outline">{user.tipo}</Badge>
+                              <Badge variant="outline" className="text-xs">{user.tipo}</Badge>
                             </TableCell>
-                            <TableCell>{getTurmaNome(user.turma)}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground">
+                            <TableCell className="hidden md:table-cell">
+                              <Badge variant="outline" className="text-xs">{getTurmaNome(user.turma)}</Badge>
+                            </TableCell>
+                            <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">
                               {user.dataSolicitacao 
                                 ? new Date(user.dataSolicitacao).toLocaleDateString('pt-BR')
                                 : "-"}
@@ -2684,82 +2694,83 @@ export default function AdminDashboard() {
                               <div className="flex justify-end gap-1 flex-wrap">
                                 <Button
                                   variant="outline"
-                                  size="sm"
+                                  size="icon"
                                   onClick={() => {
                                     setSelectedSolicitacao(user);
                                     setViewDetailsDialogOpen(true);
                                   }}
                                   data-testid="button-view-details"
+                                  title="Ver Detalhes"
                                 >
-                                  <Edit className="h-4 w-4 mr-1" />
-                                  Ver Detalhes
+                                  <Eye className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   variant="ghost"
-                                  size="sm"
+                                  size="icon"
                                   onClick={() => {
                                     setSolicitacaoToEdit(user);
                                     setEditSolicitacaoDialogOpen(true);
                                   }}
                                   data-testid="button-edit"
+                                  title="Editar"
                                 >
                                   <Edit className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   variant="default"
-                                  size="sm"
+                                  size="icon"
                                   onClick={() => {
                                     setSolicitacaoToApprove(user);
                                     setApproveDialogOpen(true);
                                   }}
                                   disabled={approveUserMutation.isPending || rejectUserMutation.isPending || returnUserMutation.isPending}
                                   data-testid="button-approve"
+                                  title="Aprovar"
                                 >
-                                  <CheckCircle className="h-4 w-4 mr-1" />
-                                  Aprovar
+                                  <CheckCircle className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   variant="outline"
-                                  size="sm"
+                                  size="icon"
                                   onClick={() => {
                                     setUserToReturn(user);
                                     setReturnDialogOpen(true);
                                   }}
                                   disabled={approveUserMutation.isPending || rejectUserMutation.isPending || returnUserMutation.isPending}
                                   data-testid="button-return"
+                                  title="Devolver"
                                 >
-                                  <RefreshCw className="h-4 w-4 mr-1" />
-                                  Devolver
+                                  <RefreshCw className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   variant="secondary"
-                                  size="sm"
+                                  size="icon"
                                   onClick={() => {
                                     setUserToStandby(user);
                                     setStandbyDialogOpen(true);
                                   }}
                                   disabled={approveUserMutation.isPending || rejectUserMutation.isPending || returnUserMutation.isPending}
                                   data-testid="button-standby"
+                                  title="Stand By"
                                 >
-                                  <Clock className="h-4 w-4 mr-1" />
-                                  Stand By
+                                  <Clock className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   variant="destructive"
-                                  size="sm"
+                                  size="icon"
                                   onClick={() => {
                                     setUserToReject(user);
                                     setRejectDialogOpen(true);
                                   }}
                                   disabled={approveUserMutation.isPending || rejectUserMutation.isPending || returnUserMutation.isPending}
                                   data-testid="button-reject"
+                                  title="Reprovar"
                                 >
-                                  <XCircle className="h-4 w-4 mr-1" />
-                                  Reprovar
+                                  <XCircle className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   variant="outline"
-                                  size="sm"
+                                  size="icon"
                                   onClick={() => {
                                     setUserToDelete(user);
                                     setDeleteDialogOpen(true);
@@ -2790,11 +2801,11 @@ export default function AdminDashboard() {
 
           {selectedSection === "usuarios" && (
             <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-xl font-semibold">Gerenciar Alunos</h3>
-              <Button onClick={() => setCreateAlunoDialogOpen(true)} data-testid="button-create-user">
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar Aluno
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+              <h3 className="text-lg sm:text-xl font-semibold">Gerenciar Alunos</h3>
+              <Button onClick={() => setCreateAlunoDialogOpen(true)} size="sm" data-testid="button-create-user">
+                <Plus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Adicionar Aluno</span>
               </Button>
             </div>
 
@@ -2984,11 +2995,11 @@ export default function AdminDashboard() {
 
           {selectedSection === "professores" && (
             <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-xl font-semibold">Gerenciar Professores</h3>
-              <Button onClick={() => setCreateProfessorDiretorDialogOpen(true)} data-testid="button-create-professor">
-                <Plus className="h-4 w-4 mr-2" />
-                Criar Professor/Diretor
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+              <h3 className="text-lg sm:text-xl font-semibold">Gerenciar Professores</h3>
+              <Button onClick={() => setCreateProfessorDiretorDialogOpen(true)} size="sm" data-testid="button-create-professor">
+                <Plus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Criar Professor/Diretor</span>
               </Button>
             </div>
 
@@ -3171,8 +3182,8 @@ export default function AdminDashboard() {
 
           {selectedSection === "senhas-logins" && (
             <div className="space-y-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold">Gerenciamento de Senhas e Logins</h3>
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+              <h3 className="text-lg sm:text-xl font-semibold">Gerenciamento de Senhas e Logins</h3>
             </div>
 
             <Card>
@@ -3189,16 +3200,16 @@ export default function AdminDashboard() {
                   />
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0 sm:p-6">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Matrícula</TableHead>
-                      <TableHead>CPF</TableHead>
+                      <TableHead className="min-w-[100px]">Nome</TableHead>
+                      <TableHead className="hidden lg:table-cell">Email</TableHead>
+                      <TableHead className="hidden md:table-cell">Matrícula</TableHead>
+                      <TableHead className="hidden xl:table-cell">CPF</TableHead>
                       <TableHead>Tipo</TableHead>
-                      <TableHead>Ações</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -3214,58 +3225,69 @@ export default function AdminDashboard() {
                       })
                       .map((user: User) => (
                         <TableRow key={user.uid}>
-                          <TableCell className="font-medium">{user.nome}</TableCell>
-                          <TableCell>{user.email}</TableCell>
-                          <TableCell>{user.matricula || "-"}</TableCell>
-                          <TableCell>{user.cpf || "-"}</TableCell>
+                          <TableCell className="font-medium">
+                            <div className="flex flex-col">
+                              <span className="truncate max-w-[100px] lg:max-w-none">{user.nome}</span>
+                              <span className="text-xs text-muted-foreground lg:hidden truncate max-w-[100px]">{user.email}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell">
+                            <span className="truncate max-w-[150px] block">{user.email}</span>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">{user.matricula || "-"}</TableCell>
+                          <TableCell className="hidden xl:table-cell">{user.cpf || "-"}</TableCell>
                           <TableCell>
-                            <Badge variant={user.tipo === "diretor" ? "default" : user.tipo === "professor" ? "secondary" : "outline"}>
+                            <Badge variant={user.tipo === "diretor" ? "default" : user.tipo === "professor" ? "secondary" : "outline"} className="text-xs">
                               {user.tipo}
                             </Badge>
                           </TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1">
                               <Button
-                                size="sm"
+                                size="icon"
                                 variant="outline"
                                 onClick={() => {
                                   setSelectedUserForPassword(user);
                                   setViewPasswordDialogOpen(true);
                                 }}
                                 data-testid={`button-view-password-${user.uid}`}
+                                title="Ver senha"
                               >
                                 <Eye className="h-4 w-4" />
                               </Button>
                               <Button
-                                size="sm"
+                                size="icon"
                                 variant="outline"
                                 onClick={() => {
                                   setSelectedUserForPassword(user);
                                   setResetPasswordDialogOpen(true);
                                 }}
                                 data-testid={`button-reset-password-${user.uid}`}
+                                title="Resetar senha"
                               >
                                 <RefreshCw className="h-4 w-4" />
                               </Button>
                               <Button
-                                size="sm"
+                                size="icon"
                                 variant="outline"
                                 onClick={() => {
                                   setSelectedUserForPassword(user);
                                   setChangePasswordDialogOpen(true);
                                 }}
                                 data-testid={`button-change-password-${user.uid}`}
+                                title="Alterar senha"
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>
                               <Button
-                                size="sm"
+                                size="icon"
                                 variant="outline"
                                 onClick={() => {
                                   setSelectedUserForPassword(user);
                                   setFormatAccountDialogOpen(true);
                                 }}
                                 data-testid={`button-format-account-${user.uid}`}
+                                title="Formatar conta"
                               >
                                 <Archive className="h-4 w-4" />
                               </Button>
@@ -3282,21 +3304,22 @@ export default function AdminDashboard() {
 
           {selectedSection === "turmas" && (
             <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-xl font-semibold">Gerenciar Turmas</h3>
-              <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+              <h3 className="text-lg sm:text-xl font-semibold">Gerenciar Turmas</h3>
+              <div className="flex gap-2 flex-wrap">
                 <Button 
                   onClick={() => syncTurmasVagasMutation.mutate()} 
                   variant="outline"
+                  size="sm"
                   disabled={syncTurmasVagasMutation.isPending}
                   data-testid="button-sync-vagas"
                 >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${syncTurmasVagasMutation.isPending ? 'animate-spin' : ''}`} />
-                  Sincronizar Vagas
+                  <RefreshCw className={`h-4 w-4 sm:mr-2 ${syncTurmasVagasMutation.isPending ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline">Sincronizar Vagas</span>
                 </Button>
-                <Button onClick={() => setCreateTurmaDialogOpen(true)} data-testid="button-create-turma">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nova Turma
+                <Button onClick={() => setCreateTurmaDialogOpen(true)} size="sm" data-testid="button-create-turma">
+                  <Plus className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Nova Turma</span>
                 </Button>
               </div>
             </div>
@@ -3501,8 +3524,8 @@ export default function AdminDashboard() {
 
           {selectedSection === "disciplinares" && (
             <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-xl font-semibold">Advertências e Suspensões Disciplinares</h3>
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+              <h3 className="text-lg sm:text-xl font-semibold">Advertências e Suspensões</h3>
             </div>
 
             <div className="relative">
@@ -3525,13 +3548,13 @@ export default function AdminDashboard() {
                     <Skeleton className="h-12 w-full" />
                   </div>
                 ) : users && users.length > 0 ? (
-                  <div className="overflow-x-auto">
+                  <div className="w-full">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Nome</TableHead>
-                          <TableHead>Matrícula</TableHead>
-                          <TableHead>Turma</TableHead>
+                          <TableHead className="min-w-[100px]">Nome</TableHead>
+                          <TableHead className="hidden md:table-cell">Matrícula</TableHead>
+                          <TableHead className="hidden lg:table-cell">Turma</TableHead>
                           <TableHead>Histórico</TableHead>
                           <TableHead className="text-right">Ações</TableHead>
                         </TableRow>
@@ -3555,43 +3578,50 @@ export default function AdminDashboard() {
 
                             return (
                               <TableRow key={student.uid} data-testid={`row-student-disciplinary-${student.uid}`}>
-                                <TableCell className="font-medium">{student.nome}</TableCell>
-                                <TableCell>{student.matricula || "-"}</TableCell>
-                                <TableCell>{getTurmaNome(student.turma)}</TableCell>
+                                <TableCell className="font-medium">
+                                  <div className="flex flex-col">
+                                    <span className="truncate max-w-[100px] lg:max-w-none">{student.nome}</span>
+                                    <span className="text-xs text-muted-foreground md:hidden">{student.matricula || "-"}</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="hidden md:table-cell">{student.matricula || "-"}</TableCell>
+                                <TableCell className="hidden lg:table-cell">
+                                  <Badge variant="outline" className="text-xs">{getTurmaNome(student.turma)}</Badge>
+                                </TableCell>
                                 <TableCell>
-                                  <div className="flex gap-2">
+                                  <div className="flex flex-col sm:flex-row gap-1">
                                     {warningsCount > 0 && (
-                                      <Badge variant="outline" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
-                                        {warningsCount} Advertência{warningsCount > 1 ? 's' : ''}
+                                      <Badge variant="outline" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 text-xs">
+                                        {warningsCount} Adv.
                                       </Badge>
                                     )}
                                     {suspensionsCount > 0 && (
-                                      <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
-                                        {suspensionsCount} Suspensão{suspensionsCount > 1 ? 'ões' : ''}
+                                      <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 text-xs">
+                                        {suspensionsCount} Susp.
                                       </Badge>
                                     )}
                                     {warningsCount === 0 && suspensionsCount === 0 && (
-                                      <span className="text-sm text-muted-foreground">Nenhum registro</span>
+                                      <span className="text-xs text-muted-foreground">-</span>
                                     )}
                                   </div>
                                 </TableCell>
                                 <TableCell className="text-right">
-                                  <div className="flex justify-end gap-2">
+                                  <div className="flex justify-end gap-1">
                                     <Button
                                       variant="ghost"
-                                      size="sm"
+                                      size="icon"
                                       onClick={() => {
                                         setSelectedStudentForHistory(student);
                                         setHistoryDialogOpen(true);
                                       }}
                                       data-testid={`button-history-${student.uid}`}
+                                      title="Histórico"
                                     >
-                                      <Eye className="h-4 w-4 mr-1" />
-                                      Histórico
+                                      <Eye className="h-4 w-4" />
                                     </Button>
                                     <Button
                                       variant="outline"
-                                      size="sm"
+                                      size="icon"
                                       className="border-yellow-500 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20"
                                       onClick={() => {
                                         setSelectedStudentForDisciplinary(student);
@@ -3599,21 +3629,21 @@ export default function AdminDashboard() {
                                       }}
                                       disabled={warningsCount >= 3}
                                       data-testid={`button-warning-${student.uid}`}
+                                      title="Advertência"
                                     >
-                                      <AlertTriangle className="h-4 w-4 mr-1" />
-                                      Advertência
+                                      <AlertTriangle className="h-4 w-4" />
                                     </Button>
                                     <Button
                                       variant="destructive"
-                                      size="sm"
+                                      size="icon"
                                       onClick={() => {
                                         setSelectedStudentForDisciplinary(student);
                                         setSuspensionDialogOpen(true);
                                       }}
                                       data-testid={`button-suspension-${student.uid}`}
+                                      title="Suspensão"
                                     >
-                                      <XCircle className="h-4 w-4 mr-1" />
-                                      Suspensão
+                                      <XCircle className="h-4 w-4" />
                                     </Button>
                                   </div>
                                 </TableCell>
