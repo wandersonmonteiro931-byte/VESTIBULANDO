@@ -92,8 +92,27 @@ Real-time attendance tracking with automatic notifications when classes start. F
   - `affectedKeys().hasOnly()` prevents field injection attacks
 - **Firestore Collections**: `chamadasDiarias` stores attendance sessions, `registrosPresencaChamada` stores individual student records, `resumosPresencaDia` stores daily summaries
 
+#### Live Class Presence Monitoring System
+Comprehensive automatic presence/attendance monitoring for live virtual classes accessible at `/aula-ao-vivo`. Features include:
+- **Continuous Interaction Detection**: Mouse movements, keyboard activity, touch events, and scroll actions are tracked to confirm student engagement
+- **Tab/Window Monitoring**: Audio/visual warnings trigger when students leave the class tab; system tracks when students switch away
+- **Absence Time Limits**: Maximum 5-minute total absence time per class session enforced; accumulated absence tracked separately from inactivity
+- **Inactivity Confirmation**: After 3 minutes without interaction, students receive a confirmation modal with 2-minute countdown to prove presence
+- **Automatic Removal**: Students are automatically marked absent and removed from the session if they fail to confirm presence or exceed absence limits
+- **Teacher-Approved Leave Requests**: Students can request permission to leave temporarily; teachers approve/reject via the control panel
+- **Teacher Control Panel**: Teachers select turma and matéria, start/stop sessions, view real-time participant list with status indicators, and manage leave requests
+- **Student Notifications**: Floating alerts appear on student dashboard when live class is available for their turma
+- **Audio/Visual Warnings**: System plays warning sounds and shows modal alerts when presence confirmation is needed
+- **Key Components**:
+  - `usePresenceMonitor` hook: Manages inactivity detection, confirmation timers, and absence tracking
+  - `LiveClassContext`: Provides session state, presence records, and leave request management with Firebase real-time sync
+  - `LiveClassroom`: Main student interface with modals for confirmation, absence, and leave requests
+  - `TeacherClassControl`: Self-contained panel for teachers to manage live class sessions
+  - `LiveClassNotification`: Floating alert component for students
+- **Firestore Collections**: `sessoesAulaAoVivo` stores session data, `presencasAulaAoVivo` stores student presence records, `solicitacoesSaida` stores leave requests
+
 ### Data Model
-Core collections include `Usuarios` (users with roles, CPF, matricula, address), `Tarefas` (assignments), `Entregas` (submissions), `Turmas` (classes), `announcements`, `chatMessages`, `chatConversations`, `userBlocks`, `chatReports`, `avaliacoes` (evaluations), `avaliacaoQuestoes`, `avaliacaoTemplates`, `avaliacaoEntregas`, `avaliacaoAutorizacoesAtraso`, `boletins` (school reports), `boletimConfigs`, `frequencias`, `bimestresConfig`, `notasBimestre`, `disciplinaryRequests`, `configuracaoHorarios` (custom time slot configurations), `eventosCalendario` (calendar events), `materiasCustomizadas` (custom subject records), `chamadasDiarias` (daily attendance sessions), `registrosPresencaChamada` (individual attendance records), and `resumosPresencaDia` (daily attendance summaries).
+Core collections include `Usuarios` (users with roles, CPF, matricula, address), `Tarefas` (assignments), `Entregas` (submissions), `Turmas` (classes), `announcements`, `chatMessages`, `chatConversations`, `userBlocks`, `chatReports`, `avaliacoes` (evaluations), `avaliacaoQuestoes`, `avaliacaoTemplates`, `avaliacaoEntregas`, `avaliacaoAutorizacoesAtraso`, `boletins` (school reports), `boletimConfigs`, `frequencias`, `bimestresConfig`, `notasBimestre`, `disciplinaryRequests`, `configuracaoHorarios` (custom time slot configurations), `eventosCalendario` (calendar events), `materiasCustomizadas` (custom subject records), `chamadasDiarias` (daily attendance sessions), `registrosPresencaChamada` (individual attendance records), `resumosPresencaDia` (daily attendance summaries), `sessoesAulaAoVivo` (live class sessions), `presencasAulaAoVivo` (live class presence records), and `solicitacoesSaida` (leave requests).
 
 ### System Design Choices
 - **Real-time Synchronization**: Achieved via Firebase Firestore `onSnapshot` listeners and `useRealtimeQuery` hook, ensuring instant data reflection across dashboards. TanStack Query is configured for automatic refetching.

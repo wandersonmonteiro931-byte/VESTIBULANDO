@@ -73,10 +73,6 @@ export function TeacherClassControl() {
   const [isResponding, setIsResponding] = useState(false);
 
   const selectedTurma = turmas.find(t => t.id === selectedTurmaId);
-  const turmaNome = selectedTurma?.nome || "";
-  const turmaId = selectedTurmaId;
-  const horarioId = `horario_${Date.now()}`;
-  const horarioNome = materia ? `Aula de ${materia}` : "Aula ao Vivo";
 
   useEffect(() => {
     const fetchTurmas = async () => {
@@ -103,12 +99,12 @@ export function TeacherClassControl() {
   };
 
   useEffect(() => {
-    if (!userData || !turmaId) return;
+    if (!userData || !selectedTurmaId) return;
 
     const sessionsRef = collection(db, "sessoesAulaAoVivo");
     const q = query(
       sessionsRef,
-      where("turmaId", "==", turmaId),
+      where("turmaId", "==", selectedTurmaId),
       where("professorId", "==", userData.uid),
       where("status", "in", ["aguardando", "em_andamento"])
     );
@@ -123,7 +119,7 @@ export function TeacherClassControl() {
     });
 
     return () => unsubscribe();
-  }, [userData, turmaId]);
+  }, [userData, selectedTurmaId]);
 
   useEffect(() => {
     if (!currentSession) {
@@ -149,20 +145,22 @@ export function TeacherClassControl() {
   }, [currentSession]);
 
   const handleStartClass = async () => {
-    if (!userData) return;
+    if (!userData || !selectedTurmaId || !materia.trim()) return;
     setIsStarting(true);
 
     try {
       const today = new Date().toISOString().split("T")[0];
       const sessionsRef = collection(db, "sessoesAulaAoVivo");
+      const generatedHorarioId = `horario_${Date.now()}`;
+      const generatedHorarioNome = `Aula de ${materia}`;
       
       await addDoc(sessionsRef, {
-        chamadaId: chamadaId || "",
-        turmaId,
-        turmaNome,
+        chamadaId: "",
+        turmaId: selectedTurmaId,
+        turmaNome: selectedTurma?.nome || "",
         materia,
-        horarioId,
-        horarioNome,
+        horarioId: generatedHorarioId,
+        horarioNome: generatedHorarioNome,
         data: today,
         professorId: userData.uid,
         professorNome: userData.nome,
