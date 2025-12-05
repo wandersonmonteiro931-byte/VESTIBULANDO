@@ -38,6 +38,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 const DIAS_LABELS: Record<DiaSemana, string> = {
+  domingo: "Domingo",
   segunda: "Segunda",
   terca: "Terça",
   quarta: "Quarta",
@@ -78,6 +79,16 @@ export function HorarioViewer({ userType, turmaId, turmaNome, professorId }: Hor
       }
     }
     return HORARIOS_AULAS_PADRAO;
+  }, [horariosConfig]);
+
+  const diasAtivos = useMemo(() => {
+    if (horariosConfig && horariosConfig.length > 0) {
+      const activeConfig = horariosConfig.find(c => c.ativo) ?? horariosConfig[0];
+      if (activeConfig.diasAtivos && activeConfig.diasAtivos.length > 0) {
+        return activeConfig.diasAtivos as DiaSemana[];
+      }
+    }
+    return ["segunda", "terca", "quarta", "quinta", "sexta"] as DiaSemana[];
   }, [horariosConfig]);
 
   const gradesPublicadas = useMemo(() => {
@@ -136,6 +147,7 @@ export function HorarioViewer({ userType, turmaId, turmaNome, professorId }: Hor
 
   const getDayOfWeekName = (date: Date): DiaSemana | null => {
     const dayMap: Record<number, DiaSemana> = {
+      0: "domingo",
       1: "segunda",
       2: "terca",
       3: "quarta",
@@ -185,13 +197,13 @@ export function HorarioViewer({ userType, turmaId, turmaNome, professorId }: Hor
     horariosCustom.forEach(horario => {
       if (horario.tipo === "intervalo") {
         const row = [`${horario.nome}\n${horario.inicio}-${horario.fim}`];
-        DIAS_SEMANA.forEach(() => {
+        diasAtivos.forEach(() => {
           row.push("Intervalo");
         });
         tableData.push(row);
       } else {
         const row = [`${horario.nome}\n${horario.inicio}-${horario.fim}`];
-        DIAS_SEMANA.forEach(dia => {
+        diasAtivos.forEach(dia => {
           const slot = grade.slots.find(s => s.diaSemana === dia && s.horarioId === horario.id);
           row.push(slot ? `${slot.materia}\n${slot.professorNome}` : "");
         });
@@ -199,8 +211,10 @@ export function HorarioViewer({ userType, turmaId, turmaNome, professorId }: Hor
       }
     });
     
+    const headerRow = ["Horário", ...diasAtivos.map(dia => DIAS_LABELS[dia])];
+    
     autoTable(pdf, {
-      head: [["Horário", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"]],
+      head: [headerRow],
       body: tableData,
       startY: 40,
       styles: { fontSize: 8, cellPadding: 3 },
@@ -218,6 +232,8 @@ export function HorarioViewer({ userType, turmaId, turmaNome, professorId }: Hor
   const printGrade = (grade: GradeHoraria) => {
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
+    
+    const headerCells = diasAtivos.map(dia => `<th>${DIAS_LABELS[dia]}</th>`).join('');
     
     let html = `
       <!DOCTYPE html>
@@ -243,12 +259,7 @@ export function HorarioViewer({ userType, turmaId, turmaNome, professorId }: Hor
           <thead>
             <tr>
               <th>Horário</th>
-              <th>Segunda</th>
-              <th>Terça</th>
-              <th>Quarta</th>
-              <th>Quinta</th>
-              <th>Sexta</th>
-              <th>Sábado</th>
+              ${headerCells}
             </tr>
           </thead>
           <tbody>
@@ -257,10 +268,10 @@ export function HorarioViewer({ userType, turmaId, turmaNome, professorId }: Hor
     horariosCustom.forEach(horario => {
       if (horario.tipo === "intervalo") {
         html += `<tr class="intervalo"><td>${horario.nome}<br><small>${horario.inicio}-${horario.fim}</small></td>`;
-        html += `<td colspan="6" class="intervalo">Intervalo</td></tr>`;
+        html += `<td colspan="${diasAtivos.length}" class="intervalo">Intervalo</td></tr>`;
       } else {
         html += `<tr><td>${horario.nome}<br><small>${horario.inicio}-${horario.fim}</small></td>`;
-        DIAS_SEMANA.forEach(dia => {
+        diasAtivos.forEach(dia => {
           const slot = grade.slots.find(s => s.diaSemana === dia && s.horarioId === horario.id);
           html += `<td>${slot ? `<div class="slot">${slot.materia}</div><div class="professor">${slot.professorNome}</div>` : ""}</td>`;
         });
@@ -390,6 +401,7 @@ export function HorarioViewer({ userType, turmaId, turmaNome, professorId }: Hor
                     highlightProfessorId={userType === "professor" ? professorId : undefined}
                     showLegend
                     horariosCustom={horariosCustom}
+                    diasExibidos={diasAtivos}
                   />
                 </CardContent>
                 <CardFooter className="flex justify-end gap-2 flex-wrap border-t pt-4">
@@ -428,7 +440,7 @@ export function HorarioViewer({ userType, turmaId, turmaNome, professorId }: Hor
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
-              {DIAS_SEMANA.map(dia => {
+              {diasAtivos.map(dia => {
                 const aulasDia = minhasAulas.filter(a => a.diaSemana === dia);
                 return (
                   <div 

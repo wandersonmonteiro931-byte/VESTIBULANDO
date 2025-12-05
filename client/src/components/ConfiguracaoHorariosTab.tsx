@@ -40,6 +40,7 @@ import { getNowBrasiliaISO } from "@/lib/brasiliaTime";
 import { cn } from "@/lib/utils";
 
 const DIAS_LABELS: Record<string, string> = {
+  domingo: "Domingo",
   segunda: "Segunda",
   terca: "Terça",
   quarta: "Quarta",

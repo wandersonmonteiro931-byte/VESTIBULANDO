@@ -81,7 +81,7 @@ export function HorariosTab({ turmas, professores }: HorariosTabProps) {
     queryKey: ["gradesHorarias"],
   });
 
-  const { data: horariosConfig } = useRealtimeQuery<{ id: string; ativo?: boolean; horarios: HorarioAula[] }>({
+  const { data: horariosConfig } = useRealtimeQuery<{ id: string; ativo?: boolean; horarios: HorarioAula[]; diasAtivos?: DiaSemana[] }>({
     collectionName: "configuracaoHorarios",
     queryKey: ["configuracaoHorarios"],
   });
@@ -96,6 +96,26 @@ export function HorariosTab({ turmas, professores }: HorariosTabProps) {
     }
     return HORARIOS_AULAS;
   }, [horariosConfig]);
+
+  const diasAtivos = useMemo(() => {
+    if (horariosConfig && horariosConfig.length > 0) {
+      const activeConfig = horariosConfig.find(c => c.ativo) ?? horariosConfig[0];
+      if (activeConfig.diasAtivos && activeConfig.diasAtivos.length > 0) {
+        return activeConfig.diasAtivos;
+      }
+    }
+    return ["segunda", "terca", "quarta", "quinta", "sexta"] as DiaSemana[];
+  }, [horariosConfig]);
+
+  const DIAS_LABELS: Record<DiaSemana, string> = {
+    domingo: "Domingo",
+    segunda: "Segunda",
+    terca: "Terça",
+    quarta: "Quarta",
+    quinta: "Quinta",
+    sexta: "Sexta",
+    sabado: "Sábado",
+  };
 
   const selectedTurma = turmas.find(t => t.id === selectedTurmaId);
   
@@ -273,7 +293,7 @@ export function HorariosTab({ turmas, professores }: HorariosTabProps) {
       
       for (const config of shuffledConfigs) {
         let aulasAlocadas = 0;
-        const diasShuffled = [...DIAS_SEMANA].sort(() => Math.random() - 0.5);
+        const diasShuffled = [...diasAtivos].sort(() => Math.random() - 0.5);
         
         for (const dia of diasShuffled) {
           if (aulasAlocadas >= config.aulasPorSemana) break;
@@ -394,13 +414,13 @@ export function HorariosTab({ turmas, professores }: HorariosTabProps) {
     horariosCustom.forEach(horario => {
       if (horario.tipo === "intervalo") {
         const row = [`${horario.nome}\n${horario.inicio}-${horario.fim}`];
-        DIAS_SEMANA.forEach(() => {
+        diasAtivos.forEach(() => {
           row.push("Intervalo");
         });
         tableData.push(row);
       } else {
         const row = [`${horario.nome}\n${horario.inicio}-${horario.fim}`];
-        DIAS_SEMANA.forEach(dia => {
+        diasAtivos.forEach(dia => {
           const slot = grade.slots.find(s => s.diaSemana === dia && s.horarioId === horario.id);
           row.push(slot ? `${slot.materia}\n${slot.professorNome}` : "");
         });
@@ -408,8 +428,10 @@ export function HorariosTab({ turmas, professores }: HorariosTabProps) {
       }
     });
     
+    const headerRow = ["Horário", ...diasAtivos.map(dia => DIAS_LABELS[dia])];
+    
     autoTable(pdf, {
-      head: [["Horário", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"]],
+      head: [headerRow],
       body: tableData,
       startY: 40,
       styles: { fontSize: 8, cellPadding: 3 },
@@ -427,6 +449,8 @@ export function HorariosTab({ turmas, professores }: HorariosTabProps) {
   const printGrade = (grade: GradeHoraria) => {
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
+    
+    const headerCells = diasAtivos.map(dia => `<th>${DIAS_LABELS[dia]}</th>`).join('');
     
     let html = `
       <!DOCTYPE html>
@@ -454,12 +478,7 @@ export function HorariosTab({ turmas, professores }: HorariosTabProps) {
           <thead>
             <tr>
               <th>Horário</th>
-              <th>Segunda</th>
-              <th>Terça</th>
-              <th>Quarta</th>
-              <th>Quinta</th>
-              <th>Sexta</th>
-              <th>Sábado</th>
+              ${headerCells}
             </tr>
           </thead>
           <tbody>
@@ -468,10 +487,10 @@ export function HorariosTab({ turmas, professores }: HorariosTabProps) {
     horariosCustom.forEach(horario => {
       if (horario.tipo === "intervalo") {
         html += `<tr class="intervalo"><td>${horario.nome}<br><small>${horario.inicio}-${horario.fim}</small></td>`;
-        html += `<td colspan="6" class="intervalo">Intervalo</td></tr>`;
+        html += `<td colspan="${diasAtivos.length}" class="intervalo">Intervalo</td></tr>`;
       } else {
         html += `<tr><td>${horario.nome}<br><small>${horario.inicio}-${horario.fim}</small></td>`;
-        DIAS_SEMANA.forEach(dia => {
+        diasAtivos.forEach(dia => {
           const slot = grade.slots.find(s => s.diaSemana === dia && s.horarioId === horario.id);
           html += `<td>${slot ? `<div class="slot">${slot.materia}</div><div class="professor">${slot.professorNome}</div>` : ""}</td>`;
         });

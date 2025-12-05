@@ -1041,6 +1041,7 @@ export type InsertSolicitacaoEdicaoNota = z.infer<typeof insertSolicitacaoEdicao
 
 // Dias da semana para horários
 export const DIAS_SEMANA = [
+  "domingo",
   "segunda",
   "terca", 
   "quarta",

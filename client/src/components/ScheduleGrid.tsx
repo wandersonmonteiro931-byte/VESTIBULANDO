@@ -18,6 +18,7 @@ import { X, Plus, Edit, Trash2, Clock, User, BookOpen, Calendar } from "lucide-r
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
 const DIAS_LABELS: Record<DiaSemana, string> = {
+  domingo: "Domingo",
   segunda: "Segunda",
   terca: "Terça",
   quarta: "Quarta",

@@ -43,6 +43,7 @@ import { cn } from "@/lib/utils";
 import { getNowBrasiliaISO } from "@/lib/brasiliaTime";
 
 const DIAS_LABELS: Record<DiaSemana, string> = {
+  domingo: "Domingo",
   segunda: "Segunda",
   terca: "Terça",
   quarta: "Quarta",
@@ -53,6 +54,7 @@ const DIAS_LABELS: Record<DiaSemana, string> = {
 
 const getDiaSemanaFromDate = (date: Date): DiaSemana | null => {
   const dayMap: Record<number, DiaSemana> = {
+    0: "domingo",
     1: "segunda",
     2: "terca",
     3: "quarta",

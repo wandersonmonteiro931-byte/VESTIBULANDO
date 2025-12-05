@@ -58,6 +58,7 @@ const TIPO_EVENTO_CONFIG: Record<string, { label: string; icon: React.ElementTyp
 };
 
 const DIAS_LABELS: Record<string, string> = {
+  domingo: "Domingo",
   segunda: "Segunda",
   terca: "Terça",
   quarta: "Quarta",
