@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Search, FileText, Download, User as UserIcon, GraduationCap, BookOpen, Calendar, Phone, MapPin, Clock } from "lucide-react";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 import { useAuth } from "@/contexts/AuthContext";
-import type { User, LoginHistory, Tarefa, Entrega, DisciplinaryAction } from "@shared/schema";
+import type { User, LoginHistory, Tarefa, Entrega, DisciplinaryAction, BoletimDocumento } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -47,6 +47,11 @@ export function DocumentationTab() {
   const { data: disciplinaryActions } = useRealtimeQuery<DisciplinaryAction>({
     collectionName: "disciplinaryActions",
     queryKey: ["/api/disciplinaryActions/all"],
+  });
+
+  const { data: boletimDocumentos } = useRealtimeQuery<BoletimDocumento>({
+    collectionName: "boletimDocumentos",
+    queryKey: ["/api/boletim-documentos"],
   });
 
   // Função para converter para horário de Brasília
@@ -101,9 +106,15 @@ export function DocumentationTab() {
 
   const userDisciplinary = useMemo(() => {
     if (!selectedUser || !disciplinaryActions) return [];
-    // Incluir TODAS as ações disciplinares (ativas e removidas)
     return disciplinaryActions.filter(d => d.alunoId === selectedUser.uid);
   }, [selectedUser, disciplinaryActions]);
+
+  const userBoletimDocumentos = useMemo(() => {
+    if (!selectedUser || !boletimDocumentos) return [];
+    return boletimDocumentos
+      .filter(b => b.alunoId === selectedUser.uid)
+      .sort((a, b) => b.anoLetivo.localeCompare(a.anoLetivo));
+  }, [selectedUser, boletimDocumentos]);
 
   // Verificar se pode ver a foto
   const canViewPhoto = (user: User) => {
@@ -698,12 +709,15 @@ export function DocumentationTab() {
                 </div>
 
                 <Tabs defaultValue="personal" className="w-full">
-                  <TabsList className="grid w-full grid-cols-4">
+                  <TabsList className="grid w-full grid-cols-5">
                     <TabsTrigger value="personal">Dados Pessoais</TabsTrigger>
                     <TabsTrigger value="address">Endereço</TabsTrigger>
                     <TabsTrigger value="history">Histórico</TabsTrigger>
                     {selectedUser.tipo === "aluno" && (
                       <TabsTrigger value="tasks">Tarefas</TabsTrigger>
+                    )}
+                    {selectedUser.tipo === "aluno" && (
+                      <TabsTrigger value="boletins">Boletins</TabsTrigger>
                     )}
                   </TabsList>
 
@@ -883,6 +897,79 @@ export function DocumentationTab() {
                                   ))}
                                 </TableBody>
                               </Table>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+                  )}
+
+                  {selectedUser.tipo === "aluno" && (
+                    <TabsContent value="boletins" className="space-y-4">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            <GraduationCap className="h-5 w-5" />
+                            Boletins Escolares
+                          </CardTitle>
+                          <CardDescription>
+                            PDFs dos boletins liberados são anexados automaticamente
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          {userBoletimDocumentos.length === 0 ? (
+                            <p className="text-sm text-muted-foreground text-center py-8">
+                              Nenhum boletim anexado à documentação
+                            </p>
+                          ) : (
+                            <div className="space-y-4">
+                              {userBoletimDocumentos.map((boletimDoc) => (
+                                <div 
+                                  key={boletimDoc.id} 
+                                  className="flex items-center justify-between p-4 border rounded-lg"
+                                  data-testid={`boletim-doc-${boletimDoc.id}`}
+                                >
+                                  <div className="flex items-center gap-4">
+                                    <div className="p-2 bg-primary/10 rounded-lg">
+                                      <FileText className="h-5 w-5 text-primary" />
+                                    </div>
+                                    <div>
+                                      <p className="font-medium">
+                                        Boletim {boletimDoc.anoLetivo} - {boletimDoc.turmaNome}
+                                      </p>
+                                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                        <span>Média: {boletimDoc.mediaGeral?.toFixed(1).replace(".", ",") || "-"}</span>
+                                        <span>|</span>
+                                        <Badge 
+                                          variant={
+                                            boletimDoc.situacao === "aprovado" ? "default" :
+                                            boletimDoc.situacao === "reprovado" ? "destructive" : "secondary"
+                                          }
+                                          className="no-default-hover-elevate no-default-active-elevate"
+                                        >
+                                          {boletimDoc.situacao.charAt(0).toUpperCase() + boletimDoc.situacao.slice(1)}
+                                        </Badge>
+                                        <span>|</span>
+                                        <span>v{boletimDoc.versao}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      const link = document.createElement("a");
+                                      link.href = boletimDoc.pdfBase64;
+                                      link.download = `boletim_${boletimDoc.alunoNome.replace(/\s+/g, "_")}_${boletimDoc.anoLetivo}.pdf`;
+                                      link.click();
+                                    }}
+                                    data-testid={`button-download-boletim-${boletimDoc.id}`}
+                                  >
+                                    <Download className="h-4 w-4 mr-1" />
+                                    Baixar PDF
+                                  </Button>
+                                </div>
+                              ))}
                             </div>
                           )}
                         </CardContent>

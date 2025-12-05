@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { collection, addDoc, updateDoc, doc, where, deleteDoc } from "firebase/firestore";
+import { collection, addDoc, updateDoc, doc, where, deleteDoc, getDocs, query } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
-import type { Boletim, BoletimNota, User, Turma, BoletimConfig, Frequencia, NotaBimestre } from "@shared/schema";
+import type { Boletim, BoletimNota, User, Turma, BoletimConfig, Frequencia, NotaBimestre, BoletimDocumento } from "@shared/schema";
 import { MATERIAS_BOLETIM } from "@shared/schema";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -424,12 +424,24 @@ export function BoletimTab() {
       };
 
       await updateDoc(doc(db, "boletins", selectedBoletim.id), boletimData);
+      
+      if (selectedBoletim.liberado) {
+        const updatedBoletim: Boletim = {
+          ...selectedBoletim,
+          ...boletimData,
+        };
+        const pdfBase64 = generateBoletimPdfBase64(updatedBoletim);
+        await saveBoletimDocumento(updatedBoletim, pdfBase64);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/boletins"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/boletim-documentos"] });
       toast({
         title: "Boletim atualizado!",
-        description: "As alterações foram salvas.",
+        description: selectedBoletim?.liberado 
+          ? "As alterações foram salvas e o PDF foi atualizado na documentação."
+          : "As alterações foram salvas.",
       });
       setEditDialogOpen(false);
       setSelectedBoletim(null);
@@ -444,7 +456,7 @@ export function BoletimTab() {
   });
 
   const toggleReleaseMutation = useMutation({
-    mutationFn: async ({ boletimId, liberar }: { boletimId: string; liberar: boolean }) => {
+    mutationFn: async ({ boletimId, liberar, boletim }: { boletimId: string; liberar: boolean; boletim: Boletim }) => {
       if (!userData) throw new Error("Usuário não autenticado");
 
       const updateData: any = {
@@ -459,14 +471,22 @@ export function BoletimTab() {
       }
 
       await updateDoc(doc(db, "boletins", boletimId), updateData);
+      
+      if (liberar) {
+        const pdfBase64 = generateBoletimPdfBase64(boletim);
+        await saveBoletimDocumento(boletim, pdfBase64);
+      } else {
+        await removeBoletimDocumento(boletimId);
+      }
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/boletins"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/boletim-documentos"] });
       toast({
         title: variables.liberar ? "Boletim liberado!" : "Boletim bloqueado!",
         description: variables.liberar 
-          ? "O aluno pode visualizar o boletim agora." 
-          : "O boletim não está mais visível para o aluno.",
+          ? "O aluno pode visualizar o boletim agora. PDF anexado à documentação." 
+          : "O boletim não está mais visível para o aluno. PDF removido da documentação.",
       });
     },
     onError: (error: any) => {
@@ -480,13 +500,15 @@ export function BoletimTab() {
 
   const deleteMutation = useMutation({
     mutationFn: async (boletimId: string) => {
+      await removeBoletimDocumento(boletimId);
       await deleteDoc(doc(db, "boletins", boletimId));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/boletins"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/boletim-documentos"] });
       toast({
         title: "Boletim excluído",
-        description: "O boletim foi removido do sistema.",
+        description: "O boletim e seu PDF foram removidos do sistema.",
       });
     },
     onError: (error: any) => {
@@ -1055,6 +1077,145 @@ export function BoletimTab() {
     doc.save(`boletim_${boletim.alunoNome.replace(/\s+/g, "_")}_${boletim.anoLetivo}.pdf`);
   };
 
+  const generateBoletimPdfBase64 = (boletim: Boletim): string => {
+    const pdfDoc = new jsPDF();
+    const pageWidth = pdfDoc.internal.pageSize.getWidth();
+    const margin = 15;
+    let yPos = 20;
+
+    pdfDoc.setFontSize(16);
+    pdfDoc.setFont("helvetica", "bold");
+    pdfDoc.text("BOLETIM ESCOLAR", pageWidth / 2, yPos, { align: "center" });
+    yPos += 8;
+
+    pdfDoc.setFontSize(12);
+    pdfDoc.text(boletim.escola || "Preparatório Vestibulando", pageWidth / 2, yPos, { align: "center" });
+    yPos += 15;
+
+    pdfDoc.setFontSize(10);
+    pdfDoc.setFont("helvetica", "normal");
+    
+    pdfDoc.text(`Aluno: ${boletim.alunoNome}`, margin, yPos);
+    pdfDoc.text(`Matrícula: ${boletim.alunoMatricula || "-"}`, pageWidth - margin - 50, yPos);
+    yPos += 6;
+    
+    pdfDoc.text(`Turma: ${boletim.turmaNome}`, margin, yPos);
+    pdfDoc.text(`Ano Letivo: ${boletim.anoLetivo}`, pageWidth - margin - 50, yPos);
+    yPos += 10;
+
+    const periodosList = boletim.periodos || (boletim.periodoTipo === "bimestre" ? PERIODOS_BIMESTRE : PERIODOS_TRIMESTRE);
+    
+    const tableHead = [["Matéria", ...periodosList, "Média Final", "Média Mínima Esperada"]];
+    const tableBody = boletim.materias.map(m => [
+      m.materia,
+      ...periodosList.map(p => formatNota(m.notas[p])),
+      formatNota(m.mediaFinal),
+      formatNota(m.mediaEsperada || 7),
+    ]);
+
+    autoTable(pdfDoc, {
+      startY: yPos,
+      head: tableHead,
+      body: tableBody,
+      margin: { left: margin, right: margin },
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+    });
+
+    yPos = (pdfDoc as any).lastAutoTable.finalY + 10;
+
+    pdfDoc.setFont("helvetica", "bold");
+    pdfDoc.text(`Média Final Anual: ${formatNota(boletim.mediaGeral)}`, margin, yPos);
+    pdfDoc.text(`Situação: ${boletim.situacao.toUpperCase()}`, pageWidth - margin - 50, yPos);
+    yPos += 8;
+
+    pdfDoc.setFont("helvetica", "normal");
+    pdfDoc.text(`Presenças: ${boletim.presencas}`, margin, yPos);
+    pdfDoc.text(`Faltas: ${boletim.faltas}`, margin + 50, yPos);
+    pdfDoc.text(`Frequência: ${boletim.percentualPresenca !== null && boletim.percentualPresenca !== undefined ? boletim.percentualPresenca.toFixed(1).replace(".", ",") + "%" : "-"}`, margin + 100, yPos);
+    yPos += 10;
+
+    if (boletim.observacoes) {
+      pdfDoc.setFont("helvetica", "bold");
+      pdfDoc.text("Observações:", margin, yPos);
+      yPos += 5;
+      pdfDoc.setFont("helvetica", "normal");
+      const obsLines = pdfDoc.splitTextToSize(boletim.observacoes, pageWidth - 2 * margin);
+      pdfDoc.text(obsLines, margin, yPos);
+      yPos += obsLines.length * 5 + 10;
+    }
+
+    yPos = Math.max(yPos, 250);
+    const lineWidth = 70;
+    const lineX = (pageWidth - lineWidth) / 2;
+    pdfDoc.line(lineX, yPos, lineX + lineWidth, yPos);
+    pdfDoc.text("Assinatura da Diretoria", pageWidth / 2, yPos + 5, { align: "center" });
+
+    pdfDoc.setFontSize(8);
+    pdfDoc.text(
+      `Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`,
+      pageWidth / 2,
+      285,
+      { align: "center" }
+    );
+
+    return pdfDoc.output("datauristring");
+  };
+
+  const saveBoletimDocumento = async (boletim: Boletim, pdfBase64: string) => {
+    if (!userData) return;
+    
+    const existingDocsQuery = query(
+      collection(db, "boletimDocumentos"),
+      where("boletimId", "==", boletim.id)
+    );
+    const existingDocs = await getDocs(existingDocsQuery);
+    
+    if (!existingDocs.empty) {
+      const existingDoc = existingDocs.docs[0];
+      const currentData = existingDoc.data();
+      await updateDoc(doc(db, "boletimDocumentos", existingDoc.id), {
+        pdfBase64,
+        situacao: boletim.situacao,
+        mediaGeral: boletim.mediaGeral,
+        versao: (currentData.versao || 1) + 1,
+        atualizadoPor: userData.uid,
+        atualizadoPorNome: userData.nome,
+        dataAtualizacao: getNowBrasiliaISO(),
+      });
+    } else {
+      await addDoc(collection(db, "boletimDocumentos"), {
+        boletimId: boletim.id,
+        alunoId: boletim.alunoId,
+        alunoNome: boletim.alunoNome,
+        alunoMatricula: boletim.alunoMatricula,
+        turmaId: boletim.turmaId,
+        turmaNome: boletim.turmaNome,
+        anoLetivo: boletim.anoLetivo,
+        pdfBase64,
+        situacao: boletim.situacao,
+        mediaGeral: boletim.mediaGeral,
+        versao: 1,
+        criadoPor: userData.uid,
+        criadoPorNome: userData.nome,
+        dataCriacao: getNowBrasiliaISO(),
+      });
+    }
+  };
+
+  const removeBoletimDocumento = async (boletimId: string) => {
+    const existingDocsQuery = query(
+      collection(db, "boletimDocumentos"),
+      where("boletimId", "==", boletimId)
+    );
+    const existingDocs = await getDocs(existingDocsQuery);
+    
+    for (const docSnapshot of existingDocs.docs) {
+      await deleteDoc(doc(db, "boletimDocumentos", docSnapshot.id));
+    }
+  };
+
   const alunosDaTurma = useMemo(() => {
     if (!selectedTurmaId || !alunos) return [];
     return alunos
@@ -1486,7 +1647,7 @@ export function BoletimTab() {
                 <Button 
                   variant={boletim.liberado ? "secondary" : "default"} 
                   size="sm"
-                  onClick={() => toggleReleaseMutation.mutate({ boletimId: boletim.id, liberar: !boletim.liberado })}
+                  onClick={() => toggleReleaseMutation.mutate({ boletimId: boletim.id, liberar: !boletim.liberado, boletim })}
                   disabled={toggleReleaseMutation.isPending}
                 >
                   {boletim.liberado ? <Lock className="h-4 w-4 mr-1" /> : <Unlock className="h-4 w-4 mr-1" />}
@@ -1950,7 +2111,8 @@ export function BoletimTab() {
                                       size="icon"
                                       onClick={() => toggleReleaseMutation.mutate({ 
                                         boletimId: boletimAluno!.id, 
-                                        liberar: !boletimAluno!.liberado 
+                                        liberar: !boletimAluno!.liberado,
+                                        boletim: boletimAluno! 
                                       })}
                                       title={boletimAluno?.liberado ? "Bloquear boletim" : "Liberar boletim"}
                                       data-testid={`button-toggle-release-${aluno.uid}`}

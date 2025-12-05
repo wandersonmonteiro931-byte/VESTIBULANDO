@@ -850,6 +850,47 @@ export const insertBoletimConfigSchema = boletimConfigSchema.omit({ id: true, da
 export type BoletimConfig = z.infer<typeof boletimConfigSchema>;
 export type InsertBoletimConfig = z.infer<typeof insertBoletimConfigSchema>;
 
+// Documento de Boletim PDF - armazenado na documentação do aluno
+export const boletimDocumentoSchema = z.object({
+  id: z.string(),
+  
+  // Referência ao boletim original
+  boletimId: z.string(),
+  
+  // Informações do aluno
+  alunoId: z.string(),
+  alunoNome: z.string(),
+  alunoMatricula: z.string().optional(),
+  
+  // Informações da turma/ano
+  turmaId: z.string().optional(),
+  turmaNome: z.string(),
+  anoLetivo: z.string(),
+  
+  // PDF em base64
+  pdfBase64: z.string(),
+  
+  // Metadados
+  situacao: z.enum(["cursando", "aprovado", "reprovado"]),
+  mediaGeral: z.number().nullable().optional(),
+  
+  // Controle de versão
+  versao: z.number().default(1),
+  
+  // Quem criou/atualizou
+  criadoPor: z.string(),
+  criadoPorNome: z.string(),
+  dataCriacao: z.string(),
+  atualizadoPor: z.string().optional(),
+  atualizadoPorNome: z.string().optional(),
+  dataAtualizacao: z.string().optional(),
+});
+
+export const insertBoletimDocumentoSchema = boletimDocumentoSchema.omit({ id: true });
+
+export type BoletimDocumento = z.infer<typeof boletimDocumentoSchema>;
+export type InsertBoletimDocumento = z.infer<typeof insertBoletimDocumentoSchema>;
+
 // Registro de frequência/presença
 export const frequenciaSchema = z.object({
   id: z.string(),
