@@ -549,6 +549,26 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin() && isUserActive();
     }
     
+    // Boletim Documentos collection - PDFs dos boletins
+    match /boletimDocumentos/{documentoId} {
+      // Alunos só podem ver seus próprios documentos de boletins liberados
+      // Professores e diretores podem ver todos
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        isProfessor() ||
+        (isAluno() && resource.data.alunoId == request.auth.uid)
+      );
+      
+      // Apenas diretores podem criar documentos de boletim
+      allow create: if isAdmin() && isUserActive();
+      
+      // Apenas diretores podem atualizar documentos de boletim
+      allow update: if isAdmin() && isUserActive();
+      
+      // Apenas diretores podem deletar documentos de boletim
+      allow delete: if isAdmin() && isUserActive();
+    }
+    
     // Frequencias collection - registros de presença (frequencias e frequencia)
     match /frequencias/{frequenciaId} {
       // Alunos podem ver apenas suas próprias frequências
