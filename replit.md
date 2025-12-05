@@ -76,8 +76,24 @@ Directors can register custom subjects beyond the built-in list for use in sched
 - **Schedule Integration**: Custom subjects appear in schedule slot dialogs and can be assigned with or without professors based on their configuration
 - **Firestore Collection**: `materiasCustomizadas` stores custom subject records with nome, requerProfessor, ativo flags, and creator metadata
 
+#### Automated Attendance Notification System
+Real-time attendance tracking with automatic notifications when classes start. Features include:
+- **Professor-Initiated Attendance**: When a class starts, professors receive a modal notification to confirm their presence
+- **5-Minute Confirmation Window**: Countdown timer using server-persisted deadline (`limiteConfirmacao`) to prevent client-side bypass
+- **Student Notifications**: After professor confirms, registros are created for all approved students in the turma who then receive their own confirmation modals
+- **Automatic Absence Marking**: If confirmation is not received within the 5-minute window, users are automatically marked as absent (`ausenteAutomatico: true`)
+- **One-Way Transitions**: Students can only change status from "aguardando" to "presente" and confirmadoPeloAluno from false to true - no reversions allowed
+- **Attendance History**: Students can view their attendance history in the "Minhas Presenças" tab
+- **Security Hardening**: 
+  - Students cannot create chamadas or registros (only professors/directors)
+  - Students can only read chamadas for their own turma
+  - Students can only update their own registro with strict field restrictions
+  - Professors can only create chamadas with their own professorId
+  - `affectedKeys().hasOnly()` prevents field injection attacks
+- **Firestore Collections**: `chamadasDiarias` stores attendance sessions, `registrosPresencaChamada` stores individual student records, `resumosPresencaDia` stores daily summaries
+
 ### Data Model
-Core collections include `Usuarios` (users with roles, CPF, matricula, address), `Tarefas` (assignments), `Entregas` (submissions), `Turmas` (classes), `announcements`, `chatMessages`, `chatConversations`, `userBlocks`, `chatReports`, `avaliacoes` (evaluations), `avaliacaoQuestoes`, `avaliacaoTemplates`, `avaliacaoEntregas`, `avaliacaoAutorizacoesAtraso`, `boletins` (school reports), `boletimConfigs`, `frequencias`, `bimestresConfig`, `notasBimestre`, `disciplinaryRequests`, `configuracaoHorarios` (custom time slot configurations), `eventosCalendario` (calendar events), and `materiasCustomizadas` (custom subject records).
+Core collections include `Usuarios` (users with roles, CPF, matricula, address), `Tarefas` (assignments), `Entregas` (submissions), `Turmas` (classes), `announcements`, `chatMessages`, `chatConversations`, `userBlocks`, `chatReports`, `avaliacoes` (evaluations), `avaliacaoQuestoes`, `avaliacaoTemplates`, `avaliacaoEntregas`, `avaliacaoAutorizacoesAtraso`, `boletins` (school reports), `boletimConfigs`, `frequencias`, `bimestresConfig`, `notasBimestre`, `disciplinaryRequests`, `configuracaoHorarios` (custom time slot configurations), `eventosCalendario` (calendar events), `materiasCustomizadas` (custom subject records), `chamadasDiarias` (daily attendance sessions), `registrosPresencaChamada` (individual attendance records), and `resumosPresencaDia` (daily attendance summaries).
 
 ### System Design Choices
 - **Real-time Synchronization**: Achieved via Firebase Firestore `onSnapshot` listeners and `useRealtimeQuery` hook, ensuring instant data reflection across dashboards. TanStack Query is configured for automatic refetching.
@@ -97,4 +113,4 @@ The system requires the following Firebase configuration variables to be set as 
 These can be obtained from the Firebase Console under Project Settings > Your apps. `DATABASE_URL` is not used.
 
 ## Firestore Rules Deployment
-Firestore security rules are defined in `firestore.rules`. Any changes require manual deployment via the Firebase Console: navigate to Firestore Database > Rules, copy the content from `firestore.rules`, and publish. The rules were recently updated to support new collections for evaluations, school reports, bimesters, disciplinary requests, and customizable class scheduling (`configuracaoHorarios`, `eventosCalendario`).
+Firestore security rules are defined in `firestore.rules`. Any changes require manual deployment via the Firebase Console: navigate to Firestore Database > Rules, copy the content from `firestore.rules`, and publish. The rules were recently updated to support new collections for evaluations, school reports, bimesters, disciplinary requests, customizable class scheduling (`configuracaoHorarios`, `eventosCalendario`), and automated attendance (`chamadasDiarias`, `registrosPresencaChamada`, `resumosPresencaDia`). The attendance rules include strict security hardening with `affectedKeys().hasOnly()` to prevent field injection and role-based access controls.
