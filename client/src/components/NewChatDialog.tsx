@@ -261,9 +261,17 @@ export default function NewChatDialog({
                           {getUserTypeLabel(user.tipo)}
                         </Badge>
                       </div>
-                      {user.turma && (
+                      {user.tipo === "aluno" && user.turma && (
                         <p className="text-sm text-muted-foreground mt-1">
                           {turmas[user.turma] || user.turma}
+                        </p>
+                      )}
+                      {user.tipo === "professor" && user.turmas && user.turmas.length > 0 && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {user.turmas
+                            .map(turmaId => turmas[turmaId] || turmaId)
+                            .filter(name => name && !name.match(/^[a-zA-Z0-9]{20,}$/))
+                            .join(", ") || "Sem turmas"}
                         </p>
                       )}
                     </div>
