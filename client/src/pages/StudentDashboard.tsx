@@ -20,6 +20,7 @@ import { ChatNotificationBubble } from "@/components/ChatNotificationBubble";
 import { LogOut, FileText, Upload, Download, Calendar, Award, CheckCircle2, Clock, AlertTriangle, MessageCircle } from "lucide-react";
 import { AlunoAvaliacoesTab } from "@/components/AlunoAvaliacoesTab";
 import { AlunoBoletimTab } from "@/components/AlunoBoletimTab";
+import { AlunoPresencasTab } from "@/components/AlunoPresencasTab";
 import { HorarioViewer } from "@/components/HorarioViewer";
 import { Link } from "wouter";
 import { queryClient } from "@/lib/queryClient";
@@ -31,6 +32,7 @@ import { ptBR } from "date-fns/locale";
 import jsPDF from "jspdf";
 import assinaturaDeclaracaoUrl from "@assets/Captura de tela 2025-10-23 011843_1761193443162.png";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
+import { AttendanceConfirmationModal } from "@/components/AttendanceConfirmationModal";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
@@ -541,6 +543,10 @@ export default function StudentDashboard() {
                 />
               )}
 
+              {selectedSection === "presencas" && (
+                <AlunoPresencasTab />
+              )}
+
               {selectedSection === "avaliacoes" && (
                 <div className="space-y-4">
                   <AlunoAvaliacoesTab />
@@ -850,6 +856,7 @@ export default function StudentDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <AttendanceConfirmationModal userType="aluno" />
     </SidebarProvider>
   );
 }

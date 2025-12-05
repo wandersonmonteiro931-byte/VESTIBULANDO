@@ -30,6 +30,7 @@ import { HorarioViewer } from "@/components/HorarioViewer";
 import { PresencasTab } from "@/components/PresencasTab";
 import { PendingIndicator } from "@/components/PendingIndicator";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
+import { AttendanceConfirmationModal } from "@/components/AttendanceConfirmationModal";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Link } from "wouter";
 import { queryClient } from "@/lib/queryClient";
@@ -653,6 +654,7 @@ export default function TeacherDashboard() {
           </Form>
         </DialogContent>
       </Dialog>
+      <AttendanceConfirmationModal userType="professor" />
     </SidebarProvider>
   );
 }

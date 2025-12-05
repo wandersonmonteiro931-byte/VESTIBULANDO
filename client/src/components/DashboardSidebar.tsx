@@ -187,6 +187,7 @@ const alunoCategories: MenuCategory[] = [
     icon: GraduationCap,
     items: [
       { id: "horarios", label: "Meu Horário", icon: Clock },
+      { id: "presencas", label: "Minhas Presenças", icon: UserCheck },
     ],
   },
   {

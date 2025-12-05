@@ -32,6 +32,10 @@ service cloud.firestore {
       return userDocExists() && (getUserData().ativo == true || getUserData().ativo == 'true');
     }
     
+    function getUserTurma() {
+      return userDocExists() ? getUserData().turma : null;
+    }
+    
     // Usuarios collection
     match /usuarios/{userId} {
       // Qualquer usuário autenticado pode ler dados de outros usuários (necessário para status de presença no chat)
@@ -836,6 +840,86 @@ service cloud.firestore {
       allow update: if isAdmin() && isUserActive();
       
       // Diretores podem deletar eventos
+      allow delete: if isAdmin() && isUserActive();
+    }
+    
+    // Chamadas Diárias - sessões de presença automática
+    match /chamadasDiarias/{chamadaId} {
+      // Leitura: diretores podem ler todas, professores só suas próprias, alunos só da sua turma
+      allow read: if isAuthenticated() && isUserActive() && (
+        isAdmin() ||
+        (isProfessor() && resource.data.professorId == request.auth.uid) ||
+        (isAluno() && resource.data.turmaId == getUserTurma())
+      );
+      
+      // Criação: diretores podem criar qualquer, professores só podem criar com seu próprio professorId
+      allow create: if isAuthenticated() && isUserActive() && (
+        isAdmin() ||
+        (isProfessor() && request.resource.data.professorId == request.auth.uid)
+      );
+      
+      // Atualização: professores só podem atualizar suas próprias chamadas
+      // E só podem modificar campos de confirmação (professorConfirmou, professorConfirmouEm, professorAusente, status)
+      // Campos imutáveis após criação: data, turmaId, turmaNome, horarioId, horarioNome, horarioInicio, horarioFim, materia, professorId, professorNome, limiteConfirmacao, dataCriacao
+      allow update: if isAuthenticated() && isUserActive() && (
+        isAdmin() ||
+        (isProfessor() && 
+         resource.data.professorId == request.auth.uid &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['professorConfirmou', 'professorConfirmouEm', 'professorAusente', 'status']))
+      );
+      
+      // Apenas diretores podem deletar
+      allow delete: if isAdmin() && isUserActive();
+    }
+    
+    // Registros de Presença por Chamada - presença individual de alunos
+    match /registrosPresencaChamada/{registroId} {
+      // Leitura: alunos só podem ler seus próprios registros, professores e diretores podem ler todos
+      allow read: if isAuthenticated() && isUserActive() && (
+        isAdmin() ||
+        isProfessor() ||
+        (isAluno() && resource.data.alunoId == request.auth.uid)
+      );
+      
+      // Apenas diretores e professores podem criar registros
+      allow create: if (isAdmin() || isProfessor()) && isUserActive();
+      
+      // Alunos podem atualizar APENAS seu próprio registro e APENAS campos específicos:
+      // - status: "aguardando" -> "presente" (única transição permitida)
+      // - confirmadoPeloAluno: false -> true (apenas nesta direção)
+      // - dataConfirmacaoAluno: pode ser adicionado
+      // - dataAtualizacao: pode ser atualizado
+      // NENHUM outro campo pode ser modificado ou adicionado
+      // Diretores e professores podem atualizar qualquer registro
+      allow update: if isAuthenticated() && isUserActive() && (
+        isAdmin() ||
+        isProfessor() ||
+        (isAluno() && 
+         resource.data.alunoId == request.auth.uid &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'confirmadoPeloAluno', 'dataConfirmacaoAluno', 'dataAtualizacao']) &&
+         resource.data.status == "aguardando" &&
+         request.resource.data.status == "presente" &&
+         resource.data.confirmadoPeloAluno == false &&
+         request.resource.data.confirmadoPeloAluno == true)
+      );
+      
+      // Apenas diretores podem deletar
+      allow delete: if isAdmin() && isUserActive();
+    }
+    
+    // Resumo de Presenças do Dia - estatísticas diárias de presença
+    match /resumosPresencaDia/{resumoId} {
+      // Usuários podem ler seus próprios resumos, professores e diretores podem ler todos
+      allow read: if isAuthenticated() && isUserActive() && (
+        isAdmin() ||
+        isProfessor() ||
+        (isAluno() && resource.data.alunoId == request.auth.uid)
+      );
+      
+      // Sistema pode criar e atualizar resumos
+      allow create, update: if isAuthenticated() && isUserActive();
+      
+      // Apenas diretores podem deletar
       allow delete: if isAdmin() && isUserActive();
     }
   }
