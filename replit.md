@@ -58,8 +58,17 @@ Students receive a modal alert upon login if they have unacknowledged warnings. 
 #### Disciplinary Action Request System
 Professors can request warnings/suspensions, which administrators then approve or reject. Professors use a dedicated tab to select students, action types, and provide justification. They can view the history of their requests. Administrators have a tab to review pending requests, approve (which applies the action automatically) or reject them, and add comments. Security ensures professors only manage their own requests, while administrators have full control. Firestore collection `disciplinaryRequests` tracks these actions.
 
+#### Customizable Class Schedule System
+Directors can configure custom class time slots instead of using fixed schedules. Features include:
+- **Custom Time Configuration**: Add, edit, and delete time slots with start/end times and labels (e.g., "1ª Aula", "Intervalo")
+- **Multiple Configurations**: Support for multiple configurations with an "active" flag to select which one is in use
+- **Slot Activation**: Individual time slots can be enabled/disabled without deletion
+- **Programming Calendar**: Visual calendar (using react-big-calendar) showing scheduled classes with month/week/day views
+- **Integration**: ScheduleGrid and HorariosTab automatically use the active custom configuration; falls back to default HORARIOS_AULAS if none configured
+- **Firestore Collections**: `configuracaoHorarios` stores time slot configurations, `eventosCalendario` stores calendar events
+
 ### Data Model
-Core collections include `Usuarios` (users with roles, CPF, matricula, address), `Tarefas` (assignments), `Entregas` (submissions), `Turmas` (classes), `announcements`, `chatMessages`, `chatConversations`, `userBlocks`, `chatReports`, `avaliacoes` (evaluations), `avaliacaoQuestoes`, `avaliacaoTemplates`, `avaliacaoEntregas`, `avaliacaoAutorizacoesAtraso`, `boletins` (school reports), `boletimConfigs`, `frequencias`, `bimestresConfig`, `notasBimestre`, and `disciplinaryRequests`.
+Core collections include `Usuarios` (users with roles, CPF, matricula, address), `Tarefas` (assignments), `Entregas` (submissions), `Turmas` (classes), `announcements`, `chatMessages`, `chatConversations`, `userBlocks`, `chatReports`, `avaliacoes` (evaluations), `avaliacaoQuestoes`, `avaliacaoTemplates`, `avaliacaoEntregas`, `avaliacaoAutorizacoesAtraso`, `boletins` (school reports), `boletimConfigs`, `frequencias`, `bimestresConfig`, `notasBimestre`, `disciplinaryRequests`, `configuracaoHorarios` (custom time slot configurations), and `eventosCalendario` (calendar events).
 
 ### System Design Choices
 - **Real-time Synchronization**: Achieved via Firebase Firestore `onSnapshot` listeners and `useRealtimeQuery` hook, ensuring instant data reflection across dashboards. TanStack Query is configured for automatic refetching.
@@ -79,4 +88,4 @@ The system requires the following Firebase configuration variables to be set as 
 These can be obtained from the Firebase Console under Project Settings > Your apps. `DATABASE_URL` is not used.
 
 ## Firestore Rules Deployment
-Firestore security rules are defined in `firestore.rules`. Any changes require manual deployment via the Firebase Console: navigate to Firestore Database > Rules, copy the content from `firestore.rules`, and publish. The rules were recently updated to support new collections for evaluations, school reports, bimesters, and disciplinary requests.
+Firestore security rules are defined in `firestore.rules`. Any changes require manual deployment via the Firebase Console: navigate to Firestore Database > Rules, copy the content from `firestore.rules`, and publish. The rules were recently updated to support new collections for evaluations, school reports, bimesters, disciplinary requests, and customizable class scheduling (`configuracaoHorarios`, `eventosCalendario`).

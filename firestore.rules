@@ -793,5 +793,35 @@ service cloud.firestore {
       // Diretores podem deletar
       allow delete: if isAdmin() && isUserActive();
     }
+    
+    // Configuração de Horários - horários personalizáveis de aula
+    match /configuracaoHorarios/{configId} {
+      // Usuários ativos podem ler configurações de horários
+      allow read: if isAuthenticated() && isUserActive();
+      
+      // Apenas diretores podem criar configurações
+      allow create: if isAdmin() && isUserActive();
+      
+      // Apenas diretores podem atualizar configurações
+      allow update: if isAdmin() && isUserActive();
+      
+      // Apenas diretores podem deletar configurações
+      allow delete: if isAdmin() && isUserActive();
+    }
+    
+    // Eventos do Calendário - eventos para o calendário de programação
+    match /eventosCalendario/{eventoId} {
+      // Usuários ativos podem ler eventos
+      allow read: if isAuthenticated() && isUserActive();
+      
+      // Diretores podem criar eventos
+      allow create: if isAdmin() && isUserActive();
+      
+      // Diretores podem atualizar eventos
+      allow update: if isAdmin() && isUserActive();
+      
+      // Diretores podem deletar eventos
+      allow delete: if isAdmin() && isUserActive();
+    }
   }
 }
