@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { collection, addDoc, updateDoc, doc, getDocs, query, where, limit } from "firebase/firestore";
+import { collection, addDoc, updateDoc, doc, deleteDoc, getDocs, query, where, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
@@ -7,8 +7,11 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   type HorarioAula,
   type ConfiguracaoHorarios,
+  type MateriaCustomizada,
   HORARIOS_AULAS_PADRAO,
   DIAS_SEMANA,
+  MATERIAS_DISPONIVEIS,
+  MATERIAS_SEM_PROFESSOR,
 } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -35,6 +38,8 @@ import {
   GripVertical,
   ArrowUp,
   ArrowDown,
+  GraduationCap,
+  UserX,
 } from "lucide-react";
 import { getNowBrasiliaISO } from "@/lib/brasiliaTime";
 import { cn } from "@/lib/utils";
@@ -60,10 +65,20 @@ export function ConfiguracaoHorariosTab() {
   const [saving, setSaving] = useState(false);
   const [configId, setConfigId] = useState<string | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
+  
+  const [novaMateriaDialogOpen, setNovaMateriaDialogOpen] = useState(false);
+  const [novaMateriaNome, setNovaMateriaNome] = useState("");
+  const [novaMateriaRequerProfessor, setNovaMateriaRequerProfessor] = useState(true);
+  const [savingMateria, setSavingMateria] = useState(false);
 
   const { data: configs, isLoading: loadingConfigs, refetch: refetchConfigs } = useRealtimeQuery<ConfiguracaoHorarios>({
     collectionName: "configuracaoHorarios",
     queryKey: ["configuracaoHorarios"],
+  });
+
+  const { data: materiasCustomizadas, isLoading: loadingMaterias, refetch: refetchMaterias } = useRealtimeQuery<MateriaCustomizada>({
+    collectionName: "materiasCustomizadas",
+    queryKey: ["materiasCustomizadas"],
   });
 
   useEffect(() => {
@@ -217,6 +232,96 @@ export function ConfiguracaoHorariosTab() {
 
   const getTotalAulas = () => horarios.filter(h => h.tipo === "aula" && h.ativo).length;
   const getTotalIntervalos = () => horarios.filter(h => h.tipo === "intervalo" && h.ativo).length;
+
+  const handleAddMateria = async () => {
+    if (!userData || !novaMateriaNome.trim()) return;
+
+    const nomeNormalizado = novaMateriaNome.trim();
+    const jaExiste = 
+      MATERIAS_DISPONIVEIS.includes(nomeNormalizado as any) ||
+      MATERIAS_SEM_PROFESSOR.includes(nomeNormalizado as any) ||
+      materiasCustomizadas?.some(m => m.nome.toLowerCase() === nomeNormalizado.toLowerCase());
+
+    if (jaExiste) {
+      toast({
+        title: "Matéria já existe",
+        description: "Esta matéria já está cadastrada no sistema.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSavingMateria(true);
+    try {
+      await addDoc(collection(db, "materiasCustomizadas"), {
+        nome: nomeNormalizado,
+        requerProfessor: novaMateriaRequerProfessor,
+        ativo: true,
+        criadoPor: userData.uid,
+        criadoPorNome: userData.nome,
+        dataCriacao: getNowBrasiliaISO(),
+      });
+
+      toast({
+        title: "Matéria cadastrada!",
+        description: `A matéria "${nomeNormalizado}" foi adicionada com sucesso.`,
+      });
+
+      setNovaMateriaNome("");
+      setNovaMateriaRequerProfessor(true);
+      setNovaMateriaDialogOpen(false);
+      refetchMaterias();
+    } catch (error) {
+      console.error("Erro ao cadastrar matéria:", error);
+      toast({
+        title: "Erro ao cadastrar",
+        description: "Não foi possível cadastrar a matéria.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingMateria(false);
+    }
+  };
+
+  const handleToggleMateriaAtiva = async (materia: MateriaCustomizada) => {
+    try {
+      await updateDoc(doc(db, "materiasCustomizadas", materia.id), {
+        ativo: !materia.ativo,
+      });
+      toast({
+        title: materia.ativo ? "Matéria desativada" : "Matéria ativada",
+        description: `A matéria "${materia.nome}" foi ${materia.ativo ? "desativada" : "ativada"}.`,
+      });
+      refetchMaterias();
+    } catch (error) {
+      console.error("Erro ao atualizar matéria:", error);
+      toast({
+        title: "Erro ao atualizar",
+        description: "Não foi possível atualizar o status da matéria.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteMateria = async (materia: MateriaCustomizada) => {
+    if (!confirm(`Deseja realmente excluir a matéria "${materia.nome}"?`)) return;
+
+    try {
+      await deleteDoc(doc(db, "materiasCustomizadas", materia.id));
+      toast({
+        title: "Matéria excluída",
+        description: `A matéria "${materia.nome}" foi removida.`,
+      });
+      refetchMaterias();
+    } catch (error) {
+      console.error("Erro ao excluir matéria:", error);
+      toast({
+        title: "Erro ao excluir",
+        description: "Não foi possível excluir a matéria.",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (loadingConfigs) {
     return (
@@ -413,6 +518,176 @@ export function ConfiguracaoHorariosTab() {
           </div>
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <GraduationCap className="h-5 w-5" />
+                Matérias Customizadas
+              </CardTitle>
+              <CardDescription>
+                Cadastre matérias adicionais que não estão na lista padrão
+              </CardDescription>
+            </div>
+            <Button size="sm" onClick={() => setNovaMateriaDialogOpen(true)} data-testid="button-add-materia">
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Matéria
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <h4 className="text-sm font-medium mb-2">Matérias do Sistema (não editáveis)</h4>
+              <div className="flex flex-wrap gap-2">
+                {MATERIAS_DISPONIVEIS.map(m => (
+                  <Badge key={m} variant="outline">{m}</Badge>
+                ))}
+              </div>
+            </div>
+            
+            <div>
+              <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                <UserX className="h-4 w-4" />
+                Atividades sem Professor (não editáveis)
+              </h4>
+              <div className="flex flex-wrap gap-2">
+                {MATERIAS_SEM_PROFESSOR.map(m => (
+                  <Badge key={m} variant="secondary">{m}</Badge>
+                ))}
+              </div>
+            </div>
+
+            {materiasCustomizadas && materiasCustomizadas.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium mb-2">Suas Matérias Customizadas</h4>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Requer Professor</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="w-24 text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {materiasCustomizadas.map(materia => (
+                        <TableRow 
+                          key={materia.id}
+                          className={cn(!materia.ativo && "opacity-50")}
+                          data-testid={`row-materia-${materia.id}`}
+                        >
+                          <TableCell className="font-medium">{materia.nome}</TableCell>
+                          <TableCell>
+                            {materia.requerProfessor ? (
+                              <Badge variant="default">Sim</Badge>
+                            ) : (
+                              <Badge variant="secondary">Não</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={materia.ativo ? "default" : "outline"}>
+                              {materia.ativo ? "Ativa" : "Inativa"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleToggleMateriaAtiva(materia)}
+                                title={materia.ativo ? "Desativar" : "Ativar"}
+                                data-testid={`button-toggle-materia-${materia.id}`}
+                              >
+                                <Switch checked={materia.ativo} className="pointer-events-none" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteMateria(materia)}
+                                data-testid={`button-delete-materia-${materia.id}`}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+
+            {(!materiasCustomizadas || materiasCustomizadas.length === 0) && !loadingMaterias && (
+              <div className="text-center py-4 text-muted-foreground">
+                Nenhuma matéria customizada cadastrada. Clique em "Nova Matéria" para adicionar.
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Dialog open={novaMateriaDialogOpen} onOpenChange={setNovaMateriaDialogOpen}>
+        <DialogContent data-testid="dialog-nova-materia">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <GraduationCap className="h-5 w-5" />
+              Nova Matéria
+            </DialogTitle>
+            <DialogDescription>
+              Cadastre uma nova matéria para uso nas grades horárias
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="nome-materia">Nome da Matéria</Label>
+              <Input
+                id="nome-materia"
+                value={novaMateriaNome}
+                onChange={(e) => setNovaMateriaNome(e.target.value)}
+                placeholder="Ex: Robótica, Empreendedorismo"
+                data-testid="input-nome-materia"
+              />
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="requer-professor"
+                checked={novaMateriaRequerProfessor}
+                onCheckedChange={setNovaMateriaRequerProfessor}
+                data-testid="switch-requer-professor"
+              />
+              <Label htmlFor="requer-professor">
+                Requer atribuição de professor
+              </Label>
+            </div>
+
+            {!novaMateriaRequerProfessor && (
+              <p className="text-sm text-muted-foreground">
+                Esta matéria poderá ser alocada sem um professor responsável (similar a Revisão ou Corujão).
+              </p>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNovaMateriaDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleAddMateria}
+              disabled={!novaMateriaNome.trim() || savingMateria}
+              data-testid="button-confirm-materia"
+            >
+              {savingMateria ? "Salvando..." : "Cadastrar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent data-testid="dialog-edit-horario">
