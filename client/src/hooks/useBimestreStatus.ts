@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { where } from "firebase/firestore";
 import { useRealtimeQuery } from "./useRealtimeQuery";
 import type { BimestreConfig } from "@shared/schema";
-import { parseISO, isBefore, isAfter, isWithinInterval } from "date-fns";
+import { parseISO, isBefore, isAfter } from "date-fns";
 
 export type BimestreStatus = "aguardando" | "em_andamento" | "fechado" | "inativo" | "nao_configurado";
 
@@ -35,8 +35,39 @@ export function useBimestreStatus(ano: string): CurrentBimestreResult {
   const bimestresInfo = useMemo((): BimestreInfo[] => {
     const now = new Date();
     
-    return [1, 2, 3, 4].map((numero) => {
-      const config = bimestresConfigs?.find(b => b.numero === numero) || null;
+    const configsByNumero = new Map<number, BimestreConfig[]>();
+    if (bimestresConfigs) {
+      for (const config of bimestresConfigs) {
+        const existing = configsByNumero.get(config.numero) || [];
+        existing.push(config);
+        configsByNumero.set(config.numero, existing);
+      }
+    }
+    
+    const getNaturalStatus = (numero: number): BimestreInfo => {
+      const configs = configsByNumero.get(numero) || [];
+      
+      if (configs.length === 0) {
+        return {
+          numero,
+          status: "nao_configurado" as BimestreStatus,
+          isEditable: false,
+          config: null,
+          statusLabel: "Não configurado",
+        };
+      }
+      
+      if (configs.length > 1) {
+        return {
+          numero,
+          status: "nao_configurado" as BimestreStatus,
+          isEditable: false,
+          config: null,
+          statusLabel: "Configuração duplicada",
+        };
+      }
+      
+      const config = configs[0];
       
       if (!config) {
         return {
@@ -59,7 +90,6 @@ export function useBimestreStatus(ano: string): CurrentBimestreResult {
       }
 
       const dataInicio = parseISO(config.dataInicio);
-      const dataFim = parseISO(config.dataFim);
       const prazoNotas = parseISO(config.prazoLancamentoNotas);
 
       if (isBefore(now, dataInicio)) {
@@ -89,26 +119,34 @@ export function useBimestreStatus(ano: string): CurrentBimestreResult {
         config,
         statusLabel: "Em andamento",
       };
+    };
+
+    const naturalStatuses = [1, 2, 3, 4].map(getNaturalStatus);
+    
+    const emAndamentoList = naturalStatuses.filter(b => b.status === "em_andamento");
+    const highestEmAndamento = emAndamentoList.length > 0 
+      ? Math.max(...emAndamentoList.map(b => b.numero))
+      : null;
+    
+    return naturalStatuses.map((bimestre) => {
+      if (highestEmAndamento !== null && 
+          bimestre.numero < highestEmAndamento && 
+          (bimestre.status === "em_andamento" || 
+           (bimestre.config?.ativo && !isBefore(now, parseISO(bimestre.config.dataInicio))))) {
+        return {
+          ...bimestre,
+          status: "fechado" as BimestreStatus,
+          isEditable: false,
+          statusLabel: "Encerrado",
+        };
+      }
+      return bimestre;
     });
   }, [bimestresConfigs]);
 
   const currentBimestre = useMemo((): BimestreInfo | null => {
     const emAndamento = bimestresInfo.find(b => b.status === "em_andamento");
-    if (emAndamento) return emAndamento;
-    
-    const now = new Date();
-    for (const bimestre of bimestresInfo) {
-      if (bimestre.config) {
-        const dataInicio = parseISO(bimestre.config.dataInicio);
-        const dataFim = parseISO(bimestre.config.dataFim);
-        
-        if (isWithinInterval(now, { start: dataInicio, end: dataFim })) {
-          return bimestre;
-        }
-      }
-    }
-    
-    return null;
+    return emAndamento || null;
   }, [bimestresInfo]);
 
   const getBimestreStatus = (numero: number): BimestreInfo => {

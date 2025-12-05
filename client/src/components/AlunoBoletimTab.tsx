@@ -11,9 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { 
   GraduationCap, FileText, Printer, Eye, 
-  CheckCircle, AlertCircle, Clock, Search
+  CheckCircle, AlertCircle, Clock, Search, Lock, Unlock
 } from "lucide-react";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
+import { useBimestreStatus } from "@/hooks/useBimestreStatus";
 import type { Boletim } from "@shared/schema";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -30,6 +31,7 @@ export function AlunoBoletimTab() {
   const [selectedBoletim, setSelectedBoletim] = useState<Boletim | null>(null);
   const [filterAno, setFilterAno] = useState<string>("todos");
   const [filterBimestre, setFilterBimestre] = useState<string>("todos");
+  const [selectedAnoForStatus, setSelectedAnoForStatus] = useState(new Date().getFullYear().toString());
 
   const { data: boletins, isLoading: loadingBoletins } = useRealtimeQuery<Boletim>({
     collectionName: "boletins",
@@ -38,6 +40,12 @@ export function AlunoBoletimTab() {
     transform: (docs) => docs as Boletim[],
     enabled: !!userData?.uid,
   });
+
+  const { 
+    currentBimestre, 
+    bimestresInfo, 
+    getBimestreStatus 
+  } = useBimestreStatus(selectedAnoForStatus);
 
   const anosDisponiveis = useMemo(() => {
     if (!boletins) return [];
@@ -188,7 +196,12 @@ export function AlunoBoletimTab() {
 
       {boletins && boletins.length > 0 && (
         <div className="flex flex-wrap gap-4 items-center">
-          <Select value={filterAno} onValueChange={setFilterAno}>
+          <Select value={filterAno} onValueChange={(value) => {
+            setFilterAno(value);
+            if (value !== "todos") {
+              setSelectedAnoForStatus(value);
+            }
+          }}>
             <SelectTrigger className="w-[160px]" data-testid="filter-ano-aluno">
               <SelectValue placeholder="Filtrar por ano" />
             </SelectTrigger>
@@ -251,13 +264,45 @@ export function AlunoBoletimTab() {
                       </CardDescription>
                     </div>
                   </div>
-                  <Badge 
-                    variant={getSituacaoBadgeVariant(boletim.situacao)}
-                    className="flex items-center gap-1"
-                  >
-                    {getSituacaoIcon(boletim.situacao)}
-                    {boletim.situacao.charAt(0).toUpperCase() + boletim.situacao.slice(1)}
-                  </Badge>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {(() => {
+                      const bimNum = boletim.bimestreNumero || 1;
+                      const bimestreStatus = getBimestreStatus(bimNum);
+                      
+                      let statusBadgeVariant: "default" | "secondary" | "outline" = "secondary";
+                      let statusIcon = <Unlock className="h-3 w-3" />;
+                      let statusText = "Liberado";
+                      
+                      if (bimestreStatus.status === "fechado") {
+                        statusBadgeVariant = "secondary";
+                        statusIcon = <Lock className="h-3 w-3" />;
+                        statusText = "Encerrado";
+                      } else if (bimestreStatus.status === "em_andamento") {
+                        statusBadgeVariant = "default";
+                        statusIcon = <Clock className="h-3 w-3" />;
+                        statusText = "Em andamento";
+                      }
+                      
+                      return (
+                        <>
+                          <Badge variant="outline" className="bg-primary/10 border-primary text-primary">
+                            {bimNum}º Bimestre
+                          </Badge>
+                          <Badge 
+                            variant={getSituacaoBadgeVariant(boletim.situacao)}
+                            className="flex items-center gap-1"
+                          >
+                            {getSituacaoIcon(boletim.situacao)}
+                            {boletim.situacao.charAt(0).toUpperCase() + boletim.situacao.slice(1)}
+                          </Badge>
+                          <Badge variant={statusBadgeVariant} className="flex items-center gap-1">
+                            {statusIcon}
+                            {statusText}
+                          </Badge>
+                        </>
+                      );
+                    })()}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">

@@ -448,6 +448,11 @@ export function BoletimTab() {
         throw new Error("Selecione um bimestre válido (1-4)");
       }
 
+      if (!canEmitBoletim(selectedBimestreNumero, userData.tipo)) {
+        const bimestreStatus = getBimestreStatus(selectedBimestreNumero);
+        throw new Error(`Não é possível emitir boletim para o ${selectedBimestreNumero}º Bimestre. Status: ${bimestreStatus.statusLabel}. ${currentBimestre ? `Apenas o ${currentBimestre.numero}º Bimestre está aberto para emissão.` : "Nenhum bimestre está aberto para emissão no momento."}`);
+      }
+
       const aluno = alunos?.find(a => a.uid === selectedAlunoId);
       const turma = turmas?.find(t => t.id === selectedTurmaId);
       
@@ -517,6 +522,12 @@ export function BoletimTab() {
     mutationFn: async () => {
       if (!userData || !selectedBoletim) throw new Error("Erro ao atualizar");
 
+      const boletimBimestre = selectedBoletim.bimestreNumero || 1;
+      if (!canEditBimestre(boletimBimestre, userData.tipo)) {
+        const bimestreStatus = getBimestreStatus(boletimBimestre);
+        throw new Error(`Não é possível editar boletim do ${boletimBimestre}º Bimestre. Status: ${bimestreStatus.statusLabel}. ${currentBimestre ? `Apenas o ${currentBimestre.numero}º Bimestre está aberto para edição.` : "Nenhum bimestre está aberto para edição no momento."}`);
+      }
+
       const mediaGeral = calcularMediaGeral(materiasNotas);
       const presencasCalc = frequenciaDoAluno.presencas;
       const faltasCalc = frequenciaDoAluno.faltas;
@@ -571,6 +582,12 @@ export function BoletimTab() {
     mutationFn: async ({ boletimId, liberar, boletim }: { boletimId: string; liberar: boolean; boletim: Boletim }) => {
       if (!userData) throw new Error("Usuário não autenticado");
 
+      const boletimBimestre = boletim.bimestreNumero || 1;
+      if (!canEditBimestre(boletimBimestre, userData.tipo)) {
+        const bimestreStatus = getBimestreStatus(boletimBimestre);
+        throw new Error(`Não é possível ${liberar ? "liberar" : "bloquear"} boletim do ${boletimBimestre}º Bimestre. Status: ${bimestreStatus.statusLabel}.`);
+      }
+
       const updateData: any = {
         liberado: liberar,
         dataAtualizacao: getNowBrasiliaISO(),
@@ -611,7 +628,15 @@ export function BoletimTab() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (boletimId: string) => {
+    mutationFn: async ({ boletimId, boletim }: { boletimId: string; boletim: Boletim }) => {
+      if (!userData) throw new Error("Usuário não autenticado");
+
+      const boletimBimestre = boletim.bimestreNumero || 1;
+      if (!canEditBimestre(boletimBimestre, userData.tipo)) {
+        const bimestreStatus = getBimestreStatus(boletimBimestre);
+        throw new Error(`Não é possível excluir boletim do ${boletimBimestre}º Bimestre. Status: ${bimestreStatus.statusLabel}. ${currentBimestre ? `Apenas o ${currentBimestre.numero}º Bimestre está aberto para edição.` : "Nenhum bimestre está aberto para edição no momento."}`);
+      }
+
       await removeBoletimDocumento(boletimId);
       await deleteDoc(doc(db, "boletins", boletimId));
     },
@@ -639,6 +664,16 @@ export function BoletimTab() {
     if (!turma) return;
 
     const bimestreParaCriar = selectedBimestreNumero;
+
+    if (!canEmitBoletim(bimestreParaCriar, userData.tipo)) {
+      const bimestreStatus = getBimestreStatus(bimestreParaCriar);
+      toast({
+        title: "Bimestre não disponível",
+        description: `Não é possível criar boletins para o ${bimestreParaCriar}º Bimestre. Status: ${bimestreStatus.statusLabel}. ${currentBimestre ? `Apenas o ${currentBimestre.numero}º Bimestre está aberto para emissão.` : "Nenhum bimestre está aberto para emissão no momento."}`,
+        variant: "destructive",
+      });
+      return;
+    }
 
     const alunosParaCriar = alunosDaTurma.filter(aluno => {
       const jaTemBoletimBimestre = boletins?.some(
@@ -728,7 +763,7 @@ export function BoletimTab() {
   };
 
   const handleBulkRelease = async (liberar: boolean) => {
-    if (!selectedTurmaId) return;
+    if (!selectedTurmaId || !userData) return;
 
     const boletinsDaTurma = boletins?.filter(
       b => b.turmaId === selectedTurmaId && b.anoLetivo === anoLetivo && b.liberado !== liberar
@@ -743,12 +778,27 @@ export function BoletimTab() {
       return;
     }
 
+    const boletinsEditaveis = boletinsDaTurma.filter(b => {
+      const bimNum = b.bimestreNumero || 1;
+      return canEditBimestre(bimNum, userData.tipo);
+    });
+
+    if (boletinsEditaveis.length === 0) {
+      toast({
+        title: "Bimestre não disponível",
+        description: `Nenhum boletim pode ser ${liberar ? "liberado" : "bloqueado"} porque todos pertencem a bimestres encerrados ou não disponíveis.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setBulkCreating(true);
-    setBulkProgress({ current: 0, total: boletinsDaTurma.length });
+    setBulkProgress({ current: 0, total: boletinsEditaveis.length });
 
     let processed = 0;
+    let skipped = boletinsDaTurma.length - boletinsEditaveis.length;
 
-    for (const boletim of boletinsDaTurma) {
+    for (const boletim of boletinsEditaveis) {
       try {
         const updateData: any = {
           liberado: liberar,
@@ -766,7 +816,7 @@ export function BoletimTab() {
       } catch (error) {
         console.error(`Erro ao ${liberar ? "liberar" : "bloquear"} boletim:`, error);
       }
-      setBulkProgress({ current: processed, total: boletinsDaTurma.length });
+      setBulkProgress({ current: processed, total: boletinsEditaveis.length });
     }
 
     setBulkCreating(false);
@@ -775,7 +825,7 @@ export function BoletimTab() {
 
     toast({
       title: liberar ? "Boletins liberados!" : "Boletins bloqueados!",
-      description: `${processed} boletins ${liberar ? "liberados" : "bloqueados"} com sucesso.`,
+      description: `${processed} boletins ${liberar ? "liberados" : "bloqueados"} com sucesso.${skipped > 0 ? ` ${skipped} boletins ignorados (bimestre encerrado).` : ""}`,
     });
   };
 
@@ -1863,40 +1913,58 @@ export function BoletimTab() {
                 </div>
               </CardContent>
               <CardFooter className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" onClick={() => { setSelectedBoletim(boletim); setViewDialogOpen(true); }}>
-                  <Eye className="h-4 w-4 mr-1" />
-                  Ver
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => openEditDialog(boletim)}>
-                  <Edit className="h-4 w-4 mr-1" />
-                  Editar
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => handlePrintBoletim(boletim)}>
-                  <Printer className="h-4 w-4 mr-1" />
-                  Imprimir
-                </Button>
-                <Button 
-                  variant={boletim.liberado ? "secondary" : "default"} 
-                  size="sm"
-                  onClick={() => toggleReleaseMutation.mutate({ boletimId: boletim.id, liberar: !boletim.liberado, boletim })}
-                  disabled={toggleReleaseMutation.isPending}
-                >
-                  {boletim.liberado ? <Lock className="h-4 w-4 mr-1" /> : <Unlock className="h-4 w-4 mr-1" />}
-                  {boletim.liberado ? "Bloquear" : "Liberar"}
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="text-destructive hover:text-destructive"
-                  onClick={() => {
-                    if (confirm("Tem certeza que deseja excluir este boletim?")) {
-                      deleteMutation.mutate(boletim.id);
-                    }
-                  }}
-                >
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Excluir
-                </Button>
+                {(() => {
+                  const bimNum = boletim.bimestreNumero || 1;
+                  const podeEditar = canEditBimestre(bimNum, userData?.tipo);
+                  const bimestreStatus = getBimestreStatus(bimNum);
+                  
+                  return (
+                    <>
+                      <Button variant="outline" size="sm" onClick={() => { setSelectedBoletim(boletim); setViewDialogOpen(true); }}>
+                        <Eye className="h-4 w-4 mr-1" />
+                        Ver
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => openEditDialog(boletim)}
+                        disabled={!podeEditar}
+                        title={!podeEditar ? `${bimNum}º Bimestre está ${bimestreStatus.statusLabel}` : "Editar boletim"}
+                      >
+                        {!podeEditar ? <Lock className="h-4 w-4 mr-1" /> : <Edit className="h-4 w-4 mr-1" />}
+                        Editar
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handlePrintBoletim(boletim)}>
+                        <Printer className="h-4 w-4 mr-1" />
+                        Imprimir
+                      </Button>
+                      <Button 
+                        variant={boletim.liberado ? "secondary" : "default"} 
+                        size="sm"
+                        onClick={() => toggleReleaseMutation.mutate({ boletimId: boletim.id, liberar: !boletim.liberado, boletim })}
+                        disabled={toggleReleaseMutation.isPending || !podeEditar}
+                        title={!podeEditar ? `${bimNum}º Bimestre está ${bimestreStatus.statusLabel}` : ""}
+                      >
+                        {boletim.liberado ? <Lock className="h-4 w-4 mr-1" /> : <Unlock className="h-4 w-4 mr-1" />}
+                        {boletim.liberado ? "Bloquear" : "Liberar"}
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-destructive hover:text-destructive"
+                        disabled={!podeEditar}
+                        onClick={() => {
+                          if (confirm("Tem certeza que deseja excluir este boletim?")) {
+                            deleteMutation.mutate({ boletimId: boletim.id, boletim });
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Excluir
+                      </Button>
+                    </>
+                  );
+                })()}
               </CardFooter>
             </Card>
           ))}

@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
+import { useBimestreStatus } from "@/hooks/useBimestreStatus";
 import type { BimestreConfig, Turma, User, NotaBimestre, SolicitacaoEdicaoNota } from "@shared/schema";
 import { MATERIAS_BOLETIM } from "@shared/schema";
 import { format, isBefore, isAfter, parseISO } from "date-fns";
@@ -108,6 +109,13 @@ export function BimestresNotasTab() {
     enabled: !!(selectedTurma && selectedMateria && userData),
   });
 
+  const { 
+    currentBimestre, 
+    bimestresInfo, 
+    canEditBimestre, 
+    getBimestreStatus 
+  } = useBimestreStatus(selectedAno);
+
   const notasDataLoaded = useMemo(() => {
     if (!selectedBimestre || !selectedTurma || !selectedMateria) return false;
     return !loadingNotas && notasBimestre !== undefined;
@@ -170,10 +178,17 @@ export function BimestresNotasTab() {
     return isAfter(new Date(), prazo);
   }, [selectedBimestreData]);
 
+  const isBimestreAtual = useMemo(() => {
+    if (!selectedBimestreData) return false;
+    const bimestreStatus = getBimestreStatus(selectedBimestreData.numero);
+    return bimestreStatus.status === "em_andamento";
+  }, [selectedBimestreData, getBimestreStatus]);
+
   const canEdit = useMemo(() => {
+    if (!isBimestreAtual) return false;
     if (userData?.tipo === "diretor") return true;
     return !isPrazoExpirado;
-  }, [userData, isPrazoExpirado]);
+  }, [userData, isPrazoExpirado, isBimestreAtual]);
 
   useEffect(() => {
     setNotasTexto({});
@@ -344,6 +359,11 @@ export function BimestresNotasTab() {
 
       if (!bimestre.ativo) {
         throw new Error("Este bimestre está inativo e não permite lançamento de notas");
+      }
+
+      if (!canEditBimestre(bimestre.numero, userData.tipo)) {
+        const bimestreStatus = getBimestreStatus(bimestre.numero);
+        throw new Error(`Não é possível lançar notas para o ${bimestre.numero}º Bimestre. Status: ${bimestreStatus.statusLabel}. ${currentBimestre ? `Apenas o ${currentBimestre.numero}º Bimestre está aberto para edição.` : "Nenhum bimestre está aberto para edição no momento."}`);
       }
 
       const prazo = parseISO(bimestre.prazoLancamentoNotas);
@@ -637,7 +657,17 @@ export function BimestresNotasTab() {
               </div>
             </div>
 
-            {isPrazoExpirado && userData?.tipo !== "diretor" && (
+            {!isBimestreAtual && (
+              <div className="mt-4 p-3 bg-amber-500/10 rounded-lg flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                <Lock className="h-5 w-5" />
+                <span className="text-sm font-medium">
+                  Este bimestre está {getBimestreStatus(selectedBimestreData.numero).statusLabel.toLowerCase()}. 
+                  {currentBimestre ? ` Apenas o ${currentBimestre.numero}º Bimestre está aberto para edição.` : " Nenhum bimestre está aberto para edição no momento."}
+                </span>
+              </div>
+            )}
+
+            {isPrazoExpirado && isBimestreAtual && userData?.tipo !== "diretor" && (
               <div className="mt-4 p-3 bg-destructive/10 rounded-lg flex items-center gap-2 text-destructive">
                 <AlertTriangle className="h-5 w-5" />
                 <span className="text-sm font-medium">O prazo para lançamento de notas expirou</span>
