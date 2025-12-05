@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Search, FileText, Download, User as UserIcon, GraduationCap, BookOpen, Calendar, Phone, MapPin, Clock } from "lucide-react";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 import { useAuth } from "@/contexts/AuthContext";
-import type { User, LoginHistory, Tarefa, Entrega, DisciplinaryAction, BoletimDocumento } from "@shared/schema";
+import type { User, LoginHistory, Tarefa, Entrega, DisciplinaryAction, BoletimDocumento, Boletim } from "@shared/schema";
+import { formatNota } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -52,6 +53,11 @@ export function DocumentationTab() {
   const { data: boletimDocumentos } = useRealtimeQuery<BoletimDocumento>({
     collectionName: "boletimDocumentos",
     queryKey: ["/api/boletim-documentos"],
+  });
+
+  const { data: boletins } = useRealtimeQuery<Boletim>({
+    collectionName: "boletins",
+    queryKey: ["/api/boletins"],
   });
 
   // Função para converter para horário de Brasília
@@ -115,6 +121,13 @@ export function DocumentationTab() {
       .filter(b => b.alunoId === selectedUser.uid)
       .sort((a, b) => b.anoLetivo.localeCompare(a.anoLetivo));
   }, [selectedUser, boletimDocumentos]);
+
+  const userBoletinsLiberados = useMemo(() => {
+    if (!selectedUser || !boletins) return [];
+    return boletins
+      .filter(b => b.alunoId === selectedUser.uid && b.liberado)
+      .sort((a, b) => b.anoLetivo.localeCompare(a.anoLetivo));
+  }, [selectedUser, boletins]);
 
   // Verificar se pode ver a foto
   const canViewPhoto = (user: User) => {
@@ -355,51 +368,140 @@ export function DocumentationTab() {
     doc.setFont("helvetica", "bold");
     doc.text(`Total de Presenças: ${totalLogins}`, margin, yPos);
 
-    // SEÇÃO 5: BOLETIM (NOTAS)
-    doc.addPage();
-    yPos = 20;
-    
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.text("BOLETIM - NOTAS E AVALIAÇÕES", margin, yPos);
-    yPos += 7;
+    // SEÇÃO 5: BOLETIM ESCOLAR OFICIAL (apenas se houver boletim liberado pela diretoria)
+    if (userBoletinsLiberados.length > 0) {
+      for (const boletim of userBoletinsLiberados) {
+        doc.addPage();
+        yPos = 20;
+        
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "bold");
+        doc.text("BOLETIM ESCOLAR", pageWidth / 2, yPos, { align: "center" });
+        yPos += 6;
+        
+        doc.setFontSize(10);
+        doc.text(boletim.escola || "Preparatório Vestibulando", pageWidth / 2, yPos, { align: "center" });
+        yPos += 10;
+        
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Aluno: ${boletim.alunoNome}`, margin, yPos);
+        doc.text(`Matrícula: ${boletim.alunoMatricula || "-"}`, pageWidth - margin - 50, yPos);
+        yPos += 5;
+        
+        doc.text(`Turma: ${boletim.turmaNome}`, margin, yPos);
+        doc.text(`Ano Letivo: ${boletim.anoLetivo}`, pageWidth - margin - 50, yPos);
+        yPos += 8;
+        
+        const periodos = boletim.periodos || (boletim.periodoTipo === "bimestre" 
+          ? ["1º Bimestre", "2º Bimestre", "3º Bimestre", "4º Bimestre"] 
+          : ["1º Trimestre", "2º Trimestre", "3º Trimestre"]);
+        
+        const tableHead = [["Matéria", ...periodos, "Média Final"]];
+        const tableBody = boletim.materias.map(m => [
+          m.materia,
+          ...periodos.map(p => formatNota(m.notas[p])),
+          formatNota(m.mediaFinal),
+        ]);
+        
+        autoTable(doc, {
+          startY: yPos,
+          head: tableHead,
+          body: tableBody,
+          margin: { left: margin, right: margin },
+          styles: { fontSize: 7, cellPadding: 1.5 },
+          headStyles: { fillColor: [41, 128, 185], textColor: 255, fontSize: 7 },
+          alternateRowStyles: { fillColor: [245, 245, 245] },
+        });
+        
+        yPos = (doc as any).lastAutoTable.finalY + 8;
+        
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold");
+        doc.text(`Média Geral: ${formatNota(boletim.mediaGeral)}`, margin, yPos);
+        
+        const situacaoTexto = boletim.situacao === "aprovado" ? "APROVADO" : 
+                             boletim.situacao === "reprovado" ? "REPROVADO" : "CURSANDO";
+        doc.text(`Situação: ${situacaoTexto}`, pageWidth / 2, yPos);
+        yPos += 7;
+        
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.text(`Presenças: ${boletim.presencas || 0}`, margin, yPos);
+        doc.text(`Faltas: ${boletim.faltas || 0}`, margin + 40, yPos);
+        const frequencia = boletim.percentualPresenca !== null && boletim.percentualPresenca !== undefined 
+          ? boletim.percentualPresenca.toFixed(1).replace(".", ",") + "%" 
+          : "-";
+        doc.text(`Frequência: ${frequencia}`, margin + 80, yPos);
+        yPos += 7;
+        
+        if (boletim.observacoes) {
+          yPos += 3;
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(9);
+          doc.text("Observações:", margin, yPos);
+          yPos += 5;
+          doc.setFont("helvetica", "normal");
+          const obsLines = doc.splitTextToSize(boletim.observacoes, pageWidth - 2 * margin);
+          doc.text(obsLines, margin, yPos);
+        }
+        
+        if (boletim.liberadoEm) {
+          yPos = Math.min((doc as any).lastAutoTable.finalY + 50, pageHeight - 30);
+          doc.setFontSize(8);
+          doc.setTextColor(100, 100, 100);
+          doc.text(`Boletim liberado em: ${formatBrasiliaTime(boletim.liberadoEm).split(" ")[0]}`, margin, yPos);
+          if (boletim.liberadoPorNome) {
+            doc.text(`Por: ${boletim.liberadoPorNome}`, pageWidth / 2, yPos);
+          }
+          doc.setTextColor(0, 0, 0);
+        }
+      }
+    } else {
+      doc.addPage();
+      yPos = 20;
+      
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text("BOLETIM - NOTAS E AVALIAÇÕES", margin, yPos);
+      yPos += 7;
 
-    const boletimData = userEntregas.length > 0
-      ? userEntregas.map(e => [
-          e.tarefaTitulo,
-          formatBrasiliaTime(e.dataEnvio).split(" ")[0],
-          e.nota !== undefined ? e.nota.toFixed(1) : "",
-          e.status,
-        ])
-      : [["", "", "", ""]];
+      const boletimData = userEntregas.length > 0
+        ? userEntregas.map(e => [
+            e.tarefaTitulo,
+            formatBrasiliaTime(e.dataEnvio).split(" ")[0],
+            e.nota !== undefined ? e.nota.toFixed(1) : "",
+            e.status,
+          ])
+        : [["", "", "", ""]];
 
-    autoTable(doc, {
-      startY: yPos,
-      head: [["Tarefa/Avaliação", "Data", "Nota", "Status"]],
-      body: boletimData,
-      theme: "grid",
-      styles: { fontSize: 8, cellPadding: 2 },
-      headStyles: { fillColor: [41, 98, 255], fontSize: 9 },
-      columnStyles: {
-        0: { cellWidth: 80 },
-        1: { cellWidth: 30 },
-        2: { cellWidth: 20 },
-        3: { cellWidth: 30 },
-      },
-      margin: { left: margin, right: margin },
-    });
+      autoTable(doc, {
+        startY: yPos,
+        head: [["Tarefa/Avaliação", "Data", "Nota", "Status"]],
+        body: boletimData,
+        theme: "grid",
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [41, 98, 255], fontSize: 9 },
+        columnStyles: {
+          0: { cellWidth: 80 },
+          1: { cellWidth: 30 },
+          2: { cellWidth: 20 },
+          3: { cellWidth: 30 },
+        },
+        margin: { left: margin, right: margin },
+      });
 
-    yPos = (doc as any).lastAutoTable.finalY + 5;
+      yPos = (doc as any).lastAutoTable.finalY + 5;
 
-    // Calcular média
-    const notasValidas = userEntregas.filter(e => e.nota !== undefined).map(e => e.nota as number);
-    const media = notasValidas.length > 0
-      ? (notasValidas.reduce((a, b) => a + b, 0) / notasValidas.length).toFixed(2)
-      : "";
+      const notasValidas = userEntregas.filter(e => e.nota !== undefined).map(e => e.nota as number);
+      const media = notasValidas.length > 0
+        ? (notasValidas.reduce((a, b) => a + b, 0) / notasValidas.length).toFixed(2)
+        : "";
 
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.text(`Média Geral: ${media}`, margin, yPos);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.text(`Média Geral: ${media}`, margin, yPos);
+    }
 
     // SEÇÃO 6: ADVERTÊNCIAS E SUSPENSÕES
     doc.addPage();
