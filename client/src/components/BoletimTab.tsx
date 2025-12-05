@@ -2181,7 +2181,7 @@ export function BoletimTab() {
           </DialogHeader>
           
           <div className="space-y-4 overflow-y-auto max-h-[65vh]">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Turma</Label>
                 <Select value={selectedTurmaId} onValueChange={(v) => {
@@ -2210,18 +2210,6 @@ export function BoletimTab() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label>Bimestre (para visualização)</Label>
-                <Select value={periodoTipo} onValueChange={(v: "bimestre" | "trimestre") => setPeriodoTipo(v)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="bimestre">Bimestral</SelectItem>
-                    <SelectItem value="trimestre">Trimestral</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
 
             {/* Seletor de Bimestre para criação em lote - apenas bimestre vigente */}
