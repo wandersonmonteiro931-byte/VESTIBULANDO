@@ -63,12 +63,21 @@ Directors can configure custom class time slots instead of using fixed schedules
 - **Custom Time Configuration**: Add, edit, and delete time slots with start/end times and labels (e.g., "1ª Aula", "Intervalo")
 - **Multiple Configurations**: Support for multiple configurations with an "active" flag to select which one is in use
 - **Slot Activation**: Individual time slots can be enabled/disabled without deletion
+- **Active Weekdays**: Configure which days of the week have classes (including Sunday support)
 - **Programming Calendar**: Visual calendar (using react-big-calendar) showing scheduled classes with month/week/day views
 - **Integration**: ScheduleGrid and HorariosTab automatically use the active custom configuration; falls back to default HORARIOS_AULAS if none configured
 - **Firestore Collections**: `configuracaoHorarios` stores time slot configurations, `eventosCalendario` stores calendar events
 
+#### Custom Subjects System
+Directors can register custom subjects beyond the built-in list for use in schedule grids. Features include:
+- **Built-in Subjects Without Professor**: "Revisão" and "Corujão" are included by default as activities that don't require professor assignment
+- **Custom Subject Registration**: Directors can add new subjects with configurable `requerProfessor` flag
+- **Subject Management**: Activate/deactivate or delete custom subjects from the configuration panel
+- **Schedule Integration**: Custom subjects appear in schedule slot dialogs and can be assigned with or without professors based on their configuration
+- **Firestore Collection**: `materiasCustomizadas` stores custom subject records with nome, requerProfessor, ativo flags, and creator metadata
+
 ### Data Model
-Core collections include `Usuarios` (users with roles, CPF, matricula, address), `Tarefas` (assignments), `Entregas` (submissions), `Turmas` (classes), `announcements`, `chatMessages`, `chatConversations`, `userBlocks`, `chatReports`, `avaliacoes` (evaluations), `avaliacaoQuestoes`, `avaliacaoTemplates`, `avaliacaoEntregas`, `avaliacaoAutorizacoesAtraso`, `boletins` (school reports), `boletimConfigs`, `frequencias`, `bimestresConfig`, `notasBimestre`, `disciplinaryRequests`, `configuracaoHorarios` (custom time slot configurations), and `eventosCalendario` (calendar events).
+Core collections include `Usuarios` (users with roles, CPF, matricula, address), `Tarefas` (assignments), `Entregas` (submissions), `Turmas` (classes), `announcements`, `chatMessages`, `chatConversations`, `userBlocks`, `chatReports`, `avaliacoes` (evaluations), `avaliacaoQuestoes`, `avaliacaoTemplates`, `avaliacaoEntregas`, `avaliacaoAutorizacoesAtraso`, `boletins` (school reports), `boletimConfigs`, `frequencias`, `bimestresConfig`, `notasBimestre`, `disciplinaryRequests`, `configuracaoHorarios` (custom time slot configurations), `eventosCalendario` (calendar events), and `materiasCustomizadas` (custom subject records).
 
 ### System Design Choices
 - **Real-time Synchronization**: Achieved via Firebase Firestore `onSnapshot` listeners and `useRealtimeQuery` hook, ensuring instant data reflection across dashboards. TanStack Query is configured for automatic refetching.
