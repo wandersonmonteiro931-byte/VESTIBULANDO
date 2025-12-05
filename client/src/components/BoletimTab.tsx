@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { collection, addDoc, updateDoc, doc, where, deleteDoc, getDocs, query } from "firebase/firestore";
+import { collection, addDoc, updateDoc, doc, where, deleteDoc, getDocs, query, setDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -283,8 +283,15 @@ export function BoletimTab() {
   };
 
   const carregarNotasBimestresAnteriores = (bimestreAtual: number): BoletimNota[] => {
-    if (!boletins || !selectedAlunoId || !selectedTurmaId || bimestreAtual <= 1) {
-      return initializeMateriasNotasReturn();
+    const materiasBase: BoletimNota[] = MATERIAS_BOLETIM.map(materia => ({
+      materia,
+      notas: Object.fromEntries(periodos.map(p => [p, null])),
+      mediaFinal: null,
+      mediaEsperada: 7,
+    }));
+
+    if (!boletins || !selectedAlunoId || !selectedTurmaId) {
+      return materiasBase;
     }
 
     const boletinsAnteriores = boletins.filter(b => 
@@ -292,37 +299,47 @@ export function BoletimTab() {
       b.turmaId === selectedTurmaId && 
       b.anoLetivo === anoLetivo &&
       (b.bimestreNumero || 1) < bimestreAtual
-    ).sort((a, b) => (b.bimestreNumero || 1) - (a.bimestreNumero || 1));
+    ).sort((a, b) => (a.bimestreNumero || 1) - (b.bimestreNumero || 1));
 
-    const materias: BoletimNota[] = MATERIAS_BOLETIM.map(materia => {
-      const notas: Record<string, number | null> = {};
-      periodos.forEach(periodo => {
-        notas[periodo] = null;
-      });
-
-      boletinsAnteriores.forEach(boletim => {
-        const materiaDoBoletim = boletim.materias?.find(m => m.materia === materia);
-        if (materiaDoBoletim?.notas) {
-          Object.entries(materiaDoBoletim.notas).forEach(([periodo, nota]) => {
-            if (notas.hasOwnProperty(periodo) && nota !== null) {
-              notas[periodo] = nota;
+    boletinsAnteriores.forEach(boletim => {
+      boletim.materias?.forEach(materiaBoletim => {
+        const materiaTarget = materiasBase.find(m => m.materia === materiaBoletim.materia);
+        if (materiaTarget && materiaBoletim.notas) {
+          Object.entries(materiaBoletim.notas).forEach(([periodo, nota]) => {
+            if (materiaTarget.notas.hasOwnProperty(periodo) && nota !== null) {
+              materiaTarget.notas[periodo] = nota;
             }
           });
         }
       });
-
-      const valores = Object.values(notas).filter((n): n is number => n !== null);
-      const mediaFinal = valores.length > 0 ? valores.reduce((a, b) => a + b, 0) / valores.length : null;
-
-      return {
-        materia,
-        notas,
-        mediaFinal,
-        mediaEsperada: 7,
-      };
     });
 
-    return materias;
+    if (notasBimestre) {
+      const notasProfessoresAluno = notasBimestre.filter(n => 
+        n.alunoId === selectedAlunoId && 
+        n.status === "entregue" &&
+        n.turmaId === selectedTurmaId &&
+        n.ano === anoLetivo &&
+        n.bimestreNumero === bimestreAtual
+      );
+
+      notasProfessoresAluno.forEach(nota => {
+        const materiaTarget = materiasBase.find(m => m.materia === nota.materia);
+        if (materiaTarget) {
+          const periodoNome = `${nota.bimestreNumero}º Bimestre`;
+          if (materiaTarget.notas.hasOwnProperty(periodoNome)) {
+            materiaTarget.notas[periodoNome] = nota.nota;
+          }
+        }
+      });
+    }
+
+    materiasBase.forEach(materia => {
+      const valores = Object.values(materia.notas).filter((n): n is number => n !== null);
+      materia.mediaFinal = valores.length > 0 ? valores.reduce((a, b) => a + b, 0) / valores.length : null;
+    });
+
+    return materiasBase;
   };
 
   const initializeMateriasNotasReturn = (): BoletimNota[] => {
@@ -427,14 +444,10 @@ export function BoletimTab() {
       
       if (!aluno || !turma) throw new Error("Aluno ou turma não encontrados");
 
-      const boletimExistente = boletins?.find(b => 
-        b.alunoId === selectedAlunoId && 
-        b.turmaId === selectedTurmaId && 
-        b.anoLetivo === anoLetivo &&
-        (b.bimestreNumero || 1) === selectedBimestreNumero
-      );
-
-      if (boletimExistente) {
+      const boletimId = `${selectedAlunoId}_${selectedTurmaId}_${anoLetivo}_${selectedBimestreNumero}`;
+      
+      const existingDoc = await getDoc(doc(db, "boletins", boletimId));
+      if (existingDoc.exists()) {
         throw new Error(`Já existe um boletim para o ${selectedBimestreNumero}º Bimestre deste aluno nesta turma e ano. Use a opção de edição.`);
       }
 
@@ -446,6 +459,7 @@ export function BoletimTab() {
         : null;
 
       const boletimData: any = {
+        id: boletimId,
         alunoId: selectedAlunoId,
         alunoNome: aluno.nome,
         alunoMatricula: aluno.matricula,
@@ -470,7 +484,7 @@ export function BoletimTab() {
         dataCriacao: getNowBrasiliaISO(),
       };
 
-      await addDoc(collection(db, "boletins"), boletimData);
+      await setDoc(doc(db, "boletins", boletimId), boletimData);
       return boletimData;
     },
     onSuccess: () => {
@@ -615,17 +629,22 @@ export function BoletimTab() {
     const turma = turmas?.find(t => t.id === selectedTurmaId);
     if (!turma) return;
 
+    const bimestreParaCriar = selectedBimestreNumero;
+
     const alunosParaCriar = alunosDaTurma.filter(aluno => {
-      const jaTemBoletim = boletins?.some(
-        b => b.alunoId === aluno.uid && b.turmaId === selectedTurmaId && b.anoLetivo === anoLetivo
+      const jaTemBoletimBimestre = boletins?.some(
+        b => b.alunoId === aluno.uid && 
+             b.turmaId === selectedTurmaId && 
+             b.anoLetivo === anoLetivo &&
+             (b.bimestreNumero || 1) === bimestreParaCriar
       );
-      return !jaTemBoletim;
+      return !jaTemBoletimBimestre;
     });
 
     if (alunosParaCriar.length === 0) {
       toast({
         title: "Nenhum boletim para criar",
-        description: "Todos os alunos da turma já possuem boletim para este ano letivo.",
+        description: `Todos os alunos da turma já possuem boletim para o ${bimestreParaCriar}º Bimestre deste ano letivo.`,
         variant: "destructive",
       });
       return;
@@ -639,6 +658,14 @@ export function BoletimTab() {
 
     for (const aluno of alunosParaCriar) {
       try {
+        const boletimId = `${aluno.uid}_${selectedTurmaId}_${anoLetivo}_${bimestreParaCriar}`;
+        
+        const existingDoc = await getDoc(doc(db, "boletins", boletimId));
+        if (existingDoc.exists()) {
+          errors++;
+          continue;
+        }
+
         const notasAluno = getNotasFromProfessores(aluno.uid, selectedTurmaId);
         const mediaGeral = calcularMediaGeral(notasAluno);
         const freq = getFrequenciaAluno(aluno.uid);
@@ -647,6 +674,7 @@ export function BoletimTab() {
           : null;
 
         const boletimData: any = {
+          id: boletimId,
           alunoId: aluno.uid,
           alunoNome: aluno.nome,
           alunoMatricula: aluno.matricula,
@@ -654,6 +682,7 @@ export function BoletimTab() {
           turmaId: selectedTurmaId,
           turmaNome: turma.nome,
           anoLetivo,
+          bimestreNumero: bimestreParaCriar,
           periodoTipo,
           periodos,
           materias: notasAluno,
@@ -670,7 +699,7 @@ export function BoletimTab() {
           dataCriacao: getNowBrasiliaISO(),
         };
 
-        await addDoc(collection(db, "boletins"), boletimData);
+        await setDoc(doc(db, "boletins", boletimId), boletimData);
         created++;
       } catch (error) {
         console.error(`Erro ao criar boletim para ${aluno.nome}:`, error);
@@ -925,6 +954,14 @@ export function BoletimTab() {
     
     try {
       const turma = turmas?.find(t => t.id === selectedTurmaId);
+      const bimestreParaCriar = selectedBimestreNumero;
+      const boletimId = `${aluno.uid}_${selectedTurmaId}_${anoLetivo}_${bimestreParaCriar}`;
+      
+      const existingDoc = await getDoc(doc(db, "boletins", boletimId));
+      if (existingDoc.exists()) {
+        throw new Error(`Já existe um boletim para o ${bimestreParaCriar}º Bimestre deste aluno.`);
+      }
+      
       const notasAluno = getNotasFromProfessores(aluno.uid, selectedTurmaId);
       const mediaGeral = calcularMediaGeral(notasAluno);
       const freq = getFrequenciaAluno(aluno.uid);
@@ -932,13 +969,15 @@ export function BoletimTab() {
         ? (freq.presencas / (freq.presencas + freq.faltas)) * 100 
         : null;
       
-      const novoBoletim: Omit<Boletim, "id"> = {
+      const novoBoletim: any = {
+        id: boletimId,
         alunoId: aluno.uid,
         alunoNome: aluno.nome,
         alunoMatricula: aluno.matricula || "",
         turmaId: selectedTurmaId,
         turmaNome: turma?.nome || "",
         anoLetivo,
+        bimestreNumero: bimestreParaCriar,
         periodoTipo,
         periodos,
         materias: notasAluno,
@@ -949,11 +988,13 @@ export function BoletimTab() {
         situacao: "cursando",
         liberado: false,
         escola: "Preparatório Vestibulando",
+        criadoPor: userData.uid,
+        criadoPorNome: userData.nome,
         dataCriacao: getNowBrasiliaISO(),
         dataAtualizacao: getNowBrasiliaISO(),
       };
       
-      await addDoc(collection(db, "boletins"), novoBoletim);
+      await setDoc(doc(db, "boletins", boletimId), novoBoletim);
       
       queryClient.invalidateQueries({ queryKey: ["/api/boletins"] });
       
@@ -1745,6 +1786,9 @@ export function BoletimTab() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="bg-primary/10 border-primary text-primary">
+                      {boletim.bimestreNumero || 1}º Bimestre
+                    </Badge>
                     <Badge variant={boletim.liberado ? "default" : "secondary"}>
                       {boletim.liberado ? "Liberado" : "Não liberado"}
                     </Badge>
@@ -1891,7 +1935,14 @@ export function BoletimTab() {
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>Boletim Escolar</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              Boletim Escolar
+              {selectedBoletim && (
+                <Badge variant="outline" className="bg-primary/10 border-primary text-primary">
+                  {selectedBoletim.bimestreNumero || 1}º Bimestre
+                </Badge>
+              )}
+            </DialogTitle>
             <DialogDescription>
               {selectedBoletim && `${selectedBoletim.alunoNome} - ${selectedBoletim.turmaNome} - ${selectedBoletim.anoLetivo}`}
             </DialogDescription>
@@ -2057,6 +2108,31 @@ export function BoletimTab() {
               </div>
             </div>
 
+            {/* Seletor de Bimestre para criação em lote */}
+            {selectedTurmaId && (
+              <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg space-y-3">
+                <Label className="font-semibold">Selecione o Bimestre para Criação em Lote</Label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[1, 2, 3, 4].map((bim) => {
+                    const isSelected = selectedBimestreNumero === bim;
+                    return (
+                      <Button
+                        key={bim}
+                        variant={isSelected ? "default" : "outline"}
+                        onClick={() => setSelectedBimestreNumero(bim)}
+                        data-testid={`button-bulk-bimestre-${bim}`}
+                      >
+                        {bim}º Bimestre
+                      </Button>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Ao criar boletins em lote, todos serão criados para o {selectedBimestreNumero}º Bimestre
+                </p>
+              </div>
+            )}
+
             {selectedTurmaId && (
               <>
                 <div className="p-4 bg-muted rounded-lg space-y-3">
@@ -2079,30 +2155,27 @@ export function BoletimTab() {
                       <p className="text-xl font-bold">{alunosDaTurma.length}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Boletins Criados</p>
+                      <p className="text-muted-foreground">Boletins {selectedBimestreNumero}º Bim</p>
                       <p className="text-xl font-bold text-green-600">
-                        {boletins?.filter(b => b.turmaId === selectedTurmaId && b.anoLetivo === anoLetivo).length || 0}
+                        {boletins?.filter(b => b.turmaId === selectedTurmaId && b.anoLetivo === anoLetivo && (b.bimestreNumero || 1) === selectedBimestreNumero).length || 0}
                       </p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Sem Boletim</p>
+                      <p className="text-muted-foreground">Sem {selectedBimestreNumero}º Bim</p>
                       <p className="text-xl font-bold text-amber-600">
-                        {alunosDaTurma.filter(a => !boletins?.some(b => b.alunoId === a.uid && b.turmaId === selectedTurmaId && b.anoLetivo === anoLetivo)).length}
+                        {alunosDaTurma.filter(a => !boletins?.some(b => b.alunoId === a.uid && b.turmaId === selectedTurmaId && b.anoLetivo === anoLetivo && (b.bimestreNumero || 1) === selectedBimestreNumero)).length}
                       </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Liberados</p>
                       <p className="text-xl font-bold text-blue-600">
-                        {boletins?.filter(b => b.turmaId === selectedTurmaId && b.anoLetivo === anoLetivo && b.liberado).length || 0}
+                        {boletins?.filter(b => b.turmaId === selectedTurmaId && b.anoLetivo === anoLetivo && (b.bimestreNumero || 1) === selectedBimestreNumero && b.liberado).length || 0}
                       </p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Completos</p>
+                      <p className="text-muted-foreground">Total Boletins</p>
                       <p className="text-xl font-bold text-purple-600">
-                        {boletins?.filter(b => {
-                          if (b.turmaId !== selectedTurmaId || b.anoLetivo !== anoLetivo) return false;
-                          return checkBoletimComplete(b).complete;
-                        }).length || 0}
+                        {boletins?.filter(b => b.turmaId === selectedTurmaId && b.anoLetivo === anoLetivo).length || 0}
                       </p>
                     </div>
                   </div>
