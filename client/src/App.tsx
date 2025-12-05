@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { SuspensionAlertProvider } from "@/contexts/SuspensionAlertContext";
 import { WarningAlertProvider } from "@/contexts/WarningAlertContext";
+import { LiveClassProvider } from "@/contexts/LiveClassContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { FirebaseErrorScreen } from "@/components/FirebaseErrorScreen";
 import { SuspensionAlertOverlay } from "@/components/SuspensionAlertOverlay";
@@ -17,10 +18,14 @@ import TeacherDashboard from "@/pages/TeacherDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
 import ChatPage from "@/pages/ChatPage";
 import ChatConversationPage from "@/pages/ChatConversationPage";
+import LiveClassPage from "@/pages/LiveClassPage";
 import NotFound from "@/pages/not-found";
+import type { User } from "@shared/schema";
 
 function RootRedirect() {
-  const { userData, loading } = useAuth();
+  const auth = useAuth();
+  const userData: User | null = (auth && typeof auth === 'object' && 'userData' in auth) ? (auth.userData as User | null) : null;
+  const loading = (auth && typeof auth === 'object' && 'loading' in auth) ? auth.loading : true;
 
   if (loading) {
     return null;
@@ -43,7 +48,8 @@ function RootRedirect() {
 }
 
 function Router() {
-  const { firebaseError } = useAuth();
+  const auth = useAuth();
+  const firebaseError = (auth && typeof auth === 'object' && 'firebaseError' in auth) ? auth.firebaseError : null;
 
   if (firebaseError) {
     return <FirebaseErrorScreen error={firebaseError} />;
@@ -84,6 +90,12 @@ function Router() {
         </ProtectedRoute>
       </Route>
       
+      <Route path="/aula">
+        <ProtectedRoute allowedTypes={["aluno"]}>
+          <LiveClassPage />
+        </ProtectedRoute>
+      </Route>
+      
       <Route component={NotFound} />
     </Switch>
   );
@@ -96,12 +108,14 @@ function App() {
         <SuspensionAlertProvider>
           <WarningAlertProvider>
             <AuthProvider>
-              <TooltipProvider>
-                <Toaster />
-                <SuspensionAlertOverlay />
-                <WarningAlertOverlay />
-                <Router />
-              </TooltipProvider>
+              <LiveClassProvider>
+                <TooltipProvider>
+                  <Toaster />
+                  <SuspensionAlertOverlay />
+                  <WarningAlertOverlay />
+                  <Router />
+                </TooltipProvider>
+              </LiveClassProvider>
             </AuthProvider>
           </WarningAlertProvider>
         </SuspensionAlertProvider>

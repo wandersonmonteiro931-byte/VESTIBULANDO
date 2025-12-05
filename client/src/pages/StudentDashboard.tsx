@@ -33,6 +33,7 @@ import jsPDF from "jspdf";
 import assinaturaDeclaracaoUrl from "@assets/Captura de tela 2025-10-23 011843_1761193443162.png";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { AttendanceConfirmationModal } from "@/components/AttendanceConfirmationModal";
+import { LiveClassNotification } from "@/components/LiveClassNotification";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
@@ -857,6 +858,7 @@ export default function StudentDashboard() {
         </DialogContent>
       </Dialog>
       <AttendanceConfirmationModal userType="aluno" />
+      <LiveClassNotification />
     </SidebarProvider>
   );
 }

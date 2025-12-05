@@ -43,6 +43,7 @@ import {
   Award,
   Home,
   Clock,
+  Video,
 } from "lucide-react";
 
 export interface MenuItem {
@@ -150,6 +151,14 @@ const professorCategories: MenuCategory[] = [
     items: [
       { id: "horarios", label: "Meus Horários", icon: Clock },
       { id: "presencas", label: "Registro de Presenças", icon: UserCheck },
+    ],
+  },
+  {
+    id: "aula-ao-vivo",
+    label: "Aula ao Vivo",
+    icon: Video,
+    items: [
+      { id: "aulaAoVivo", label: "Gerenciar Aula", icon: Video },
     ],
   },
   {

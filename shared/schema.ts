@@ -1561,3 +1561,183 @@ export const insertResumoPresencaDiaSchema = resumoPresencaDiaSchema.omit({ id: 
 
 export type ResumoPresencaDia = z.infer<typeof resumoPresencaDiaSchema>;
 export type InsertResumoPresencaDia = z.infer<typeof insertResumoPresencaDiaSchema>;
+
+// ==================== SISTEMA DE AULA AO VIVO COM MONITORAMENTO DE PRESENÇA ====================
+
+// Sessão de aula ao vivo (criada quando professor inicia a aula)
+export const sessaoAulaAoVivoSchema = z.object({
+  id: z.string(),
+  
+  // Referência à chamada diária
+  chamadaId: z.string().optional(),
+  
+  // Dados da aula
+  turmaId: z.string(),
+  turmaNome: z.string(),
+  materia: z.string(),
+  horarioId: z.string(),
+  horarioNome: z.string(),
+  data: z.string(), // YYYY-MM-DD
+  
+  // Professor
+  professorId: z.string(),
+  professorNome: z.string(),
+  
+  // Status da sessão
+  status: z.enum(["aguardando", "em_andamento", "finalizada", "cancelada"]).default("aguardando"),
+  
+  // Timestamps
+  dataInicio: z.string().optional(), // Quando professor iniciou
+  dataFim: z.string().optional(), // Quando professor finalizou
+  
+  // Configurações de presença
+  tempoMaxAusencia: z.number().default(300), // 5 minutos em segundos
+  tempoInatividade: z.number().default(180), // 3 minutos em segundos
+  tempoConfirmacao: z.number().default(120), // 2 minutos para confirmar
+  
+  // Metadados
+  dataCriacao: z.string(),
+});
+
+export const insertSessaoAulaAoVivoSchema = sessaoAulaAoVivoSchema.omit({ id: true, dataCriacao: true });
+
+export type SessaoAulaAoVivo = z.infer<typeof sessaoAulaAoVivoSchema>;
+export type InsertSessaoAulaAoVivo = z.infer<typeof insertSessaoAulaAoVivoSchema>;
+
+// Presença do aluno na aula ao vivo (monitoramento em tempo real)
+export const presencaAulaAoVivoSchema = z.object({
+  id: z.string(),
+  
+  // Referências
+  sessaoId: z.string(),
+  turmaId: z.string(),
+  
+  // Dados do aluno
+  alunoId: z.string(),
+  alunoNome: z.string(),
+  alunoMatricula: z.string().optional(),
+  
+  // Status de presença
+  status: z.enum(["na_sala", "ausente", "removido", "liberado"]).default("na_sala"),
+  
+  // Controle de tempo
+  dataEntrada: z.string().optional(), // Quando entrou na sala
+  dataSaida: z.string().optional(), // Quando saiu/foi removido
+  tempoTotalAusente: z.number().default(0), // Tempo total ausente em segundos
+  ultimaAtividade: z.string().optional(), // Última interação detectada
+  
+  // Histórico de ausências (cada vez que saiu da aba)
+  historicoAusencias: z.array(z.object({
+    inicio: z.string(),
+    fim: z.string().optional(),
+    duracao: z.number().optional(),
+    motivo: z.enum(["troca_aba", "inatividade", "fechou_navegador"]),
+  })).default([]),
+  
+  // Confirmações de presença
+  confirmacoesSolicitadas: z.number().default(0),
+  confirmacoesRespondidas: z.number().default(0),
+  
+  // Motivo da remoção (se removido)
+  motivoRemocao: z.enum(["ausencia_prolongada", "inatividade", "saida_nao_autorizada"]).optional(),
+  
+  // Liberação autorizada
+  liberadoPor: z.string().optional(),
+  liberadoPorNome: z.string().optional(),
+  dataLiberacao: z.string().optional(),
+  
+  // Resultado final
+  presencaValidada: z.boolean().default(false),
+  
+  // Metadados
+  dataCriacao: z.string(),
+  dataAtualizacao: z.string().optional(),
+});
+
+export const insertPresencaAulaAoVivoSchema = presencaAulaAoVivoSchema.omit({ id: true, dataCriacao: true });
+
+export type PresencaAulaAoVivo = z.infer<typeof presencaAulaAoVivoSchema>;
+export type InsertPresencaAulaAoVivo = z.infer<typeof insertPresencaAulaAoVivoSchema>;
+
+// Solicitação de saída da aula
+export const solicitacaoSaidaSchema = z.object({
+  id: z.string(),
+  
+  // Referências
+  sessaoId: z.string(),
+  presencaId: z.string(),
+  
+  // Dados do aluno
+  alunoId: z.string(),
+  alunoNome: z.string(),
+  alunoMatricula: z.string().optional(),
+  
+  // Dados da aula
+  turmaId: z.string(),
+  turmaNome: z.string(),
+  materia: z.string(),
+  
+  // Professor da aula
+  professorId: z.string(),
+  professorNome: z.string(),
+  
+  // Status da solicitação
+  status: z.enum(["pendente", "aprovada", "recusada"]).default("pendente"),
+  
+  // Motivo do aluno (opcional)
+  motivoAluno: z.string().optional(),
+  
+  // Resposta
+  respondidoPor: z.string().optional(),
+  respondidoPorNome: z.string().optional(),
+  dataResposta: z.string().optional(),
+  comentarioResposta: z.string().optional(),
+  
+  // Metadados
+  dataSolicitacao: z.string(),
+});
+
+export const insertSolicitacaoSaidaSchema = solicitacaoSaidaSchema.omit({ id: true });
+
+export type SolicitacaoSaida = z.infer<typeof solicitacaoSaidaSchema>;
+export type InsertSolicitacaoSaida = z.infer<typeof insertSolicitacaoSaidaSchema>;
+
+// Notificação de presença (para alertas em tempo real)
+export const notificacaoPresencaSchema = z.object({
+  id: z.string(),
+  
+  // Destinatário
+  destinatarioId: z.string(),
+  destinatarioTipo: z.enum(["aluno", "professor", "diretor"]),
+  
+  // Tipo de notificação
+  tipo: z.enum([
+    "confirmacao_presenca", // Você ainda está aí?
+    "aviso_ausencia", // Você saiu da aula
+    "remocao_falta", // Você foi removido por falta
+    "solicitacao_saida", // Aluno pediu para sair (para professor)
+    "saida_aprovada", // Professor aprovou saída
+    "saida_recusada", // Professor recusou saída
+  ]),
+  
+  // Referências
+  sessaoId: z.string().optional(),
+  presencaId: z.string().optional(),
+  solicitacaoSaidaId: z.string().optional(),
+  
+  // Conteúdo
+  titulo: z.string(),
+  mensagem: z.string(),
+  
+  // Status
+  lida: z.boolean().default(false),
+  lidaEm: z.string().optional(),
+  
+  // Ação necessária
+  requerAcao: z.boolean().default(false),
+  acaoRealizada: z.boolean().default(false),
+  
+  // Metadados
+  dataCriacao: z.string(),
+  expiraEm: z.string().optional(), // Para notificações com tempo limite
+});
