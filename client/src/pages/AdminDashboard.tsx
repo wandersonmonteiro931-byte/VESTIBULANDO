@@ -2554,8 +2554,8 @@ export default function AdminDashboard() {
             />
           )}
 
-          <main className="flex-1 overflow-auto p-3 sm:p-6">
-            <div className="max-w-7xl mx-auto">
+          <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-6">
+            <div className="w-full">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 mb-6 sm:mb-8">
                 <Card className="border-primary/20 bg-gradient-to-br from-card to-primary/5 hover-elevate">
                   <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
@@ -2642,7 +2642,7 @@ export default function AdminDashboard() {
                     <Skeleton className="h-12 w-full" />
                   </div>
                 ) : pendingUsers && pendingUsers.length > 0 ? (
-                  <div className="w-full overflow-x-auto">
+                  <div className="w-full">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -2842,7 +2842,7 @@ export default function AdminDashboard() {
                     .sort((a, b) => a.nome.localeCompare(b.nome)); // Ordenação alfabética
                   
                   return filteredAlunos.length > 0 ? (
-                  <div className="w-full overflow-x-auto">
+                  <div className="w-full">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -3035,39 +3035,64 @@ export default function AdminDashboard() {
                   });
                   
                   return filteredProfessores.length > 0 ? (
-                    <div className="w-full overflow-x-auto">
+                    <div className="w-full">
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="min-w-[120px]">Nome</TableHead>
-                            <TableHead className="hidden lg:table-cell">Email</TableHead>
-                            <TableHead className="hidden md:table-cell">Tipo</TableHead>
+                            <TableHead>Nome</TableHead>
+                            <TableHead className="hidden xl:table-cell">Email</TableHead>
+                            <TableHead className="hidden lg:table-cell">Tipo</TableHead>
                             <TableHead className="hidden xl:table-cell">Turmas</TableHead>
-                            <TableHead className="hidden md:table-cell">Matrícula</TableHead>
+                            <TableHead className="hidden lg:table-cell">Matrícula</TableHead>
                             <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Ações</TableHead>
+                            <TableHead className="text-right w-[120px]">Ações</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {filteredProfessores.map((user: User) => (
                             <TableRow key={user.uid} data-testid={`row-professor-${user.uid}`}>
-                              <TableCell className="font-medium">
-                                <div className="flex flex-col">
-                                  <span className="truncate max-w-[150px] lg:max-w-none">{user.nome}</span>
-                                  <span className="text-xs text-muted-foreground lg:hidden truncate max-w-[150px]">{user.email}</span>
+                              <TableCell className="font-medium max-w-[200px]">
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="truncate font-medium">{user.nome}</span>
+                                  <span className="text-xs text-muted-foreground xl:hidden truncate">{user.email}</span>
+                                  <div className="flex flex-wrap gap-1 lg:hidden">
+                                    <Badge variant={user.tipo === "diretor" ? "default" : "secondary"} className="text-xs">
+                                      {user.tipo}
+                                    </Badge>
+                                    {user.matricula && (
+                                      <code className="text-xs bg-muted px-1 py-0.5 rounded">{user.matricula}</code>
+                                    )}
+                                  </div>
+                                  {user.turmas && user.turmas.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 xl:hidden mt-0.5">
+                                      {(() => {
+                                        const uniqueTurmas = Array.from(new Set(user.turmas.map((t: string) => getTurmaNome(t))));
+                                        return uniqueTurmas.slice(0, 3).map((turmaNome: string) => (
+                                          <Badge key={turmaNome} variant="outline" className="text-xs">
+                                            {turmaNome}
+                                          </Badge>
+                                        ));
+                                      })()}
+                                      {user.turmas.length > 3 && (
+                                        <Badge variant="outline" className="text-xs">
+                                          +{user.turmas.length - 3}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
                               </TableCell>
-                              <TableCell className="hidden lg:table-cell">
-                                <span className="truncate max-w-[200px] block">{user.email}</span>
+                              <TableCell className="hidden xl:table-cell">
+                                <span className="truncate max-w-[180px] block text-sm">{user.email}</span>
                               </TableCell>
-                              <TableCell className="hidden md:table-cell">
+                              <TableCell className="hidden lg:table-cell">
                                 <Badge variant={user.tipo === "diretor" ? "default" : "secondary"}>
                                   {user.tipo}
                                 </Badge>
                               </TableCell>
                               <TableCell className="hidden xl:table-cell">
                                 {user.turmas && user.turmas.length > 0 ? (
-                                  <div className="flex flex-wrap gap-1 max-w-[150px]">
+                                  <div className="flex flex-wrap gap-1 max-w-[120px]">
                                     {(() => {
                                       const uniqueTurmas = Array.from(new Set(user.turmas.map((t: string) => getTurmaNome(t))));
                                       return (
@@ -3092,7 +3117,7 @@ export default function AdminDashboard() {
                                   <span className="text-muted-foreground">-</span>
                                 )}
                               </TableCell>
-                              <TableCell className="hidden md:table-cell">{user.matricula || "-"}</TableCell>
+                              <TableCell className="hidden lg:table-cell">{user.matricula || "-"}</TableCell>
                               <TableCell>
                                 {user.bloqueado ? (
                                   <Badge variant="outline" className="bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400 text-xs">
@@ -3207,7 +3232,7 @@ export default function AdminDashboard() {
                   />
                 </div>
               </CardHeader>
-              <CardContent className="p-0 sm:p-6 overflow-x-auto">
+              <CardContent className="p-0 sm:p-6">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -3555,7 +3580,7 @@ export default function AdminDashboard() {
                     <Skeleton className="h-12 w-full" />
                   </div>
                 ) : users && users.length > 0 ? (
-                  <div className="w-full overflow-x-auto">
+                  <div className="w-full">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -7218,7 +7243,7 @@ export default function AdminDashboard() {
               )}
 
               {users && users.filter(u => u.turma === selectedTurmaForStudents.id && u.tipo === "aluno").length > 0 ? (
-                <div className="border rounded-lg overflow-x-auto">
+                <div className="border rounded-lg">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -7343,7 +7368,7 @@ export default function AdminDashboard() {
           
           <div className="space-y-4">
             {users && users.filter(u => u.tipo === "aluno" && u.status === "aprovado").length > 0 ? (
-              <div className="border rounded-lg overflow-x-auto">
+              <div className="border rounded-lg">
                 <Table>
                   <TableHeader>
                     <TableRow>
