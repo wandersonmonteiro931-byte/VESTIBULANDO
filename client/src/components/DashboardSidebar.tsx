@@ -42,6 +42,7 @@ import {
   FileCheck,
   Award,
   Home,
+  Clock,
 } from "lucide-react";
 
 export interface MenuItem {
@@ -74,6 +75,7 @@ const diretorCategories: MenuCategory[] = [
     icon: Users,
     items: [
       { id: "aprovacoes", label: "Aprovações", icon: UserCheck },
+      { id: "lista-espera", label: "Lista de Espera", icon: Clock },
       { id: "usuarios", label: "Alunos", icon: Users },
       { id: "professores", label: "Professores", icon: School },
       { id: "senhas-logins", label: "Senhas", icon: Key },
