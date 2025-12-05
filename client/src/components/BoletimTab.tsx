@@ -1622,19 +1622,25 @@ export function BoletimTab() {
                 {materiasNotas.map((materia, idx) => (
                   <TableRow key={materia.materia}>
                     <TableCell className="font-medium">{materia.materia}</TableCell>
-                    {periodos.map(p => (
-                      <TableCell key={p} className="p-1">
-                        <Input
-                          type="text"
-                          inputMode="decimal"
-                          className="w-full text-center h-8"
-                          placeholder="0,0"
-                          value={getNotaBoletimDisplayValue(idx, p, materia.notas[p])}
-                          onChange={(e) => handleNotaChange(idx, p, e.target.value)}
-                          data-testid={`input-nota-${idx}-${p}`}
-                        />
-                      </TableCell>
-                    ))}
+                    {periodos.map(p => {
+                      const bimestreNumero = parseInt(p.match(/(\d+)/)?.[1] || "0");
+                      const isCurrentBimestre = currentBimestre?.numero === bimestreNumero;
+                      const podeEditar = canEmitBoletim(bimestreNumero, userData?.tipo);
+                      return (
+                        <TableCell key={p} className="p-1">
+                          <Input
+                            type="text"
+                            inputMode="decimal"
+                            className={`w-full text-center h-8 ${!podeEditar ? "bg-muted cursor-not-allowed opacity-60" : ""}`}
+                            placeholder="0,0"
+                            value={getNotaBoletimDisplayValue(idx, p, materia.notas[p])}
+                            onChange={(e) => podeEditar && handleNotaChange(idx, p, e.target.value)}
+                            disabled={!podeEditar}
+                            data-testid={`input-nota-${idx}-${p}`}
+                          />
+                        </TableCell>
+                      );
+                    })}
                     <TableCell className="text-center font-semibold">
                       {formatNota(materia.mediaFinal)}
                     </TableCell>
