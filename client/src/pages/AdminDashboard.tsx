@@ -2556,49 +2556,6 @@ export default function AdminDashboard() {
 
           <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-6">
             <div className="w-full">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 mb-6 sm:mb-8">
-                <Card className="border-primary/20 bg-gradient-to-br from-card to-primary/5 hover-elevate">
-                  <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
-                    <CardTitle className="text-sm font-semibold">Total de Alunos</CardTitle>
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                      <Users className="h-5 w-5 text-primary" />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold text-primary" data-testid="stat-users">{stats.totalUsers}</div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {stats.alunos} alunos, {stats.professores} professores
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-blue-200/50 dark:border-blue-900/50 bg-gradient-to-br from-card to-blue-50/30 dark:to-blue-950/10 hover-elevate">
-                  <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
-                    <CardTitle className="text-sm font-semibold">Turmas</CardTitle>
-                    <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg">
-                      <BookOpen className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold text-blue-600 dark:text-blue-400" data-testid="stat-turmas">{stats.turmas}</div>
-                    <p className="text-xs text-muted-foreground mt-1">Turmas ativas</p>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-green-200/50 dark:border-green-900/50 bg-gradient-to-br from-card to-green-50/30 dark:to-green-950/10 hover-elevate">
-                  <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
-                    <CardTitle className="text-sm font-semibold">Atividades</CardTitle>
-                    <div className="p-2 bg-green-100 dark:bg-green-900/40 rounded-lg">
-                      <FileText className="h-5 w-5 text-green-600 dark:text-green-400" />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold text-green-600 dark:text-green-400" data-testid="stat-atividades">{stats.tarefas}</div>
-                    <p className="text-xs text-muted-foreground mt-1">{stats.entregas} entregas</p>
-                  </CardContent>
-                </Card>
-              </div>
-
               {selectedSection === "aprovacoes" && (
                 <div className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
