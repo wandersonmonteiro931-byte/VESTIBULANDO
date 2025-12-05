@@ -271,36 +271,28 @@ export function InternalDocumentsTab() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-10 hidden lg:table-cell">#</TableHead>
                     <TableHead>Nome</TableHead>
-                    <TableHead className="hidden xl:table-cell">CPF</TableHead>
-                    <TableHead className="hidden xl:table-cell">Matrícula</TableHead>
-                    <TableHead className="hidden xl:table-cell">Turma</TableHead>
                     <TableHead>Tipo</TableHead>
-                    <TableHead className="hidden xl:table-cell">Email</TableHead>
-                    <TableHead className="hidden lg:table-cell">Data Aceitação</TableHead>
+                    <TableHead className="hidden 2xl:table-cell">Data Aceitação</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredAcceptances.map((acceptance, index) => (
                     <TableRow key={acceptance.uid} data-testid={`row-acceptance-${acceptance.uid}`}>
-                      <TableCell className="font-medium text-muted-foreground hidden lg:table-cell">
-                        {index + 1}
-                      </TableCell>
-                      <TableCell className="font-medium max-w-[200px]" data-testid={`text-name-${acceptance.uid}`}>
+                      <TableCell className="font-medium" data-testid={`text-name-${acceptance.uid}`}>
                         <div className="flex flex-col gap-0.5">
-                          <span className="truncate font-medium">{acceptance.nome}</span>
-                          <span className="text-xs text-muted-foreground xl:hidden truncate">{acceptance.email}</span>
-                          <div className="flex flex-wrap gap-1 xl:hidden">
+                          <span className="font-medium">{acceptance.nome}</span>
+                          <span className="text-xs text-muted-foreground">{acceptance.email}</span>
+                          <div className="flex flex-wrap gap-1">
                             <code className="text-xs bg-muted px-1 py-0.5 rounded">{acceptance.cpf}</code>
                             {acceptance.matricula && acceptance.matricula !== "N/A" && (
                               <code className="text-xs bg-muted px-1 py-0.5 rounded">{acceptance.matricula}</code>
                             )}
                           </div>
-                          <span className="text-xs text-muted-foreground xl:hidden">
+                          <span className="text-xs text-muted-foreground">
                             {acceptance.tipo === "diretor" ? "Diretoria" : acceptance.turma || "-"}
                           </span>
-                          <div className="flex items-center gap-1 lg:hidden">
+                          <div className="flex items-center gap-1 2xl:hidden">
                             <CheckCircle className="h-3 w-3 text-green-600 dark:text-green-400 flex-shrink-0" />
                             <span className="text-xs text-muted-foreground">
                               {formatBrasiliaDateTime(acceptance.chatTermsAcceptedDate)}
@@ -308,30 +300,12 @@ export function InternalDocumentsTab() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="hidden xl:table-cell">
-                        <code className="text-xs bg-muted px-2 py-1 rounded">
-                          {acceptance.cpf}
-                        </code>
-                      </TableCell>
-                      <TableCell className="hidden xl:table-cell">
-                        <code className="text-xs bg-muted px-2 py-1 rounded">
-                          {acceptance.matricula || "N/A"}
-                        </code>
-                      </TableCell>
-                      <TableCell className="hidden xl:table-cell">
-                        <span className="text-sm">
-                          {acceptance.tipo === "diretor" ? "Diretoria" : acceptance.turma || "N/A"}
-                        </span>
-                      </TableCell>
                       <TableCell>
                         <Badge variant={getTipoVariant(acceptance.tipo)} className="text-xs">
                           {getTipoLabel(acceptance.tipo)}
                         </Badge>
                       </TableCell>
-                      <TableCell className="hidden xl:table-cell text-sm text-muted-foreground">
-                        <span className="truncate max-w-[150px] block">{acceptance.email}</span>
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell">
+                      <TableCell className="hidden 2xl:table-cell">
                         <div className="flex items-center gap-1">
                           <CheckCircle className="h-3 w-3 text-green-600 dark:text-green-400" />
                           <span className="text-xs font-mono">
