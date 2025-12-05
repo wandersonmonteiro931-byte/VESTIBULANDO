@@ -3039,7 +3039,7 @@ export default function AdminDashboard() {
                               <TableCell>
                                 {user.turmas && user.turmas.length > 0 ? (
                                   <div className="flex flex-wrap gap-1">
-                                    {user.turmas.map((turmaId: string) => (
+                                    {Array.from(new Set(user.turmas)).map((turmaId: string) => (
                                       <Badge key={turmaId} variant="outline" className="text-xs">
                                         {getTurmaNome(turmaId)}
                                       </Badge>
@@ -3080,7 +3080,8 @@ export default function AdminDashboard() {
                                     onClick={() => {
                                       setSelectedProfessorDetails(user);
                                       setIsEditingProfessor(false);
-                                      setEditProfessorTurmas(user.turmas || (user.turma ? user.turma.split(",").filter(Boolean) : []));
+                                      const turmasArray = user.turmas || (user.turma ? user.turma.split(",").filter(Boolean) : []);
+                                      setEditProfessorTurmas(Array.from(new Set(turmasArray)));
                                       setProfessorDetailsDialogOpen(true);
                                     }}
                                     data-testid={`button-view-professor-${user.uid}`}
@@ -6308,7 +6309,7 @@ export default function AdminDashboard() {
                 <Label className="text-muted-foreground">Turmas Atribuídas</Label>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {selectedProfessorDetails.turmas && selectedProfessorDetails.turmas.length > 0 ? (
-                    selectedProfessorDetails.turmas.map((turmaId: string) => (
+                    Array.from(new Set(selectedProfessorDetails.turmas)).map((turmaId: string) => (
                       <Badge key={turmaId} variant="secondary">{getTurmaNome(turmaId)}</Badge>
                     ))
                   ) : selectedProfessorDetails.turma ? (
@@ -6671,6 +6672,8 @@ export default function AdminDashboard() {
                 <Button
                   onClick={() => {
                     if (selectedProfessorDetails) {
+                      const uniqueTurmas = Array.from(new Set(selectedProfessorDetails.turmas || []));
+                      const uniqueMaterias = Array.from(new Set(selectedProfessorDetails.materias || []));
                       editProfessorForm.reset({
                         nome: selectedProfessorDetails.nome || "",
                         email: selectedProfessorDetails.email || "",
@@ -6684,11 +6687,11 @@ export default function AdminDashboard() {
                         bairro: selectedProfessorDetails.bairro || "",
                         cidade: selectedProfessorDetails.cidade || "",
                         estado: selectedProfessorDetails.estado || "",
-                        turmas: selectedProfessorDetails.turmas || [],
-                        materias: selectedProfessorDetails.materias || [],
+                        turmas: uniqueTurmas,
+                        materias: uniqueMaterias,
                       });
-                      setEditProfessorTurmas(selectedProfessorDetails.turmas || []);
-                      setEditProfessorMaterias(selectedProfessorDetails.materias || []);
+                      setEditProfessorTurmas(uniqueTurmas);
+                      setEditProfessorMaterias(uniqueMaterias);
                     }
                     setIsEditingProfessor(true);
                   }}
@@ -6712,8 +6715,8 @@ export default function AdminDashboard() {
                     updateProfessorDataMutation.mutate({
                       ...data,
                       userId: selectedProfessorDetails!.uid,
-                      turmas: editProfessorTurmas,
-                      materias: editProfessorMaterias,
+                      turmas: Array.from(new Set(editProfessorTurmas)),
+                      materias: Array.from(new Set(editProfessorMaterias)),
                     });
                   })}
                   disabled={updateProfessorDataMutation.isPending}
