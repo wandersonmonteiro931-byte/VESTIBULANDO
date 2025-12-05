@@ -23,10 +23,11 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { 
   Plus, FileText, Calendar, Eye, Edit, Trash2, Printer, 
   GraduationCap, Users, CheckCircle, Lock, Unlock, Download,
-  ClipboardList, AlertCircle, Search, RefreshCw, ChevronDown, ChevronRight, Save, X
+  ClipboardList, AlertCircle, Search, RefreshCw, ChevronDown, ChevronRight, Save, X, Clock
 } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
+import { useBimestreStatus } from "@/hooks/useBimestreStatus";
 import type { Boletim, BoletimNota, User, Turma, BoletimConfig, Frequencia, NotaBimestre, BoletimDocumento } from "@shared/schema";
 import { MATERIAS_BOLETIM } from "@shared/schema";
 import { format } from "date-fns";
@@ -107,6 +108,14 @@ export function BoletimTab() {
     constraints: [where("ano", "==", anoLetivo)],
     transform: (docs) => docs as NotaBimestre[],
   });
+
+  const { 
+    currentBimestre, 
+    bimestresInfo, 
+    canEditBimestre, 
+    canEmitBoletim,
+    getBimestreStatus 
+  } = useBimestreStatus(anoLetivo);
 
   const periodos = periodoTipo === "bimestre" ? PERIODOS_BIMESTRE : PERIODOS_TRIMESTRE;
 
@@ -1462,20 +1471,46 @@ export function BoletimTab() {
             <div className="p-4 bg-muted rounded-lg space-y-3">
               <div className="flex items-center justify-between">
                 <Label className="font-semibold">Selecione o Bimestre</Label>
-                {bimestresDisponiveis.length === 0 && (
-                  <Badge variant="destructive">Todos os bimestres já possuem boletim</Badge>
+                {currentBimestre && (
+                  <Badge variant="default" className="bg-green-600">
+                    <Clock className="h-3 w-3 mr-1" />
+                    Bimestre Atual: {currentBimestre.numero}º
+                  </Badge>
                 )}
               </div>
               <div className="grid grid-cols-4 gap-2">
                 {[1, 2, 3, 4].map((bim) => {
                   const jaExiste = !bimestresDisponiveis.includes(bim);
                   const isSelected = selectedBimestreNumero === bim;
+                  const bimestreStatus = getBimestreStatus(bim);
+                  const podeEmitir = canEmitBoletim(bim, userData?.tipo);
+                  const isCurrentBim = currentBimestre?.numero === bim;
+                  
+                  const isDisabled = jaExiste || !podeEmitir;
+                  
+                  let statusIcon = null;
+                  let statusText = "";
+                  
+                  if (bimestreStatus.status === "aguardando") {
+                    statusIcon = <Clock className="h-3 w-3 ml-1" />;
+                    statusText = "Aguardando";
+                  } else if (bimestreStatus.status === "fechado") {
+                    statusIcon = <Lock className="h-3 w-3 ml-1" />;
+                    statusText = "Encerrado";
+                  } else if (bimestreStatus.status === "nao_configurado") {
+                    statusIcon = <AlertCircle className="h-3 w-3 ml-1" />;
+                    statusText = "Não configurado";
+                  } else if (jaExiste) {
+                    statusIcon = <Lock className="h-3 w-3 ml-1" />;
+                    statusText = "Já emitido";
+                  }
+                  
                   return (
                     <Button
                       key={bim}
-                      variant={isSelected ? "default" : jaExiste ? "secondary" : "outline"}
-                      className={jaExiste ? "opacity-50 cursor-not-allowed" : ""}
-                      disabled={jaExiste}
+                      variant={isSelected ? "default" : isDisabled ? "secondary" : "outline"}
+                      className={`${isDisabled ? "opacity-50 cursor-not-allowed" : ""} ${isCurrentBim && !jaExiste ? "ring-2 ring-green-500" : ""}`}
+                      disabled={isDisabled}
                       onClick={() => {
                         setSelectedBimestreNumero(bim);
                         const notasAnteriores = carregarNotasBimestresAnteriores(bim);
@@ -1488,7 +1523,7 @@ export function BoletimTab() {
                       data-testid={`button-bimestre-${bim}`}
                     >
                       {bim}º Bimestre
-                      {jaExiste && <Lock className="h-3 w-3 ml-1" />}
+                      {statusIcon}
                     </Button>
                   );
                 })}
@@ -1496,6 +1531,16 @@ export function BoletimTab() {
               {getBoletinsExistentes.length > 0 && (
                 <p className="text-xs text-muted-foreground">
                   Este aluno já possui boletim para: {getBoletinsExistentes.map(b => `${b.bimestreNumero || 1}º Bimestre`).join(", ")}
+                </p>
+              )}
+              {!currentBimestre && (
+                <p className="text-xs text-amber-600">
+                  Nenhum bimestre está em andamento no momento. Configure os bimestres na aba de Bimestres.
+                </p>
+              )}
+              {currentBimestre && (
+                <p className="text-xs text-green-600">
+                  Somente o {currentBimestre.numero}º Bimestre pode ser emitido ou editado neste momento.
                 </p>
               )}
             </div>
