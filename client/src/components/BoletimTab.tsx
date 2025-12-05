@@ -1450,6 +1450,9 @@ export function BoletimTab() {
                     carregarNotasProfessores(id);
                   }
                   if (id === "todos") {
+                    if (currentBimestre) {
+                      setSelectedBimestreNumero(currentBimestre.numero);
+                    }
                     setBulkDialogOpen(true);
                     setCreateDialogOpen(false);
                   }
@@ -2221,18 +2224,35 @@ export function BoletimTab() {
               </div>
             </div>
 
-            {/* Seletor de Bimestre para criação em lote */}
+            {/* Seletor de Bimestre para criação em lote - apenas bimestre vigente */}
             {selectedTurmaId && (
               <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg space-y-3">
-                <Label className="font-semibold">Selecione o Bimestre para Criação em Lote</Label>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <Label className="font-semibold">Selecione o Bimestre para Criação em Lote</Label>
+                  {currentBimestre && (
+                    <Badge variant="default" className="bg-green-600">
+                      <Clock className="h-3 w-3 mr-1" />
+                      Bimestre Vigente: {currentBimestre.numero}º
+                    </Badge>
+                  )}
+                </div>
                 <div className="grid grid-cols-4 gap-2">
                   {[1, 2, 3, 4].map((bim) => {
                     const isSelected = selectedBimestreNumero === bim;
+                    const isCurrentBim = currentBimestre?.numero === bim;
+                    const podeEmitir = canEmitBoletim(bim, userData?.tipo);
+                    const isDisabled = !podeEmitir;
                     return (
                       <Button
                         key={bim}
-                        variant={isSelected ? "default" : "outline"}
-                        onClick={() => setSelectedBimestreNumero(bim)}
+                        variant={isSelected ? "default" : isDisabled ? "secondary" : "outline"}
+                        className={`${isDisabled ? "opacity-50 cursor-not-allowed" : ""} ${isCurrentBim && podeEmitir ? "ring-2 ring-green-500" : ""}`}
+                        disabled={isDisabled}
+                        onClick={() => {
+                          if (podeEmitir) {
+                            setSelectedBimestreNumero(bim);
+                          }
+                        }}
                         data-testid={`button-bulk-bimestre-${bim}`}
                       >
                         {bim}º Bimestre
@@ -2240,9 +2260,15 @@ export function BoletimTab() {
                     );
                   })}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Ao criar boletins em lote, todos serão criados para o {selectedBimestreNumero}º Bimestre
-                </p>
+                {currentBimestre ? (
+                  <p className="text-xs text-green-600">
+                    Somente o {currentBimestre.numero}º Bimestre pode ser usado para criação em lote. Boletins serão criados apenas para alunos que ainda não possuem boletim neste bimestre.
+                  </p>
+                ) : (
+                  <p className="text-xs text-amber-600">
+                    Nenhum bimestre está em andamento no momento. Configure os bimestres na aba de Bimestres.
+                  </p>
+                )}
               </div>
             )}
 
