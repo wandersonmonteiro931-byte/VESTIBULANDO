@@ -185,9 +185,9 @@ export function InternalDocumentsTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
         <div>
-          <h3 className="text-xl font-semibold flex items-center gap-2">
+          <h3 className="text-lg sm:text-xl font-semibold flex items-center gap-2">
             <FileText className="h-5 w-5" />
             Documentos Internos
           </h3>
@@ -195,8 +195,8 @@ export function InternalDocumentsTab() {
             Registros de aceitação dos termos de uso do chat
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary" className="text-sm">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Badge variant="secondary" className="text-xs sm:text-sm">
             {filteredAcceptances.length} registro(s)
           </Badge>
           <Button
@@ -205,8 +205,8 @@ export function InternalDocumentsTab() {
             onClick={loadAcceptances}
             data-testid="button-refresh-acceptances"
           >
-            <RefreshCw className="h-4 w-4 mr-1" />
-            Atualizar
+            <RefreshCw className="h-4 w-4 sm:mr-1" />
+            <span className="hidden sm:inline">Atualizar</span>
           </Button>
           <Button
             variant="default"
@@ -215,21 +215,21 @@ export function InternalDocumentsTab() {
             disabled={filteredAcceptances.length === 0}
             data-testid="button-export-pdf"
           >
-            <Download className="h-4 w-4 mr-1" />
-            Exportar PDF
+            <Download className="h-4 w-4 sm:mr-1" />
+            <span className="hidden sm:inline">Exportar PDF</span>
           </Button>
         </div>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
-            Termos de Uso do Chat - Aceitações
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+            <span>Termos de Uso do Chat - Aceitações</span>
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-xs sm:text-sm">
             Registro completo de usuários que concordaram com os termos de utilização do chat da plataforma.
-            Todos os dados são armazenados de forma segura para fins de auditoria e compliance.
+            <span className="hidden sm:inline"> Todos os dados são armazenados de forma segura para fins de auditoria e compliance.</span>
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -267,56 +267,74 @@ export function InternalDocumentsTab() {
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-lg border">
+            <div className="rounded-lg border overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-12">#</TableHead>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>CPF</TableHead>
-                    <TableHead>Matrícula</TableHead>
-                    <TableHead>Turma</TableHead>
+                    <TableHead className="w-10 hidden sm:table-cell">#</TableHead>
+                    <TableHead className="min-w-[140px]">Nome</TableHead>
+                    <TableHead className="hidden lg:table-cell">CPF</TableHead>
+                    <TableHead className="hidden md:table-cell">Matrícula</TableHead>
+                    <TableHead className="hidden xl:table-cell">Turma</TableHead>
                     <TableHead>Tipo</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Data/Hora de Aceitação</TableHead>
+                    <TableHead className="hidden lg:table-cell">Email</TableHead>
+                    <TableHead className="hidden sm:table-cell">Data Aceitação</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredAcceptances.map((acceptance, index) => (
                     <TableRow key={acceptance.uid} data-testid={`row-acceptance-${acceptance.uid}`}>
-                      <TableCell className="font-medium text-muted-foreground">
+                      <TableCell className="font-medium text-muted-foreground hidden sm:table-cell">
                         {index + 1}
                       </TableCell>
                       <TableCell className="font-medium" data-testid={`text-name-${acceptance.uid}`}>
-                        {acceptance.nome}
+                        <div className="flex flex-col gap-0.5">
+                          <span className="truncate max-w-[130px] sm:max-w-[150px] lg:max-w-none font-medium">{acceptance.nome}</span>
+                          <span className="text-xs text-muted-foreground lg:hidden truncate max-w-[130px]">{acceptance.email}</span>
+                          <div className="flex flex-wrap gap-1 lg:hidden">
+                            <code className="text-xs bg-muted px-1 py-0.5 rounded">{acceptance.cpf}</code>
+                          </div>
+                          <div className="flex flex-wrap gap-1 md:hidden">
+                            <code className="text-xs bg-muted px-1 py-0.5 rounded">{acceptance.matricula || "N/A"}</code>
+                          </div>
+                          <span className="text-xs text-muted-foreground xl:hidden">
+                            {acceptance.tipo === "diretor" ? "Diretoria" : acceptance.turma || "-"}
+                          </span>
+                          <div className="flex items-center gap-1 sm:hidden">
+                            <CheckCircle className="h-3 w-3 text-green-600 dark:text-green-400 flex-shrink-0" />
+                            <span className="text-xs text-muted-foreground">
+                              {formatBrasiliaDateTime(acceptance.chatTermsAcceptedDate)}
+                            </span>
+                          </div>
+                        </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden lg:table-cell">
                         <code className="text-xs bg-muted px-2 py-1 rounded">
                           {acceptance.cpf}
                         </code>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell">
                         <code className="text-xs bg-muted px-2 py-1 rounded">
                           {acceptance.matricula || "N/A"}
                         </code>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden xl:table-cell">
                         <span className="text-sm">
                           {acceptance.tipo === "diretor" ? "Diretoria" : acceptance.turma || "N/A"}
                         </span>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={getTipoVariant(acceptance.tipo)}>
+                        <Badge variant={getTipoVariant(acceptance.tipo)} className="text-xs">
                           {getTipoLabel(acceptance.tipo)}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {acceptance.email}
+                      <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
+                        <span className="truncate max-w-[150px] block">{acceptance.email}</span>
                       </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-                          <span className="text-sm font-mono">
+                      <TableCell className="hidden sm:table-cell">
+                        <div className="flex items-center gap-1">
+                          <CheckCircle className="h-3 w-3 text-green-600 dark:text-green-400" />
+                          <span className="text-xs font-mono">
                             {formatBrasiliaDateTime(acceptance.chatTermsAcceptedDate)}
                           </span>
                         </div>
@@ -331,21 +349,24 @@ export function InternalDocumentsTab() {
       </Card>
 
       <Card className="bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900">
-        <CardHeader>
-          <CardTitle className="text-sm">ℹ️ Informações Importantes</CardTitle>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-xs sm:text-sm flex items-center gap-2">
+            <FileText className="h-4 w-4 flex-shrink-0" />
+            Informações Importantes
+          </CardTitle>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground space-y-2">
+        <CardContent className="text-xs sm:text-sm text-muted-foreground space-y-1.5 sm:space-y-2">
           <p>
-            <strong>Finalidade:</strong> Este registro documenta formalmente a aceitação dos termos de uso do chat por cada usuário da plataforma.
+            <strong>Finalidade:</strong> Este registro documenta formalmente a aceitação dos termos de uso do chat.
           </p>
           <p>
-            <strong>Segurança:</strong> Todos os dados são armazenados de forma criptografada e seguem as normas da LGPD (Lei nº 13.709/2018).
+            <strong>Segurança:</strong> Dados criptografados seguindo as normas da LGPD.
           </p>
-          <p>
-            <strong>Auditoria:</strong> Os registros são permanentes e podem ser utilizados para fins de auditoria, investigação administrativa ou legal.
+          <p className="hidden sm:block">
+            <strong>Auditoria:</strong> Os registros são permanentes e podem ser utilizados para fins de auditoria.
           </p>
-          <p>
-            <strong>Exportação:</strong> É possível exportar os dados em formato PDF para arquivamento ou apresentação formal.
+          <p className="hidden sm:block">
+            <strong>Exportação:</strong> É possível exportar os dados em formato PDF para arquivamento.
           </p>
         </CardContent>
       </Card>
