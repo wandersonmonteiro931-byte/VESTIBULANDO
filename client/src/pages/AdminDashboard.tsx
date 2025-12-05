@@ -2831,14 +2831,14 @@ export default function AdminDashboard() {
                     .sort((a, b) => a.nome.localeCompare(b.nome)); // Ordenação alfabética
                   
                   return filteredAlunos.length > 0 ? (
-                  <div className="overflow-x-auto">
+                  <div className="w-full">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Nome</TableHead>
-                          <TableHead>Email</TableHead>
+                          <TableHead className="min-w-[120px]">Nome</TableHead>
+                          <TableHead className="hidden lg:table-cell">Email</TableHead>
                           <TableHead>Turma</TableHead>
-                          <TableHead>Matrícula</TableHead>
+                          <TableHead className="hidden md:table-cell">Matrícula</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead className="text-right">Ações</TableHead>
                         </TableRow>
@@ -2846,36 +2846,43 @@ export default function AdminDashboard() {
                       <TableBody>
                         {filteredAlunos.map((user) => (
                           <TableRow key={user.uid} data-testid={`row-user-${user.uid}`}>
-                            <TableCell className="font-medium">{user.nome}</TableCell>
-                            <TableCell>{user.email}</TableCell>
-                            <TableCell>{getTurmaNome(user.turma)}</TableCell>
-                            <TableCell>{user.matricula || "-"}</TableCell>
-                            <TableCell>
-                              <div className="flex flex-col gap-1">
-                                {user.bloqueado ? (
-                                  <Badge variant="outline" className="bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400">
-                                    <Shield className="h-3 w-3 mr-1" />
-                                    Bloqueado
-                                  </Badge>
-                                ) : user.ativo ? (
-                                  <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                                    <CheckCircle className="h-3 w-3 mr-1" />
-                                    Ativo
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
-                                    <XCircle className="h-3 w-3 mr-1" />
-                                    Desativado
-                                  </Badge>
-                                )}
+                            <TableCell className="font-medium">
+                              <div className="flex flex-col">
+                                <span className="truncate max-w-[120px] lg:max-w-none">{user.nome}</span>
+                                <span className="text-xs text-muted-foreground lg:hidden truncate max-w-[120px]">{user.email}</span>
                               </div>
                             </TableCell>
+                            <TableCell className="hidden lg:table-cell">
+                              <span className="truncate max-w-[180px] block">{user.email}</span>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="text-xs">{getTurmaNome(user.turma)}</Badge>
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">{user.matricula || "-"}</TableCell>
+                            <TableCell>
+                              {user.bloqueado ? (
+                                <Badge variant="outline" className="bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400 text-xs">
+                                  <Shield className="h-3 w-3 sm:mr-1" />
+                                  <span className="hidden sm:inline">Bloqueado</span>
+                                </Badge>
+                              ) : user.ativo ? (
+                                <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-xs">
+                                  <CheckCircle className="h-3 w-3 sm:mr-1" />
+                                  <span className="hidden sm:inline">Ativo</span>
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 text-xs">
+                                  <XCircle className="h-3 w-3 sm:mr-1" />
+                                  <span className="hidden sm:inline">Inativo</span>
+                                </Badge>
+                              )}
+                            </TableCell>
                             <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
+                              <div className="flex justify-end gap-1">
                                 {user.tipo === "aluno" && (
                                   <Button
                                     variant="ghost"
-                                    size="sm"
+                                    size="icon"
                                     onClick={() => {
                                       setSelectedStudentDetails(user);
                                       setIsEditingStudent(false);
@@ -2899,42 +2906,45 @@ export default function AdminDashboard() {
                                       setStudentDetailsDialogOpen(true);
                                     }}
                                     data-testid={`button-view-details-${user.uid}`}
+                                    title="Ver detalhes"
                                   >
                                     <Eye className="h-4 w-4" />
                                   </Button>
                                 )}
                                 <Button
                                   variant="ghost"
-                                  size="sm"
+                                  size="icon"
                                   onClick={() => toggleUserStatusMutation.mutate({ 
                                     userId: user.uid, 
                                     ativo: !user.ativo 
                                   })}
                                   data-testid="button-toggle-status"
+                                  title={user.ativo ? "Desativar" : "Ativar"}
                                 >
-                                  {user.ativo ? "Desativar" : "Ativar"}
+                                  {user.ativo ? <XCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
                                 </Button>
                                 <Button
                                   variant={user.bloqueado ? "outline" : "destructive"}
-                                  size="sm"
+                                  size="icon"
                                   onClick={() => toggleUserBlockMutation.mutate({ 
                                     userId: user.uid, 
                                     bloqueado: !user.bloqueado 
                                   })}
                                   data-testid={`button-block-${user.uid}`}
+                                  title={user.bloqueado ? "Desbloquear" : "Bloquear"}
                                 >
-                                  <Shield className="h-4 w-4 mr-1" />
-                                  {user.bloqueado ? "Desbloquear" : "Bloquear"}
+                                  <Shield className="h-4 w-4" />
                                 </Button>
                                 {user.tipo === "aluno" && user.turma && (
                                   <Button
                                     variant="ghost"
-                                    size="sm"
+                                    size="icon"
                                     onClick={() => {
                                       setUserToTransfer(user);
                                       setTransferDialogOpen(true);
                                     }}
                                     data-testid={`button-transfer-${user.uid}`}
+                                    title="Transferir"
                                   >
                                     <ArrowRightLeft className="h-4 w-4" />
                                   </Button>
@@ -2942,12 +2952,13 @@ export default function AdminDashboard() {
                                 {user.tipo !== "diretor" && (
                                   <Button
                                     variant="ghost"
-                                    size="sm"
+                                    size="icon"
                                     onClick={() => {
                                       setUserToDelete(user);
                                       setDeleteDialogOpen(true);
                                     }}
                                     data-testid="button-delete-user"
+                                    title="Excluir"
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
@@ -3013,15 +3024,15 @@ export default function AdminDashboard() {
                   });
                   
                   return filteredProfessores.length > 0 ? (
-                    <div className="overflow-x-auto">
+                    <div className="w-full">
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Nome</TableHead>
-                            <TableHead>Email</TableHead>
-                            <TableHead>Tipo</TableHead>
-                            <TableHead>Turmas</TableHead>
-                            <TableHead>Matrícula</TableHead>
+                            <TableHead className="min-w-[120px]">Nome</TableHead>
+                            <TableHead className="hidden lg:table-cell">Email</TableHead>
+                            <TableHead className="hidden md:table-cell">Tipo</TableHead>
+                            <TableHead className="hidden xl:table-cell">Turmas</TableHead>
+                            <TableHead className="hidden md:table-cell">Matrícula</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead className="text-right">Ações</TableHead>
                           </TableRow>
@@ -3029,21 +3040,33 @@ export default function AdminDashboard() {
                         <TableBody>
                           {filteredProfessores.map((user: User) => (
                             <TableRow key={user.uid} data-testid={`row-professor-${user.uid}`}>
-                              <TableCell className="font-medium">{user.nome}</TableCell>
-                              <TableCell>{user.email}</TableCell>
-                              <TableCell>
+                              <TableCell className="font-medium">
+                                <div className="flex flex-col">
+                                  <span className="truncate max-w-[150px] lg:max-w-none">{user.nome}</span>
+                                  <span className="text-xs text-muted-foreground lg:hidden truncate max-w-[150px]">{user.email}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="hidden lg:table-cell">
+                                <span className="truncate max-w-[200px] block">{user.email}</span>
+                              </TableCell>
+                              <TableCell className="hidden md:table-cell">
                                 <Badge variant={user.tipo === "diretor" ? "default" : "secondary"}>
                                   {user.tipo}
                                 </Badge>
                               </TableCell>
-                              <TableCell>
+                              <TableCell className="hidden xl:table-cell">
                                 {user.turmas && user.turmas.length > 0 ? (
-                                  <div className="flex flex-wrap gap-1">
-                                    {Array.from(new Set(user.turmas)).map((turmaId: string) => (
+                                  <div className="flex flex-wrap gap-1 max-w-[150px]">
+                                    {Array.from(new Set(user.turmas)).slice(0, 3).map((turmaId: string) => (
                                       <Badge key={turmaId} variant="outline" className="text-xs">
                                         {getTurmaNome(turmaId)}
                                       </Badge>
                                     ))}
+                                    {Array.from(new Set(user.turmas)).length > 3 && (
+                                      <Badge variant="outline" className="text-xs">
+                                        +{Array.from(new Set(user.turmas)).length - 3}
+                                      </Badge>
+                                    )}
                                   </div>
                                 ) : user.turma ? (
                                   <Badge variant="outline" className="text-xs">{getTurmaNome(user.turma)}</Badge>
@@ -3051,32 +3074,30 @@ export default function AdminDashboard() {
                                   <span className="text-muted-foreground">-</span>
                                 )}
                               </TableCell>
-                              <TableCell>{user.matricula || "-"}</TableCell>
+                              <TableCell className="hidden md:table-cell">{user.matricula || "-"}</TableCell>
                               <TableCell>
-                                <div className="flex flex-col gap-1">
-                                  {user.bloqueado ? (
-                                    <Badge variant="outline" className="bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400">
-                                      <Shield className="h-3 w-3 mr-1" />
-                                      Bloqueado
-                                    </Badge>
-                                  ) : user.ativo ? (
-                                    <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                                      <CheckCircle className="h-3 w-3 mr-1" />
-                                      Ativo
-                                    </Badge>
-                                  ) : (
-                                    <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
-                                      <XCircle className="h-3 w-3 mr-1" />
-                                      Desativado
-                                    </Badge>
-                                  )}
-                                </div>
+                                {user.bloqueado ? (
+                                  <Badge variant="outline" className="bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400 text-xs">
+                                    <Shield className="h-3 w-3 mr-1" />
+                                    <span className="hidden sm:inline">Bloqueado</span>
+                                  </Badge>
+                                ) : user.ativo ? (
+                                  <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-xs">
+                                    <CheckCircle className="h-3 w-3 sm:mr-1" />
+                                    <span className="hidden sm:inline">Ativo</span>
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 text-xs">
+                                    <XCircle className="h-3 w-3 sm:mr-1" />
+                                    <span className="hidden sm:inline">Inativo</span>
+                                  </Badge>
+                                )}
                               </TableCell>
                               <TableCell className="text-right">
-                                <div className="flex justify-end gap-2">
+                                <div className="flex justify-end gap-1">
                                   <Button
                                     variant="ghost"
-                                    size="sm"
+                                    size="icon"
                                     onClick={() => {
                                       setSelectedProfessorDetails(user);
                                       setIsEditingProfessor(false);
@@ -3090,38 +3111,40 @@ export default function AdminDashboard() {
                                   </Button>
                                   <Button
                                     variant="ghost"
-                                    size="sm"
+                                    size="icon"
                                     onClick={() => toggleUserStatusMutation.mutate({ 
                                       userId: user.uid, 
                                       ativo: !user.ativo 
                                     })}
                                     data-testid={`button-toggle-professor-status-${user.uid}`}
+                                    title={user.ativo ? "Desativar" : "Ativar"}
                                   >
-                                    {user.ativo ? "Desativar" : "Ativar"}
+                                    {user.ativo ? <XCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
                                   </Button>
                                   {user.tipo !== "diretor" && (
                                     <Button
                                       variant={user.bloqueado ? "outline" : "destructive"}
-                                      size="sm"
+                                      size="icon"
                                       onClick={() => toggleUserBlockMutation.mutate({ 
                                         userId: user.uid, 
                                         bloqueado: !user.bloqueado 
                                       })}
                                       data-testid={`button-block-professor-${user.uid}`}
+                                      title={user.bloqueado ? "Desbloquear" : "Bloquear"}
                                     >
-                                      <Shield className="h-4 w-4 mr-1" />
-                                      {user.bloqueado ? "Desbloquear" : "Bloquear"}
+                                      <Shield className="h-4 w-4" />
                                     </Button>
                                   )}
                                   {user.tipo !== "diretor" && (
                                     <Button
                                       variant="ghost"
-                                      size="sm"
+                                      size="icon"
                                       onClick={() => {
                                         setUserToDelete(user);
                                         setDeleteDialogOpen(true);
                                       }}
                                       data-testid={`button-delete-professor-${user.uid}`}
+                                      title="Excluir"
                                     >
                                       <Trash2 className="h-4 w-4" />
                                     </Button>
