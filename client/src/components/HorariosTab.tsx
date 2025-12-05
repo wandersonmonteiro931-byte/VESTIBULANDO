@@ -8,12 +8,14 @@ import {
   DIAS_SEMANA, 
   HORARIOS_AULAS,
   MATERIAS_DISPONIVEIS,
+  MATERIAS_SEM_PROFESSOR,
   type DiaSemana, 
   type SlotAula,
   type GradeHoraria,
   type ConfiguracaoMateria,
   type User,
-  type HorarioAula
+  type HorarioAula,
+  type MateriaCustomizada
 } from "@shared/schema";
 import { ScheduleGrid, SlotEditDialog, ScheduleViewCard } from "./ScheduleGrid";
 import { Button } from "@/components/ui/button";
@@ -106,6 +108,20 @@ export function HorariosTab({ turmas, professores }: HorariosTabProps) {
     }
     return ["segunda", "terca", "quarta", "quinta", "sexta"] as DiaSemana[];
   }, [horariosConfig]);
+
+  const { data: materiasCustomizadas } = useRealtimeQuery<MateriaCustomizada>({
+    collectionName: "materiasCustomizadas",
+    queryKey: ["materiasCustomizadas"],
+  });
+
+  const todasMaterias = useMemo(() => {
+    const materias = [...MATERIAS_DISPONIVEIS, ...MATERIAS_SEM_PROFESSOR];
+    if (materiasCustomizadas && materiasCustomizadas.length > 0) {
+      const customNomes = materiasCustomizadas.filter(m => m.ativo).map(m => m.nome);
+      return [...materias, ...customNomes];
+    }
+    return materias;
+  }, [materiasCustomizadas]);
 
   const DIAS_LABELS: Record<DiaSemana, string> = {
     domingo: "Domingo",
@@ -377,21 +393,23 @@ export function HorariosTab({ turmas, professores }: HorariosTabProps) {
   };
 
   const addConfigMateria = (materia: string, professorId: string, aulasPorSemana: number) => {
-    const professor = professoresFiltrados.find(p => p.uid === professorId);
-    if (!professor) return;
+    const isSemProfessor = !professorId || professorId === "";
+    const professor = isSemProfessor ? null : professoresFiltrados.find(p => p.uid === professorId);
+    
+    if (!isSemProfessor && !professor) return;
     
     const existing = configMaterias.find(c => c.materia === materia);
     if (existing) {
       setConfigMaterias(prev => prev.map(c => 
         c.materia === materia 
-          ? { ...c, professorId, professorNome: professor.nome, aulasPorSemana }
+          ? { ...c, professorId: professorId || "", professorNome: professor?.nome || "", aulasPorSemana }
           : c
       ));
     } else {
       setConfigMaterias(prev => [...prev, {
         materia,
-        professorId,
-        professorNome: professor.nome,
+        professorId: professorId || "",
+        professorNome: professor?.nome || "",
         aulasPorSemana,
       }]);
     }
@@ -802,10 +820,11 @@ export function HorariosTab({ turmas, professores }: HorariosTabProps) {
                   ))}
 
                   <ConfigMateriaForm 
-                    materias={MATERIAS_DISPONIVEIS}
+                    materias={todasMaterias}
                     professores={professoresFiltrados}
                     existingMaterias={configMaterias.map(c => c.materia)}
                     onAdd={addConfigMateria}
+                    materiasCustomizadas={materiasCustomizadas || []}
                   />
                 </div>
               </CardContent>
@@ -825,7 +844,7 @@ export function HorariosTab({ turmas, professores }: HorariosTabProps) {
                   onSlotClick={handleSlotClick}
                   onSlotRemove={handleSlotRemove}
                   professores={professoresFiltrados}
-                  materias={[...MATERIAS_DISPONIVEIS]}
+                  materias={todasMaterias}
                   horariosCustom={horariosCustom}
                 />
               </CardContent>
@@ -866,7 +885,8 @@ export function HorariosTab({ turmas, professores }: HorariosTabProps) {
         horarioId={editSlotDialog.horarioId}
         existingSlot={editSlotDialog.existingSlot}
         professores={professoresFiltrados}
-        materias={[...MATERIAS_DISPONIVEIS]}
+        materias={todasMaterias}
+        materiasCustomizadas={materiasCustomizadas || []}
         onSave={handleSlotSave}
         onRemove={editSlotDialog.existingSlot ? () => handleSlotRemove(editSlotDialog.dia, editSlotDialog.horarioId) : undefined}
         conflictCheck={checkProfessorConflict}
@@ -938,18 +958,28 @@ export function HorariosTab({ turmas, professores }: HorariosTabProps) {
 }
 
 interface ConfigMateriaFormProps {
-  materias: readonly string[];
+  materias: readonly string[] | string[];
   professores: User[];
   existingMaterias: string[];
   onAdd: (materia: string, professorId: string, aulasPorSemana: number) => void;
+  materiasCustomizadas: MateriaCustomizada[];
 }
 
-function ConfigMateriaForm({ materias, professores, existingMaterias, onAdd }: ConfigMateriaFormProps) {
+function materiaSemProfessor(materia: string, materiasCustomizadas: MateriaCustomizada[]): boolean {
+  if (MATERIAS_SEM_PROFESSOR.includes(materia as any)) {
+    return true;
+  }
+  const custom = materiasCustomizadas.find(m => m.nome === materia);
+  return custom ? !custom.requerProfessor : false;
+}
+
+function ConfigMateriaForm({ materias, professores, existingMaterias, onAdd, materiasCustomizadas }: ConfigMateriaFormProps) {
   const [materia, setMateria] = useState("");
   const [professorId, setProfessorId] = useState("");
   const [aulas, setAulas] = useState("4");
 
   const materiasDisponiveis = materias.filter(m => !existingMaterias.includes(m));
+  const semProfessor = materia ? materiaSemProfessor(materia, materiasCustomizadas) : false;
   const professoresMateria = professorId 
     ? professores 
     : materia 
@@ -957,12 +987,19 @@ function ConfigMateriaForm({ materias, professores, existingMaterias, onAdd }: C
       : professores;
 
   const handleAdd = () => {
-    if (!materia || !professorId) return;
-    onAdd(materia, professorId, parseInt(aulas) || 4);
+    if (!materia) return;
+    if (semProfessor) {
+      onAdd(materia, "", parseInt(aulas) || 4);
+    } else {
+      if (!professorId) return;
+      onAdd(materia, professorId, parseInt(aulas) || 4);
+    }
     setMateria("");
     setProfessorId("");
     setAulas("4");
   };
+
+  const canAdd = materia && (semProfessor || professorId);
 
   return (
     <div className="flex flex-wrap items-end gap-2 pt-2 border-t">
@@ -977,24 +1014,36 @@ function ConfigMateriaForm({ materias, professores, existingMaterias, onAdd }: C
           </SelectTrigger>
           <SelectContent>
             {materiasDisponiveis.map(m => (
-              <SelectItem key={m} value={m}>{m}</SelectItem>
+              <SelectItem key={m} value={m}>
+                {m}
+                {materiaSemProfessor(m, materiasCustomizadas) && (
+                  <span className="ml-2 text-xs text-muted-foreground">(sem prof.)</span>
+                )}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
-      <div className="flex-1 min-w-[150px]">
-        <Label className="text-xs">Professor</Label>
-        <Select value={professorId} onValueChange={setProfessorId} disabled={!materia}>
-          <SelectTrigger className="h-9" data-testid="select-new-professor">
-            <SelectValue placeholder={materia ? "Selecione" : "Escolha a matéria"} />
-          </SelectTrigger>
-          <SelectContent>
-            {professoresMateria.map(p => (
-              <SelectItem key={p.uid} value={p.uid}>{p.nome}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {!semProfessor && (
+        <div className="flex-1 min-w-[150px]">
+          <Label className="text-xs">Professor</Label>
+          <Select value={professorId} onValueChange={setProfessorId} disabled={!materia}>
+            <SelectTrigger className="h-9" data-testid="select-new-professor">
+              <SelectValue placeholder={materia ? "Selecione" : "Escolha a matéria"} />
+            </SelectTrigger>
+            <SelectContent>
+              {professoresMateria.map(p => (
+                <SelectItem key={p.uid} value={p.uid}>{p.nome}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      {semProfessor && materia && (
+        <div className="flex-1 min-w-[150px] flex items-center">
+          <span className="text-sm text-muted-foreground">Atividade sem professor</span>
+        </div>
+      )}
       <div className="w-24">
         <Label className="text-xs">Aulas/Sem</Label>
         <Input
@@ -1010,7 +1059,7 @@ function ConfigMateriaForm({ materias, professores, existingMaterias, onAdd }: C
       <Button 
         size="sm" 
         onClick={handleAdd} 
-        disabled={!materia || !professorId}
+        disabled={!canAdd}
         data-testid="button-add-config"
       >
         <Plus className="h-4 w-4" />

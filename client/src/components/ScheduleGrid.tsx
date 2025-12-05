@@ -3,10 +3,12 @@ import { cn } from "@/lib/utils";
 import { 
   DIAS_SEMANA, 
   HORARIOS_AULAS,
+  MATERIAS_SEM_PROFESSOR,
   type DiaSemana, 
   type SlotAula,
   type GradeHoraria,
-  type HorarioAula
+  type HorarioAula,
+  type MateriaCustomizada
 } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -64,8 +66,23 @@ function getMateriaColor(materia: string): string {
     "Sociologia": "bg-violet-100 dark:bg-violet-900/50 text-violet-800 dark:text-violet-200 border-violet-300 dark:border-violet-700",
     "Redação": "bg-rose-100 dark:bg-rose-900/50 text-rose-800 dark:text-rose-200 border-rose-300 dark:border-rose-700",
     "Literatura": "bg-fuchsia-100 dark:bg-fuchsia-900/50 text-fuchsia-800 dark:text-fuchsia-200 border-fuchsia-300 dark:border-fuchsia-700",
+    "Revisão": "bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200 border-yellow-300 dark:border-yellow-700",
+    "Corujão": "bg-slate-100 dark:bg-slate-900/50 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-700",
   };
   return colors[materia] || "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border-gray-300 dark:border-gray-600";
+}
+
+function materiaNaoPrecisaProfessor(materia: string, materiasCustomizadas?: MateriaCustomizada[]): boolean {
+  if (MATERIAS_SEM_PROFESSOR.includes(materia as any)) {
+    return true;
+  }
+  if (materiasCustomizadas) {
+    const custom = materiasCustomizadas.find(m => m.nome === materia);
+    if (custom && !custom.requerProfessor) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export function ScheduleGrid({
@@ -259,6 +276,7 @@ interface SlotEditDialogProps {
   existingSlot?: SlotAula;
   professores: Professor[];
   materias: string[];
+  materiasCustomizadas?: MateriaCustomizada[];
   onSave: (slot: Omit<SlotAula, "diaSemana" | "horarioId">) => void;
   onRemove?: () => void;
   conflictCheck?: (professorId: string) => SlotAula | undefined;
@@ -273,6 +291,7 @@ export function SlotEditDialog({
   existingSlot,
   professores,
   materias,
+  materiasCustomizadas,
   onSave,
   onRemove,
   conflictCheck,
@@ -285,6 +304,8 @@ export function SlotEditDialog({
   const baseHorarios = horariosCustom && horariosCustom.length > 0 ? horariosCustom : HORARIOS_AULAS;
   const horario = baseHorarios.find(h => h.id === horarioId);
   const selectedProfessor = professores.find(p => p.uid === selectedProfessorId);
+  
+  const semProfessor = selectedMateria ? materiaNaoPrecisaProfessor(selectedMateria, materiasCustomizadas) : false;
 
   const handleProfessorChange = (professorId: string) => {
     setSelectedProfessorId(professorId);
@@ -295,19 +316,30 @@ export function SlotEditDialog({
   };
 
   const handleSave = () => {
-    if (!selectedMateria || !selectedProfessorId || !selectedProfessor) return;
+    if (!selectedMateria) return;
     
-    onSave({
-      materia: selectedMateria,
-      professorId: selectedProfessorId,
-      professorNome: selectedProfessor.nome,
-    });
+    if (semProfessor) {
+      onSave({
+        materia: selectedMateria,
+        professorId: "",
+        professorNome: "",
+      });
+    } else {
+      if (!selectedProfessorId || !selectedProfessor) return;
+      onSave({
+        materia: selectedMateria,
+        professorId: selectedProfessorId,
+        professorNome: selectedProfessor.nome,
+      });
+    }
     onOpenChange(false);
   };
 
   const professoresDisp = selectedMateria 
     ? professores.filter(p => p.materias?.includes(selectedMateria))
     : professores;
+
+  const canSave = selectedMateria && (semProfessor || (selectedProfessorId && !conflict));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -336,36 +368,49 @@ export function SlotEditDialog({
                 {materias.map(materia => (
                   <SelectItem key={materia} value={materia}>
                     {materia}
+                    {materiaNaoPrecisaProfessor(materia, materiasCustomizadas) && (
+                      <span className="ml-2 text-xs text-muted-foreground">(sem professor)</span>
+                    )}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label>Professor</Label>
-            <Select 
-              value={selectedProfessorId} 
-              onValueChange={handleProfessorChange}
-              disabled={!selectedMateria}
-            >
-              <SelectTrigger data-testid="select-professor">
-                <SelectValue placeholder={selectedMateria ? "Selecione o professor" : "Selecione uma matéria primeiro"} />
-              </SelectTrigger>
-              <SelectContent>
-                {professoresDisp.map(professor => (
-                  <SelectItem key={professor.uid} value={professor.uid}>
-                    {professor.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {professoresDisp.length === 0 && selectedMateria && (
-              <p className="text-sm text-amber-600 dark:text-amber-400">
-                Nenhum professor cadastrado para esta matéria
+          {!semProfessor && (
+            <div className="space-y-2">
+              <Label>Professor</Label>
+              <Select 
+                value={selectedProfessorId} 
+                onValueChange={handleProfessorChange}
+                disabled={!selectedMateria}
+              >
+                <SelectTrigger data-testid="select-professor">
+                  <SelectValue placeholder={selectedMateria ? "Selecione o professor" : "Selecione uma matéria primeiro"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {professoresDisp.map(professor => (
+                    <SelectItem key={professor.uid} value={professor.uid}>
+                      {professor.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {professoresDisp.length === 0 && selectedMateria && (
+                <p className="text-sm text-amber-600 dark:text-amber-400">
+                  Nenhum professor cadastrado para esta matéria
+                </p>
+              )}
+            </div>
+          )}
+
+          {semProfessor && selectedMateria && (
+            <div className="p-3 bg-muted/50 border rounded-md">
+              <p className="text-sm text-muted-foreground">
+                Esta atividade não requer um professor atribuído.
               </p>
-            )}
-          </div>
+            </div>
+          )}
 
           {conflict && (
             <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-md">
@@ -401,7 +446,7 @@ export function SlotEditDialog({
           </Button>
           <Button
             onClick={handleSave}
-            disabled={!selectedMateria || !selectedProfessorId || !!conflict}
+            disabled={!canSave}
             data-testid="button-save-slot"
           >
             Salvar
