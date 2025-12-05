@@ -121,92 +121,113 @@ export function ScheduleGrid({
             </tr>
           </thead>
           <tbody>
-            {horarios.map(horario => (
-              <tr key={horario.id}>
-                <td className={cn(
-                  "border border-border bg-muted/30 text-center font-medium",
-                  compact ? "p-1 text-xs" : "p-2 text-sm"
-                )}>
-                  <div className="flex flex-col items-center">
-                    <span className="font-semibold">{horario.nome}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {horario.inicio} - {horario.fim}
-                    </span>
-                  </div>
-                </td>
-                {diasExibidos.map(dia => {
-                  const slot = getSlot(dia, horario.id);
-                  const isHighlighted = highlightProfessorId && slot?.professorId === highlightProfessorId;
-
-                  return (
-                    <td
-                      key={`${dia}-${horario.id}`}
+            {horarios.map(horario => {
+              const isIntervalo = horario.tipo === "intervalo";
+              
+              return (
+                <tr key={horario.id} className={cn(isIntervalo && "bg-muted/40")}>
+                  <td className={cn(
+                    "border border-border bg-muted/30 text-center font-medium",
+                    compact ? "p-1 text-xs" : "p-2 text-sm",
+                    isIntervalo && "bg-muted/50"
+                  )}>
+                    <div className="flex flex-col items-center">
+                      <span className="font-semibold">{horario.nome}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {horario.inicio} - {horario.fim}
+                      </span>
+                    </div>
+                  </td>
+                  {isIntervalo ? (
+                    <td 
+                      colSpan={diasExibidos.length}
                       className={cn(
-                        "border border-border transition-colors",
-                        compact ? "p-1" : "p-1.5",
-                        editable && !slot && "hover-elevate cursor-pointer",
-                        isHighlighted && "ring-2 ring-primary ring-inset"
+                        "border border-border text-center bg-muted/30",
+                        compact ? "p-1 text-xs" : "p-2 text-sm"
                       )}
-                      onClick={() => {
-                        if (editable && onSlotClick) {
-                          onSlotClick(dia, horario.id, slot);
-                        }
-                      }}
-                      data-testid={`cell-${dia}-${horario.id}`}
+                      data-testid={`cell-intervalo-${horario.id}`}
                     >
-                      {slot ? (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className={cn(
-                                "rounded border p-1.5 text-center relative group",
-                                getMateriaColor(slot.materia),
-                                compact ? "text-xs" : "text-sm"
-                              )}>
-                                <div className="font-medium truncate">{slot.materia}</div>
-                                {!compact && (
-                                  <div className="text-xs opacity-80 truncate flex items-center justify-center gap-1">
-                                    <User className="h-3 w-3" />
-                                    {slot.professorNome.split(" ")[0]}
-                                  </div>
-                                )}
-                                {editable && onSlotRemove && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="absolute -top-1 -right-1 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      onSlotRemove(dia, horario.id);
-                                    }}
-                                    data-testid={`remove-${dia}-${horario.id}`}
-                                  >
-                                    <X className="h-3 w-3" />
-                                  </Button>
-                                )}
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <div className="text-sm">
-                                <p className="font-medium">{slot.materia}</p>
-                                <p className="text-muted-foreground">Prof. {slot.professorNome}</p>
-                                <p className="text-muted-foreground">{horario.inicio} - {horario.fim}</p>
-                              </div>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      ) : editable ? (
-                        <div className="h-12 flex items-center justify-center text-muted-foreground/40">
-                          <Plus className="h-4 w-4" />
-                        </div>
-                      ) : (
-                        <div className={cn("h-12", compact && "h-8")} />
-                      )}
+                      <div className="flex items-center justify-center gap-2 text-muted-foreground italic">
+                        <Clock className="h-4 w-4" />
+                        <span>{horario.nome}</span>
+                      </div>
                     </td>
-                  );
-                })}
-              </tr>
-            ))}
+                  ) : (
+                    diasExibidos.map(dia => {
+                      const slot = getSlot(dia, horario.id);
+                      const isHighlighted = highlightProfessorId && slot?.professorId === highlightProfessorId;
+
+                      return (
+                        <td
+                          key={`${dia}-${horario.id}`}
+                          className={cn(
+                            "border border-border transition-colors",
+                            compact ? "p-1" : "p-1.5",
+                            editable && !slot && "hover-elevate cursor-pointer",
+                            isHighlighted && "ring-2 ring-primary ring-inset"
+                          )}
+                          onClick={() => {
+                            if (editable && onSlotClick) {
+                              onSlotClick(dia, horario.id, slot);
+                            }
+                          }}
+                          data-testid={`cell-${dia}-${horario.id}`}
+                        >
+                          {slot ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className={cn(
+                                    "rounded border p-1.5 text-center relative group",
+                                    getMateriaColor(slot.materia),
+                                    compact ? "text-xs" : "text-sm"
+                                  )}>
+                                    <div className="font-medium truncate">{slot.materia}</div>
+                                    {!compact && (
+                                      <div className="text-xs opacity-80 truncate flex items-center justify-center gap-1">
+                                        <User className="h-3 w-3" />
+                                        {slot.professorNome.split(" ")[0]}
+                                      </div>
+                                    )}
+                                    {editable && onSlotRemove && (
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="absolute -top-1 -right-1 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          onSlotRemove(dia, horario.id);
+                                        }}
+                                        data-testid={`remove-${dia}-${horario.id}`}
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </Button>
+                                    )}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <div className="text-sm">
+                                    <p className="font-medium">{slot.materia}</p>
+                                    <p className="text-muted-foreground">Prof. {slot.professorNome}</p>
+                                    <p className="text-muted-foreground">{horario.inicio} - {horario.fim}</p>
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : editable ? (
+                            <div className="h-12 flex items-center justify-center text-muted-foreground/40">
+                              <Plus className="h-4 w-4" />
+                            </div>
+                          ) : (
+                            <div className={cn("h-12", compact && "h-8")} />
+                          )}
+                        </td>
+                      );
+                    })
+                  )}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

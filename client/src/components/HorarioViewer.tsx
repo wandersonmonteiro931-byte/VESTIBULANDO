@@ -5,10 +5,13 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   DIAS_SEMANA, 
   HORARIOS_AULAS,
+  HORARIOS_AULAS_PADRAO,
   type DiaSemana, 
   type GradeHoraria,
   type AulaAgendada,
-  type PresencaAula
+  type PresencaAula,
+  type HorarioAula,
+  type ConfiguracaoHorarios
 } from "@shared/schema";
 import { ScheduleGrid } from "./ScheduleGrid";
 import { Button } from "@/components/ui/button";
@@ -61,6 +64,22 @@ export function HorarioViewer({ userType, turmaId, turmaNome, professorId }: Hor
     queryKey: ["gradesHorarias", turmaId, professorId],
   });
 
+  const { data: horariosConfig } = useRealtimeQuery<ConfiguracaoHorarios>({
+    collectionName: "configuracaoHorarios",
+    queryKey: ["configuracaoHorarios"],
+  });
+
+  const horariosCustom = useMemo(() => {
+    if (horariosConfig && horariosConfig.length > 0) {
+      const activeConfig = horariosConfig.find(c => c.ativo) ?? horariosConfig[0];
+      if (activeConfig.horarios && activeConfig.horarios.length > 0) {
+        const activeHorarios = activeConfig.horarios.filter(h => h.ativo !== false);
+        return [...activeHorarios].sort((a, b) => a.inicio.localeCompare(b.inicio));
+      }
+    }
+    return HORARIOS_AULAS_PADRAO;
+  }, [horariosConfig]);
+
   const gradesPublicadas = useMemo(() => {
     if (!grades) return [];
     return grades.filter(g => g.status === "publicado");
@@ -99,7 +118,7 @@ export function HorarioViewer({ userType, turmaId, turmaNome, professorId }: Hor
       grade.slots
         .filter(s => s.professorId === professorId)
         .forEach(slot => {
-          const horario = HORARIOS_AULAS.find(h => h.id === slot.horarioId);
+          const horario = horariosCustom.find(h => h.id === slot.horarioId);
           aulas.push({
             turmaId: grade.turmaId,
             turmaNome: grade.turmaNome,
@@ -113,7 +132,7 @@ export function HorarioViewer({ userType, turmaId, turmaNome, professorId }: Hor
     });
     
     return aulas;
-  }, [gradesFiltradas, professorId, userType]);
+  }, [gradesFiltradas, professorId, userType, horariosCustom]);
 
   const getDayOfWeekName = (date: Date): DiaSemana | null => {
     const dayMap: Record<number, DiaSemana> = {
@@ -140,7 +159,7 @@ export function HorarioViewer({ userType, turmaId, turmaNome, professorId }: Hor
       return grade.slots
         .filter(s => s.diaSemana === diaHoje)
         .map(slot => {
-          const horario = HORARIOS_AULAS.find(h => h.id === slot.horarioId);
+          const horario = horariosCustom.find(h => h.id === slot.horarioId);
           return {
             ...slot,
             horarioInicio: horario?.inicio || "",
@@ -151,7 +170,7 @@ export function HorarioViewer({ userType, turmaId, turmaNome, professorId }: Hor
     }
     
     return [];
-  }, [minhasAulas, gradesFiltradas, userType]);
+  }, [minhasAulas, gradesFiltradas, userType, horariosCustom]);
 
   const exportToPDF = (grade: GradeHoraria) => {
     const pdf = new jsPDF({ orientation: "landscape" });
@@ -163,13 +182,21 @@ export function HorarioViewer({ userType, turmaId, turmaNome, professorId }: Hor
     
     const tableData: string[][] = [];
     
-    HORARIOS_AULAS.forEach(horario => {
-      const row = [`${horario.nome}\n${horario.inicio}-${horario.fim}`];
-      DIAS_SEMANA.forEach(dia => {
-        const slot = grade.slots.find(s => s.diaSemana === dia && s.horarioId === horario.id);
-        row.push(slot ? `${slot.materia}\n${slot.professorNome}` : "");
-      });
-      tableData.push(row);
+    horariosCustom.forEach(horario => {
+      if (horario.tipo === "intervalo") {
+        const row = [`${horario.nome}\n${horario.inicio}-${horario.fim}`];
+        DIAS_SEMANA.forEach(() => {
+          row.push("Intervalo");
+        });
+        tableData.push(row);
+      } else {
+        const row = [`${horario.nome}\n${horario.inicio}-${horario.fim}`];
+        DIAS_SEMANA.forEach(dia => {
+          const slot = grade.slots.find(s => s.diaSemana === dia && s.horarioId === horario.id);
+          row.push(slot ? `${slot.materia}\n${slot.professorNome}` : "");
+        });
+        tableData.push(row);
+      }
     });
     
     autoTable(pdf, {
@@ -205,6 +232,7 @@ export function HorarioViewer({ userType, turmaId, turmaNome, professorId }: Hor
           th { background: #333; color: white; }
           .slot { font-weight: bold; }
           .professor { font-size: 0.8em; color: #666; }
+          .intervalo { background: #f0f0f0; color: #666; font-style: italic; }
           @media print { body { padding: 0; } }
         </style>
       </head>
@@ -226,13 +254,18 @@ export function HorarioViewer({ userType, turmaId, turmaNome, professorId }: Hor
           <tbody>
     `;
     
-    HORARIOS_AULAS.forEach(horario => {
-      html += `<tr><td>${horario.nome}<br><small>${horario.inicio}-${horario.fim}</small></td>`;
-      DIAS_SEMANA.forEach(dia => {
-        const slot = grade.slots.find(s => s.diaSemana === dia && s.horarioId === horario.id);
-        html += `<td>${slot ? `<div class="slot">${slot.materia}</div><div class="professor">${slot.professorNome}</div>` : ""}</td>`;
-      });
-      html += "</tr>";
+    horariosCustom.forEach(horario => {
+      if (horario.tipo === "intervalo") {
+        html += `<tr class="intervalo"><td>${horario.nome}<br><small>${horario.inicio}-${horario.fim}</small></td>`;
+        html += `<td colspan="6" class="intervalo">Intervalo</td></tr>`;
+      } else {
+        html += `<tr><td>${horario.nome}<br><small>${horario.inicio}-${horario.fim}</small></td>`;
+        DIAS_SEMANA.forEach(dia => {
+          const slot = grade.slots.find(s => s.diaSemana === dia && s.horarioId === horario.id);
+          html += `<td>${slot ? `<div class="slot">${slot.materia}</div><div class="professor">${slot.professorNome}</div>` : ""}</td>`;
+        });
+        html += "</tr>";
+      }
     });
     
     html += `</tbody></table></body></html>`;
@@ -356,6 +389,7 @@ export function HorarioViewer({ userType, turmaId, turmaNome, professorId }: Hor
                     } 
                     highlightProfessorId={userType === "professor" ? professorId : undefined}
                     showLegend
+                    horariosCustom={horariosCustom}
                   />
                 </CardContent>
                 <CardFooter className="flex justify-end gap-2 flex-wrap border-t pt-4">

@@ -1051,19 +1051,31 @@ export const DIAS_SEMANA = [
 
 export type DiaSemana = typeof DIAS_SEMANA[number];
 
-// Horários padrão das aulas
-export const HORARIOS_AULAS = [
-  { id: "1", inicio: "07:00", fim: "07:50", nome: "1ª Aula" },
-  { id: "2", inicio: "07:50", fim: "08:40", nome: "2ª Aula" },
-  { id: "3", inicio: "08:40", fim: "09:30", nome: "3ª Aula" },
-  { id: "4", inicio: "09:45", fim: "10:35", nome: "4ª Aula" },
-  { id: "5", inicio: "10:35", fim: "11:25", nome: "5ª Aula" },
-  { id: "6", inicio: "11:25", fim: "12:15", nome: "6ª Aula" },
-  { id: "7", inicio: "13:30", fim: "14:20", nome: "7ª Aula" },
-  { id: "8", inicio: "14:20", fim: "15:10", nome: "8ª Aula" },
-  { id: "9", inicio: "15:10", fim: "16:00", nome: "9ª Aula" },
-  { id: "10", inicio: "16:15", fim: "17:05", nome: "10ª Aula" },
-] as const;
+// Schema para um horário de aula individual (personalizável pelo diretor)
+export const horarioAulaSchema = z.object({
+  id: z.string(),
+  nome: z.string(),
+  inicio: z.string(),
+  fim: z.string(),
+  tipo: z.enum(["aula", "intervalo"]).default("aula"),
+  ativo: z.boolean().default(true),
+});
+
+export type HorarioAula = z.infer<typeof horarioAulaSchema>;
+
+// Horários padrão das aulas (legado - usar HORARIOS_AULAS_PADRAO quando possível)
+export const HORARIOS_AULAS: HorarioAula[] = [
+  { id: "1", inicio: "07:00", fim: "07:50", nome: "1ª Aula", tipo: "aula", ativo: true },
+  { id: "2", inicio: "07:50", fim: "08:40", nome: "2ª Aula", tipo: "aula", ativo: true },
+  { id: "3", inicio: "08:40", fim: "09:30", nome: "3ª Aula", tipo: "aula", ativo: true },
+  { id: "4", inicio: "09:45", fim: "10:35", nome: "4ª Aula", tipo: "aula", ativo: true },
+  { id: "5", inicio: "10:35", fim: "11:25", nome: "5ª Aula", tipo: "aula", ativo: true },
+  { id: "6", inicio: "11:25", fim: "12:15", nome: "6ª Aula", tipo: "aula", ativo: true },
+  { id: "7", inicio: "13:30", fim: "14:20", nome: "7ª Aula", tipo: "aula", ativo: true },
+  { id: "8", inicio: "14:20", fim: "15:10", nome: "8ª Aula", tipo: "aula", ativo: true },
+  { id: "9", inicio: "15:10", fim: "16:00", nome: "9ª Aula", tipo: "aula", ativo: true },
+  { id: "10", inicio: "16:15", fim: "17:05", nome: "10ª Aula", tipo: "aula", ativo: true },
+];
 
 // Slot de aula na grade horária
 export const slotAulaSchema = z.object({
@@ -1318,18 +1330,6 @@ export type DisponibilidadeProfessor = z.infer<typeof disponibilidadeProfessorSc
 export type InsertDisponibilidadeProfessor = z.infer<typeof insertDisponibilidadeProfessorSchema>;
 
 // ==================== CONFIGURAÇÃO DE HORÁRIOS PERSONALIZADOS ====================
-
-// Schema para um horário de aula individual (personalizável pelo diretor)
-export const horarioAulaSchema = z.object({
-  id: z.string(), // ID único do horário (ex: "1", "2", etc.)
-  nome: z.string(), // Nome do horário (ex: "1ª Aula", "Intervalo")
-  inicio: z.string(), // Hora de início (ex: "07:00")
-  fim: z.string(), // Hora de fim (ex: "07:50")
-  tipo: z.enum(["aula", "intervalo"]).default("aula"), // Tipo: aula normal ou intervalo
-  ativo: z.boolean().default(true), // Se está ativo ou não
-});
-
-export type HorarioAula = z.infer<typeof horarioAulaSchema>;
 
 // Schema para configuração geral de horários da escola (salvo no Firestore)
 export const configuracaoHorariosSchema = z.object({

@@ -392,12 +392,20 @@ export function HorariosTab({ turmas, professores }: HorariosTabProps) {
     const tableData: string[][] = [];
     
     horariosCustom.forEach(horario => {
-      const row = [`${horario.nome}\n${horario.inicio}-${horario.fim}`];
-      DIAS_SEMANA.forEach(dia => {
-        const slot = grade.slots.find(s => s.diaSemana === dia && s.horarioId === horario.id);
-        row.push(slot ? `${slot.materia}\n${slot.professorNome}` : "");
-      });
-      tableData.push(row);
+      if (horario.tipo === "intervalo") {
+        const row = [`${horario.nome}\n${horario.inicio}-${horario.fim}`];
+        DIAS_SEMANA.forEach(() => {
+          row.push("Intervalo");
+        });
+        tableData.push(row);
+      } else {
+        const row = [`${horario.nome}\n${horario.inicio}-${horario.fim}`];
+        DIAS_SEMANA.forEach(dia => {
+          const slot = grade.slots.find(s => s.diaSemana === dia && s.horarioId === horario.id);
+          row.push(slot ? `${slot.materia}\n${slot.professorNome}` : "");
+        });
+        tableData.push(row);
+      }
     });
     
     autoTable(pdf, {
@@ -433,6 +441,7 @@ export function HorariosTab({ turmas, professores }: HorariosTabProps) {
           th { background: #333; color: white; }
           .slot { font-weight: bold; }
           .professor { font-size: 0.8em; color: #666; }
+          .intervalo { background: #f0f0f0; color: #666; font-style: italic; }
           @media print {
             body { padding: 0; }
           }
@@ -457,12 +466,17 @@ export function HorariosTab({ turmas, professores }: HorariosTabProps) {
     `;
     
     horariosCustom.forEach(horario => {
-      html += `<tr><td>${horario.nome}<br><small>${horario.inicio}-${horario.fim}</small></td>`;
-      DIAS_SEMANA.forEach(dia => {
-        const slot = grade.slots.find(s => s.diaSemana === dia && s.horarioId === horario.id);
-        html += `<td>${slot ? `<div class="slot">${slot.materia}</div><div class="professor">${slot.professorNome}</div>` : ""}</td>`;
-      });
-      html += "</tr>";
+      if (horario.tipo === "intervalo") {
+        html += `<tr class="intervalo"><td>${horario.nome}<br><small>${horario.inicio}-${horario.fim}</small></td>`;
+        html += `<td colspan="6" class="intervalo">Intervalo</td></tr>`;
+      } else {
+        html += `<tr><td>${horario.nome}<br><small>${horario.inicio}-${horario.fim}</small></td>`;
+        DIAS_SEMANA.forEach(dia => {
+          const slot = grade.slots.find(s => s.diaSemana === dia && s.horarioId === horario.id);
+          html += `<td>${slot ? `<div class="slot">${slot.materia}</div><div class="professor">${slot.professorNome}</div>` : ""}</td>`;
+        });
+        html += "</tr>";
+      }
     });
     
     html += `
