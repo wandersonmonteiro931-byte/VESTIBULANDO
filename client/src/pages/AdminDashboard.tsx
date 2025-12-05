@@ -3068,16 +3068,23 @@ export default function AdminDashboard() {
                               <TableCell className="hidden xl:table-cell">
                                 {user.turmas && user.turmas.length > 0 ? (
                                   <div className="flex flex-wrap gap-1 max-w-[150px]">
-                                    {Array.from(new Set(user.turmas)).slice(0, 3).map((turmaId: string) => (
-                                      <Badge key={turmaId} variant="outline" className="text-xs">
-                                        {getTurmaNome(turmaId)}
-                                      </Badge>
-                                    ))}
-                                    {Array.from(new Set(user.turmas)).length > 3 && (
-                                      <Badge variant="outline" className="text-xs">
-                                        +{Array.from(new Set(user.turmas)).length - 3}
-                                      </Badge>
-                                    )}
+                                    {(() => {
+                                      const uniqueTurmas = Array.from(new Set(user.turmas.map((t: string) => getTurmaNome(t))));
+                                      return (
+                                        <>
+                                          {uniqueTurmas.slice(0, 3).map((turmaNome: string) => (
+                                            <Badge key={turmaNome} variant="outline" className="text-xs">
+                                              {turmaNome}
+                                            </Badge>
+                                          ))}
+                                          {uniqueTurmas.length > 3 && (
+                                            <Badge variant="outline" className="text-xs">
+                                              +{uniqueTurmas.length - 3}
+                                            </Badge>
+                                          )}
+                                        </>
+                                      );
+                                    })()}
                                   </div>
                                 ) : user.turma ? (
                                   <Badge variant="outline" className="text-xs">{getTurmaNome(user.turma)}</Badge>
@@ -6362,8 +6369,8 @@ export default function AdminDashboard() {
                 <Label className="text-muted-foreground">Turmas Atribuídas</Label>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {selectedProfessorDetails.turmas && selectedProfessorDetails.turmas.length > 0 ? (
-                    Array.from(new Set(selectedProfessorDetails.turmas)).map((turmaId: string) => (
-                      <Badge key={turmaId} variant="secondary">{getTurmaNome(turmaId)}</Badge>
+                    Array.from(new Set(selectedProfessorDetails.turmas.map((t: string) => getTurmaNome(t)))).map((turmaNome: string) => (
+                      <Badge key={turmaNome} variant="secondary">{turmaNome}</Badge>
                     ))
                   ) : selectedProfessorDetails.turma ? (
                     <Badge variant="secondary">{getTurmaNome(selectedProfessorDetails.turma)}</Badge>
