@@ -764,7 +764,7 @@ export const boletimNotaSchema = z.object({
 
 export type BoletimNota = z.infer<typeof boletimNotaSchema>;
 
-// Boletim Escolar completo
+// Boletim Escolar completo (1 boletim por bimestre por aluno)
 export const boletimSchema = z.object({
   id: z.string(),
   
@@ -778,6 +778,9 @@ export const boletimSchema = z.object({
   turmaId: z.string().optional(),
   turmaNome: z.string(),
   anoLetivo: z.string(), // Ex: "2025"
+  
+  // Identificador do bimestre (1, 2, 3 ou 4) - cada aluno tem 1 boletim por bimestre
+  bimestreNumero: z.number().min(1).max(4).default(1),
   
   // Configuração do período
   periodoTipo: z.enum(["bimestre", "trimestre"]).default("bimestre"),
