@@ -1595,6 +1595,15 @@ export const sessaoAulaAoVivoSchema = z.object({
   tempoInatividade: z.number().default(180), // 3 minutos em segundos
   tempoConfirmacao: z.number().default(120), // 2 minutos para confirmar
   
+  // Transmissão de mídia do professor
+  transmitindoTela: z.boolean().default(false),
+  transmitindoCamera: z.boolean().default(false),
+  transmitindoAudio: z.boolean().default(false),
+  modoVisualizacao: z.enum(["tela", "camera", "quadro_branco", "tela_camera"]).default("tela"),
+  
+  // Dados do quadro branco (serializado como JSON string)
+  quadroBrancoData: z.string().optional(),
+  
   // Metadados
   dataCriacao: z.string(),
 });
@@ -1619,6 +1628,10 @@ export const presencaAulaAoVivoSchema = z.object({
   
   // Status de presença
   status: z.enum(["na_sala", "ausente", "removido", "liberado"]).default("na_sala"),
+  
+  // Controle de câmera e microfone do aluno
+  cameraLigada: z.boolean().default(false),
+  micLigado: z.boolean().default(false),
   
   // Controle de tempo
   dataEntrada: z.string().optional(), // Quando entrou na sala
@@ -1741,3 +1754,39 @@ export const notificacaoPresencaSchema = z.object({
   dataCriacao: z.string(),
   expiraEm: z.string().optional(), // Para notificações com tempo limite
 });
+
+export const insertNotificacaoPresencaSchema = notificacaoPresencaSchema.omit({ id: true, dataCriacao: true });
+
+export type NotificacaoPresenca = z.infer<typeof notificacaoPresencaSchema>;
+export type InsertNotificacaoPresenca = z.infer<typeof insertNotificacaoPresencaSchema>;
+
+// ==================== SINALIZAÇÃO WEBRTC PARA AULA AO VIVO ====================
+
+// Sinal WebRTC para conexão peer-to-peer
+export const webrtcSignalSchema = z.object({
+  id: z.string(),
+  
+  // Identificadores da sessão
+  sessaoId: z.string(),
+  
+  // Remetente e destinatário
+  fromUserId: z.string(),
+  fromUserNome: z.string(),
+  fromUserTipo: z.enum(["professor", "aluno"]),
+  toUserId: z.string(), // "all" para broadcast do professor
+  
+  // Tipo de sinal
+  tipo: z.enum(["offer", "answer", "ice-candidate", "stream-update", "user-joined", "user-left"]),
+  
+  // Dados do sinal (SDP ou ICE candidate serializado)
+  data: z.string(), // JSON stringified
+  
+  // Metadados
+  timestamp: z.string(),
+  processado: z.boolean().default(false),
+});
+
+export const insertWebrtcSignalSchema = webrtcSignalSchema.omit({ id: true });
+
+export type WebrtcSignal = z.infer<typeof webrtcSignalSchema>;
+export type InsertWebrtcSignal = z.infer<typeof insertWebrtcSignalSchema>;

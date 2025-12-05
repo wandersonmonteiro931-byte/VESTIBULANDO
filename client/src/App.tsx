@@ -19,6 +19,8 @@ import AdminDashboard from "@/pages/AdminDashboard";
 import ChatPage from "@/pages/ChatPage";
 import ChatConversationPage from "@/pages/ChatConversationPage";
 import LiveClassPage from "@/pages/LiveClassPage";
+import TeacherClassroomPage from "@/pages/TeacherClassroomPage";
+import StudentClassroomPage from "@/pages/StudentClassroomPage";
 import NotFound from "@/pages/not-found";
 import type { User } from "@shared/schema";
 
@@ -93,6 +95,18 @@ function Router() {
       <Route path="/aula">
         <ProtectedRoute allowedTypes={["aluno"]}>
           <LiveClassPage />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/sala-professor/:sessionId">
+        <ProtectedRoute allowedTypes={["professor"]}>
+          <TeacherClassroomPage />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/sala-aluno">
+        <ProtectedRoute allowedTypes={["aluno"]}>
+          <StudentClassroomPage />
         </ProtectedRoute>
       </Route>
       

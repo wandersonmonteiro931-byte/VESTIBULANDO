@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLiveClass } from "@/contexts/LiveClassContext";
 import { db } from "@/lib/firebase";
@@ -52,6 +53,7 @@ interface Turma {
 }
 
 export function TeacherClassControl() {
+  const [, setLocation] = useLocation();
   const authContext = useAuth();
   const userData: User | null = (authContext && typeof authContext === 'object' && authContext !== null && 'userData' in authContext) 
     ? (authContext.userData as User | null) 
@@ -154,7 +156,7 @@ export function TeacherClassControl() {
       const generatedHorarioId = `horario_${Date.now()}`;
       const generatedHorarioNome = `Aula de ${materia}`;
       
-      await addDoc(sessionsRef, {
+      const docRef = await addDoc(sessionsRef, {
         chamadaId: "",
         turmaId: selectedTurmaId,
         turmaNome: selectedTurma?.nome || "",
@@ -169,22 +171,34 @@ export function TeacherClassControl() {
         tempoMaxAusencia: 300,
         tempoInatividade: 180,
         tempoConfirmacao: 120,
+        transmitindoTela: false,
+        transmitindoCamera: false,
+        transmitindoAudio: false,
+        modoVisualizacao: "tela",
         dataCriacao: formatBrasiliaTime(),
       });
 
       toast({
         title: "Aula Iniciada",
-        description: "Os alunos já podem entrar na sala.",
+        description: "Redirecionando para a sala de aula...",
       });
+      
+      setLocation(`/sala-professor/${docRef.id}`);
     } catch (error) {
       console.error("Error starting class:", error);
       toast({
         title: "Erro",
-        description: "Não foi possível iniciar a aula.",
+        description: "Nao foi possivel iniciar a aula.",
         variant: "destructive",
       });
     } finally {
       setIsStarting(false);
+    }
+  };
+  
+  const handleEnterClassroom = () => {
+    if (currentSession) {
+      setLocation(`/sala-professor/${currentSession.id}`);
     }
   };
 
@@ -463,15 +477,24 @@ export function TeacherClassControl() {
                 </ScrollArea>
               </div>
 
-              <Button 
-                variant="destructive" 
-                className="w-full"
-                onClick={() => setShowEndConfirmation(true)}
-                data-testid="button-end-class"
-              >
-                <Square className="h-4 w-4 mr-2" />
-                Encerrar Aula
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  className="flex-1"
+                  onClick={handleEnterClassroom}
+                  data-testid="button-enter-classroom"
+                >
+                  <Play className="h-4 w-4 mr-2" />
+                  Entrar na Sala
+                </Button>
+                <Button 
+                  variant="destructive"
+                  onClick={() => setShowEndConfirmation(true)}
+                  data-testid="button-end-class"
+                >
+                  <Square className="h-4 w-4 mr-2" />
+                  Encerrar
+                </Button>
+              </div>
             </>
           ) : null}
         </CardContent>
