@@ -2211,7 +2211,7 @@ export function BoletimTab() {
               </div>
 
               <div className="space-y-2">
-                <Label>Tipo de Período</Label>
+                <Label>Bimestre (para visualização)</Label>
                 <Select value={periodoTipo} onValueChange={(v: "bimestre" | "trimestre") => setPeriodoTipo(v)}>
                   <SelectTrigger>
                     <SelectValue />
