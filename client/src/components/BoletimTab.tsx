@@ -312,6 +312,8 @@ export function BoletimTab() {
   };
 
   const openCreateDialog = () => {
+    setSelectedBoletim(null);
+    setEditingBoletimData(null);
     setSelectedAlunoId("");
     setSelectedTurmaId("");
     setAnoLetivo(new Date().getFullYear().toString());
