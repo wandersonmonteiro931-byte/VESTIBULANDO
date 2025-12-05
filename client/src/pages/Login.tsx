@@ -790,7 +790,7 @@ export default function Login() {
               } else if (solicitacaoData.status === "standby") {
                 toast({
                   title: "Em fila de espera",
-                  description: solicitacaoData.comentarioStandby || "Você está em fila de espera. A diretoria entrará em contato em breve.",
+                  description: solicitacaoData.comentarioStandby || "Você está em fila de espera. Aguarde avaliação interna.",
                   variant: "default",
                 });
                 setLoading(false);
@@ -2129,10 +2129,10 @@ export default function Login() {
                   <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
                     <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Status: Fila de Espera (Stand By)</p>
                     <p className="text-sm mt-2">
-                      {statusResult.comentarioStandby || "Você está em fila de espera. A diretoria entrará em contato em breve."}
+                      {statusResult.comentarioStandby || "Você está em fila de espera. Aguarde avaliação interna."}
                     </p>
                     <p className="text-sm mt-3 p-2 bg-background rounded">
-                      Aguarde o contato da diretoria para mais informações.
+                      Você pode continuar verificando o status para verificar se houve alterações na sua matrícula.
                     </p>
                   </div>
                 )}
