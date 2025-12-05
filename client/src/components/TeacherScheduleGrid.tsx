@@ -166,8 +166,8 @@ export function TeacherScheduleGrid({
     return minhasAulas.get(`${dia}-${horarioId}`);
   };
 
-  const formatBrasiliaTime = () => {
-    return new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+  const formatISOTime = () => {
+    return new Date().toISOString();
   };
 
   const isCurrentTimeSlot = (horario: HorarioAula, dia: DiaSemana): boolean => {

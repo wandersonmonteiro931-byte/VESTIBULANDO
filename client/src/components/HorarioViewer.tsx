@@ -11,9 +11,11 @@ import {
   type AulaAgendada,
   type PresencaAula,
   type HorarioAula,
-  type ConfiguracaoHorarios
+  type ConfiguracaoHorarios,
+  type User
 } from "@shared/schema";
 import { ScheduleGrid } from "./ScheduleGrid";
+import { TeacherScheduleGrid } from "./TeacherScheduleGrid";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -27,7 +29,7 @@ import {
   AlertCircle,
   FileSpreadsheet,
   Printer,
-  User,
+  User as UserIcon,
   BookOpen,
   RefreshCw
 } from "lucide-react";
@@ -55,7 +57,10 @@ interface HorarioViewerProps {
 }
 
 export function HorarioViewer({ userType, turmaId, turmaNome, professorId }: HorarioViewerProps) {
-  const { userData } = useAuth();
+  const authContext = useAuth();
+  const userData: User | null = (authContext && typeof authContext === 'object' && authContext !== null && 'userData' in authContext) 
+    ? (authContext.userData as User | null) 
+    : null;
   const { toast } = useToast();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedAula, setSelectedAula] = useState<any | null>(null);
@@ -368,18 +373,52 @@ export function HorarioViewer({ userType, turmaId, turmaNome, professorId }: Hor
             </p>
           </CardContent>
         </Card>
+      ) : userType === "professor" && professorId ? (
+        <Card data-testid="card-horario-professor">
+          <CardHeader className="pb-3">
+            <div className="flex items-start justify-between gap-2 flex-wrap">
+              <div>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <BookOpen className="h-5 w-5" />
+                  Minha Grade de Aulas
+                </CardTitle>
+                <CardDescription>
+                  {minhasAulas.length} aulas em {Array.from(new Set(minhasAulas.map(a => a.turmaNome))).length} turma(s)
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <TeacherScheduleGrid 
+              grades={gradesFiltradas}
+              professorId={professorId}
+              horariosCustom={horariosCustom}
+              diasExibidos={diasAtivos}
+            />
+          </CardContent>
+          <CardFooter className="flex justify-end gap-2 flex-wrap border-t pt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => gradesFiltradas[0] && exportToPDF(gradesFiltradas[0])}
+              data-testid="button-export-pdf-professor"
+            >
+              <FileSpreadsheet className="h-4 w-4 mr-1" />
+              PDF
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => gradesFiltradas[0] && printGrade(gradesFiltradas[0])}
+              data-testid="button-print-professor"
+            >
+              <Printer className="h-4 w-4 mr-1" />
+              Imprimir
+            </Button>
+          </CardFooter>
+        </Card>
       ) : (
         <Tabs defaultValue={gradesFiltradas[0]?.id}>
-          {userType === "professor" && gradesFiltradas.length > 1 && (
-            <TabsList className="mb-4">
-              {gradesFiltradas.map(grade => (
-                <TabsTrigger key={grade.id} value={grade.id}>
-                  {grade.turmaNome}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          )}
-
           {gradesFiltradas.map(grade => (
             <TabsContent key={grade.id} value={grade.id}>
               <Card data-testid={`card-horario-${grade.id}`}>
@@ -398,11 +437,7 @@ export function HorarioViewer({ userType, turmaId, turmaNome, professorId }: Hor
                 </CardHeader>
                 <CardContent>
                   <ScheduleGrid 
-                    slots={userType === "professor" && professorId
-                      ? grade.slots.filter(s => s.professorId === professorId)
-                      : grade.slots
-                    } 
-                    highlightProfessorId={userType === "professor" ? professorId : undefined}
+                    slots={grade.slots} 
                     showLegend
                     horariosCustom={horariosCustom}
                     diasExibidos={diasAtivos}
