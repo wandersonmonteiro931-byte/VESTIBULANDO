@@ -165,13 +165,26 @@ export function TeacherClassControl() {
   const materiasDisponiveis = useMemo((): MateriaDisponivel[] => {
     if (!userData || gradesHorarias.length === 0) return [];
 
+    console.log("[TeacherClassControl] Debug - userData.uid:", userData.uid);
+    console.log("[TeacherClassControl] Debug - gradesHorarias:", gradesHorarias);
+    console.log("[TeacherClassControl] Debug - selectedTurmaId:", selectedTurmaId);
+
     const diaAtual = getDiaSemanaAtual();
     const minutosAtual = getHorarioBrasiliaMinutos();
     const resultado: MateriaDisponivel[] = [];
     const materiasJaAdicionadas = new Set<string>();
 
     for (const grade of gradesHorarias) {
+      console.log("[TeacherClassControl] Debug - Checking grade:", grade.id, "turmaId:", grade.turmaId, "slots:", grade.slots?.length);
+      
+      if (grade.slots) {
+        grade.slots.forEach((slot, i) => {
+          console.log(`[TeacherClassControl] Debug - Slot ${i}: professorId=${slot.professorId}, materia=${slot.materia}`);
+        });
+      }
+      
       const slotsDoProf = grade.slots.filter(slot => slot.professorId === userData.uid);
+      console.log("[TeacherClassControl] Debug - slotsDoProf for this grade:", slotsDoProf.length);
       
       for (const slot of slotsDoProf) {
         const horario = HORARIOS_AULAS.find(h => h.id === slot.horarioId);
@@ -494,6 +507,24 @@ export function TeacherClassControl() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="materia-select">Matéria / Disciplina</Label>
+                {/* Debug info - remover após correção */}
+                {selectedTurmaId && materiasDisponiveisParaTurma.length === 0 && (
+                  <div className="text-xs text-amber-500 bg-amber-50 dark:bg-amber-950/30 p-2 rounded mb-2 space-y-1">
+                    <div>Debug: UID do professor: {userData?.uid}</div>
+                    <div>Grades publicadas: {gradesHorarias.length}</div>
+                    <div>Matérias do professor (todas turmas): {materiasDisponiveis.length}</div>
+                    <div>Turma selecionada: {selectedTurmaId}</div>
+                    <div>Grades com esta turma: {gradesHorarias.filter(g => g.turmaId === selectedTurmaId).length}</div>
+                    {gradesHorarias.map(g => (
+                      <div key={g.id} className="text-[10px] border-t pt-1">
+                        Grade: {g.id} | TurmaId: {g.turmaId} | Status: {g.status} | Slots: {g.slots?.length || 0}
+                        {g.slots?.slice(0, 3).map((s, i) => (
+                          <div key={i} className="ml-2">Slot {i}: {s.materia} - Prof: {s.professorId?.substring(0, 10)}...</div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <Select value={materia} onValueChange={setMateria}>
                   <SelectTrigger id="materia-select" data-testid="select-materia">
                     <SelectValue placeholder="Selecione a matéria" />
