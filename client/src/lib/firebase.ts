@@ -1,6 +1,6 @@
-import { initializeApp, type FirebaseApp } from "firebase/app";
+import { initializeApp, getApps, getApp, deleteApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth, createUserWithEmailAndPassword } from "firebase/auth";
-import { initializeFirestore, type Firestore, memoryLocalCache } from "firebase/firestore";
+import { getFirestore, type Firestore, enableIndexedDbPersistence, CACHE_SIZE_UNLIMITED, initializeFirestore, memoryLocalCache } from "firebase/firestore";
 import { getStorage, type FirebaseStorage } from "firebase/storage";
 
 const firebaseConfig = {
@@ -43,11 +43,25 @@ try {
 
   console.log("✅ Inicializando Firebase...");
   console.log("📌 Project ID:", firebaseConfig.projectId);
-  app = initializeApp(firebaseConfig);
+  
+  const existingApps = getApps();
+  if (existingApps.length > 0) {
+    app = getApp();
+    console.log("📌 Reutilizando app Firebase existente");
+  } else {
+    app = initializeApp(firebaseConfig);
+  }
+  
   auth = getAuth(app);
-  db = initializeFirestore(app, {
-    localCache: memoryLocalCache()
-  });
+  
+  try {
+    db = getFirestore(app);
+  } catch {
+    db = initializeFirestore(app, {
+      localCache: memoryLocalCache(),
+      experimentalForceLongPolling: true
+    });
+  }
   
   try {
     storage = getStorage(app);
@@ -59,7 +73,12 @@ try {
     storageAvailable = false;
   }
   
-  secondaryApp = initializeApp(firebaseConfig, "secondary");
+  const secondaryApps = existingApps.filter(a => a.name === "secondary");
+  if (secondaryApps.length > 0) {
+    secondaryApp = secondaryApps[0];
+  } else {
+    secondaryApp = initializeApp(firebaseConfig, "secondary");
+  }
   secondaryAuth = getAuth(secondaryApp);
   console.log("✅ Firebase inicializado com sucesso!");
 } catch (error) {
