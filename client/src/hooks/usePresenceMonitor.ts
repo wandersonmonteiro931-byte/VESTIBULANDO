@@ -15,9 +15,9 @@ export interface PresenceState {
 }
 
 export interface PresenceMonitorConfig {
-  inactivityTimeout: number; // seconds before showing confirmation (default: 180 = 3 min)
-  confirmationTimeout: number; // seconds to confirm presence (default: 120 = 2 min)
-  maxAbsenceTime: number; // max total absence time before removal (default: 300 = 5 min)
+  inactivityTimeout: number;
+  confirmationTimeout: number;
+  maxAbsenceTime: number;
   onInactivityDetected: () => void;
   onAbsenceDetected: () => void;
   onAbsenceReturn: () => void;
@@ -62,18 +62,97 @@ export function usePresenceMonitor(config: Partial<PresenceMonitorConfig> = {}) 
   const confirmationTimerRef = useRef<NodeJS.Timeout | null>(null);
   const absenceSoundIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const absenceStartRef = useRef<number | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const oscillatorRef = useRef<OscillatorNode | null>(null);
+  const gainNodeRef = useRef<GainNode | null>(null);
+  const alarmPatternRef = useRef<NodeJS.Timeout | null>(null);
 
   const playAlertSound = useCallback(() => {
     try {
-      if (!audioRef.current) {
-        audioRef.current = new Audio();
-        audioRef.current.src = "data:audio/wav;base64,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";
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
       }
-      audioRef.current.volume = 0.3;
-      audioRef.current.play().catch(() => {});
+      const ctx = audioContextRef.current;
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = 880;
+      gain.gain.value = 0.3;
+      osc.start();
+      osc.stop(ctx.currentTime + 0.2);
     } catch (e) {
       console.log("Could not play alert sound");
+    }
+  }, []);
+
+  const startContinuousAlarm = useCallback(() => {
+    try {
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      
+      const ctx = audioContextRef.current;
+      
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
+
+      if (oscillatorRef.current) {
+        try {
+          oscillatorRef.current.stop();
+          oscillatorRef.current.disconnect();
+        } catch (e) {}
+      }
+
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      
+      oscillator.type = 'square';
+      oscillator.frequency.value = 880;
+      gainNode.gain.value = 0.4;
+      
+      oscillatorRef.current = oscillator;
+      gainNodeRef.current = gainNode;
+      
+      oscillator.start();
+      
+      let highFreq = true;
+      alarmPatternRef.current = setInterval(() => {
+        if (oscillatorRef.current) {
+          oscillatorRef.current.frequency.value = highFreq ? 880 : 660;
+          highFreq = !highFreq;
+        }
+      }, 250);
+      
+    } catch (e) {
+      console.log("Could not start continuous alarm");
+    }
+  }, []);
+
+  const stopContinuousAlarm = useCallback(() => {
+    try {
+      if (oscillatorRef.current) {
+        oscillatorRef.current.stop();
+        oscillatorRef.current.disconnect();
+        oscillatorRef.current = null;
+      }
+      if (gainNodeRef.current) {
+        gainNodeRef.current.disconnect();
+        gainNodeRef.current = null;
+      }
+    } catch (e) {}
+    
+    if (alarmPatternRef.current) {
+      clearInterval(alarmPatternRef.current);
+      alarmPatternRef.current = null;
     }
   }, []);
 
@@ -102,37 +181,16 @@ export function usePresenceMonitor(config: Partial<PresenceMonitorConfig> = {}) 
   }, [mergedConfig.confirmationTimeout]);
 
   const startIntermittentSound = useCallback(() => {
-    // Start continuous alarm that loops until student returns
-    try {
-      if (!audioRef.current) {
-        audioRef.current = new Audio();
-      }
-      // Urgent alarm sound
-      audioRef.current.src = "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleT8WAoBm2Pt4dGBjgmhqc2BfY35vW+KsAABNe3Vofm1qc2txYmJmfWZYvpEAAEJwbmh7bGpxanJiZGZ6Z1W1iAAAQG5uaHlranBpcWJkZnhmVbSGAAA/bW5oeGtqcGlxYmRmeGZVs4UAAD9sbmh4a2pwaXFiZGZ4ZlWzhAAAPmxuaHhranBpcGJkZnhmVLODAAA+bG5od2tqb2hwYmRld2ZUs4IAAD1sbmh3a2pvZ3BiZHd2ZFSyggAAPWxuaHdrao9nXGRvbmZVnIAAADxpbmh5bGmUX1NdXWRtWYt1AAA4ZG1oeGxplFlMV1FeZVx7bQAANV9qaHdsYZFOQlFOWF9cZ2gAADJXZmd1alqJQzlKSVNYV1diAAAvUmFmdWlXhz40REVPUlJVXQAALk5cZHNoV4Y8NEFDTlFQU1kAACxLWGJyaFWFOzE/QU1QTlJWAAArSFVgcGdUhDswPkBMT01RVQAAKkZTXm9mU4M6Lz0/S05MTlMAAClEUV1uZVOCOS49PkpNS01SAAApQ1BcbWRSgTguPD5JS0tNUQAAKEJPW2xkUoA3LTw+SUpLS0wAACdBTlprY1F/Ny08PkhJS0tMAAAoQU5aamNRfjYtOz5ISEpKSwAAJ0BNWWliUH02LTs9R0hKSkwAACdATFlpYlB8NS06PUdISElLAAAnQExZaGFQfDUtOj1GR0lJSwAAJ0BMWGZZUXY0LDg7REVHR0kAACY/S1dlVVNyMis2OUNERkZHAAAlPklWYk5UcTEqNDdBQ0RERQAAIz1HVGBLUm8wKjM2QEJDQkQAACM9R1ReSk9tLykxNT9BQkFCAAAgPERTXEhNbC4oMDQ+QEFAQgAAITxEU1pHS2ssJy4zPT9APz8AACBASlpdSkhtKSUtMTs9PT4/AAAkRlNhXEpHaikjKi84Ozw8PQAAJ0xaZV1KRmMkIScsMjc6OjsAACpTYmlfS0NZHhsfJy8zNTc3AAAuWmtuX0k/Tx4XHCQtMDI0NQAAMmBxdGBKOkMdERYfKSstLy8AADRkdXlhSD07GhAQGyQnKCsqAAA1aHp9YkhCRxsWExokJSUnJgAANGd5fWNJR00gGhkfIyMjJCMAADVneH1jRks+IBwcJCIhIiEgAAAwZHh7Xz85MRoYGx8gISAgHwAAL11ublo6MywZFxwdHh4eHhwAAC1VYWNVNCopFxgcGxwcHBsaAAAoS1VTSyokJBcYGxoaGhoaGAAAIUBIRz4iIB8WFxkYGBgYFxYAABlASD83Hx4fFhcXFxcXFhUVAAATNz80NyMgHRQUFhUVFRQUEwAADjMxLzElIh8UFRQUFBQUFBMAAA0yLy0uJCIgFRQUExQUExMTAAAMLy0rLSMhHxYUFBMTExMSEgAACi0sKiwhIB4VFBMTExIREREAAAkqKikpIB8dFRMSEhISEhERAAAIKSkpKR8eHBQTEhISEREREAAACCkpKCgeHRsUExIREREREBAAAAgoKCcnHRwbFBMSEREREBEQAAAHJycnJh0cGhQSEhAQEBAQEAAABycmJiYdHBoUEhIQEBAQDw8AAAYmJiYlHRsaFBIRDxAPEA8PAAAGJiYlJR0bGhQSEQ8QDw8PDwAABiUlJSQcGxoUEhEPDw8PDw8AAAUlJSUkHBsaFBIRDw8PDw8PAAAFJSUkJBwbGRQSEQ8PDw8ODgAABSQkJCMcGxkUEhEPDw8PDg4AAAUkJCQjGxsZFBIRDw8PDg4OAAAFJCQjIxsbGBQSEQ8PDw4ODgAABCMjIyIaGhgTERAPDw8ODg4AAAQjIyIiGhoYExEQDw4ODg4OAAAEIyMiIhoaGBMRDw4ODg4ODQAABCIiIi";
-      audioRef.current.volume = 0.6;
-      audioRef.current.loop = true;
-      audioRef.current.play().catch(() => {});
-    } catch (e) {
-      console.log("Could not start continuous alarm");
-    }
-  }, []);
+    startContinuousAlarm();
+  }, [startContinuousAlarm]);
 
   const stopIntermittentSound = useCallback(() => {
-    // Stop the continuous alarm
-    try {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-        audioRef.current.loop = false;
-      }
-    } catch (e) {
-      console.log("Could not stop alarm");
-    }
+    stopContinuousAlarm();
     if (absenceSoundIntervalRef.current) {
       clearInterval(absenceSoundIntervalRef.current);
       absenceSoundIntervalRef.current = null;
     }
-  }, []);
+  }, [stopContinuousAlarm]);
 
   const dismissReturnModal = useCallback(() => {
     setState(prev => ({ ...prev, showReturnModal: false }));
@@ -143,7 +201,7 @@ export function usePresenceMonitor(config: Partial<PresenceMonitorConfig> = {}) 
     console.log("[usePresenceMonitor] visibilitychange - isVisible:", isVisible, "enabled:", mergedConfig.enabled);
     
     if (!isVisible && mergedConfig.enabled) {
-      console.log("[usePresenceMonitor] Tab hidden - starting intermittent sound");
+      console.log("[usePresenceMonitor] Tab hidden - starting continuous alarm");
       absenceStartRef.current = Date.now();
       startIntermittentSound();
       mergedConfig.onAbsenceDetected();
