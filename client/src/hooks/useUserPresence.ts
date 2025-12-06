@@ -35,9 +35,14 @@ export function useUserPresence(userId: string | null | undefined) {
         });
         isOnlineRef.current = true;
         lastActivityUpdateRef.current = Date.now();
-        console.log(`[Presence] ✅ Usuário ${userId} marcado como ONLINE com sucesso`);
-      } catch (error) {
-        console.error(`[Presence] ❌ Erro ao marcar usuário ${userId} como online:`, error);
+        console.log(`[Presence] Usuário ${userId} marcado como ONLINE com sucesso`);
+      } catch (error: any) {
+        // Bug do Firebase SDK 12.4.0 - suprimir apenas este erro específico
+        if (error?.message?.includes('INTERNAL ASSERTION FAILED')) {
+          console.warn('[Presence] Firebase SDK bug detectado - recarregue a página se persistir');
+          return;
+        }
+        console.error(`[Presence] Erro ao marcar usuário ${userId} como online:`, error);
       }
     };
 
@@ -64,9 +69,20 @@ export function useUserPresence(userId: string | null | undefined) {
           statusPresenca: 'offline',
         });
         isOnlineRef.current = false;
-        console.log(`[Presence] ✅ Usuário ${userId} marcado como OFFLINE com sucesso`);
-      } catch (error) {
-        console.error(`[Presence] ❌ Erro ao marcar usuário ${userId} como offline:`, error);
+        console.log(`[Presence] Usuário ${userId} marcado como OFFLINE com sucesso`);
+      } catch (error: any) {
+        // Ignora erros de permissão e o bug interno do Firebase SDK 12.4.0
+        if (error?.code === 'permission-denied') {
+          console.warn(`[Presence] Sem permissão para marcar ${userId} como offline`);
+          isOnlineRef.current = false; // Marca localmente de qualquer forma
+          return;
+        }
+        if (error?.message?.includes('INTERNAL ASSERTION FAILED')) {
+          console.warn('[Presence] Firebase SDK bug detectado, ignorando...');
+          isOnlineRef.current = false;
+          return;
+        }
+        console.error(`[Presence] Erro ao marcar usuário ${userId} como offline:`, error);
       }
     };
 
@@ -104,7 +120,16 @@ export function useUserPresence(userId: string | null | undefined) {
           lastActivity: serverTimestamp(),
         });
         lastActivityUpdateRef.current = now;
-      } catch (error) {
+      } catch (error: any) {
+        // Ignora erros de permissão e o bug interno do Firebase SDK 12.4.0
+        if (error?.code === 'permission-denied') {
+          console.warn('[Presence] Sem permissão para atualizar atividade');
+          return;
+        }
+        if (error?.message?.includes('INTERNAL ASSERTION FAILED')) {
+          console.warn('[Presence] Firebase SDK bug detectado, ignorando...');
+          return;
+        }
         console.error('Erro ao atualizar atividade:', error);
       }
     };

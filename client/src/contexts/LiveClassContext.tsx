@@ -52,72 +52,142 @@ export function LiveClassProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!userData || userData.tipo !== "aluno" || !userData.turma) return;
 
-    const sessionsRef = collection(db, "sessoesAulaAoVivo");
-    const q = query(
-      sessionsRef,
-      where("turmaId", "==", userData.turma),
-      where("status", "==", "em_andamento")
-    );
+    let unsubscribe: (() => void) | null = null;
+    let isMounted = true;
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      if (!snapshot.empty) {
-        const sessionData = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as SessaoAulaAoVivo;
-        setCurrentSession(sessionData);
-      } else {
-        setCurrentSession(null);
-        setStudentPresence(null);
+    const setupListener = () => {
+      try {
+        const sessionsRef = collection(db, "sessoesAulaAoVivo");
+        const q = query(
+          sessionsRef,
+          where("turmaId", "==", userData.turma),
+          where("status", "==", "em_andamento")
+        );
+
+        unsubscribe = onSnapshot(q, (snapshot) => {
+          if (!isMounted) return;
+          if (!snapshot.empty) {
+            const sessionData = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as SessaoAulaAoVivo;
+            setCurrentSession(sessionData);
+          } else {
+            setCurrentSession(null);
+            setStudentPresence(null);
+          }
+        }, (error: any) => {
+          // Bug do Firebase SDK 12.4.0 - suprimir apenas este erro específico
+          if (error?.message?.includes('INTERNAL ASSERTION FAILED')) {
+            console.warn("[LiveClassContext] Firebase SDK bug detectado - recarregue a página se persistir");
+            return;
+          }
+          console.error("[LiveClassContext] Erro ao escutar sessões:", error);
+        });
+      } catch (error: any) {
+        if (!error?.message?.includes('INTERNAL ASSERTION FAILED')) {
+          console.error("[LiveClassContext] Falha ao configurar listener de sessões:", error);
+        }
       }
-    }, (error) => {
-      console.error("[LiveClassContext] Error listening to sessions:", error);
-    });
+    };
 
-    return () => unsubscribe();
+    setupListener();
+
+    return () => {
+      isMounted = false;
+      if (unsubscribe) unsubscribe();
+    };
   }, [userData]);
 
   useEffect(() => {
     if (!userData || userData.tipo !== "professor") return;
 
-    const requestsRef = collection(db, "solicitacoesSaida");
-    const q = query(
-      requestsRef,
-      where("professorId", "==", userData.uid),
-      where("status", "==", "pendente"),
-      orderBy("dataSolicitacao", "desc")
-    );
+    let unsubscribe: (() => void) | null = null;
+    let isMounted = true;
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const requests = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as SolicitacaoSaida[];
-      setPendingLeaveRequests(requests);
-    }, (error) => {
-      console.error("[LiveClassContext] Error listening to leave requests:", error);
-    });
+    const setupListener = async () => {
+      try {
+        const requestsRef = collection(db, "solicitacoesSaida");
+        const q = query(
+          requestsRef,
+          where("professorId", "==", userData.uid),
+          where("status", "==", "pendente")
+        );
 
-    return () => unsubscribe();
+        unsubscribe = onSnapshot(q, (snapshot) => {
+          if (!isMounted) return;
+          const requests = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as SolicitacaoSaida[];
+          const sortedRequests = requests.sort((a, b) => {
+            const dateA = a.dataSolicitacao ? new Date(a.dataSolicitacao).getTime() : 0;
+            const dateB = b.dataSolicitacao ? new Date(b.dataSolicitacao).getTime() : 0;
+            return dateB - dateA;
+          });
+          setPendingLeaveRequests(sortedRequests);
+        }, (error: any) => {
+          // Bug do Firebase SDK 12.4.0 - suprimir apenas este erro específico
+          if (error?.message?.includes('INTERNAL ASSERTION FAILED')) {
+            console.warn("[LiveClassContext] Firebase SDK bug detectado - recarregue a página se persistir");
+            return;
+          }
+          console.error("[LiveClassContext] Erro ao escutar solicitações de saída:", error);
+        });
+      } catch (error: any) {
+        if (!error?.message?.includes('INTERNAL ASSERTION FAILED')) {
+          console.error("[LiveClassContext] Falha ao configurar listener de solicitações:", error);
+        }
+      }
+    };
+
+    setupListener();
+
+    return () => {
+      isMounted = false;
+      if (unsubscribe) unsubscribe();
+    };
   }, [userData]);
 
   useEffect(() => {
     if (!currentSession || !userData) return;
 
-    const presenceRef = collection(db, "presencasAulaAoVivo");
-    const q = query(
-      presenceRef,
-      where("sessaoId", "==", currentSession.id),
-      where("alunoId", "==", userData.uid)
-    );
+    let unsubscribe: (() => void) | null = null;
+    let isMounted = true;
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      if (!snapshot.empty) {
-        const presenceData = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as PresencaAulaAoVivo;
-        setStudentPresence(presenceData);
+    const setupListener = () => {
+      try {
+        const presenceRef = collection(db, "presencasAulaAoVivo");
+        const q = query(
+          presenceRef,
+          where("sessaoId", "==", currentSession.id),
+          where("alunoId", "==", userData.uid)
+        );
+
+        unsubscribe = onSnapshot(q, (snapshot) => {
+          if (!isMounted) return;
+          if (!snapshot.empty) {
+            const presenceData = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as PresencaAulaAoVivo;
+            setStudentPresence(presenceData);
+          }
+        }, (error: any) => {
+          // Bug do Firebase SDK 12.4.0 - suprimir apenas este erro específico
+          if (error?.message?.includes('INTERNAL ASSERTION FAILED')) {
+            console.warn("[LiveClassContext] Firebase SDK bug detectado - recarregue a página se persistir");
+            return;
+          }
+          console.error("[LiveClassContext] Erro ao escutar presença:", error);
+        });
+      } catch (error: any) {
+        if (!error?.message?.includes('INTERNAL ASSERTION FAILED')) {
+          console.error("[LiveClassContext] Falha ao configurar listener de presença:", error);
+        }
       }
-    }, (error) => {
-      console.error("[LiveClassContext] Error listening to presence:", error);
-    });
+    };
 
-    return () => unsubscribe();
+    setupListener();
+
+    return () => {
+      isMounted = false;
+      if (unsubscribe) unsubscribe();
+    };
   }, [currentSession, userData]);
 
   const enterClass = useCallback(async (sessionId: string) => {

@@ -104,46 +104,90 @@ export default function TeacherClassroomPage() {
   useEffect(() => {
     if (!sessionId) return;
 
-    const sessionRef = doc(db, "sessoesAulaAoVivo", sessionId);
-    const unsubscribe = onSnapshot(sessionRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const sessionData = { id: snapshot.id, ...snapshot.data() } as SessaoAulaAoVivo;
-        setSession(sessionData);
-        if (sessionData.modoVisualizacao) {
-          setViewMode(sessionData.modoVisualizacao as ViewMode);
-        }
-      } else {
-        toast({
-          title: "Sessao nao encontrada",
-          description: "A aula nao foi encontrada.",
-          variant: "destructive",
-        });
-        setLocation("/professor");
-      }
-    }, (error) => {
-      console.error("[TeacherClassroomPage] Error listening to session:", error);
-    });
+    let unsubscribe: (() => void) | null = null;
+    let isMounted = true;
 
-    return () => unsubscribe();
+    const setupListener = () => {
+      try {
+        const sessionRef = doc(db, "sessoesAulaAoVivo", sessionId);
+        unsubscribe = onSnapshot(sessionRef, (snapshot) => {
+          if (!isMounted) return;
+          if (snapshot.exists()) {
+            const sessionData = { id: snapshot.id, ...snapshot.data() } as SessaoAulaAoVivo;
+            setSession(sessionData);
+            if (sessionData.modoVisualizacao) {
+              setViewMode(sessionData.modoVisualizacao as ViewMode);
+            }
+          } else {
+            toast({
+              title: "Sessao nao encontrada",
+              description: "A aula nao foi encontrada.",
+              variant: "destructive",
+            });
+            setLocation("/professor");
+          }
+        }, (error: any) => {
+          // Bug do Firebase SDK 12.4.0 - suprimir apenas este erro específico
+          if (error?.message?.includes('INTERNAL ASSERTION FAILED')) {
+            console.warn("[TeacherClassroomPage] Firebase SDK bug detectado - recarregue a página se persistir");
+            return;
+          }
+          console.error("[TeacherClassroomPage] Erro ao escutar sessão:", error);
+        });
+      } catch (error: any) {
+        if (!error?.message?.includes('INTERNAL ASSERTION FAILED')) {
+          console.error("[TeacherClassroomPage] Falha ao configurar listener de sessão:", error);
+        }
+      }
+    };
+
+    setupListener();
+
+    return () => {
+      isMounted = false;
+      if (unsubscribe) unsubscribe();
+    };
   }, [sessionId, setLocation, toast]);
 
   useEffect(() => {
     if (!session) return;
 
-    const participantsRef = collection(db, "presencasAulaAoVivo");
-    const q = query(participantsRef, where("sessaoId", "==", session.id));
+    let unsubscribe: (() => void) | null = null;
+    let isMounted = true;
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const participantsList = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as PresencaAulaAoVivo[];
-      setParticipants(participantsList);
-    }, (error) => {
-      console.error("[TeacherClassroomPage] Error listening to participants:", error);
-    });
+    const setupListener = () => {
+      try {
+        const participantsRef = collection(db, "presencasAulaAoVivo");
+        const q = query(participantsRef, where("sessaoId", "==", session.id));
 
-    return () => unsubscribe();
+        unsubscribe = onSnapshot(q, (snapshot) => {
+          if (!isMounted) return;
+          const participantsList = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as PresencaAulaAoVivo[];
+          setParticipants(participantsList);
+        }, (error: any) => {
+          // Bug do Firebase SDK 12.4.0 - suprimir apenas este erro específico
+          if (error?.message?.includes('INTERNAL ASSERTION FAILED')) {
+            console.warn("[TeacherClassroomPage] Firebase SDK bug detectado - recarregue a página se persistir");
+            return;
+          }
+          console.error("[TeacherClassroomPage] Erro ao escutar participantes:", error);
+        });
+      } catch (error: any) {
+        if (!error?.message?.includes('INTERNAL ASSERTION FAILED')) {
+          console.error("[TeacherClassroomPage] Falha ao configurar listener de participantes:", error);
+        }
+      }
+    };
+
+    setupListener();
+
+    return () => {
+      isMounted = false;
+      if (unsubscribe) unsubscribe();
+    };
   }, [session]);
 
   useEffect(() => {

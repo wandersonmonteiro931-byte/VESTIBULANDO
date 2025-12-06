@@ -3,6 +3,7 @@ import { getAuth, type Auth, createUserWithEmailAndPassword } from "firebase/aut
 import { getFirestore, type Firestore, enableIndexedDbPersistence, CACHE_SIZE_UNLIMITED, initializeFirestore, memoryLocalCache } from "firebase/firestore";
 import { getStorage, type FirebaseStorage } from "firebase/storage";
 
+
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: `${import.meta.env.VITE_FIREBASE_PROJECT_ID}.firebaseapp.com`,
