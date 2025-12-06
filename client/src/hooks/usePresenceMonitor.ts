@@ -10,6 +10,8 @@ export interface PresenceState {
   isShowingConfirmation: boolean;
   confirmationCountdown: number;
   absenceWarningShown: boolean;
+  showReturnModal: boolean;
+  lastAbsenceDuration: number;
 }
 
 export interface PresenceMonitorConfig {
@@ -51,11 +53,14 @@ export function usePresenceMonitor(config: Partial<PresenceMonitorConfig> = {}) 
     isShowingConfirmation: false,
     confirmationCountdown: mergedConfig.confirmationTimeout,
     absenceWarningShown: false,
+    showReturnModal: false,
+    lastAbsenceDuration: 0,
   });
 
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const absenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const confirmationTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const absenceSoundIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const absenceStartRef = useRef<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -96,12 +101,33 @@ export function usePresenceMonitor(config: Partial<PresenceMonitorConfig> = {}) 
     }));
   }, [mergedConfig.confirmationTimeout]);
 
+  const startIntermittentSound = useCallback(() => {
+    if (absenceSoundIntervalRef.current) {
+      clearInterval(absenceSoundIntervalRef.current);
+    }
+    playAlertSound();
+    absenceSoundIntervalRef.current = setInterval(() => {
+      playAlertSound();
+    }, 5000);
+  }, [playAlertSound]);
+
+  const stopIntermittentSound = useCallback(() => {
+    if (absenceSoundIntervalRef.current) {
+      clearInterval(absenceSoundIntervalRef.current);
+      absenceSoundIntervalRef.current = null;
+    }
+  }, []);
+
+  const dismissReturnModal = useCallback(() => {
+    setState(prev => ({ ...prev, showReturnModal: false }));
+  }, []);
+
   const handleVisibilityChange = useCallback(() => {
     const isVisible = document.visibilityState === "visible";
     
     if (!isVisible && mergedConfig.enabled) {
       absenceStartRef.current = Date.now();
-      playAlertSound();
+      startIntermittentSound();
       mergedConfig.onAbsenceDetected();
       setState(prev => ({
         ...prev,
@@ -111,6 +137,7 @@ export function usePresenceMonitor(config: Partial<PresenceMonitorConfig> = {}) 
     } else if (isVisible && absenceStartRef.current) {
       const absenceDuration = Math.floor((Date.now() - absenceStartRef.current) / 1000);
       absenceStartRef.current = null;
+      stopIntermittentSound();
       
       setState(prev => ({
         ...prev,
@@ -118,11 +145,13 @@ export function usePresenceMonitor(config: Partial<PresenceMonitorConfig> = {}) 
         absenceDuration: 0,
         totalAbsenceTime: prev.totalAbsenceTime + absenceDuration,
         absenceWarningShown: false,
+        showReturnModal: absenceDuration >= 3,
+        lastAbsenceDuration: absenceDuration,
       }));
       
       mergedConfig.onAbsenceReturn();
     }
-  }, [mergedConfig, playAlertSound]);
+  }, [mergedConfig, startIntermittentSound, stopIntermittentSound]);
 
   const handleBeforeUnload = useCallback((e: BeforeUnloadEvent) => {
     if (mergedConfig.enabled) {
@@ -154,8 +183,9 @@ export function usePresenceMonitor(config: Partial<PresenceMonitorConfig> = {}) 
       });
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("beforeunload", handleBeforeUnload);
+      stopIntermittentSound();
     };
-  }, [mergedConfig.enabled, resetActivity, handleVisibilityChange, handleBeforeUnload]);
+  }, [mergedConfig.enabled, resetActivity, handleVisibilityChange, handleBeforeUnload, stopIntermittentSound]);
 
   useEffect(() => {
     if (!mergedConfig.enabled) return;
@@ -285,6 +315,7 @@ export function usePresenceMonitor(config: Partial<PresenceMonitorConfig> = {}) 
     confirmPresence,
     resetActivity,
     playAlertSound,
+    dismissReturnModal,
     getCurrentAbsenceTime: () => {
       const currentAbsence = absenceStartRef.current 
         ? Math.floor((Date.now() - absenceStartRef.current) / 1000)

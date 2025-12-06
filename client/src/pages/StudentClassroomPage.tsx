@@ -44,6 +44,7 @@ import { PresenceConfirmationModal } from "@/components/PresenceConfirmationModa
 import { AbsenceModal } from "@/components/AbsenceModal";
 import { AbsenceWarningModal } from "@/components/AbsenceWarningModal";
 import { LeaveRequestModal } from "@/components/LeaveRequestModal";
+import { ReturnModal } from "@/components/ReturnModal";
 import { usePresenceMonitor } from "@/hooks/usePresenceMonitor";
 import type { SessaoAulaAoVivo, PresencaAulaAoVivo, User } from "@shared/schema";
 
@@ -138,7 +139,8 @@ export default function StudentClassroomPage() {
   const { 
     state: presenceState, 
     confirmPresence, 
-    getCurrentAbsenceTime 
+    getCurrentAbsenceTime,
+    dismissReturnModal,
   } = usePresenceMonitor({
     inactivityTimeout,
     confirmationTimeout,
@@ -599,6 +601,14 @@ export default function StudentClassroomPage() {
           }
         }}
         onSubmit={handleLeaveRequest}
+      />
+
+      <ReturnModal
+        open={presenceState.showReturnModal}
+        absenceDuration={presenceState.lastAbsenceDuration}
+        totalAbsenceTime={presenceState.totalAbsenceTime}
+        maxAbsenceTime={maxAbsenceTime}
+        onDismiss={dismissReturnModal}
       />
     </div>
   );

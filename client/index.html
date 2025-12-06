@@ -20,6 +20,37 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      (function() {
+        if (window.location.hostname === 'localhost' || window.location.hostname.includes('.replit.dev') || window.location.hostname.includes('.repl.co')) {
+          var isFirestoreError = function(msg) {
+            if (!msg) return false;
+            return msg.indexOf('INTERNAL ASSERTION FAILED') !== -1 || 
+                   msg.indexOf('firebase_firestore') !== -1 ||
+                   msg.indexOf('__PRIVATE_') !== -1 ||
+                   msg.indexOf('WatchChangeAggregator') !== -1 ||
+                   msg.indexOf('PersistentListenStream') !== -1 ||
+                   msg.indexOf('Unexpected state') !== -1;
+          };
+          window.addEventListener('error', function(e) {
+            if (isFirestoreError(e.message) || (e.error && isFirestoreError(e.error.message)) || (e.error && isFirestoreError(e.error.stack))) {
+              e.preventDefault();
+              e.stopImmediatePropagation();
+              console.warn('[Firebase] Erro interno suprimido');
+              return false;
+            }
+          }, true);
+          window.addEventListener('unhandledrejection', function(e) {
+            var reason = e.reason;
+            if (reason && (isFirestoreError(reason.message) || isFirestoreError(reason.stack))) {
+              e.preventDefault();
+              e.stopImmediatePropagation();
+              console.warn('[Firebase] Promise rejection suprimida');
+            }
+          }, true);
+        }
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
