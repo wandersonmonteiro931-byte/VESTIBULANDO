@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLiveClass } from "@/contexts/LiveClassContext";
@@ -14,6 +14,12 @@ import {
   getDocs,
   orderBy
 } from "firebase/firestore";
+import { 
+  HORARIOS_AULAS,
+  type GradeHoraria,
+  type HorarioAula,
+  type DiaSemana
+} from "@shared/schema";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
