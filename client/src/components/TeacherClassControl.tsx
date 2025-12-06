@@ -16,9 +16,11 @@ import {
 } from "firebase/firestore";
 import { 
   HORARIOS_AULAS,
+  DIAS_SEMANA,
   type GradeHoraria,
   type HorarioAula,
-  type DiaSemana
+  type DiaSemana,
+  type SlotAula
 } from "@shared/schema";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -58,6 +60,16 @@ interface Turma {
   nome: string;
 }
 
+interface MateriaDisponivel {
+  materia: string;
+  turmaId: string;
+  turmaNome: string;
+  horarioInicio: string;
+  horarioFim: string;
+  disponivel: boolean;
+  proximaAula?: string;
+}
+
 export function TeacherClassControl() {
   const [, setLocation] = useLocation();
   const authContext = useAuth();
@@ -71,6 +83,8 @@ export function TeacherClassControl() {
   const [selectedTurmaId, setSelectedTurmaId] = useState<string>("");
   const [materia, setMateria] = useState<string>("");
   const [loadingTurmas, setLoadingTurmas] = useState(true);
+  const [gradesHorarias, setGradesHorarias] = useState<GradeHoraria[]>([]);
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   const [currentSession, setCurrentSession] = useState<SessaoAulaAoVivo | null>(null);
   const [participants, setParticipants] = useState<PresencaAulaAoVivo[]>([]);
@@ -101,6 +115,127 @@ export function TeacherClassControl() {
 
     fetchTurmas();
   }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (!userData) return;
+
+    const fetchGradesHorarias = async () => {
+      try {
+        const gradesRef = collection(db, "gradesHorarias");
+        const q = query(gradesRef, where("status", "==", "publicado"));
+        const snapshot = await getDocs(q);
+        const gradesData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as GradeHoraria[];
+        setGradesHorarias(gradesData);
+      } catch (error) {
+        console.error("Error fetching grades horarias:", error);
+      }
+    };
+
+    fetchGradesHorarias();
+  }, [userData]);
+
+  const getDiaSemanaAtual = (): DiaSemana => {
+    const now = new Date();
+    const brasiliaTime = new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+    const dayIndex = brasiliaTime.getDay();
+    return DIAS_SEMANA[dayIndex] as DiaSemana;
+  };
+
+  const getHorarioBrasiliaMinutos = (): number => {
+    const now = new Date();
+    const brasiliaTime = new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+    return brasiliaTime.getHours() * 60 + brasiliaTime.getMinutes();
+  };
+
+  const horarioParaMinutos = (horario: string): number => {
+    const [horas, minutos] = horario.split(":").map(Number);
+    return horas * 60 + minutos;
+  };
+
+  const materiasDisponiveis = useMemo((): MateriaDisponivel[] => {
+    if (!userData || gradesHorarias.length === 0) return [];
+
+    const diaAtual = getDiaSemanaAtual();
+    const minutosAtual = getHorarioBrasiliaMinutos();
+    const resultado: MateriaDisponivel[] = [];
+    const materiasJaAdicionadas = new Set<string>();
+
+    for (const grade of gradesHorarias) {
+      const slotsDoProf = grade.slots.filter(slot => slot.professorId === userData.uid);
+      
+      for (const slot of slotsDoProf) {
+        const horario = HORARIOS_AULAS.find(h => h.id === slot.horarioId);
+        if (!horario) continue;
+
+        const inicioMinutos = horarioParaMinutos(horario.inicio);
+        const fimMinutos = horarioParaMinutos(horario.fim);
+        const chaveMateria = `${slot.materia}-${grade.turmaId}`;
+
+        if (materiasJaAdicionadas.has(chaveMateria)) continue;
+        materiasJaAdicionadas.add(chaveMateria);
+
+        const janelaInicio = inicioMinutos - 20;
+        const janelaFim = fimMinutos + 20;
+        const disponivel = slot.diaSemana === diaAtual && 
+                          minutosAtual >= janelaInicio && 
+                          minutosAtual <= janelaFim;
+
+        let proximaAula: string | undefined;
+        if (!disponivel) {
+          const diasOrdem = ["domingo", "segunda", "terca", "quarta", "quinta", "sexta", "sabado"];
+          const diaAtualIndex = diasOrdem.indexOf(diaAtual);
+          const slotDiaIndex = diasOrdem.indexOf(slot.diaSemana);
+          
+          if (slot.diaSemana === diaAtual && minutosAtual < janelaInicio) {
+            proximaAula = `Hoje às ${horario.inicio}`;
+          } else if (slotDiaIndex > diaAtualIndex) {
+            const diasNomes: Record<string, string> = {
+              domingo: "Domingo", segunda: "Segunda", terca: "Terça",
+              quarta: "Quarta", quinta: "Quinta", sexta: "Sexta", sabado: "Sábado"
+            };
+            proximaAula = `${diasNomes[slot.diaSemana]} às ${horario.inicio}`;
+          } else {
+            const diasNomes: Record<string, string> = {
+              domingo: "Domingo", segunda: "Segunda", terca: "Terça",
+              quarta: "Quarta", quinta: "Quinta", sexta: "Sexta", sabado: "Sábado"
+            };
+            proximaAula = `${diasNomes[slot.diaSemana]} às ${horario.inicio}`;
+          }
+        }
+
+        resultado.push({
+          materia: slot.materia,
+          turmaId: grade.turmaId,
+          turmaNome: grade.turmaNome,
+          horarioInicio: horario.inicio,
+          horarioFim: horario.fim,
+          disponivel,
+          proximaAula
+        });
+      }
+    }
+
+    return resultado.sort((a, b) => {
+      if (a.disponivel && !b.disponivel) return -1;
+      if (!a.disponivel && b.disponivel) return 1;
+      return a.materia.localeCompare(b.materia);
+    });
+  }, [userData, gradesHorarias, currentTime]);
+
+  const materiasDisponiveisParaTurma = useMemo(() => {
+    if (!selectedTurmaId) return materiasDisponiveis;
+    return materiasDisponiveis.filter(m => m.turmaId === selectedTurmaId);
+  }, [materiasDisponiveis, selectedTurmaId]);
 
   const formatBrasiliaTime = () => {
     return new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
@@ -341,7 +476,10 @@ export function TeacherClassControl() {
             <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
               <div className="space-y-2">
                 <Label htmlFor="turma-select">Turma</Label>
-                <Select value={selectedTurmaId} onValueChange={setSelectedTurmaId}>
+                <Select value={selectedTurmaId} onValueChange={(value) => {
+                  setSelectedTurmaId(value);
+                  setMateria("");
+                }}>
                   <SelectTrigger id="turma-select" data-testid="select-turma">
                     <SelectValue placeholder="Selecione a turma" />
                   </SelectTrigger>
@@ -361,19 +499,60 @@ export function TeacherClassControl() {
                     <SelectValue placeholder="Selecione a matéria" />
                   </SelectTrigger>
                   <SelectContent>
-                    {userData?.materias && userData.materias.length > 0 ? (
-                      userData.materias.map((mat) => (
-                        <SelectItem key={mat} value={mat}>
-                          {mat}
-                        </SelectItem>
-                      ))
+                    {materiasDisponiveisParaTurma.length > 0 ? (
+                      <>
+                        {materiasDisponiveisParaTurma.filter(m => m.disponivel).length > 0 && (
+                          <div className="px-2 py-1.5 text-xs font-semibold text-green-600 dark:text-green-400">
+                            Disponíveis agora
+                          </div>
+                        )}
+                        {materiasDisponiveisParaTurma.filter(m => m.disponivel).map((m) => (
+                          <SelectItem key={`${m.materia}-${m.turmaId}`} value={m.materia}>
+                            <div className="flex items-center gap-2">
+                              <span>{m.materia}</span>
+                              <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600 border-green-500/30">
+                                {m.horarioInicio} - {m.horarioFim}
+                              </Badge>
+                            </div>
+                          </SelectItem>
+                        ))}
+                        {materiasDisponiveisParaTurma.filter(m => !m.disponivel).length > 0 && (
+                          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground mt-2 border-t pt-2">
+                            Próximas aulas
+                          </div>
+                        )}
+                        {materiasDisponiveisParaTurma.filter(m => !m.disponivel).map((m) => (
+                          <SelectItem 
+                            key={`${m.materia}-${m.turmaId}-disabled`} 
+                            value={`disabled-${m.materia}`} 
+                            disabled
+                          >
+                            <div className="flex items-center gap-2 opacity-60">
+                              <span>{m.materia}</span>
+                              <span className="text-xs text-muted-foreground">
+                                ({m.proximaAula})
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </>
+                    ) : selectedTurmaId ? (
+                      <div className="px-2 py-3 text-sm text-muted-foreground text-center">
+                        Nenhuma aula programada para esta turma
+                      </div>
                     ) : (
-                      <SelectItem value="sem-materias" disabled>
-                        Nenhuma matéria cadastrada
-                      </SelectItem>
+                      <div className="px-2 py-3 text-sm text-muted-foreground text-center">
+                        Selecione uma turma primeiro
+                      </div>
                     )}
                   </SelectContent>
                 </Select>
+                {selectedTurmaId && materiasDisponiveisParaTurma.filter(m => m.disponivel).length === 0 && materiasDisponiveisParaTurma.length > 0 && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1 mt-1">
+                    <Clock className="h-3 w-3" />
+                    Nenhuma matéria disponível no momento. Aguarde o horário da próxima aula.
+                  </p>
+                )}
               </div>
               <Button
                 onClick={handleStartClass}
