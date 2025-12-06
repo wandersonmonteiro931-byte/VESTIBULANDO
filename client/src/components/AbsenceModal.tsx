@@ -7,7 +7,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { XCircle, AlertTriangle, Info } from "lucide-react";
+import { XCircle, AlertTriangle, ShieldAlert, Scale } from "lucide-react";
 
 interface AbsenceModalProps {
   open: boolean;
@@ -27,11 +27,11 @@ export function AbsenceModal({
   const getReasonTitle = () => {
     switch (reason) {
       case "ausencia_prolongada":
-        return "Você foi removido por ausência prolongada";
+        return "Removido por Ausência Injustificada";
       case "inatividade":
-        return "Você foi removido por inatividade";
+        return "Removido por Inatividade";
       case "saida_nao_autorizada":
-        return "Você foi removido por saída não autorizada";
+        return "Removido por Saída Não Autorizada";
       default:
         return "Você foi removido da aula";
     }
@@ -40,7 +40,7 @@ export function AbsenceModal({
   const getReasonDescription = () => {
     switch (reason) {
       case "ausencia_prolongada":
-        return "Você ficou ausente da aula por mais de 5 minutos no total. O limite máximo de ausência foi excedido.";
+        return "Você permaneceu fora da sala de aula por mais de 5 minutos no total. Seu tempo de ausência excedeu o limite máximo permitido.";
       case "inatividade":
         return "Você não confirmou sua presença quando solicitado pelo sistema. A confirmação de presença é obrigatória durante a aula.";
       case "saida_nao_autorizada":
@@ -87,30 +87,50 @@ export function AbsenceModal({
               <div>
                 <p className="font-semibold text-destructive">Falta Registrada</p>
                 <p className="text-sm text-destructive/80">
-                  Esta ocorrência foi registrada como falta nesta aula.
+                  Você foi marcado com <strong>FALTA</strong> nesta aula por ausência injustificada. Esta ocorrência ficará registrada no seu histórico acadêmico.
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-2">
+          <div className="bg-amber-100 dark:bg-amber-950/50 border border-amber-400 dark:border-amber-700 rounded-lg p-4 space-y-3">
             <div className="flex items-start gap-2">
-              <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+              <ShieldAlert className="h-5 w-5 text-amber-700 dark:text-amber-400 mt-0.5 flex-shrink-0" />
               <div className="space-y-2">
-                <p className="font-semibold text-blue-800 dark:text-blue-200">
-                  Aguarde a próxima aula
+                <p className="font-bold text-amber-800 dark:text-amber-200">
+                  Aviso de Ações Disciplinares
                 </p>
-                <p className="text-sm text-blue-700 dark:text-blue-300">
-                  Você deverá aguardar a próxima aula para participar novamente. 
+                <p className="text-sm text-amber-800 dark:text-amber-300">
+                  Se esse comportamento continuar se repetindo, você poderá sofrer <strong>ações disciplinares pela diretoria</strong>, incluindo advertências formais e até o <strong>banimento permanente do sistema</strong>.
                 </p>
-                <ul className="text-sm text-blue-700 dark:text-blue-300 list-disc list-inside space-y-1 mt-2">
-                  <li>Sempre confirme sua presença quando o sistema solicitar</li>
-                  <li>Durante a aula, você não pode sair sem autorização do professor</li>
-                  <li>Se precisar sair, utilize o botão "Pedir para sair"</li>
-                  <li>Saídas não autorizadas resultam em falta automática</li>
-                </ul>
               </div>
             </div>
+          </div>
+
+          <div className="bg-primary/10 border border-primary/30 rounded-lg p-4 space-y-2">
+            <div className="flex items-start gap-2">
+              <Scale className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+              <div className="space-y-2">
+                <p className="font-bold text-primary">
+                  Projeto Vestibulando
+                </p>
+                <p className="text-sm text-foreground/80">
+                  O Projeto Vestibulando é levado <strong>muito a sério</strong>. Nosso compromisso é preparar você para o vestibular com disciplina e dedicação. A sua presença e participação ativa nas aulas são fundamentais para o seu sucesso.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-muted/50 border border-border rounded-lg p-4 space-y-2">
+            <p className="text-sm text-muted-foreground font-medium">
+              Para evitar futuras ocorrências:
+            </p>
+            <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1">
+              <li>Permaneça na aba da aula durante toda a sessão</li>
+              <li>Sempre confirme sua presença quando o sistema solicitar</li>
+              <li>Se precisar sair, utilize o botão "Pedir para sair" e aguarde autorização</li>
+              <li>Evite alternar entre abas ou minimizar o navegador</li>
+            </ul>
           </div>
         </div>
 
