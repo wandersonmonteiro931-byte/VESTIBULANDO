@@ -1,6 +1,6 @@
 import { initializeApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth, createUserWithEmailAndPassword } from "firebase/auth";
-import { getFirestore, type Firestore } from "firebase/firestore";
+import { initializeFirestore, type Firestore, memoryLocalCache } from "firebase/firestore";
 import { getStorage, type FirebaseStorage } from "firebase/storage";
 
 const firebaseConfig = {
@@ -44,7 +44,9 @@ try {
   console.log("📌 Project ID:", firebaseConfig.projectId);
   app = initializeApp(firebaseConfig);
   auth = getAuth(app);
-  db = getFirestore(app);
+  db = initializeFirestore(app, {
+    localCache: memoryLocalCache()
+  });
   storage = getStorage(app);
   
   secondaryApp = initializeApp(firebaseConfig, "secondary");
