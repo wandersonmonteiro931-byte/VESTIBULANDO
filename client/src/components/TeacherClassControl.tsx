@@ -153,7 +153,7 @@ export function TeacherClassControl() {
   }, [currentSession]);
 
   const handleStartClass = async () => {
-    if (!userData || !selectedTurmaId || !materia.trim()) return;
+    if (!userData || !selectedTurmaId || !materia) return;
     setIsStarting(true);
 
     try {
@@ -355,18 +355,29 @@ export function TeacherClassControl() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="materia-input">Matéria / Disciplina</Label>
-                <Input 
-                  id="materia-input" 
-                  placeholder="Ex: Matemática, Física, Português..."
-                  value={materia}
-                  onChange={(e) => setMateria(e.target.value)}
-                  data-testid="input-materia"
-                />
+                <Label htmlFor="materia-select">Matéria / Disciplina</Label>
+                <Select value={materia} onValueChange={setMateria}>
+                  <SelectTrigger id="materia-select" data-testid="select-materia">
+                    <SelectValue placeholder="Selecione a matéria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {userData?.materias && userData.materias.length > 0 ? (
+                      userData.materias.map((mat) => (
+                        <SelectItem key={mat} value={mat}>
+                          {mat}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="sem-materias" disabled>
+                        Nenhuma matéria cadastrada
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
               <Button
                 onClick={handleStartClass}
-                disabled={isStarting || !selectedTurmaId || !materia.trim()}
+                disabled={isStarting || !selectedTurmaId || !materia}
                 className="w-full"
                 data-testid="button-start-class"
               >
