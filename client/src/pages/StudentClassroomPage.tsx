@@ -155,32 +155,78 @@ export default function StudentClassroomPage() {
   useEffect(() => {
     if (!currentSession) return;
 
-    const sessionRef = doc(db, "sessoesAulaAoVivo", currentSession.id);
-    const unsubscribe = onSnapshot(sessionRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const sessionData = { id: snapshot.id, ...snapshot.data() } as SessaoAulaAoVivo;
-        setSession(sessionData);
-      }
-    });
+    let unsubscribe: (() => void) | null = null;
+    let isMounted = true;
 
-    return () => unsubscribe();
+    const setupListener = () => {
+      try {
+        const sessionRef = doc(db, "sessoesAulaAoVivo", currentSession.id);
+        unsubscribe = onSnapshot(sessionRef, (snapshot) => {
+          if (!isMounted) return;
+          if (snapshot.exists()) {
+            const sessionData = { id: snapshot.id, ...snapshot.data() } as SessaoAulaAoVivo;
+            setSession(sessionData);
+          }
+        }, (error: any) => {
+          if (error?.message?.includes('INTERNAL ASSERTION FAILED')) {
+            console.warn("[StudentClassroomPage] Firebase SDK bug detectado - recarregue a página se persistir");
+            return;
+          }
+          console.error("[StudentClassroomPage] Erro ao escutar sessão:", error);
+        });
+      } catch (error: any) {
+        if (!error?.message?.includes('INTERNAL ASSERTION FAILED')) {
+          console.error("[StudentClassroomPage] Falha ao configurar listener de sessão:", error);
+        }
+      }
+    };
+
+    setupListener();
+
+    return () => {
+      isMounted = false;
+      if (unsubscribe) unsubscribe();
+    };
   }, [currentSession]);
 
   useEffect(() => {
     if (!currentSession) return;
 
-    const participantsRef = collection(db, "presencasAulaAoVivo");
-    const q = query(
-      participantsRef,
-      where("sessaoId", "==", currentSession.id),
-      where("status", "==", "na_sala")
-    );
+    let unsubscribe: (() => void) | null = null;
+    let isMounted = true;
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setClassParticipants(snapshot.size);
-    });
+    const setupListener = () => {
+      try {
+        const participantsRef = collection(db, "presencasAulaAoVivo");
+        const q = query(
+          participantsRef,
+          where("sessaoId", "==", currentSession.id),
+          where("status", "==", "na_sala")
+        );
 
-    return () => unsubscribe();
+        unsubscribe = onSnapshot(q, (snapshot) => {
+          if (!isMounted) return;
+          setClassParticipants(snapshot.size);
+        }, (error: any) => {
+          if (error?.message?.includes('INTERNAL ASSERTION FAILED')) {
+            console.warn("[StudentClassroomPage] Firebase SDK bug detectado - recarregue a página se persistir");
+            return;
+          }
+          console.error("[StudentClassroomPage] Erro ao escutar participantes:", error);
+        });
+      } catch (error: any) {
+        if (!error?.message?.includes('INTERNAL ASSERTION FAILED')) {
+          console.error("[StudentClassroomPage] Falha ao configurar listener de participantes:", error);
+        }
+      }
+    };
+
+    setupListener();
+
+    return () => {
+      isMounted = false;
+      if (unsubscribe) unsubscribe();
+    };
   }, [currentSession]);
 
   useEffect(() => {

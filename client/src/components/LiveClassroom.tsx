@@ -97,18 +97,41 @@ export function LiveClassroom({ onExit }: LiveClassroomProps) {
   useEffect(() => {
     if (!currentSession) return;
 
-    const participantsRef = collection(db, "presencasAulaAoVivo");
-    const q = query(
-      participantsRef,
-      where("sessaoId", "==", currentSession.id),
-      where("status", "==", "na_sala")
-    );
+    let unsubscribe: (() => void) | null = null;
+    let isMounted = true;
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setClassParticipants(snapshot.size);
-    });
+    const setupListener = () => {
+      try {
+        const participantsRef = collection(db, "presencasAulaAoVivo");
+        const q = query(
+          participantsRef,
+          where("sessaoId", "==", currentSession.id),
+          where("status", "==", "na_sala")
+        );
 
-    return () => unsubscribe();
+        unsubscribe = onSnapshot(q, (snapshot) => {
+          if (!isMounted) return;
+          setClassParticipants(snapshot.size);
+        }, (error: any) => {
+          if (error?.message?.includes('INTERNAL ASSERTION FAILED')) {
+            console.warn("[LiveClassroom] Firebase SDK bug detectado - recarregue a página se persistir");
+            return;
+          }
+          console.error("[LiveClassroom] Erro ao escutar participantes:", error);
+        });
+      } catch (error: any) {
+        if (!error?.message?.includes('INTERNAL ASSERTION FAILED')) {
+          console.error("[LiveClassroom] Falha ao configurar listener:", error);
+        }
+      }
+    };
+
+    setupListener();
+
+    return () => {
+      isMounted = false;
+      if (unsubscribe) unsubscribe();
+    };
   }, [currentSession]);
 
   useEffect(() => {
