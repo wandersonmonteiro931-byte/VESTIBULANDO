@@ -16,7 +16,8 @@ let secondaryApp: FirebaseApp;
 let auth: Auth;
 let secondaryAuth: Auth;
 let db: Firestore;
-let storage: FirebaseStorage;
+let storage: FirebaseStorage | null = null;
+let storageAvailable = false;
 let firebaseError: Error | null = null;
 
 try {
@@ -47,7 +48,16 @@ try {
   db = initializeFirestore(app, {
     localCache: memoryLocalCache()
   });
-  storage = getStorage(app);
+  
+  try {
+    storage = getStorage(app);
+    storageAvailable = true;
+    console.log("✅ Firebase Storage inicializado");
+  } catch (storageError) {
+    console.warn("⚠️ Firebase Storage não disponível (plano gratuito não suporta). Uploads de arquivos desabilitados.");
+    storage = null;
+    storageAvailable = false;
+  }
   
   secondaryApp = initializeApp(firebaseConfig, "secondary");
   secondaryAuth = getAuth(secondaryApp);
@@ -64,4 +74,8 @@ export async function createUserWithoutSignIn(email: string, password: string) {
   return userCredential;
 }
 
-export { auth, db, storage, firebaseError };
+export function isStorageAvailable(): boolean {
+  return storageAvailable && storage !== null;
+}
+
+export { auth, db, storage, storageAvailable, firebaseError };

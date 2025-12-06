@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { collection, where, addDoc, updateDoc, doc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage } from "@/lib/firebase";
+import { db, storage, storageAvailable } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -127,6 +127,9 @@ export default function TeacherDashboard() {
       let arquivoNome = undefined;
       
       if (attachmentFile) {
+        if (!storageAvailable || !storage) {
+          throw new Error("O upload de arquivos não está disponível no plano gratuito. Crie tarefas sem anexos ou solicite que os alunos respondam diretamente.");
+        }
         const storageRef = ref(storage, `tarefas/${userData.uid}/${Date.now()}_${attachmentFile.name}`);
         await uploadBytes(storageRef, attachmentFile);
         arquivoAnexo = await getDownloadURL(storageRef);

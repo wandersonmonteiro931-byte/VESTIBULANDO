@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { collection, addDoc, updateDoc, doc, where, deleteDoc, getDocs, query, writeBatch } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage } from "@/lib/firebase";
+import { db, storage, storageAvailable } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -278,6 +278,9 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
       let arquivoNome: string | null = null;
 
       if (attachmentFile) {
+        if (!storageAvailable || !storage) {
+          throw new Error("O upload de arquivos não está disponível no plano gratuito. Use o modelo 'Questões Online' para criar avaliações sem precisar anexar arquivos.");
+        }
         const storageRef = ref(storage, `avaliacoes/${userData.uid}/${Date.now()}_${attachmentFile.name}`);
         await uploadBytes(storageRef, attachmentFile);
         arquivoUrl = await getDownloadURL(storageRef);
@@ -462,6 +465,9 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
       let arquivoNome = editingAvaliacao.arquivoNome;
 
       if (attachmentFile) {
+        if (!storageAvailable || !storage) {
+          throw new Error("O upload de arquivos não está disponível no plano gratuito. Use o modelo 'Questões Online' para criar avaliações sem precisar anexar arquivos.");
+        }
         const storageRef = ref(storage, `avaliacoes/${data.id}/${attachmentFile.name}`);
         await uploadBytes(storageRef, attachmentFile);
         arquivoUrl = await getDownloadURL(storageRef);

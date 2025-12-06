@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { collection, where, addDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage } from "@/lib/firebase";
+import { db, storage, storageAvailable } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWarningAlert } from "@/contexts/WarningAlertContext";
 import { Button } from "@/components/ui/button";
@@ -120,6 +120,10 @@ export default function StudentDashboard() {
       
       const tarefa = tarefas?.find(t => t.id === tarefaId);
       if (!tarefa) throw new Error("Tarefa não encontrada");
+      
+      if (!storageAvailable || !storage) {
+        throw new Error("O envio de arquivos não está disponível no momento. Por favor, entre em contato com a escola.");
+      }
       
       const storageRef = ref(storage, `entregas/${userData.uid}/${tarefaId}/${file.name}`);
       await uploadBytes(storageRef, file);
