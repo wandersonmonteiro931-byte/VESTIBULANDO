@@ -191,7 +191,7 @@ export function TeacherClassControl() {
     const diaAtual = getDiaSemanaAtual();
     const minutosAtual = getHorarioBrasiliaMinutos();
     const resultado: MateriaDisponivel[] = [];
-    const materiasJaAdicionadas = new Set<string>();
+    const materiasProcessadas = new Map<string, MateriaDisponivel>();
 
     for (const grade of gradesHorarias) {
       const slotsDoProf = grade.slots.filter(slot => slot.professorId === userData.uid);
@@ -212,31 +212,34 @@ export function TeacherClassControl() {
 
         const inicioMinutos = horarioParaMinutos(horario.inicio);
         const fimMinutos = horarioParaMinutos(horario.fim);
-        const chaveMateria = `${slot.materia}-${grade.turmaId}`;
-
-        if (materiasJaAdicionadas.has(chaveMateria)) continue;
-        materiasJaAdicionadas.add(chaveMateria);
 
         const janelaInicio = inicioMinutos - 20;
         const janelaFim = fimMinutos + 20;
-        const disponivel = slot.diaSemana === diaAtual && 
+        const slotDisponivel = slot.diaSemana === diaAtual && 
                           minutosAtual >= janelaInicio && 
                           minutosAtual <= janelaFim;
 
-        let proximaAula: string | undefined;
-        if (!disponivel) {
+        const chaveMateria = `${slot.materia}-${grade.turmaId}`;
+        const materiaExistente = materiasProcessadas.get(chaveMateria);
+
+        if (slotDisponivel) {
+          materiasProcessadas.set(chaveMateria, {
+            materia: slot.materia,
+            turmaId: grade.turmaId,
+            turmaNome: grade.turmaNome,
+            horarioInicio: horario.inicio,
+            horarioFim: horario.fim,
+            disponivel: true,
+            proximaAula: undefined
+          });
+        } else if (!materiaExistente || !materiaExistente.disponivel) {
           const diasOrdem = ["domingo", "segunda", "terca", "quarta", "quinta", "sexta", "sabado"];
           const diaAtualIndex = diasOrdem.indexOf(diaAtual);
           const slotDiaIndex = diasOrdem.indexOf(slot.diaSemana);
           
+          let proximaAula: string;
           if (slot.diaSemana === diaAtual && minutosAtual < janelaInicio) {
             proximaAula = `Hoje às ${horario.inicio}`;
-          } else if (slotDiaIndex > diaAtualIndex) {
-            const diasNomes: Record<string, string> = {
-              domingo: "Domingo", segunda: "Segunda", terca: "Terça",
-              quarta: "Quarta", quinta: "Quinta", sexta: "Sexta", sabado: "Sábado"
-            };
-            proximaAula = `${diasNomes[slot.diaSemana]} às ${horario.inicio}`;
           } else {
             const diasNomes: Record<string, string> = {
               domingo: "Domingo", segunda: "Segunda", terca: "Terça",
@@ -244,21 +247,25 @@ export function TeacherClassControl() {
             };
             proximaAula = `${diasNomes[slot.diaSemana]} às ${horario.inicio}`;
           }
-        }
 
-        resultado.push({
-          materia: slot.materia,
-          turmaId: grade.turmaId,
-          turmaNome: grade.turmaNome,
-          horarioInicio: horario.inicio,
-          horarioFim: horario.fim,
-          disponivel,
-          proximaAula
-        });
+          if (!materiaExistente) {
+            materiasProcessadas.set(chaveMateria, {
+              materia: slot.materia,
+              turmaId: grade.turmaId,
+              turmaNome: grade.turmaNome,
+              horarioInicio: horario.inicio,
+              horarioFim: horario.fim,
+              disponivel: false,
+              proximaAula
+            });
+          }
+        }
       }
     }
 
-    return resultado.sort((a, b) => {
+    const resultadoFinal = Array.from(materiasProcessadas.values());
+
+    return resultadoFinal.sort((a, b) => {
       if (a.disponivel && !b.disponivel) return -1;
       if (!a.disponivel && b.disponivel) return 1;
       return a.materia.localeCompare(b.materia);
