@@ -5,6 +5,7 @@ import { PresenceConfirmationModal } from "./PresenceConfirmationModal";
 import { AbsenceModal } from "./AbsenceModal";
 import { AbsenceWarningModal } from "./AbsenceWarningModal";
 import { LeaveRequestModal } from "./LeaveRequestModal";
+import { ReturnModal } from "./ReturnModal";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +47,8 @@ export function LiveClassroom({ onExit }: LiveClassroomProps) {
   const inactivityTimeout = currentSession?.tempoInatividade || 180;
   const confirmationTimeout = currentSession?.tempoConfirmacao || 120;
 
+  console.log("[LiveClassroom] isInClass:", isInClass, "currentSession:", !!currentSession);
+
   const handleInactivityDetected = useCallback(() => {
     console.log("Inactivity detected");
   }, []);
@@ -80,7 +83,8 @@ export function LiveClassroom({ onExit }: LiveClassroomProps) {
   const { 
     state: presenceState, 
     confirmPresence, 
-    getCurrentAbsenceTime 
+    getCurrentAbsenceTime,
+    dismissReturnModal,
   } = usePresenceMonitor({
     inactivityTimeout,
     confirmationTimeout,
@@ -348,6 +352,14 @@ export function LiveClassroom({ onExit }: LiveClassroomProps) {
           }
         }}
         onSubmit={handleLeaveRequest}
+      />
+
+      <ReturnModal
+        open={presenceState.showReturnModal}
+        absenceDuration={presenceState.lastAbsenceDuration}
+        totalAbsenceTime={presenceState.totalAbsenceTime}
+        maxAbsenceTime={maxAbsenceTime}
+        onDismiss={dismissReturnModal}
       />
     </>
   );

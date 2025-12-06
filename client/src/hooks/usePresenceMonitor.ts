@@ -124,8 +124,10 @@ export function usePresenceMonitor(config: Partial<PresenceMonitorConfig> = {}) 
 
   const handleVisibilityChange = useCallback(() => {
     const isVisible = document.visibilityState === "visible";
+    console.log("[usePresenceMonitor] visibilitychange - isVisible:", isVisible, "enabled:", mergedConfig.enabled);
     
     if (!isVisible && mergedConfig.enabled) {
+      console.log("[usePresenceMonitor] Tab hidden - starting intermittent sound");
       absenceStartRef.current = Date.now();
       startIntermittentSound();
       mergedConfig.onAbsenceDetected();
@@ -136,6 +138,7 @@ export function usePresenceMonitor(config: Partial<PresenceMonitorConfig> = {}) 
       }));
     } else if (isVisible && absenceStartRef.current) {
       const absenceDuration = Math.floor((Date.now() - absenceStartRef.current) / 1000);
+      console.log("[usePresenceMonitor] Tab visible - absence duration:", absenceDuration, "seconds");
       absenceStartRef.current = null;
       stopIntermittentSound();
       

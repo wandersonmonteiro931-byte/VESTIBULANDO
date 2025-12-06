@@ -105,6 +105,8 @@ export default function StudentClassroomPage() {
   const inactivityTimeout = currentSession?.tempoInatividade || 180;
   const confirmationTimeout = currentSession?.tempoConfirmacao || 120;
 
+  console.log("[StudentClassroomPage] isInClass:", isInClass, "currentSession:", !!currentSession);
+
   const handleInactivityDetected = useCallback(() => {
     console.log("Inactivity detected");
   }, []);
