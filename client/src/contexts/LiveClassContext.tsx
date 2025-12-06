@@ -67,6 +67,8 @@ export function LiveClassProvider({ children }: { children: React.ReactNode }) {
         setCurrentSession(null);
         setStudentPresence(null);
       }
+    }, (error) => {
+      console.error("[LiveClassContext] Error listening to sessions:", error);
     });
 
     return () => unsubscribe();
@@ -89,6 +91,8 @@ export function LiveClassProvider({ children }: { children: React.ReactNode }) {
         ...doc.data()
       })) as SolicitacaoSaida[];
       setPendingLeaveRequests(requests);
+    }, (error) => {
+      console.error("[LiveClassContext] Error listening to leave requests:", error);
     });
 
     return () => unsubscribe();
@@ -109,6 +113,8 @@ export function LiveClassProvider({ children }: { children: React.ReactNode }) {
         const presenceData = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as PresencaAulaAoVivo;
         setStudentPresence(presenceData);
       }
+    }, (error) => {
+      console.error("[LiveClassContext] Error listening to presence:", error);
     });
 
     return () => unsubscribe();

@@ -120,6 +120,8 @@ export default function TeacherClassroomPage() {
         });
         setLocation("/professor");
       }
+    }, (error) => {
+      console.error("[TeacherClassroomPage] Error listening to session:", error);
     });
 
     return () => unsubscribe();
@@ -137,6 +139,8 @@ export default function TeacherClassroomPage() {
         ...doc.data()
       })) as PresencaAulaAoVivo[];
       setParticipants(participantsList);
+    }, (error) => {
+      console.error("[TeacherClassroomPage] Error listening to participants:", error);
     });
 
     return () => unsubscribe();
