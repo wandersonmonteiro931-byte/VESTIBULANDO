@@ -75,10 +75,10 @@ export default function StudentClassroomPage() {
   const [leaveRequestStatus, setLeaveRequestStatus] = useState<"idle" | "pending" | "approved" | "rejected">("idle");
   const [showAbsenceModal, setShowAbsenceModal] = useState(false);
   const [absenceReason, setAbsenceReason] = useState<"ausencia_prolongada" | "inatividade" | "saida_nao_autorizada">("inatividade");
+  const [leaveRequestId, setLeaveRequestId] = useState<string | null>(null);
 
   const teacherVideoRef = useRef<HTMLVideoElement>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
-  const leaveRequestIdRef = useRef<string | null>(null);
 
   const webrtcConfig = currentSession && userData ? {
     sessionId: currentSession.id,
@@ -322,8 +322,8 @@ export default function StudentClassroomPage() {
     try {
       setLeaveRequestStatus("pending");
       const requestId = await requestLeave(reason);
-      leaveRequestIdRef.current = requestId;
       console.log("[StudentClassroomPage] Leave request created:", requestId);
+      setLeaveRequestId(requestId);
     } catch (error) {
       console.error("Error requesting leave:", error);
       setLeaveRequestStatus("idle");
@@ -331,13 +331,12 @@ export default function StudentClassroomPage() {
   };
 
   useEffect(() => {
-    if (!leaveRequestIdRef.current || leaveRequestStatus !== "pending") return;
+    if (!leaveRequestId) return;
 
-    const requestId = leaveRequestIdRef.current;
-    console.log("[StudentClassroomPage] Setting up listener for leave request:", requestId);
+    console.log("[StudentClassroomPage] Setting up listener for leave request:", leaveRequestId);
 
     const unsubscribe = onSnapshot(
-      doc(db, "solicitacoesSaida", requestId),
+      doc(db, "solicitacoesSaida", leaveRequestId),
       (docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
@@ -345,10 +344,10 @@ export default function StudentClassroomPage() {
           
           if (data.status === "aprovada") {
             setLeaveRequestStatus("approved");
-            leaveRequestIdRef.current = null;
+            setLeaveRequestId(null);
           } else if (data.status === "recusada") {
             setLeaveRequestStatus("rejected");
-            leaveRequestIdRef.current = null;
+            setLeaveRequestId(null);
           }
         }
       },
@@ -358,7 +357,7 @@ export default function StudentClassroomPage() {
     );
 
     return () => unsubscribe();
-  }, [leaveRequestStatus]);
+  }, [leaveRequestId]);
 
   const handleAbsenceModalClose = () => {
     setShowAbsenceModal(false);
