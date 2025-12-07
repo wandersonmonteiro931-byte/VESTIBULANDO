@@ -66,6 +66,7 @@ export function usePresenceMonitor(config: Partial<PresenceMonitorConfig> = {}) 
   const oscillatorRef = useRef<OscillatorNode | null>(null);
   const gainNodeRef = useRef<GainNode | null>(null);
   const alarmPatternRef = useRef<NodeJS.Timeout | null>(null);
+  const maxAbsenceReachedRef = useRef<boolean>(false);
 
   const playAlertSound = useCallback(() => {
     try {
@@ -102,51 +103,54 @@ export function usePresenceMonitor(config: Partial<PresenceMonitorConfig> = {}) 
         ctx.resume();
       }
 
+      // Stop any existing alarm
       if (oscillatorRef.current) {
         try {
           oscillatorRef.current.stop();
           oscillatorRef.current.disconnect();
         } catch (e) {}
       }
+      if (alarmPatternRef.current) {
+        clearInterval(alarmPatternRef.current);
+        alarmPatternRef.current = null;
+      }
 
-      // Triple beep pattern that repeats
-      const playTripleBeep = () => {
-        const beepDuration = 0.15;
-        const pauseDuration = 0.1;
-        const frequencies = [1200, 1400, 1600]; // Ascending tones
-        
-        frequencies.forEach((freq, index) => {
-          const startTime = ctx.currentTime + (index * (beepDuration + pauseDuration));
-          
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          
-          osc.type = 'sawtooth';
-          osc.frequency.value = freq;
-          gain.gain.value = 0.35;
-          
-          // Fade out effect
-          gain.gain.setValueAtTime(0.35, startTime);
-          gain.gain.exponentialRampToValueAtTime(0.01, startTime + beepDuration);
-          
-          osc.start(startTime);
-          osc.stop(startTime + beepDuration);
-        });
-      };
-
-      // Play immediately
-      playTripleBeep();
+      // Create continuous oscillator with LFO for siren effect
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      const lfo = ctx.createOscillator();
+      const lfoGain = ctx.createGain();
       
-      // Repeat every 1.2 seconds
-      alarmPatternRef.current = setInterval(() => {
-        playTripleBeep();
-      }, 1200);
+      // Main oscillator - sawtooth for harsh alarm sound
+      oscillator.type = 'sawtooth';
+      oscillator.frequency.value = 800;
+      
+      // LFO to modulate frequency for siren effect
+      lfo.type = 'sine';
+      lfo.frequency.value = 3; // 3Hz = 3 wobbles per second
+      lfoGain.gain.value = 400; // Frequency range: 800 +/- 400 Hz
+      
+      // Connect LFO to oscillator frequency
+      lfo.connect(lfoGain);
+      lfoGain.connect(oscillator.frequency);
+      
+      // Connect main oscillator to output
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      gainNode.gain.value = 0.35;
+      
+      // Store references for cleanup
+      oscillatorRef.current = oscillator;
+      gainNodeRef.current = gainNode;
+      
+      // Start both oscillators
+      oscillator.start();
+      lfo.start();
+      
+      console.log("[usePresenceMonitor] Continuous alarm started");
       
     } catch (e) {
-      console.log("Could not start continuous alarm");
+      console.log("Could not start continuous alarm", e);
     }
   }, []);
 
@@ -326,7 +330,11 @@ export function usePresenceMonitor(config: Partial<PresenceMonitorConfig> = {}) 
 
         const newTotalAbsence = prev.totalAbsenceTime + absenceDuration;
         
-        if (newTotalAbsence >= mergedConfig.maxAbsenceTime) {
+        // Only call onMaxAbsenceReached once
+        if (newTotalAbsence >= mergedConfig.maxAbsenceTime && !maxAbsenceReachedRef.current) {
+          maxAbsenceReachedRef.current = true;
+          console.log("[usePresenceMonitor] Max absence reached! Expelling student...");
+          stopContinuousAlarm();
           mergedConfig.onMaxAbsenceReached();
         }
 
@@ -342,7 +350,7 @@ export function usePresenceMonitor(config: Partial<PresenceMonitorConfig> = {}) 
         clearInterval(absenceTimerRef.current);
       }
     };
-  }, [mergedConfig]);
+  }, [mergedConfig, stopContinuousAlarm]);
 
   useEffect(() => {
     if (!state.isShowingConfirmation || !mergedConfig.enabled) {
@@ -391,14 +399,18 @@ export function usePresenceMonitor(config: Partial<PresenceMonitorConfig> = {}) 
         : 0;
       const total = state.totalAbsenceTime + currentAbsence;
       
-      if (total >= mergedConfig.maxAbsenceTime && mergedConfig.enabled) {
+      // Only call onMaxAbsenceReached once
+      if (total >= mergedConfig.maxAbsenceTime && mergedConfig.enabled && !maxAbsenceReachedRef.current) {
+        maxAbsenceReachedRef.current = true;
+        console.log("[usePresenceMonitor] Max absence check triggered expulsion");
+        stopContinuousAlarm();
         mergedConfig.onMaxAbsenceReached();
       }
     };
 
     const interval = setInterval(checkTotalAbsence, 1000);
     return () => clearInterval(interval);
-  }, [state.totalAbsenceTime, mergedConfig]);
+  }, [state.totalAbsenceTime, mergedConfig, stopContinuousAlarm]);
 
   return {
     state,
