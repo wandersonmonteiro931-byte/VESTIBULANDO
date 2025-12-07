@@ -109,28 +109,41 @@ export function usePresenceMonitor(config: Partial<PresenceMonitorConfig> = {}) 
         } catch (e) {}
       }
 
-      const oscillator = ctx.createOscillator();
-      const gainNode = ctx.createGain();
+      // Triple beep pattern that repeats
+      const playTripleBeep = () => {
+        const beepDuration = 0.15;
+        const pauseDuration = 0.1;
+        const frequencies = [1200, 1400, 1600]; // Ascending tones
+        
+        frequencies.forEach((freq, index) => {
+          const startTime = ctx.currentTime + (index * (beepDuration + pauseDuration));
+          
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          
+          osc.type = 'sawtooth';
+          osc.frequency.value = freq;
+          gain.gain.value = 0.35;
+          
+          // Fade out effect
+          gain.gain.setValueAtTime(0.35, startTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, startTime + beepDuration);
+          
+          osc.start(startTime);
+          osc.stop(startTime + beepDuration);
+        });
+      };
+
+      // Play immediately
+      playTripleBeep();
       
-      oscillator.connect(gainNode);
-      gainNode.connect(ctx.destination);
-      
-      oscillator.type = 'square';
-      oscillator.frequency.value = 880;
-      gainNode.gain.value = 0.4;
-      
-      oscillatorRef.current = oscillator;
-      gainNodeRef.current = gainNode;
-      
-      oscillator.start();
-      
-      let highFreq = true;
+      // Repeat every 1.2 seconds
       alarmPatternRef.current = setInterval(() => {
-        if (oscillatorRef.current) {
-          oscillatorRef.current.frequency.value = highFreq ? 880 : 660;
-          highFreq = !highFreq;
-        }
-      }, 250);
+        playTripleBeep();
+      }, 1200);
       
     } catch (e) {
       console.log("Could not start continuous alarm");
