@@ -250,31 +250,57 @@ export function usePresenceMonitor(config: Partial<PresenceMonitorConfig> = {}) 
     }
   }, [mergedConfig.enabled]);
 
+  // Store callback refs to avoid stale closures
+  const handleVisibilityChangeRef = useRef(handleVisibilityChange);
+  const handleBeforeUnloadRef = useRef(handleBeforeUnload);
+  const resetActivityRef = useRef(resetActivity);
+  const stopIntermittentSoundRef = useRef(stopIntermittentSound);
+
+  // Keep refs updated
+  useEffect(() => {
+    handleVisibilityChangeRef.current = handleVisibilityChange;
+    handleBeforeUnloadRef.current = handleBeforeUnload;
+    resetActivityRef.current = resetActivity;
+    stopIntermittentSoundRef.current = stopIntermittentSound;
+  });
+
   useEffect(() => {
     if (!mergedConfig.enabled) return;
 
     const activityEvents = ["mousedown", "mousemove", "keydown", "scroll", "touchstart", "click"];
     
     const handleActivity = () => {
-      resetActivity();
+      resetActivityRef.current();
+    };
+
+    const handleVisibility = () => {
+      handleVisibilityChangeRef.current();
+    };
+
+    const handleUnload = (e: BeforeUnloadEvent) => {
+      handleBeforeUnloadRef.current(e);
     };
 
     activityEvents.forEach(event => {
       document.addEventListener(event, handleActivity, { passive: true });
     });
 
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("beforeunload", handleBeforeUnload);
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("beforeunload", handleUnload);
 
     return () => {
       activityEvents.forEach(event => {
         document.removeEventListener(event, handleActivity);
       });
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-      stopIntermittentSound();
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("beforeunload", handleUnload);
+      // Only stop on unmount, not on every re-render
+      if (alarmPatternRef.current) {
+        clearInterval(alarmPatternRef.current);
+        alarmPatternRef.current = null;
+      }
     };
-  }, [mergedConfig.enabled, resetActivity, handleVisibilityChange, handleBeforeUnload, stopIntermittentSound]);
+  }, [mergedConfig.enabled]);
 
   useEffect(() => {
     if (!mergedConfig.enabled) return;
