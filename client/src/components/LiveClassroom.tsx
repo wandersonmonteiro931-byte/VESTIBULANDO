@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useLiveClass } from "@/contexts/LiveClassContext";
 import { usePresenceMonitor } from "@/hooks/usePresenceMonitor";
 import { PresenceConfirmationModal } from "./PresenceConfirmationModal";
@@ -19,7 +19,7 @@ import {
   Loader2
 } from "lucide-react";
 import { db } from "@/lib/firebase";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { collection, query, where, onSnapshot, doc } from "firebase/firestore";
 
 interface LiveClassroomProps {
   onExit?: () => void;
@@ -42,6 +42,7 @@ export function LiveClassroom({ onExit }: LiveClassroomProps) {
   const [absenceReason, setAbsenceReason] = useState<"ausencia_prolongada" | "inatividade" | "saida_nao_autorizada">("inatividade");
   const [isEntering, setIsEntering] = useState(false);
   const [classParticipants, setClassParticipants] = useState(0);
+  const leaveRequestIdRef = useRef<string | null>(null);
 
   const maxAbsenceTime = currentSession?.tempoMaxAusencia || 300;
   const inactivityTimeout = currentSession?.tempoInatividade || 180;
@@ -162,12 +163,44 @@ export function LiveClassroom({ onExit }: LiveClassroomProps) {
   const handleLeaveRequest = async (reason: string) => {
     try {
       setLeaveRequestStatus("pending");
-      await requestLeave(reason);
+      const requestId = await requestLeave(reason);
+      leaveRequestIdRef.current = requestId;
+      console.log("[LiveClassroom] Leave request created:", requestId);
     } catch (error) {
       console.error("Error requesting leave:", error);
       setLeaveRequestStatus("idle");
     }
   };
+
+  useEffect(() => {
+    if (!leaveRequestIdRef.current || leaveRequestStatus !== "pending") return;
+
+    const requestId = leaveRequestIdRef.current;
+    console.log("[LiveClassroom] Setting up listener for leave request:", requestId);
+
+    const unsubscribe = onSnapshot(
+      doc(db, "solicitacoesSaida", requestId),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          console.log("[LiveClassroom] Leave request status update:", data.status);
+          
+          if (data.status === "aprovada") {
+            setLeaveRequestStatus("approved");
+            leaveRequestIdRef.current = null;
+          } else if (data.status === "recusada") {
+            setLeaveRequestStatus("rejected");
+            leaveRequestIdRef.current = null;
+          }
+        }
+      },
+      (error) => {
+        console.error("[LiveClassroom] Error listening to leave request:", error);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [leaveRequestStatus]);
 
   const handleAbsenceModalClose = () => {
     setShowAbsenceModal(false);

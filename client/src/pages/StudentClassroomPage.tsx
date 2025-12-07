@@ -12,7 +12,7 @@ import {
   updateDoc,
   query,
   where,
-  getDocs
+  getDocs,
 } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -78,6 +78,7 @@ export default function StudentClassroomPage() {
 
   const teacherVideoRef = useRef<HTMLVideoElement>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
+  const leaveRequestIdRef = useRef<string | null>(null);
 
   const webrtcConfig = currentSession && userData ? {
     sessionId: currentSession.id,
@@ -320,12 +321,44 @@ export default function StudentClassroomPage() {
   const handleLeaveRequest = async (reason: string) => {
     try {
       setLeaveRequestStatus("pending");
-      await requestLeave(reason);
+      const requestId = await requestLeave(reason);
+      leaveRequestIdRef.current = requestId;
+      console.log("[StudentClassroomPage] Leave request created:", requestId);
     } catch (error) {
       console.error("Error requesting leave:", error);
       setLeaveRequestStatus("idle");
     }
   };
+
+  useEffect(() => {
+    if (!leaveRequestIdRef.current || leaveRequestStatus !== "pending") return;
+
+    const requestId = leaveRequestIdRef.current;
+    console.log("[StudentClassroomPage] Setting up listener for leave request:", requestId);
+
+    const unsubscribe = onSnapshot(
+      doc(db, "solicitacoesSaida", requestId),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          console.log("[StudentClassroomPage] Leave request status update:", data.status);
+          
+          if (data.status === "aprovada") {
+            setLeaveRequestStatus("approved");
+            leaveRequestIdRef.current = null;
+          } else if (data.status === "recusada") {
+            setLeaveRequestStatus("rejected");
+            leaveRequestIdRef.current = null;
+          }
+        }
+      },
+      (error) => {
+        console.error("[StudentClassroomPage] Error listening to leave request:", error);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [leaveRequestStatus]);
 
   const handleAbsenceModalClose = () => {
     setShowAbsenceModal(false);
