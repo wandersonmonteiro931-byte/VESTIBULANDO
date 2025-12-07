@@ -93,59 +93,54 @@ export function usePresenceMonitor(config: Partial<PresenceMonitorConfig> = {}) 
 
   const startContinuousAlarm = useCallback(() => {
     try {
-      if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      }
-      
-      const ctx = audioContextRef.current;
-      
-      if (ctx.state === 'suspended') {
-        ctx.resume();
-      }
-
-      // Stop any existing alarm
-      if (oscillatorRef.current) {
-        try {
-          oscillatorRef.current.stop();
-          oscillatorRef.current.disconnect();
-        } catch (e) {}
-      }
+      // Stop any existing alarm first
       if (alarmPatternRef.current) {
         clearInterval(alarmPatternRef.current);
         alarmPatternRef.current = null;
       }
 
-      // Create continuous oscillator with LFO for siren effect
-      const oscillator = ctx.createOscillator();
-      const gainNode = ctx.createGain();
-      const lfo = ctx.createOscillator();
-      const lfoGain = ctx.createGain();
+      const playBeep = () => {
+        try {
+          if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
+            audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+          }
+          
+          const ctx = audioContextRef.current;
+          
+          if (ctx.state === 'suspended') {
+            ctx.resume();
+          }
+
+          // Triple beep pattern
+          const frequencies = [1200, 1400, 1600];
+          frequencies.forEach((freq, index) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            
+            osc.type = 'sawtooth';
+            osc.frequency.value = freq;
+            gain.gain.value = 0.4;
+            
+            const startTime = ctx.currentTime + (index * 0.2);
+            gain.gain.setValueAtTime(0.4, startTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.15);
+            
+            osc.start(startTime);
+            osc.stop(startTime + 0.15);
+          });
+        } catch (e) {
+          console.log("Beep error:", e);
+        }
+      };
+
+      // Play immediately
+      playBeep();
       
-      // Main oscillator - sawtooth for harsh alarm sound
-      oscillator.type = 'sawtooth';
-      oscillator.frequency.value = 800;
-      
-      // LFO to modulate frequency for siren effect
-      lfo.type = 'sine';
-      lfo.frequency.value = 3; // 3Hz = 3 wobbles per second
-      lfoGain.gain.value = 400; // Frequency range: 800 +/- 400 Hz
-      
-      // Connect LFO to oscillator frequency
-      lfo.connect(lfoGain);
-      lfoGain.connect(oscillator.frequency);
-      
-      // Connect main oscillator to output
-      oscillator.connect(gainNode);
-      gainNode.connect(ctx.destination);
-      gainNode.gain.value = 0.35;
-      
-      // Store references for cleanup
-      oscillatorRef.current = oscillator;
-      gainNodeRef.current = gainNode;
-      
-      // Start both oscillators
-      oscillator.start();
-      lfo.start();
+      // Repeat every 800ms
+      alarmPatternRef.current = setInterval(playBeep, 800);
       
       console.log("[usePresenceMonitor] Continuous alarm started");
       
