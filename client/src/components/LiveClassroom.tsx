@@ -273,7 +273,7 @@ export function LiveClassroom({ onExit }: LiveClassroomProps) {
 
           <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
             <p className="text-sm text-amber-800 dark:text-amber-200">
-              <strong>Atenção:</strong> Após sair, você não poderá entrar novamente nesta aula.
+              <strong>Atenção:</strong> Quando você solicita a saída de uma aula e é liberado pelo professor, você não poderá entrar novamente. Aguarde a próxima aula.
             </p>
           </div>
 
