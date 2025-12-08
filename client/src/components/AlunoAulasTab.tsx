@@ -228,7 +228,7 @@ export function AlunoAulasTab() {
     }
     try {
       await enterClass(currentSession.id);
-      setLocation("/aluno/sala");
+      setLocation("/aula");
     } catch (error) {
       toast({
         title: "Erro ao entrar na aula",
@@ -239,7 +239,7 @@ export function AlunoAulasTab() {
   };
 
   const handleGoToClassroom = () => {
-    setLocation("/aluno/sala");
+    setLocation("/aula");
   };
 
   const getTodaySchedule = useMemo(() => {
