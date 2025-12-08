@@ -194,44 +194,66 @@ export function LiveClassProvider({ children }: { children: React.ReactNode }) {
     if (!userData) return;
     setIsLoading(true);
 
-    try {
-      const presenceRef = collection(db, "presencasAulaAoVivo");
-      const existingQuery = query(
-        presenceRef,
-        where("sessaoId", "==", sessionId),
-        where("alunoId", "==", userData.uid)
-      );
-      const existingDocs = await getDocs(existingQuery);
+    const maxRetries = 3;
+    let lastError: any = null;
 
-      if (!existingDocs.empty) {
-        const docRef = doc(db, "presencasAulaAoVivo", existingDocs.docs[0].id);
-        await updateDoc(docRef, {
-          status: "na_sala",
-          dataEntrada: formatBrasiliaTime(),
-          ultimaAtividade: formatBrasiliaTime(),
-          dataAtualizacao: formatBrasiliaTime(),
-        });
-      } else {
-        await addDoc(presenceRef, {
-          sessaoId: sessionId,
-          turmaId: userData.turma,
-          alunoId: userData.uid,
-          alunoNome: userData.nome,
-          alunoMatricula: userData.matricula || "",
-          status: "na_sala",
-          dataEntrada: formatBrasiliaTime(),
-          ultimaAtividade: formatBrasiliaTime(),
-          tempoTotalAusente: 0,
-          historicoAusencias: [],
-          confirmacoesSolicitadas: 0,
-          confirmacoesRespondidas: 0,
-          presencaValidada: false,
-          dataCriacao: formatBrasiliaTime(),
-        });
+    try {
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          const presenceRef = collection(db, "presencasAulaAoVivo");
+          const existingQuery = query(
+            presenceRef,
+            where("sessaoId", "==", sessionId),
+            where("alunoId", "==", userData.uid)
+          );
+          const existingDocs = await getDocs(existingQuery);
+
+          if (!existingDocs.empty) {
+            const docRef = doc(db, "presencasAulaAoVivo", existingDocs.docs[0].id);
+            await updateDoc(docRef, {
+              status: "na_sala",
+              dataEntrada: formatBrasiliaTime(),
+              ultimaAtividade: formatBrasiliaTime(),
+              dataAtualizacao: formatBrasiliaTime(),
+            });
+          } else {
+            await addDoc(presenceRef, {
+              sessaoId: sessionId,
+              turmaId: userData.turma,
+              alunoId: userData.uid,
+              alunoNome: userData.nome,
+              alunoMatricula: userData.matricula || "",
+              status: "na_sala",
+              dataEntrada: formatBrasiliaTime(),
+              ultimaAtividade: formatBrasiliaTime(),
+              tempoTotalAusente: 0,
+              historicoAusencias: [],
+              confirmacoesSolicitadas: 0,
+              confirmacoesRespondidas: 0,
+              presencaValidada: false,
+              dataCriacao: formatBrasiliaTime(),
+            });
+          }
+          return;
+        } catch (error: any) {
+          lastError = error;
+          const isFirebaseBug = error?.message?.includes('INTERNAL ASSERTION FAILED') || 
+                                error?.code === 'internal';
+          
+          if (isFirebaseBug && attempt < maxRetries) {
+            console.warn(`[LiveClassContext] Firebase SDK bug detectado, tentativa ${attempt}/${maxRetries}`);
+            await new Promise(resolve => setTimeout(resolve, 500 * attempt));
+            continue;
+          }
+          
+          console.error("Error entering class:", error);
+          throw error;
+        }
       }
-    } catch (error) {
-      console.error("Error entering class:", error);
-      throw error;
+
+      if (lastError) {
+        throw lastError;
+      }
     } finally {
       setIsLoading(false);
     }

@@ -193,8 +193,16 @@ export function LiveClassroom({ onExit }: LiveClassroomProps) {
     setIsEntering(true);
     try {
       await enterClass(currentSession.id);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error entering class:", error);
+      const isFirebaseBug = error?.message?.includes('INTERNAL ASSERTION FAILED');
+      toast({
+        variant: "destructive",
+        title: "Erro ao entrar na aula",
+        description: isFirebaseBug 
+          ? "Ocorreu um erro temporário. Por favor, recarregue a página e tente novamente."
+          : "Não foi possível entrar na aula. Tente novamente.",
+      });
     } finally {
       setIsEntering(false);
     }
