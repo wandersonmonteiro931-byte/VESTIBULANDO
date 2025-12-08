@@ -990,5 +990,21 @@ service cloud.firestore {
       );
       allow delete: if isAdmin() && isUserActive();
     }
+    
+    // WebRTC Signals - sinalização para videoconferência
+    match /webrtcSignals/{signalId} {
+      // Professores e alunos podem ler sinais direcionados a eles ou para todos
+      allow read: if isAuthenticated() && isUserActive();
+      
+      // Professores e alunos podem criar sinais
+      allow create: if isAuthenticated() && isUserActive() && 
+                       request.resource.data.fromUserId == request.auth.uid;
+      
+      // Professores e alunos podem atualizar sinais (marcar como processado)
+      allow update: if isAuthenticated() && isUserActive();
+      
+      // Apenas admins podem deletar sinais
+      allow delete: if isAdmin() && isUserActive();
+    }
   }
 }
