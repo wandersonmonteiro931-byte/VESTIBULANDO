@@ -292,9 +292,15 @@ export function LiveClassProvider({ children }: { children: React.ReactNode }) {
         dataSolicitacao: formatBrasiliaTime(),
       });
       return docRef.id;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error requesting leave:", error);
-      throw error;
+      if (error?.code === 'permission-denied') {
+        throw new Error("Você não tem permissão para solicitar saída. Verifique se está logado corretamente.");
+      }
+      if (error?.message?.includes('INTERNAL ASSERTION FAILED')) {
+        throw new Error("Erro temporário. Por favor, recarregue a página e tente novamente.");
+      }
+      throw new Error("Erro ao enviar solicitação. Tente novamente.");
     }
   }, [studentPresence, currentSession, userData]);
 

@@ -976,19 +976,19 @@ service cloud.firestore {
     match /solicitacoesSaida/{solicitacaoId} {
       allow read: if isAuthenticated() && (
         isAdmin() ||
-        (isProfessor() && resource.data.professorId == request.auth.uid) ||
-        resource.data.alunoId == request.auth.uid
+        isProfessor() ||
+        (isAluno() && resource.data.alunoId == request.auth.uid)
       );
-      allow create: if isAuthenticated() && (
+      allow create: if isAuthenticated() && isUserActive() && (
         isAdmin() ||
         isProfessor() ||
-        request.resource.data.alunoId == request.auth.uid
+        (isAluno() && request.resource.data.alunoId == request.auth.uid)
       );
-      allow update: if isAuthenticated() && (
+      allow update: if isAuthenticated() && isUserActive() && (
         isAdmin() ||
         (isProfessor() && resource.data.professorId == request.auth.uid)
       );
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() && isUserActive();
     }
   }
 }

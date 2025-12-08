@@ -9,6 +9,7 @@ import { ReturnModal } from "./ReturnModal";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 import { 
   LogOut, 
   Clock, 
@@ -26,6 +27,7 @@ interface LiveClassroomProps {
 }
 
 export function LiveClassroom({ onExit }: LiveClassroomProps) {
+  const { toast } = useToast();
   const { 
     currentSession, 
     studentPresence, 
@@ -166,9 +168,14 @@ export function LiveClassroom({ onExit }: LiveClassroomProps) {
       const requestId = await requestLeave(reason);
       console.log("[LiveClassroom] Leave request created:", requestId);
       setLeaveRequestId(requestId);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error requesting leave:", error);
       setLeaveRequestStatus("idle");
+      toast({
+        variant: "destructive",
+        title: "Erro ao solicitar saída",
+        description: error?.message || "Não foi possível enviar sua solicitação. Tente novamente.",
+      });
     }
   };
 
