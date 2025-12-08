@@ -12,7 +12,6 @@ import {
   updateDoc,
   doc,
   getDocs,
-  orderBy
 } from "firebase/firestore";
 import { 
   HORARIOS_AULAS,
@@ -21,7 +20,6 @@ import {
   type GradeHoraria,
   type HorarioAula,
   type DiaSemana,
-  type SlotAula
 } from "@shared/schema";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -48,13 +46,17 @@ import {
   Loader2,
   AlertTriangle,
   BookOpen,
-  Bell
+  Bell,
+  ExternalLink,
+  Link2,
+  Video
 } from "lucide-react";
 import type { SessaoAulaAoVivo, PresencaAulaAoVivo, SolicitacaoSaida, User } from "@shared/schema";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Turma {
   id: string;
@@ -95,6 +97,10 @@ export function TeacherClassControl() {
   const [showEndConfirmation, setShowEndConfirmation] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<SolicitacaoSaida | null>(null);
   const [isResponding, setIsResponding] = useState(false);
+
+  const [showTeamsLinkDialog, setShowTeamsLinkDialog] = useState(false);
+  const [teamsLink, setTeamsLink] = useState("");
+  const [duracaoMinutos, setDuracaoMinutos] = useState(50);
 
   const selectedTurma = turmas.find(t => t.id === selectedTurmaId);
 
@@ -327,8 +333,30 @@ export function TeacherClassControl() {
     return () => unsubscribe();
   }, [currentSession]);
 
+  const handleOpenTeamsDialog = () => {
+    if (!selectedTurmaId || !materia) {
+      toast({
+        title: "Selecione turma e matéria",
+        description: "Escolha a turma e a matéria antes de iniciar a aula.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setShowTeamsLinkDialog(true);
+  };
+
   const handleStartClass = async () => {
-    if (!userData || !selectedTurmaId || !materia) return;
+    if (!userData || !selectedTurmaId || !materia || !teamsLink) return;
+    
+    if (!teamsLink.includes("teams.microsoft.com") && !teamsLink.includes("teams.live.com")) {
+      toast({
+        title: "Link inválido",
+        description: "Insira um link válido do Microsoft Teams.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsStarting(true);
 
     try {
@@ -352,24 +380,24 @@ export function TeacherClassControl() {
         tempoMaxAusencia: 300,
         tempoInatividade: 180,
         tempoConfirmacao: 120,
-        transmitindoTela: false,
-        transmitindoCamera: false,
-        transmitindoAudio: false,
-        modoVisualizacao: "tela",
+        teamsLink: teamsLink,
+        duracaoMaximaMinutos: duracaoMinutos,
         dataCriacao: formatBrasiliaTime(),
       });
 
       toast({
         title: "Aula Iniciada",
-        description: "Redirecionando para a sala de aula...",
+        description: "Os alunos foram notificados e podem entrar na reunião.",
       });
       
+      setShowTeamsLinkDialog(false);
+      setTeamsLink("");
       setLocation(`/sala-professor/${docRef.id}`);
     } catch (error) {
       console.error("Error starting class:", error);
       toast({
         title: "Erro",
-        description: "Nao foi possivel iniciar a aula.",
+        description: "Não foi possível iniciar a aula.",
         variant: "destructive",
       });
     } finally {
@@ -595,27 +623,18 @@ export function TeacherClassControl() {
                 )}
               </div>
               <Button
-                onClick={handleStartClass}
-                disabled={isStarting || !selectedTurmaId || !materia}
+                onClick={handleOpenTeamsDialog}
+                disabled={!selectedTurmaId || !materia}
                 className="w-full"
                 data-testid="button-start-class"
               >
-                {isStarting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Iniciando...
-                  </>
-                ) : (
-                  <>
-                    <Play className="h-4 w-4 mr-2" />
-                    Iniciar Aula ao Vivo
-                  </>
-                )}
+                <Play className="h-4 w-4 mr-2" />
+                Iniciar Aula ao Vivo
               </Button>
             </div>
           )}
 
-          {currentSession?.status === "em_andamento" ? (
+          {currentSession?.status === "em_andamento" && (
             <>
               <div className="grid grid-cols-3 gap-3">
                 <div className="bg-muted/50 rounded-lg p-3 text-center">
@@ -629,143 +648,252 @@ export function TeacherClassControl() {
                   <p className="text-xs text-muted-foreground">Removidos</p>
                 </div>
                 <div className="bg-muted/50 rounded-lg p-3 text-center">
-                  <LogOut className="h-4 w-4 mx-auto mb-1 text-amber-500" />
-                  <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{pendingLeaveRequests.length}</p>
-                  <p className="text-xs text-muted-foreground">Pedidos</p>
+                  <Clock className="h-4 w-4 mx-auto mb-1 text-blue-500" />
+                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{currentSession.duracaoMaximaMinutos || 50}</p>
+                  <p className="text-xs text-muted-foreground">Min. Máx.</p>
                 </div>
               </div>
 
-              {pendingLeaveRequests.length > 0 && (
-                <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Bell className="h-4 w-4 text-amber-500" />
-                    <span className="font-medium text-amber-800 dark:text-amber-200">
-                      Solicitações de Saída Pendentes
-                    </span>
+              {currentSession.teamsLink && (
+                <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                    <Video className="h-4 w-4" />
+                    <span className="text-sm font-medium">Reunião do Teams ativa</span>
                   </div>
-                  <div className="space-y-2">
-                    {pendingLeaveRequests.map((request) => (
-                      <div 
-                        key={request.id} 
-                        className="flex items-center justify-between bg-white dark:bg-background rounded p-2"
-                      >
-                        <div>
-                          <p className="font-medium text-sm">{request.alunoNome}</p>
-                          {request.motivoAluno && (
-                            <p className="text-xs text-muted-foreground">{request.motivoAluno}</p>
-                          )}
-                        </div>
-                        <div className="flex gap-1">
-                          <Button 
-                            size="sm" 
-                            variant="ghost"
-                            className="h-7 text-green-600 hover:text-green-700 hover:bg-green-50"
-                            onClick={() => setSelectedRequest(request)}
-                            data-testid={`button-respond-leave-${request.id}`}
-                          >
-                            <CheckCircle className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="ghost"
-                            className="h-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => {
-                              setSelectedRequest(request);
-                            }}
-                            data-testid={`button-deny-leave-${request.id}`}
-                          >
-                            <XCircle className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <a 
+                    href={currentSession.teamsLink} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-500 hover:underline flex items-center gap-1 mt-1"
+                  >
+                    Abrir reunião <ExternalLink className="h-3 w-3" />
+                  </a>
                 </div>
               )}
 
-              <Separator />
-
-              <div>
-                <h4 className="text-sm font-medium mb-2">Alunos na Sala</h4>
-                <ScrollArea className="h-[200px]">
-                  <div className="space-y-2">
-                    {participants.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-4">
-                        Nenhum aluno entrou ainda
-                      </p>
-                    ) : (
-                      participants.map((participant) => (
-                        <div 
-                          key={participant.id}
-                          className="flex items-center justify-between p-2 bg-muted/30 rounded-lg"
-                        >
-                          <div>
-                            <p className="font-medium text-sm">{participant.alunoNome}</p>
-                            {participant.alunoMatricula && (
-                              <p className="text-xs text-muted-foreground">Mat: {participant.alunoMatricula}</p>
-                            )}
-                          </div>
-                          {getStatusBadge(participant.status)}
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </ScrollArea>
-              </div>
-
               <div className="flex gap-2">
-                <Button 
-                  className="flex-1"
+                <Button
                   onClick={handleEnterClassroom}
+                  className="flex-1"
                   data-testid="button-enter-classroom"
                 >
-                  <Play className="h-4 w-4 mr-2" />
-                  Entrar na Sala
+                  <Users className="h-4 w-4 mr-2" />
+                  Ver Sala de Aula
                 </Button>
-                <Button 
-                  variant="destructive"
+                <Button
                   onClick={() => setShowEndConfirmation(true)}
+                  variant="destructive"
                   data-testid="button-end-class"
                 >
-                  <Square className="h-4 w-4 mr-2" />
-                  Encerrar
+                  <Square className="h-4 w-4" />
                 </Button>
               </div>
+
+              {pendingLeaveRequests.length > 0 && (
+                <>
+                  <Separator />
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Bell className="h-4 w-4 text-amber-500" />
+                      <h4 className="text-sm font-medium">Solicitações de Saída</h4>
+                      <Badge variant="secondary" className="text-xs">
+                        {pendingLeaveRequests.length}
+                      </Badge>
+                    </div>
+                    <ScrollArea className="h-[120px]">
+                      {pendingLeaveRequests.map((request) => (
+                        <div
+                          key={request.id}
+                          className="flex items-center justify-between p-2 bg-amber-500/10 rounded-lg mb-2 cursor-pointer hover-elevate"
+                          onClick={() => setSelectedRequest(request)}
+                        >
+                          <div>
+                            <p className="text-sm font-medium">{request.alunoNome}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {request.motivo || "Sem motivo informado"}
+                            </p>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedRequest(request);
+                              }}
+                            >
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </ScrollArea>
+                  </div>
+                </>
+              )}
+
+              {participants.length > 0 && (
+                <>
+                  <Separator />
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium">Participantes</h4>
+                    <ScrollArea className="h-[150px]">
+                      {participants.map((participant) => (
+                        <div
+                          key={participant.id}
+                          className="flex items-center justify-between p-2 bg-muted/50 rounded-lg mb-2"
+                        >
+                          <span className="text-sm">{participant.alunoNome}</span>
+                          {getStatusBadge(participant.status)}
+                        </div>
+                      ))}
+                    </ScrollArea>
+                  </div>
+                </>
+              )}
             </>
-          ) : null}
+          )}
         </CardContent>
       </Card>
 
-      <Dialog open={showEndConfirmation} onOpenChange={setShowEndConfirmation}>
-        <DialogContent>
+      <Dialog open={showTeamsLinkDialog} onOpenChange={setShowTeamsLinkDialog}>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Encerrar Aula?</DialogTitle>
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-full bg-blue-500/10">
+                <Video className="h-6 w-6 text-blue-500" />
+              </div>
+              <DialogTitle className="text-xl">Configurar Aula via Teams</DialogTitle>
+            </div>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+              <h4 className="font-medium flex items-center gap-2">
+                <span className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm">1</span>
+                Abra o Microsoft Teams
+              </h4>
+              <p className="text-sm text-muted-foreground ml-8">
+                Acesse o Microsoft Teams no seu computador ou navegador e crie uma nova reunião.
+              </p>
+            </div>
+
+            <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+              <h4 className="font-medium flex items-center gap-2">
+                <span className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm">2</span>
+                Copie o link da reunião
+              </h4>
+              <p className="text-sm text-muted-foreground ml-8">
+                Após criar a reunião, copie o link de convite gerado pelo Teams.
+              </p>
+            </div>
+
+            <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+              <h4 className="font-medium flex items-center gap-2">
+                <span className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm">3</span>
+                Cole o link abaixo
+              </h4>
+              <div className="ml-8 space-y-2">
+                <Label htmlFor="teams-link">Link da reunião do Teams</Label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="teams-link"
+                      type="url"
+                      placeholder="https://teams.microsoft.com/l/meetup-join/..."
+                      value={teamsLink}
+                      onChange={(e) => setTeamsLink(e.target.value)}
+                      className="pl-10"
+                      data-testid="input-teams-link"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="duracao">Duração máxima da aula (minutos)</Label>
+              <Select value={duracaoMinutos.toString()} onValueChange={(v) => setDuracaoMinutos(parseInt(v))}>
+                <SelectTrigger id="duracao" data-testid="select-duracao">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="30">30 minutos</SelectItem>
+                  <SelectItem value="45">45 minutos</SelectItem>
+                  <SelectItem value="50">50 minutos</SelectItem>
+                  <SelectItem value="60">60 minutos (1 hora)</SelectItem>
+                  <SelectItem value="90">90 minutos (1h30)</SelectItem>
+                  <SelectItem value="120">120 minutos (2 horas)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+              <p className="text-sm text-amber-700 dark:text-amber-300 flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <span>
+                  Após iniciar, os alunos receberão uma notificação com o link para entrar na reunião. 
+                  Certifique-se de que a reunião está ativa no Teams.
+                </span>
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTeamsLinkDialog(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleStartClass}
+              disabled={isStarting || !teamsLink}
+              data-testid="button-confirm-start-class"
+            >
+              {isStarting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Iniciando...
+                </>
+              ) : (
+                <>
+                  <Play className="h-4 w-4 mr-2" />
+                  Iniciar Aula
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showEndConfirmation} onOpenChange={setShowEndConfirmation}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Encerrar Aula</DialogTitle>
             <DialogDescription>
-              Ao encerrar a aula, todos os alunos presentes terão a presença validada automaticamente.
+              Tem certeza que deseja encerrar esta aula? Todos os alunos presentes terão sua presença validada automaticamente.
             </DialogDescription>
           </DialogHeader>
-          <div className="bg-muted/50 rounded-lg p-4">
-            <p className="text-sm">
-              <strong>{presentCount}</strong> aluno(s) presente(s) terão presença confirmada.
-            </p>
-            {removedCount > 0 && (
-              <p className="text-sm text-destructive mt-1">
-                <strong>{removedCount}</strong> aluno(s) foram removidos e receberão falta.
-              </p>
-            )}
-          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowEndConfirmation(false)}>
               Cancelar
             </Button>
-            <Button variant="destructive" onClick={handleEndClass} disabled={isEnding}>
+            <Button
+              variant="destructive"
+              onClick={handleEndClass}
+              disabled={isEnding}
+              data-testid="button-confirm-end-class"
+            >
               {isEnding ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Encerrando...
                 </>
               ) : (
-                "Encerrar Aula"
+                <>
+                  <Square className="h-4 w-4 mr-2" />
+                  Encerrar Aula
+                </>
               )}
             </Button>
           </DialogFooter>
@@ -773,58 +901,42 @@ export function TeacherClassControl() {
       </Dialog>
 
       <Dialog open={!!selectedRequest} onOpenChange={() => setSelectedRequest(null)}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-full bg-amber-500/10">
-                <LogOut className="h-6 w-6 text-amber-500" />
-              </div>
-              <DialogTitle>Solicitação de Saída</DialogTitle>
-            </div>
+            <DialogTitle>Solicitação de Saída</DialogTitle>
+            <DialogDescription>
+              {selectedRequest?.alunoNome} está solicitando permissão para sair da aula.
+            </DialogDescription>
           </DialogHeader>
-          {selectedRequest && (
-            <div className="space-y-4">
-              <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Aluno:</span>
-                  <span className="font-medium">{selectedRequest.alunoNome}</span>
-                </div>
-                {selectedRequest.alunoMatricula && (
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Matrícula:</span>
-                    <span>{selectedRequest.alunoMatricula}</span>
-                  </div>
-                )}
-                {selectedRequest.motivoAluno && (
-                  <div>
-                    <span className="text-sm text-muted-foreground">Motivo:</span>
-                    <p className="mt-1">{selectedRequest.motivoAluno}</p>
-                  </div>
-                )}
-              </div>
-
-              <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-                <p className="text-sm text-blue-800 dark:text-blue-200">
-                  Se autorizar, o aluno será liberado com presença validada. Se negar, o aluno deverá permanecer na aula.
-                </p>
-              </div>
+          {selectedRequest?.motivo && (
+            <div className="bg-muted/50 rounded-lg p-3">
+              <p className="text-sm">
+                <strong>Motivo:</strong> {selectedRequest.motivo}
+              </p>
             </div>
           )}
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button 
-              variant="destructive" 
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
               onClick={() => handleRespondToRequest(false)}
               disabled={isResponding}
             >
-              {isResponding ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4 mr-2" />}
-              Negar Saída
+              <XCircle className="h-4 w-4 mr-2" />
+              Negar
             </Button>
-            <Button 
+            <Button
               onClick={() => handleRespondToRequest(true)}
               disabled={isResponding}
+              className="bg-green-600 hover:bg-green-700"
             >
-              {isResponding ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-2" />}
-              Autorizar Saída
+              {isResponding ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Autorizar
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

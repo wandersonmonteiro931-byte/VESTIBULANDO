@@ -1595,14 +1595,11 @@ export const sessaoAulaAoVivoSchema = z.object({
   tempoInatividade: z.number().default(180), // 3 minutos em segundos
   tempoConfirmacao: z.number().default(120), // 2 minutos para confirmar
   
-  // Transmissão de mídia do professor
-  transmitindoTela: z.boolean().default(false),
-  transmitindoCamera: z.boolean().default(false),
-  transmitindoAudio: z.boolean().default(false),
-  modoVisualizacao: z.enum(["tela", "camera", "quadro_branco", "tela_camera"]).default("tela"),
+  // Link do Microsoft Teams para a reunião
+  teamsLink: z.string().optional(),
   
-  // Dados do quadro branco (serializado como JSON string)
-  quadroBrancoData: z.string().optional(),
+  // Duração máxima da aula em minutos
+  duracaoMaximaMinutos: z.number().default(50),
   
   // Metadados
   dataCriacao: z.string(),
