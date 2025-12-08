@@ -162,9 +162,8 @@ export function LiveClassroom({ onExit }: LiveClassroomProps) {
     }
   }, [isInClass, updateActivity]);
 
-  // Detectar quando a aula é encerrada pelo professor
+  // Salvar informações da sessão e marcar quando está em aula
   useEffect(() => {
-    // Salvar informações da sessão atual
     if (currentSession) {
       previousSessionRef.current = currentSession.id;
       setEndedSessionInfo({
@@ -173,20 +172,23 @@ export function LiveClassroom({ onExit }: LiveClassroomProps) {
         professorNome: currentSession.professorNome,
       });
     }
-    
-    // Marcar quando o aluno estava na aula
+  }, [currentSession]);
+
+  useEffect(() => {
     if (isInClass) {
       wasInClassRef.current = true;
     }
-    
-    // Se não há mais sessão mas o aluno estava na aula, significa que a aula foi encerrada
+  }, [isInClass]);
+
+  // Detectar quando a aula é encerrada pelo professor
+  useEffect(() => {
     if (!currentSession && wasInClassRef.current && previousSessionRef.current) {
       console.log("[LiveClassroom] Aula encerrada pelo professor");
       setShowClassEndedModal(true);
       wasInClassRef.current = false;
       previousSessionRef.current = null;
     }
-  }, [currentSession, isInClass]);
+  }, [currentSession]);
 
   const handleEnterClass = async () => {
     if (!currentSession) return;
