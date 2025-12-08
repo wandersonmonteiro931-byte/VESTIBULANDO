@@ -73,6 +73,7 @@ export function AlunoAulasTab() {
   const [classParticipants, setClassParticipants] = useState(0);
   const [recentSessions, setRecentSessions] = useState<SessaoAulaAoVivo[]>([]);
   const [presenceHistory, setPresenceHistory] = useState<PresencaAulaAoVivo[]>([]);
+  const [listenerError, setListenerError] = useState<string | null>(null);
 
   const { data: gradeHoraria, isLoading: loadingGrade } = useRealtimeQuery<GradeHoraria>({
     collectionName: "gradesHorarias",
@@ -128,6 +129,9 @@ export function AlunoAulasTab() {
       }, (error: any) => {
         if (!error?.message?.includes('INTERNAL ASSERTION FAILED')) {
           console.error("[AlunoAulasTab] Error listening to participants:", error);
+          if (error?.code === 'permission-denied') {
+            setListenerError("Não foi possível carregar os participantes. Verifique suas permissões.");
+          }
         }
       });
     } catch (error) {
@@ -162,6 +166,9 @@ export function AlunoAulasTab() {
       }, (error: any) => {
         if (!error?.message?.includes('INTERNAL ASSERTION FAILED')) {
           console.error("[AlunoAulasTab] Error listening to recent sessions:", error);
+          if (error?.code === 'permission-denied') {
+            setListenerError("Não foi possível carregar o histórico de aulas. Verifique suas permissões.");
+          }
         }
       });
     } catch (error) {
@@ -195,6 +202,9 @@ export function AlunoAulasTab() {
       }, (error: any) => {
         if (!error?.message?.includes('INTERNAL ASSERTION FAILED')) {
           console.error("[AlunoAulasTab] Error listening to presence history:", error);
+          if (error?.code === 'permission-denied') {
+            setListenerError("Não foi possível carregar seu histórico de presenças. Verifique suas permissões.");
+          }
         }
       });
     } catch (error) {
@@ -304,6 +314,27 @@ export function AlunoAulasTab() {
           <p className="text-muted-foreground">Acompanhe suas aulas ao vivo e horários</p>
         </div>
       </div>
+
+      {listenerError && (
+        <div 
+          className="flex items-center gap-3 p-4 bg-destructive/10 border border-destructive/20 rounded-lg"
+          data-testid="alert-listener-error"
+        >
+          <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-destructive">Erro ao carregar dados</p>
+            <p className="text-sm text-muted-foreground">{listenerError}</p>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => window.location.reload()}
+            data-testid="button-retry-reload"
+          >
+            Tentar novamente
+          </Button>
+        </div>
+      )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-3 max-w-md">
