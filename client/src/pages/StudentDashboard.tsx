@@ -21,6 +21,7 @@ import { LogOut, FileText, Upload, Download, Calendar, Award, CheckCircle2, Cloc
 import { AlunoAvaliacoesTab } from "@/components/AlunoAvaliacoesTab";
 import { AlunoBoletimTab } from "@/components/AlunoBoletimTab";
 import { AlunoPresencasTab } from "@/components/AlunoPresencasTab";
+import { AlunoAulasTab } from "@/components/AlunoAulasTab";
 import { HorarioViewer } from "@/components/HorarioViewer";
 import { Link } from "wouter";
 import { queryClient } from "@/lib/queryClient";
@@ -556,6 +557,10 @@ export default function StudentDashboard() {
                 <div className="space-y-4">
                   <AlunoAvaliacoesTab />
                 </div>
+              )}
+
+              {selectedSection === "aulas" && (
+                <AlunoAulasTab />
               )}
 
               {selectedSection === "pendentes" && (

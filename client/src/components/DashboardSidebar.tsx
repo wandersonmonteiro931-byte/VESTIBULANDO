@@ -200,6 +200,14 @@ const alunoCategories: MenuCategory[] = [
     ],
   },
   {
+    id: "aulas-ao-vivo",
+    label: "Aulas ao Vivo",
+    icon: Video,
+    items: [
+      { id: "aulas", label: "Minhas Aulas", icon: Video },
+    ],
+  },
+  {
     id: "tarefas",
     label: "Tarefas",
     icon: ClipboardList,
