@@ -275,42 +275,37 @@ export function LiveClassProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const requestRef = collection(db, "solicitacoesSaida");
-      const docRef = await addDoc(requestRef, {
-        sessaoId: currentSession.id,
-        presencaId: studentPresence.id,
-        alunoId: userData.uid,
-        alunoNome: userData.nome,
-        alunoMatricula: userData.matricula || "",
-        turmaId: currentSession.turmaId,
-        turmaNome: currentSession.turmaNome,
-        materia: currentSession.materia,
-        professorId: currentSession.professorId,
-        professorNome: currentSession.professorNome,
-        status: "pendente",
-        motivoAluno: reason || "",
-        dataSolicitacao: formatBrasiliaTime(),
+      // Usar backend para contornar bug do Firebase SDK 12.4.0
+      const response = await fetch('/api/leave-request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sessaoId: currentSession.id,
+          presencaId: studentPresence.id,
+          alunoId: userData.uid,
+          alunoNome: userData.nome,
+          alunoMatricula: userData.matricula || "",
+          turmaId: currentSession.turmaId,
+          turmaNome: currentSession.turmaNome,
+          materia: currentSession.materia,
+          professorId: currentSession.professorId,
+          professorNome: currentSession.professorNome,
+          motivoAluno: reason || "",
+        }),
       });
-      return docRef.id;
+
+      const data = await response.json();
+      
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Erro ao enviar solicitação");
+      }
+      
+      return data.requestId;
     } catch (error: any) {
       console.error("Error requesting leave:", error);
-      console.error("Error code:", error?.code);
-      console.error("Error message:", error?.message);
-      
-      // Firebase pode retornar permission-denied em diferentes formatos
-      const isPermissionError = 
-        error?.code === 'permission-denied' ||
-        error?.code === 'PERMISSION_DENIED' ||
-        error?.message?.includes('permission-denied') ||
-        error?.message?.includes('Missing or insufficient permissions');
-      
-      if (isPermissionError) {
-        throw new Error("Você não tem permissão para solicitar saída. Verifique se está logado corretamente e se sua conta está ativa.");
-      }
-      if (error?.message?.includes('INTERNAL ASSERTION FAILED')) {
-        throw new Error("Erro temporário do Firebase. Por favor, recarregue a página e tente novamente.");
-      }
-      throw new Error("Erro ao enviar solicitação: " + (error?.message || "Tente novamente."));
+      throw new Error(error?.message || "Erro ao enviar solicitação. Tente novamente.");
     }
   }, [studentPresence, currentSession, userData]);
 

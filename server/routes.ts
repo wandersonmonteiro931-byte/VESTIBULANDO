@@ -153,6 +153,71 @@ export async function registerRoutes(expressApp: Express): Promise<Server> {
     }
   });
 
+  // Endpoint para criar solicitação de saída da aula (contorna bug do Firebase SDK 12.4.0)
+  expressApp.post("/api/leave-request", async (req, res) => {
+    try {
+      const { 
+        sessaoId,
+        presencaId,
+        alunoId,
+        alunoNome,
+        alunoMatricula,
+        turmaId,
+        turmaNome,
+        materia,
+        professorId,
+        professorNome,
+        motivoAluno
+      } = req.body;
+
+      if (!sessaoId || !presencaId || !alunoId || !professorId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Dados obrigatórios faltando" 
+        });
+      }
+
+      if (!firebaseAdmin) {
+        return res.status(503).json({ 
+          success: false, 
+          message: "Firebase Admin SDK não está configurado" 
+        });
+      }
+
+      const db = firebaseAdmin.firestore();
+      
+      // Criar a solicitação de saída
+      const docRef = await db.collection('solicitacoesSaida').add({
+        sessaoId,
+        presencaId,
+        alunoId,
+        alunoNome: alunoNome || "",
+        alunoMatricula: alunoMatricula || "",
+        turmaId: turmaId || "",
+        turmaNome: turmaNome || "",
+        materia: materia || "",
+        professorId,
+        professorNome: professorNome || "",
+        status: "pendente",
+        motivoAluno: motivoAluno || "",
+        dataSolicitacao: new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }),
+      });
+
+      console.log(`✅ Solicitação de saída criada: ${docRef.id} por aluno ${alunoId}`);
+      return res.json({ 
+        success: true, 
+        requestId: docRef.id 
+      });
+
+    } catch (error: any) {
+      console.error("❌ Erro ao criar solicitação de saída:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: error.message || "Erro interno ao criar solicitação" 
+      });
+    }
+  });
+
   const httpServer = createServer(expressApp);
   return httpServer;
 }
