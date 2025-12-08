@@ -193,9 +193,11 @@ export function LiveClassroom({ onExit }: LiveClassroomProps) {
           
           if (data.status === "aprovada") {
             setLeaveRequestStatus("approved");
+            setShowLeaveModal(true);
             setLeaveRequestId(null);
           } else if (data.status === "recusada") {
             setLeaveRequestStatus("rejected");
+            setShowLeaveModal(true);
             setLeaveRequestId(null);
           }
         }
