@@ -939,13 +939,13 @@ service cloud.firestore {
       );
       
       // Atualização: professores só podem atualizar suas próprias sessões
-      // Campos permitidos para atualização: status, dataFim, dataAtualizacao
+      // Campos permitidos para atualização: status, dataFim, dataAtualizacao, transmitindoTela, transmitindoCamera, transmitindoAudio, modoVisualizacao
       // Campos imutáveis: turmaId, turmaNome, horarioId, horarioNome, data, professorId, professorNome, materia, dataCriacao, dataInicio, tempoMaxAusencia, tempoInatividade, tempoConfirmacao
       allow update: if isAuthenticated() && isUserActive() && (
         isAdmin() ||
         (isProfessor() && 
          resource.data.professorId == request.auth.uid &&
-         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'dataFim', 'dataAtualizacao']))
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'dataFim', 'dataAtualizacao', 'transmitindoTela', 'transmitindoCamera', 'transmitindoAudio', 'modoVisualizacao']))
       );
       
       // Apenas diretores podem deletar
