@@ -13,6 +13,24 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "webrtcSignals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "processado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "sessaoId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useLiveClass } from "@/contexts/LiveClassContext";
 import { usePresenceMonitor } from "@/hooks/usePresenceMonitor";
 import { PresenceConfirmationModal } from "./PresenceConfirmationModal";
@@ -10,6 +10,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { 
   LogOut, 
   Clock, 
@@ -45,6 +53,10 @@ export function LiveClassroom({ onExit }: LiveClassroomProps) {
   const [isEntering, setIsEntering] = useState(false);
   const [classParticipants, setClassParticipants] = useState(0);
   const [leaveRequestId, setLeaveRequestId] = useState<string | null>(null);
+  const [showClassEndedModal, setShowClassEndedModal] = useState(false);
+  const [endedSessionInfo, setEndedSessionInfo] = useState<{materia: string; turmaNome: string; professorNome: string} | null>(null);
+  const previousSessionRef = useRef<string | null>(null);
+  const wasInClassRef = useRef(false);
 
   const maxAbsenceTime = currentSession?.tempoMaxAusencia || 300;
   const inactivityTimeout = currentSession?.tempoInatividade || 180;
@@ -150,6 +162,32 @@ export function LiveClassroom({ onExit }: LiveClassroomProps) {
     }
   }, [isInClass, updateActivity]);
 
+  // Detectar quando a aula é encerrada pelo professor
+  useEffect(() => {
+    // Salvar informações da sessão atual
+    if (currentSession) {
+      previousSessionRef.current = currentSession.id;
+      setEndedSessionInfo({
+        materia: currentSession.materia,
+        turmaNome: currentSession.turmaNome,
+        professorNome: currentSession.professorNome,
+      });
+    }
+    
+    // Marcar quando o aluno estava na aula
+    if (isInClass) {
+      wasInClassRef.current = true;
+    }
+    
+    // Se não há mais sessão mas o aluno estava na aula, significa que a aula foi encerrada
+    if (!currentSession && wasInClassRef.current && previousSessionRef.current) {
+      console.log("[LiveClassroom] Aula encerrada pelo professor");
+      setShowClassEndedModal(true);
+      wasInClassRef.current = false;
+      previousSessionRef.current = null;
+    }
+  }, [currentSession, isInClass]);
+
   const handleEnterClass = async () => {
     if (!currentSession) return;
     setIsEntering(true);
@@ -223,17 +261,82 @@ export function LiveClassroom({ onExit }: LiveClassroomProps) {
 
   if (!currentSession) {
     return (
-      <Card className="max-w-md mx-auto mt-8">
-        <CardHeader className="text-center">
-          <div className="mx-auto p-3 rounded-full bg-muted w-fit mb-2">
-            <BookOpen className="h-8 w-8 text-muted-foreground" />
-          </div>
-          <CardTitle>Nenhuma Aula em Andamento</CardTitle>
-          <CardDescription>
-            Não há nenhuma aula ao vivo no momento. Aguarde o professor iniciar a aula.
-          </CardDescription>
-        </CardHeader>
-      </Card>
+      <>
+        <Card className="max-w-md mx-auto mt-8">
+          <CardHeader className="text-center">
+            <div className="mx-auto p-3 rounded-full bg-muted w-fit mb-2">
+              <BookOpen className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <CardTitle>Nenhuma Aula em Andamento</CardTitle>
+            <CardDescription>
+              Não há nenhuma aula ao vivo no momento. Aguarde o professor iniciar a aula.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+
+        <Dialog open={showClassEndedModal} onOpenChange={() => {}}>
+          <DialogContent 
+            className="sm:max-w-md"
+            onPointerDownOutside={(e) => e.preventDefault()}
+            onEscapeKeyDown={(e) => e.preventDefault()}
+          >
+            <DialogHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-full bg-green-500/10">
+                  <CheckCircle className="h-6 w-6 text-green-500" />
+                </div>
+                <DialogTitle className="text-xl text-green-600 dark:text-green-400">
+                  Aula Encerrada
+                </DialogTitle>
+              </div>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <DialogDescription className="text-base">
+                O professor encerrou a aula. Sua presença foi contabilizada com sucesso!
+              </DialogDescription>
+
+              {endedSessionInfo && (
+                <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Aula:</span>
+                    <span className="font-medium">{endedSessionInfo.materia}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Turma:</span>
+                    <span className="font-medium">{endedSessionInfo.turmaNome}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Professor:</span>
+                    <span className="font-medium">{endedSessionInfo.professorNome}</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                <p className="text-sm text-green-800 dark:text-green-200">
+                  Sua presença foi validada automaticamente ao final da aula. Obrigado por participar!
+                </p>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button 
+                onClick={() => {
+                  setShowClassEndedModal(false);
+                  setEndedSessionInfo(null);
+                  onExit?.();
+                }}
+                size="lg"
+                className="w-full"
+                data-testid="button-return-home-after-class"
+              >
+                Voltar à Tela Inicial
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </>
     );
   }
 
@@ -457,6 +560,69 @@ export function LiveClassroom({ onExit }: LiveClassroomProps) {
         maxAbsenceTime={maxAbsenceTime}
         onDismiss={dismissReturnModal}
       />
+
+      <Dialog open={showClassEndedModal} onOpenChange={() => {}}>
+        <DialogContent 
+          className="sm:max-w-md"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-full bg-green-500/10">
+                <CheckCircle className="h-6 w-6 text-green-500" />
+              </div>
+              <DialogTitle className="text-xl text-green-600 dark:text-green-400">
+                Aula Encerrada
+              </DialogTitle>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <DialogDescription className="text-base">
+              O professor encerrou a aula. Sua presença foi contabilizada com sucesso!
+            </DialogDescription>
+
+            {endedSessionInfo && (
+              <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Aula:</span>
+                  <span className="font-medium">{endedSessionInfo.materia}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Turma:</span>
+                  <span className="font-medium">{endedSessionInfo.turmaNome}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Professor:</span>
+                  <span className="font-medium">{endedSessionInfo.professorNome}</span>
+                </div>
+              </div>
+            )}
+
+            <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-3">
+              <p className="text-sm text-green-800 dark:text-green-200">
+                Sua presença foi validada automaticamente ao final da aula. Obrigado por participar!
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button 
+              onClick={() => {
+                setShowClassEndedModal(false);
+                setEndedSessionInfo(null);
+                onExit?.();
+              }}
+              size="lg"
+              className="w-full"
+              data-testid="button-return-home-after-class"
+            >
+              Voltar à Tela Inicial
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
