@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { LiveClassroom } from "@/components/LiveClassroom";
 import { useLiveClass } from "@/contexts/LiveClassContext";
@@ -7,6 +8,29 @@ import { ArrowLeft } from "lucide-react";
 export default function LiveClassPage() {
   const [, setLocation] = useLocation();
   const { isInClass } = useLiveClass();
+
+  useEffect(() => {
+    if (!isInClass) return;
+
+    const handlePopState = (e: PopStateEvent) => {
+      window.history.pushState(null, "", window.location.href);
+    };
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "Você está em uma aula ao vivo. Sair resultará em falta.";
+      return e.returnValue;
+    };
+
+    window.history.pushState(null, "", window.location.href);
+    window.addEventListener("popstate", handlePopState);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [isInClass]);
 
   const handleExit = () => {
     setLocation("/aluno");
