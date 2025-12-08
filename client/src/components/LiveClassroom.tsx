@@ -237,6 +237,55 @@ export function LiveClassroom({ onExit }: LiveClassroomProps) {
     );
   }
 
+  if (studentPresence?.status === "liberado") {
+    return (
+      <Card className="max-w-md mx-auto mt-8">
+        <CardHeader className="text-center">
+          <div className="mx-auto p-3 rounded-full bg-green-500/10 w-fit mb-2">
+            <CheckCircle className="h-8 w-8 text-green-500" />
+          </div>
+          <CardTitle className="text-green-600 dark:text-green-400">Você Foi Liberado</CardTitle>
+          <CardDescription>
+            Sua saída da aula foi autorizada pelo professor.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Aula:</span>
+              <span className="font-medium">{currentSession.materia}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Turma:</span>
+              <span className="font-medium">{currentSession.turmaNome}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Professor:</span>
+              <span className="font-medium">{currentSession.professorNome}</span>
+            </div>
+          </div>
+
+          <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-3">
+            <p className="text-sm text-green-800 dark:text-green-200">
+              Sua presença foi validada com sucesso. Você pode sair da plataforma agora.
+            </p>
+          </div>
+
+          <Button 
+            onClick={() => onExit?.()}
+            variant="outline"
+            className="w-full" 
+            size="lg"
+            data-testid="button-leave-after-released"
+          >
+            <LogOut className="h-5 w-5 mr-2" />
+            Sair da Sala de Aula
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (!isInClass) {
     return (
       <Card className="max-w-lg mx-auto mt-8">
