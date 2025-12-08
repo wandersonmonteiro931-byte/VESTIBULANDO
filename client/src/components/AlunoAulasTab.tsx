@@ -216,26 +216,9 @@ export function AlunoAulasTab() {
     };
   }, [userData?.uid]);
 
-  const handleEnterClass = async () => {
+  const handleEnterClass = () => {
     if (!currentSession) return;
-    if (!enterClass) {
-      toast({
-        title: "Aula não disponível",
-        description: "Não foi possível conectar ao sistema de aulas. Atualize a página e tente novamente.",
-        variant: "destructive"
-      });
-      return;
-    }
-    try {
-      await enterClass(currentSession.id);
-      setLocation("/aula");
-    } catch (error) {
-      toast({
-        title: "Erro ao entrar na aula",
-        description: "Não foi possível entrar na aula. Tente novamente.",
-        variant: "destructive"
-      });
-    }
+    setLocation("/aula");
   };
 
   const handleGoToClassroom = () => {
