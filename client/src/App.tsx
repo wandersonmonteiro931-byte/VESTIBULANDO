@@ -110,6 +110,12 @@ function Router() {
         </ProtectedRoute>
       </Route>
       
+      <Route path="/aluno/sala">
+        <ProtectedRoute allowedTypes={["aluno"]}>
+          <StudentClassroomPage />
+        </ProtectedRoute>
+      </Route>
+      
       <Route component={NotFound} />
     </Switch>
   );
