@@ -294,13 +294,23 @@ export function LiveClassProvider({ children }: { children: React.ReactNode }) {
       return docRef.id;
     } catch (error: any) {
       console.error("Error requesting leave:", error);
-      if (error?.code === 'permission-denied') {
-        throw new Error("Você não tem permissão para solicitar saída. Verifique se está logado corretamente.");
+      console.error("Error code:", error?.code);
+      console.error("Error message:", error?.message);
+      
+      // Firebase pode retornar permission-denied em diferentes formatos
+      const isPermissionError = 
+        error?.code === 'permission-denied' ||
+        error?.code === 'PERMISSION_DENIED' ||
+        error?.message?.includes('permission-denied') ||
+        error?.message?.includes('Missing or insufficient permissions');
+      
+      if (isPermissionError) {
+        throw new Error("Você não tem permissão para solicitar saída. Verifique se está logado corretamente e se sua conta está ativa.");
       }
       if (error?.message?.includes('INTERNAL ASSERTION FAILED')) {
-        throw new Error("Erro temporário. Por favor, recarregue a página e tente novamente.");
+        throw new Error("Erro temporário do Firebase. Por favor, recarregue a página e tente novamente.");
       }
-      throw new Error("Erro ao enviar solicitação. Tente novamente.");
+      throw new Error("Erro ao enviar solicitação: " + (error?.message || "Tente novamente."));
     }
   }, [studentPresence, currentSession, userData]);
 
