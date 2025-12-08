@@ -1,9 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useLocation, useRoute } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLiveClass } from "@/contexts/LiveClassContext";
-import { useWebRTC } from "@/hooks/useWebRTC";
-import { Whiteboard } from "@/components/Whiteboard";
 import { db } from "@/lib/firebase";
 import { 
   collection, 
@@ -12,13 +10,12 @@ import {
   onSnapshot, 
   doc, 
   updateDoc,
-  getDoc
 } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -29,26 +26,19 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { 
-  Monitor, 
-  Camera, 
-  CameraOff,
-  Mic, 
-  MicOff, 
-  MonitorOff,
   Users, 
   ArrowLeft,
   Square,
   Loader2,
-  PenTool,
   CheckCircle,
   XCircle,
-  Video,
-  VideoOff,
-  Bell
+  Bell,
+  Clock,
+  ExternalLink,
+  Copy,
+  AlertTriangle,
 } from "lucide-react";
 import type { SessaoAulaAoVivo, PresencaAulaAoVivo, SolicitacaoSaida, User } from "@shared/schema";
-
-type ViewMode = "screen" | "camera" | "whiteboard" | "screen_camera";
 
 export default function TeacherClassroomPage() {
   const [, setLocation] = useLocation();
@@ -64,41 +54,31 @@ export default function TeacherClassroomPage() {
 
   const [session, setSession] = useState<SessaoAulaAoVivo | null>(null);
   const [participants, setParticipants] = useState<PresencaAulaAoVivo[]>([]);
-  const [viewMode, setViewMode] = useState<ViewMode>("screen");
   const [showEndConfirmation, setShowEndConfirmation] = useState(false);
   const [isEnding, setIsEnding] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<SolicitacaoSaida | null>(null);
   const [isResponding, setIsResponding] = useState(false);
-  const [whiteboardData, setWhiteboardData] = useState<string>("");
-
-  const localVideoRef = useRef<HTMLVideoElement>(null);
-  const screenVideoRef = useRef<HTMLVideoElement>(null);
-
-  const webrtcConfig = session && userData ? {
-    sessionId: session.id,
-    userId: userData.uid,
-    userNome: userData.nome,
-    userTipo: "professor" as const,
-    isTeacher: true,
-  } : null;
-
-  const {
-    localStream,
-    screenStream,
-    isScreenSharing,
-    isCameraOn,
-    isMicOn,
-    startCamera,
-    stopCamera,
-    toggleCamera,
-    toggleMic,
-    startScreenShare,
-    stopScreenShare,
-    cleanup,
-  } = useWebRTC(webrtcConfig);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [showTimeWarning, setShowTimeWarning] = useState(false);
 
   const formatBrasiliaTime = () => {
     return new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+  };
+
+  const maxDurationMinutes = session?.duracaoMaximaMinutos || 50;
+  const maxDurationSeconds = maxDurationMinutes * 60;
+  const remainingSeconds = Math.max(0, maxDurationSeconds - elapsedSeconds);
+  const progressPercentage = Math.min(100, (elapsedSeconds / maxDurationSeconds) * 100);
+  const isOverTime = elapsedSeconds >= maxDurationSeconds;
+
+  const formatTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    if (hours > 0) {
+      return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   useEffect(() => {
@@ -115,9 +95,6 @@ export default function TeacherClassroomPage() {
           if (snapshot.exists()) {
             const sessionData = { id: snapshot.id, ...snapshot.data() } as SessaoAulaAoVivo;
             setSession(sessionData);
-            if (sessionData.modoVisualizacao) {
-              setViewMode(sessionData.modoVisualizacao as ViewMode);
-            }
           } else {
             toast({
               title: "Sessao nao encontrada",
@@ -127,7 +104,6 @@ export default function TeacherClassroomPage() {
             setLocation("/professor");
           }
         }, (error: any) => {
-          // Bug do Firebase SDK 12.4.0 - suprimir apenas este erro específico
           if (error?.message?.includes('INTERNAL ASSERTION FAILED')) {
             console.warn("[TeacherClassroomPage] Firebase SDK bug detectado - recarregue a página se persistir");
             return;
@@ -168,7 +144,6 @@ export default function TeacherClassroomPage() {
           })) as PresencaAulaAoVivo[];
           setParticipants(participantsList);
         }, (error: any) => {
-          // Bug do Firebase SDK 12.4.0 - suprimir apenas este erro específico
           if (error?.message?.includes('INTERNAL ASSERTION FAILED')) {
             console.warn("[TeacherClassroomPage] Firebase SDK bug detectado - recarregue a página se persistir");
             return;
@@ -191,104 +166,55 @@ export default function TeacherClassroomPage() {
   }, [session]);
 
   useEffect(() => {
-    if (localVideoRef.current && localStream) {
-      localVideoRef.current.srcObject = localStream;
-    }
-  }, [localStream]);
+    if (!session?.dataInicio) return;
+
+    const calculateElapsed = () => {
+      const startTime = new Date(session.dataInicio).getTime();
+      const now = Date.now();
+      const elapsed = Math.floor((now - startTime) / 1000);
+      setElapsedSeconds(Math.max(0, elapsed));
+    };
+
+    calculateElapsed();
+    const interval = setInterval(calculateElapsed, 1000);
+
+    return () => clearInterval(interval);
+  }, [session?.dataInicio]);
 
   useEffect(() => {
-    if (screenVideoRef.current && screenStream) {
-      screenVideoRef.current.srcObject = screenStream;
-    }
-  }, [screenStream]);
-
-  const updateSessionMedia = useCallback(async (updates: Partial<SessaoAulaAoVivo>) => {
-    if (!session) return;
-    
-    try {
-      const sessionRef = doc(db, "sessoesAulaAoVivo", session.id);
-      await updateDoc(sessionRef, updates);
-    } catch (error) {
-      console.error("Error updating session:", error);
-    }
-  }, [session]);
-
-  const handleStartScreenShare = async () => {
-    try {
-      await startScreenShare();
-      await updateSessionMedia({ 
-        transmitindoTela: true,
-        modoVisualizacao: "tela" as any,
-      });
-      setViewMode("screen");
+    const fiveMinutesRemaining = maxDurationSeconds - 300;
+    if (elapsedSeconds >= fiveMinutesRemaining && elapsedSeconds < fiveMinutesRemaining + 2 && !showTimeWarning) {
+      setShowTimeWarning(true);
       toast({
-        title: "Compartilhamento iniciado",
-        description: "Sua tela esta sendo transmitida para os alunos.",
-      });
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Nao foi possivel compartilhar a tela.",
+        title: "Tempo quase esgotado",
+        description: "Restam menos de 5 minutos para o fim da aula.",
         variant: "destructive",
       });
     }
-  };
+  }, [elapsedSeconds, maxDurationSeconds, showTimeWarning, toast]);
 
-  const handleStopScreenShare = async () => {
-    stopScreenShare();
-    await updateSessionMedia({ transmitindoTela: false });
-    toast({
-      title: "Compartilhamento encerrado",
-      description: "O compartilhamento de tela foi encerrado.",
-    });
-  };
-
-  const handleStartCamera = async () => {
-    try {
-      await startCamera();
-      await updateSessionMedia({ 
-        transmitindoCamera: true,
-        transmitindoAudio: true,
-      });
-      toast({
-        title: "Camera ativada",
-        description: "Sua camera e microfone estao ativos.",
-      });
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Nao foi possivel ativar a camera. Verifique as permissoes do navegador.",
-        variant: "destructive",
-      });
+  const handleOpenTeams = () => {
+    if (session?.teamsLink) {
+      window.open(session.teamsLink, '_blank');
     }
   };
 
-  const handleStopCamera = async () => {
-    stopCamera();
-    await updateSessionMedia({ 
-      transmitindoCamera: false,
-      transmitindoAudio: false,
-    });
-  };
-
-  const handleToggleMic = async () => {
-    toggleMic();
-    await updateSessionMedia({ transmitindoAudio: !isMicOn });
-  };
-
-  const handleToggleCamera = async () => {
-    toggleCamera();
-    await updateSessionMedia({ transmitindoCamera: !isCameraOn });
-  };
-
-  const handleViewModeChange = async (mode: ViewMode) => {
-    setViewMode(mode);
-    await updateSessionMedia({ modoVisualizacao: mode as any });
-  };
-
-  const handleWhiteboardDataChange = async (data: string) => {
-    setWhiteboardData(data);
-    await updateSessionMedia({ quadroBrancoData: data });
+  const handleCopyLink = async () => {
+    if (session?.teamsLink) {
+      try {
+        await navigator.clipboard.writeText(session.teamsLink);
+        toast({
+          title: "Link copiado",
+          description: "O link do Teams foi copiado para a area de transferencia.",
+        });
+      } catch (error) {
+        toast({
+          title: "Erro",
+          description: "Nao foi possivel copiar o link.",
+          variant: "destructive",
+        });
+      }
+    }
   };
 
   const handleEndClass = async () => {
@@ -300,17 +226,7 @@ export default function TeacherClassroomPage() {
       await updateDoc(sessionRef, {
         status: "finalizada",
         dataFim: formatBrasiliaTime(),
-        transmitindoTela: false,
-        transmitindoCamera: false,
-        transmitindoAudio: false,
       });
-
-      const participantsRef = collection(db, "presencasAulaAoVivo");
-      const q = query(participantsRef, where("sessaoId", "==", session.id));
-      const snapshot = await onSnapshot(q, () => {});
-      snapshot();
-
-      cleanup();
 
       toast({
         title: "Aula Encerrada",
@@ -331,17 +247,17 @@ export default function TeacherClassroomPage() {
     }
   };
 
-  const handleRespondToRequest = async (approved: boolean) => {
-    if (!selectedRequest) return;
+  const handleRespondToRequest = async (request: SolicitacaoSaida, approved: boolean) => {
+    setSelectedRequest(request);
     setIsResponding(true);
 
     try {
-      await respondToLeaveRequest(selectedRequest.id, approved);
+      await respondToLeaveRequest(request.id, approved);
       toast({
         title: approved ? "Saida Autorizada" : "Saida Negada",
         description: approved 
-          ? `${selectedRequest.alunoNome} foi liberado(a) da aula.`
-          : `${selectedRequest.alunoNome} deve permanecer na aula.`,
+          ? `${request.alunoNome} foi liberado(a) da aula.`
+          : `${request.alunoNome} deve permanecer na aula.`,
       });
       setSelectedRequest(null);
     } catch (error) {
@@ -385,7 +301,7 @@ export default function TeacherClassroomPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="border-b bg-card">
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center justify-between px-4 py-3 gap-2 flex-wrap">
           <div className="flex items-center gap-4">
             <Button 
               variant="ghost" 
@@ -413,183 +329,106 @@ export default function TeacherClassroomPage() {
         </div>
       </header>
 
-      <div className="flex-1 flex">
-        <div className="flex-1 flex flex-col">
-          <div className="flex items-center gap-2 p-3 bg-muted/50 border-b flex-wrap">
-            <div className="flex items-center gap-1 bg-card rounded-lg p-1">
-              <Button
-                size="sm"
-                variant={viewMode === "screen" ? "default" : "ghost"}
-                onClick={() => handleViewModeChange("screen")}
-                disabled={!isScreenSharing}
-                data-testid="button-view-screen"
-              >
-                <Monitor className="h-4 w-4 mr-1" />
-                Tela
-              </Button>
-              <Button
-                size="sm"
-                variant={viewMode === "camera" ? "default" : "ghost"}
-                onClick={() => handleViewModeChange("camera")}
-                disabled={!isCameraOn}
-                data-testid="button-view-camera"
-              >
-                <Camera className="h-4 w-4 mr-1" />
-                Camera
-              </Button>
-              <Button
-                size="sm"
-                variant={viewMode === "whiteboard" ? "default" : "ghost"}
-                onClick={() => handleViewModeChange("whiteboard")}
-                data-testid="button-view-whiteboard"
-              >
-                <PenTool className="h-4 w-4 mr-1" />
-                Quadro
-              </Button>
-              <Button
-                size="sm"
-                variant={viewMode === "screen_camera" ? "default" : "ghost"}
-                onClick={() => handleViewModeChange("screen_camera")}
-                disabled={!isScreenSharing || !isCameraOn}
-                data-testid="button-view-both"
-              >
-                <Video className="h-4 w-4 mr-1" />
-                Ambos
-              </Button>
-            </div>
+      <div className="flex-1 flex flex-col lg:flex-row">
+        <div className="flex-1 p-4 lg:p-6">
+          <div className="max-w-2xl mx-auto space-y-6">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5" />
+                  Tempo de Aula
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-3xl font-bold" data-testid="text-elapsed-time">
+                      {formatTime(elapsedSeconds)}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Tempo decorrido
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-2xl font-semibold ${isOverTime ? 'text-destructive' : remainingSeconds <= 300 ? 'text-amber-500' : ''}`} data-testid="text-remaining-time">
+                      {isOverTime ? `+${formatTime(elapsedSeconds - maxDurationSeconds)}` : formatTime(remainingSeconds)}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {isOverTime ? 'Tempo excedido' : 'Tempo restante'}
+                    </p>
+                  </div>
+                </div>
 
-            <Separator orientation="vertical" className="h-6" />
-
-            <div className="flex items-center gap-1">
-              {!isScreenSharing ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleStartScreenShare}
-                  data-testid="button-start-screen"
-                >
-                  <Monitor className="h-4 w-4 mr-1" />
-                  Compartilhar Tela
-                </Button>
-              ) : (
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={handleStopScreenShare}
-                  data-testid="button-stop-screen"
-                >
-                  <MonitorOff className="h-4 w-4 mr-1" />
-                  Parar
-                </Button>
-              )}
-
-              {!localStream ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleStartCamera}
-                  data-testid="button-start-camera"
-                >
-                  <Camera className="h-4 w-4 mr-1" />
-                  Iniciar Camera
-                </Button>
-              ) : (
-                <>
-                  <Button
-                    size="icon"
-                    variant={isCameraOn ? "default" : "secondary"}
-                    onClick={handleToggleCamera}
-                    data-testid="button-toggle-camera"
-                  >
-                    {isCameraOn ? <Camera className="h-4 w-4" /> : <CameraOff className="h-4 w-4" />}
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant={isMicOn ? "default" : "secondary"}
-                    onClick={handleToggleMic}
-                    data-testid="button-toggle-mic"
-                  >
-                    {isMicOn ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
-                  </Button>
-                </>
-              )}
-            </div>
-
-            <div className="flex-1" />
-
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={() => setShowEndConfirmation(true)}
-              data-testid="button-end-class"
-            >
-              <Square className="h-4 w-4 mr-1" />
-              Encerrar Aula
-            </Button>
-          </div>
-
-          <div className="flex-1 p-4 bg-black/5 dark:bg-black/20">
-            {viewMode === "whiteboard" ? (
-              <div className="h-full bg-white rounded-lg shadow-lg overflow-hidden">
-                <Whiteboard 
-                  onDataChange={handleWhiteboardDataChange}
-                  initialData={whiteboardData}
-                />
-              </div>
-            ) : viewMode === "screen" && isScreenSharing ? (
-              <div className="h-full flex items-center justify-center">
-                <video
-                  ref={screenVideoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="max-w-full max-h-full rounded-lg shadow-lg"
-                />
-              </div>
-            ) : viewMode === "camera" && localStream ? (
-              <div className="h-full flex items-center justify-center">
-                <video
-                  ref={localVideoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="max-w-full max-h-full rounded-lg shadow-lg"
-                  style={{ transform: "scaleX(-1)" }}
-                />
-              </div>
-            ) : viewMode === "screen_camera" && isScreenSharing && localStream ? (
-              <div className="h-full relative">
-                <video
-                  ref={screenVideoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-full h-full object-contain rounded-lg shadow-lg"
-                />
-                <video
-                  ref={localVideoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="absolute bottom-4 right-4 w-48 h-36 object-cover rounded-lg shadow-lg border-2 border-white"
-                  style={{ transform: "scaleX(-1)" }}
-                />
-              </div>
-            ) : (
-              <div className="h-full flex items-center justify-center text-muted-foreground">
-                <div className="text-center">
-                  <Monitor className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg">Nenhuma transmissao ativa</p>
-                  <p className="text-sm mt-1">
-                    Clique em "Compartilhar Tela" ou "Iniciar Camera" para comecar
+                <div className="space-y-2">
+                  <Progress 
+                    value={progressPercentage} 
+                    className={`h-3 ${isOverTime ? '[&>div]:bg-destructive' : progressPercentage > 90 ? '[&>div]:bg-amber-500' : ''}`}
+                  />
+                  <p className="text-xs text-muted-foreground text-center">
+                    Duracao maxima: {maxDurationMinutes} minutos
                   </p>
                 </div>
-              </div>
-            )}
+
+                {isOverTime && (
+                  <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                    <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0" />
+                    <p className="text-sm text-destructive">
+                      O tempo maximo da aula foi excedido. Por favor, encerre a aula.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2">
+                  <ExternalLink className="h-5 w-5" />
+                  Reuniao do Teams
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {session.teamsLink ? (
+                  <>
+                    <div className="p-3 bg-muted rounded-lg">
+                      <p className="text-sm font-mono break-all text-muted-foreground" data-testid="text-teams-link">
+                        {session.teamsLink}
+                      </p>
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      <Button onClick={handleOpenTeams} className="flex-1" data-testid="button-open-teams">
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        Abrir no Teams
+                      </Button>
+                      <Button variant="outline" onClick={handleCopyLink} data-testid="button-copy-link">
+                        <Copy className="h-4 w-4 mr-2" />
+                        Copiar Link
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Nenhum link do Teams configurado para esta aula.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            <div className="flex justify-center">
+              <Button
+                size="lg"
+                variant="destructive"
+                onClick={() => setShowEndConfirmation(true)}
+                data-testid="button-end-class"
+              >
+                <Square className="h-4 w-4 mr-2" />
+                Encerrar Aula
+              </Button>
+            </div>
           </div>
         </div>
 
-        <div className="w-80 border-l bg-card flex flex-col">
+        <div className="w-full lg:w-80 border-t lg:border-t-0 lg:border-l bg-card flex flex-col">
           <div className="p-3 border-b">
             <h3 className="font-semibold flex items-center gap-2">
               <Users className="h-4 w-4" />
@@ -622,11 +461,9 @@ export default function TeacherClassroomPage() {
                       <Button 
                         size="icon"
                         variant="ghost"
-                        className="h-7 w-7 text-green-600 hover:text-green-700 hover:bg-green-50"
-                        onClick={() => {
-                          setSelectedRequest(request);
-                          handleRespondToRequest(true);
-                        }}
+                        className="h-7 w-7 text-green-600"
+                        onClick={() => handleRespondToRequest(request, true)}
+                        disabled={isResponding}
                         data-testid={`button-approve-${request.id}`}
                       >
                         <CheckCircle className="h-4 w-4" />
@@ -634,11 +471,9 @@ export default function TeacherClassroomPage() {
                       <Button 
                         size="icon"
                         variant="ghost"
-                        className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => {
-                          setSelectedRequest(request);
-                          handleRespondToRequest(false);
-                        }}
+                        className="h-7 w-7 text-destructive"
+                        onClick={() => handleRespondToRequest(request, false)}
+                        disabled={isResponding}
                         data-testid={`button-deny-${request.id}`}
                       >
                         <XCircle className="h-4 w-4" />
@@ -658,25 +493,12 @@ export default function TeacherClassroomPage() {
                 </p>
               ) : (
                 participants.map((participant) => (
-                  <div 
+                  <div
                     key={participant.id}
-                    className="flex items-center justify-between p-2 bg-muted/50 rounded-lg"
+                    className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
+                    data-testid={`participant-${participant.id}`}
                   >
-                    <div className="min-w-0">
-                      <p className="font-medium text-sm truncate">{participant.alunoNome}</p>
-                      <div className="flex items-center gap-1 mt-1">
-                        {participant.cameraLigada ? (
-                          <Camera className="h-3 w-3 text-green-500" />
-                        ) : (
-                          <CameraOff className="h-3 w-3 text-muted-foreground" />
-                        )}
-                        {participant.micLigado ? (
-                          <Mic className="h-3 w-3 text-green-500" />
-                        ) : (
-                          <MicOff className="h-3 w-3 text-muted-foreground" />
-                        )}
-                      </div>
-                    </div>
+                    <span className="text-sm font-medium truncate">{participant.alunoNome}</span>
                     {getStatusBadge(participant.status)}
                   </div>
                 ))
@@ -691,19 +513,25 @@ export default function TeacherClassroomPage() {
           <DialogHeader>
             <DialogTitle>Encerrar Aula?</DialogTitle>
             <DialogDescription>
-              Ao encerrar a aula, todos os alunos presentes terao a presenca validada automaticamente.
+              Ao encerrar a aula, todos os alunos presentes terao sua presenca validada automaticamente.
+              Esta acao nao pode ser desfeita.
             </DialogDescription>
           </DialogHeader>
-          <div className="bg-muted/50 rounded-lg p-4">
-            <p className="text-sm">
-              <strong>{presentCount}</strong> aluno(s) presente(s) terao presenca confirmada.
-            </p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEndConfirmation(false)}>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowEndConfirmation(false)}
+              disabled={isEnding}
+              data-testid="button-cancel-end"
+            >
               Cancelar
             </Button>
-            <Button variant="destructive" onClick={handleEndClass} disabled={isEnding}>
+            <Button
+              variant="destructive"
+              onClick={handleEndClass}
+              disabled={isEnding}
+              data-testid="button-confirm-end"
+            >
               {isEnding ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -712,47 +540,6 @@ export default function TeacherClassroomPage() {
               ) : (
                 "Encerrar Aula"
               )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!selectedRequest} onOpenChange={() => setSelectedRequest(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Solicitacao de Saida</DialogTitle>
-          </DialogHeader>
-          {selectedRequest && (
-            <div className="space-y-4">
-              <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Aluno:</span>
-                  <span className="font-medium">{selectedRequest.alunoNome}</span>
-                </div>
-                {selectedRequest.motivoAluno && (
-                  <div>
-                    <span className="text-sm text-muted-foreground">Motivo:</span>
-                    <p className="mt-1">{selectedRequest.motivoAluno}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button 
-              variant="destructive" 
-              onClick={() => handleRespondToRequest(false)}
-              disabled={isResponding}
-            >
-              {isResponding ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4 mr-2" />}
-              Negar Saida
-            </Button>
-            <Button 
-              onClick={() => handleRespondToRequest(true)}
-              disabled={isResponding}
-            >
-              {isResponding ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-2" />}
-              Autorizar Saida
             </Button>
           </DialogFooter>
         </DialogContent>

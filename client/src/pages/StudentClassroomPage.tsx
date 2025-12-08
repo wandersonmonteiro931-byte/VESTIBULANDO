@@ -1,36 +1,21 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLiveClass } from "@/contexts/LiveClassContext";
-import { useWebRTC } from "@/hooks/useWebRTC";
-import { Whiteboard } from "@/components/Whiteboard";
 import { db } from "@/lib/firebase";
 import { 
   collection, 
   doc, 
   onSnapshot, 
-  updateDoc,
   query,
   where,
-  getDocs,
 } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { 
-  Camera, 
-  CameraOff,
-  Mic, 
-  MicOff, 
   Users, 
   ArrowLeft,
   Loader2,
@@ -38,7 +23,8 @@ import {
   LogOut,
   BookOpen,
   Clock,
-  AlertTriangle
+  ExternalLink,
+  AlertTriangle,
 } from "lucide-react";
 import { PresenceConfirmationModal } from "@/components/PresenceConfirmationModal";
 import { AbsenceModal } from "@/components/AbsenceModal";
@@ -46,7 +32,7 @@ import { AbsenceWarningModal } from "@/components/AbsenceWarningModal";
 import { LeaveRequestModal } from "@/components/LeaveRequestModal";
 import { ReturnModal } from "@/components/ReturnModal";
 import { usePresenceMonitor } from "@/hooks/usePresenceMonitor";
-import type { SessaoAulaAoVivo, PresencaAulaAoVivo, User } from "@shared/schema";
+import type { SessaoAulaAoVivo, User } from "@shared/schema";
 
 export default function StudentClassroomPage() {
   const [, setLocation] = useLocation();
@@ -76,35 +62,25 @@ export default function StudentClassroomPage() {
   const [showAbsenceModal, setShowAbsenceModal] = useState(false);
   const [absenceReason, setAbsenceReason] = useState<"ausencia_prolongada" | "inatividade" | "saida_nao_autorizada">("inatividade");
   const [leaveRequestId, setLeaveRequestId] = useState<string | null>(null);
-
-  const teacherVideoRef = useRef<HTMLVideoElement>(null);
-  const localVideoRef = useRef<HTMLVideoElement>(null);
-
-  const webrtcConfig = currentSession && userData ? {
-    sessionId: currentSession.id,
-    userId: userData.uid,
-    userNome: userData.nome,
-    userTipo: "aluno" as const,
-    isTeacher: false,
-  } : null;
-
-  const {
-    localStream,
-    remoteStreams,
-    isCameraOn,
-    isMicOn,
-    startCamera,
-    stopCamera,
-    toggleCamera,
-    toggleMic,
-    announceJoin,
-    announceLeave,
-    cleanup,
-  } = useWebRTC(webrtcConfig);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   const maxAbsenceTime = currentSession?.tempoMaxAusencia || 300;
   const inactivityTimeout = currentSession?.tempoInatividade || 180;
   const confirmationTimeout = currentSession?.tempoConfirmacao || 120;
+  const maxDurationMinutes = session?.duracaoMaximaMinutos || currentSession?.duracaoMaximaMinutos || 50;
+  const maxDurationSeconds = maxDurationMinutes * 60;
+  const remainingSeconds = Math.max(0, maxDurationSeconds - elapsedSeconds);
+  const progressPercentage = Math.min(100, (elapsedSeconds / maxDurationSeconds) * 100);
+
+  const formatTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    if (hours > 0) {
+      return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   console.log("[StudentClassroomPage] isInClass:", isInClass, "currentSession:", !!currentSession);
 
@@ -235,19 +211,21 @@ export default function StudentClassroomPage() {
   }, [currentSession]);
 
   useEffect(() => {
-    if (localVideoRef.current && localStream) {
-      localVideoRef.current.srcObject = localStream;
-    }
-  }, [localStream]);
+    const sessionToUse = session || currentSession;
+    if (!sessionToUse?.dataInicio) return;
 
-  useEffect(() => {
-    if (teacherVideoRef.current && remoteStreams.size > 0) {
-      const teacherStream = Array.from(remoteStreams.values())[0];
-      if (teacherStream) {
-        teacherVideoRef.current.srcObject = teacherStream;
-      }
-    }
-  }, [remoteStreams]);
+    const calculateElapsed = () => {
+      const startTime = new Date(sessionToUse.dataInicio).getTime();
+      const now = Date.now();
+      const elapsed = Math.floor((now - startTime) / 1000);
+      setElapsedSeconds(Math.max(0, elapsed));
+    };
+
+    calculateElapsed();
+    const interval = setInterval(calculateElapsed, 1000);
+
+    return () => clearInterval(interval);
+  }, [session?.dataInicio, currentSession?.dataInicio]);
 
   useEffect(() => {
     if (isInClass) {
@@ -258,23 +236,11 @@ export default function StudentClassroomPage() {
     }
   }, [isInClass, updateActivity]);
 
-  const updatePresenceMedia = useCallback(async (updates: Partial<PresencaAulaAoVivo>) => {
-    if (!studentPresence) return;
-    
-    try {
-      const presenceRef = doc(db, "presencasAulaAoVivo", studentPresence.id);
-      await updateDoc(presenceRef, updates);
-    } catch (error) {
-      console.error("Error updating presence:", error);
-    }
-  }, [studentPresence]);
-
   const handleEnterClass = async () => {
     if (!currentSession) return;
     setIsEntering(true);
     try {
       await enterClass(currentSession.id);
-      await announceJoin();
       toast({
         title: "Voce entrou na aula",
         description: "Permaneca nesta pagina durante toda a aula.",
@@ -291,31 +257,11 @@ export default function StudentClassroomPage() {
     }
   };
 
-  const handleStartCamera = async () => {
-    try {
-      await startCamera();
-      await updatePresenceMedia({ cameraLigada: true, micLigado: true });
-      toast({
-        title: "Camera ativada",
-        description: "Sua camera e microfone estao ativos.",
-      });
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Nao foi possivel ativar a camera. Verifique as permissoes do navegador.",
-        variant: "destructive",
-      });
+  const handleOpenTeams = () => {
+    const teamsLink = session?.teamsLink || currentSession?.teamsLink;
+    if (teamsLink) {
+      window.open(teamsLink, '_blank');
     }
-  };
-
-  const handleToggleCamera = async () => {
-    toggleCamera();
-    await updatePresenceMedia({ cameraLigada: !isCameraOn });
-  };
-
-  const handleToggleMic = async () => {
-    toggleMic();
-    await updatePresenceMedia({ micLigado: !isMicOn });
   };
 
   const handleLeaveRequest = async (reason: string) => {
@@ -361,14 +307,12 @@ export default function StudentClassroomPage() {
 
   const handleAbsenceModalClose = () => {
     setShowAbsenceModal(false);
-    cleanup();
     setLocation("/aluno");
   };
 
   const handleLeaveApproved = () => {
     setLeaveRequestStatus("idle");
     setShowLeaveModal(false);
-    cleanup();
     setLocation("/aluno");
   };
 
@@ -480,10 +424,12 @@ export default function StudentClassroomPage() {
     );
   }
 
+  const teamsLink = session?.teamsLink || currentSession?.teamsLink;
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="border-b bg-card">
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center justify-between px-4 py-3 gap-2 flex-wrap">
           <div className="flex items-center gap-4">
             <div>
               <h1 className="text-lg font-semibold">{currentSession.materia}</h1>
@@ -503,101 +449,100 @@ export default function StudentClassroomPage() {
         </div>
       </header>
 
-      <div className="flex-1 flex flex-col lg:flex-row">
-        <div className="flex-1 flex flex-col">
-          <div className="flex-1 p-4 bg-black/5 dark:bg-black/20">
-            {session?.modoVisualizacao === "quadro_branco" && session?.quadroBrancoData ? (
-              <div className="h-full bg-white rounded-lg shadow-lg overflow-hidden">
-                <Whiteboard 
-                  initialData={session.quadroBrancoData}
-                  readOnly
-                />
-              </div>
-            ) : (session?.transmitindoTela || session?.transmitindoCamera) && remoteStreams.size > 0 ? (
-              <div className="h-full flex items-center justify-center relative">
-                <video
-                  ref={teacherVideoRef}
-                  autoPlay
-                  playsInline
-                  className="max-w-full max-h-full rounded-lg shadow-lg"
-                />
-                {localStream && (
-                  <video
-                    ref={localVideoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="absolute bottom-4 right-4 w-32 h-24 object-cover rounded-lg shadow-lg border-2 border-white"
-                    style={{ transform: "scaleX(-1)" }}
-                  />
-                )}
-              </div>
-            ) : (
-              <div className="h-full flex items-center justify-center text-muted-foreground">
-                <div className="text-center">
-                  <BookOpen className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg">
-                    {session?.status === "em_andamento" 
-                      ? "Aguardando transmissao do professor" 
-                      : "Aula nao iniciada"}
+      <div className="flex-1 p-4 lg:p-6">
+        <div className="max-w-2xl mx-auto space-y-6">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Tempo de Aula
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-3xl font-bold" data-testid="text-elapsed-time">
+                    {formatTime(elapsedSeconds)}
                   </p>
-                  <p className="text-sm mt-1">
-                    {session?.transmitindoTela && "Compartilhando tela"}
-                    {session?.transmitindoCamera && !session?.transmitindoTela && "Camera ligada"}
-                    {!session?.transmitindoTela && !session?.transmitindoCamera && "O professor ainda nao iniciou a transmissao"}
+                  <p className="text-sm text-muted-foreground">
+                    Tempo decorrido
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className={`text-2xl font-semibold ${remainingSeconds <= 300 ? 'text-amber-500' : ''}`} data-testid="text-remaining-time">
+                    {formatTime(remainingSeconds)}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Tempo restante
                   </p>
                 </div>
               </div>
-            )}
-          </div>
 
-          <div className="flex items-center justify-center gap-2 p-3 bg-card border-t">
-            {!localStream ? (
-              <Button
+              <div className="space-y-2">
+                <Progress 
+                  value={progressPercentage} 
+                  className={`h-3 ${progressPercentage > 90 ? '[&>div]:bg-amber-500' : ''}`}
+                />
+                <p className="text-xs text-muted-foreground text-center">
+                  Duracao da aula: {maxDurationMinutes} minutos
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {teamsLink && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2">
+                  <ExternalLink className="h-5 w-5" />
+                  Reuniao do Teams
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Button onClick={handleOpenTeams} className="w-full" size="lg" data-testid="button-join-teams">
+                  <ExternalLink className="h-5 w-5 mr-2" />
+                  Entrar na Reuniao do Teams
+                </Button>
+                <p className="text-xs text-muted-foreground text-center mt-2">
+                  Clique para abrir o Microsoft Teams e participar da aula
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5" />
+                Monitoramento de Presenca
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">Tempo de ausencia</span>
+                </div>
+                <span className="font-medium">
+                  {Math.floor(getCurrentAbsenceTime() / 60)}m / {Math.floor(maxAbsenceTime / 60)}m
+                </span>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                Permaneca nesta pagina durante toda a aula. Sair sem autorizacao ou exceder o tempo maximo de ausencia resultara em falta.
+              </p>
+
+              <Button 
                 variant="outline"
-                onClick={handleStartCamera}
-                data-testid="button-start-camera"
+                onClick={() => setShowLeaveModal(true)}
+                className="w-full"
+                data-testid="button-request-leave"
               >
-                <Camera className="h-4 w-4 mr-2" />
-                Ligar Camera
+                <LogOut className="h-4 w-4 mr-2" />
+                Pedir Autorizacao para Sair
               </Button>
-            ) : (
-              <>
-                <Button
-                  size="icon"
-                  variant={isCameraOn ? "default" : "secondary"}
-                  onClick={handleToggleCamera}
-                  data-testid="button-toggle-camera"
-                >
-                  {isCameraOn ? <Camera className="h-4 w-4" /> : <CameraOff className="h-4 w-4" />}
-                </Button>
-                <Button
-                  size="icon"
-                  variant={isMicOn ? "default" : "secondary"}
-                  onClick={handleToggleMic}
-                  data-testid="button-toggle-mic"
-                >
-                  {isMicOn ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
-                </Button>
-              </>
-            )}
-
-            <div className="flex-1" />
-
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Clock className="h-4 w-4" />
-              <span>Ausencia: {Math.floor(getCurrentAbsenceTime() / 60)}m / {Math.floor(maxAbsenceTime / 60)}m</span>
-            </div>
-
-            <Button 
-              variant="outline"
-              onClick={() => setShowLeaveModal(true)}
-              data-testid="button-request-leave"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Pedir para Sair
-            </Button>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
