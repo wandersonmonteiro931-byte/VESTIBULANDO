@@ -10,6 +10,8 @@ import {
   onSnapshot, 
   doc, 
   updateDoc,
+  getDocs,
+  addDoc,
 } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
