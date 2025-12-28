@@ -416,19 +416,23 @@ export function TeacherClassControl() {
     setIsEnding(true);
 
     try {
+      // 1. Finalizar a sessão
       const sessionRef = doc(db, "sessoesAulaAoVivo", currentSession.id);
       await updateDoc(sessionRef, {
         status: "finalizada",
         dataFim: formatBrasiliaTime(),
       });
 
+      // 2. Validar presenças dos alunos na sala
       const participantsRef = collection(db, "presencasAulaAoVivo");
       const q = query(participantsRef, where("sessaoId", "==", currentSession.id));
       const snapshot = await getDocs(q);
+      const validatedStudents: string[] = [];
 
       for (const docSnap of snapshot.docs) {
         const presence = docSnap.data() as PresencaAulaAoVivo;
         if (presence.status === "na_sala") {
+          validatedStudents.push(presence.alunoId);
           await updateDoc(doc(db, "presencasAulaAoVivo", docSnap.id), {
             status: "liberado",
             presencaValidada: true,
@@ -436,6 +440,55 @@ export function TeacherClassControl() {
             dataAtualizacao: formatBrasiliaTime(),
           });
         }
+      }
+
+      // 3. Sincronizar com o registro geral de presenças (registroPresencas)
+      // Buscamos a grade horária para obter todos os alunos da turma
+      const usersRef = collection(db, "usuarios");
+      const usersQuery = query(usersRef, where("turma", "==", currentSession.turmaId), where("tipo", "==", "aluno"), where("status", "==", "aprovado"));
+      const usersSnapshot = await getDocs(usersQuery);
+      
+      const allStudents = usersSnapshot.docs.map(d => ({
+        alunoId: d.id,
+        alunoNome: d.data().nome || "Sem nome"
+      }));
+
+      const registroData = {
+        gradeHorariaId: currentSession.gradeId || "", // Adicionando fallback
+        turmaId: currentSession.turmaId,
+        turmaNome: currentSession.turmaNome,
+        horarioId: currentSession.horarioId,
+        materia: currentSession.materia,
+        professorId: currentSession.professorId,
+        professorNome: currentSession.professorNome,
+        data: currentSession.data, // formato YYYY-MM-DD
+        presencas: allStudents.map(s => ({
+          alunoId: s.alunoId,
+          alunoNome: s.alunoNome,
+          presente: validatedStudents.includes(s.alunoId),
+          tipo: "ao_vivo"
+        })),
+        registradoPorId: userData.uid,
+        registradoPorNome: userData.nome,
+        criadoEm: formatBrasiliaTime(),
+        atualizadoEm: formatBrasiliaTime(),
+        origem: "aula_ao_vivo",
+        sessaoAoVivoId: currentSession.id
+      };
+
+      // Verificar se já existe um registro para este horário/dia/turma
+      const existingRegistryQuery = query(
+        collection(db, "registroPresencas"),
+        where("turmaId", "==", currentSession.turmaId),
+        where("horarioId", "==", currentSession.horarioId),
+        where("data", "==", currentSession.data)
+      );
+      const existingRegistrySnapshot = await getDocs(existingRegistryQuery);
+
+      if (!existingRegistrySnapshot.empty) {
+        await updateDoc(doc(db, "registroPresencas", existingRegistrySnapshot.docs[0].id), registroData);
+      } else {
+        await addDoc(collection(db, "registroPresencas"), registroData);
       }
 
       toast({
