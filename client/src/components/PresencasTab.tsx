@@ -175,6 +175,7 @@ export function PresencasTab({ userType, professorId }: PresencasTabProps) {
             const matchHorario = p.horarioId === slot.horarioId;
             
             // Normalize dates to YYYY-MM-DD
+            // Handle both ISO strings and simpler YYYY-MM-DD
             const pData = ((p as any).data || p.data || "").split("T")[0];
             const targetData = selectedDate.toISOString().split("T")[0];
             const matchData = pData === targetData;
@@ -185,6 +186,10 @@ export function PresencasTab({ userType, professorId }: PresencasTabProps) {
             
             return matchTurma && matchHorario && matchData;
           });
+
+          // Se for uma aula ao vivo e houver um registro sincronizado,
+          // consideramos como "Presença Marcada" automaticamente
+          const isLiveClassPresence = presencaExistente?.origem === "aula_ao_vivo" || (presencaExistente as any)?.tipo === "ao_vivo";
           
           aulas.push({
             gradeId: grade.id,
@@ -198,6 +203,7 @@ export function PresencasTab({ userType, professorId }: PresencasTabProps) {
             professorId: slot.professorId,
             professorNome: slot.professorNome,
             presencaMarcada: !!presencaExistente,
+            isLiveClass: isLiveClassPresence
           });
         });
     });
@@ -473,9 +479,12 @@ export function PresencasTab({ userType, professorId }: PresencasTabProps) {
                       </Badge>
                       <Badge>{aula.materia}</Badge>
                       {aula.presencaMarcada && (
-                        <Badge variant="outline" className="text-green-600 border-green-300">
+                        <Badge variant="outline" className={cn(
+                          "border-green-300",
+                          (aula as any).isLiveClass ? "text-blue-600 border-blue-300" : "text-green-600"
+                        )}>
                           <CheckCircle className="h-3 w-3 mr-1" />
-                          Presença registrada
+                          {(aula as any).isLiveClass ? "Sincronizado Aula Ao Vivo" : "Presença registrada"}
                         </Badge>
                       )}
                     </div>
