@@ -114,12 +114,16 @@ export function LiveClassProvider({ children }: { children: React.ReactNode }) {
         unsubscribe = onSnapshot(q, (snapshot) => {
           if (!isMounted) return;
           // Filter out requests that are not actually pending (extra safety)
+          // Also filter by current session if possible, though professorId + pendente should be enough
           const requests = snapshot.docs
             .map(doc => ({
               id: doc.id,
               ...doc.data()
             }))
-            .filter(req => (req as SolicitacaoSaida).status === "pendente") as SolicitacaoSaida[];
+            .filter(req => {
+              const r = req as SolicitacaoSaida;
+              return r.status === "pendente" && r.professorId === userData.uid;
+            }) as SolicitacaoSaida[];
             
           const sortedRequests = requests.sort((a, b) => {
             const dateA = a.dataSolicitacao ? new Date(a.dataSolicitacao).getTime() : 0;

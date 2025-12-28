@@ -459,7 +459,7 @@ export default function TeacherClassroomPage() {
             </h3>
           </div>
 
-          {pendingLeaveRequests.length > 0 && (
+          {pendingLeaveRequests && pendingLeaveRequests.length > 0 && (
             <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border-b">
               <div className="flex items-center gap-2 mb-2">
                 <Bell className="h-4 w-4 text-amber-500" />
