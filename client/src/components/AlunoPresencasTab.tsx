@@ -284,7 +284,7 @@ export function AlunoPresencasTab() {
                             {formatarData(registro.data)}
                           </TableCell>
                           <TableCell>
-                            {registro.tipo === "aula_ao_vivo" ? "Ao Vivo" : (chamada?.horarioNome || "-")}
+                            {registro.tipo === "ao_vivo" || registro.origem === "aula_ao_vivo" ? "Ao Vivo" : (chamada?.horarioNome || "-")}
                             {chamada && (
                               <span className="text-xs text-muted-foreground block">
                                 {chamada.horarioInicio} - {chamada.horarioFim}
@@ -292,16 +292,16 @@ export function AlunoPresencasTab() {
                             )}
                           </TableCell>
                           <TableCell>
-                            {registro.materia || chamada?.materia || "-"}
-                            {(registro.professorNome || chamada?.professorNome) && (
+                            {registro.materia || (registro as any).materia || chamada?.materia || "-"}
+                            {(registro.professorNome || (registro as any).professorNome || chamada?.professorNome) && (
                               <span className="text-xs text-muted-foreground block">
-                                Prof. {(registro.professorNome || chamada?.professorNome || "").split(" ")[0]}
+                                Prof. {(registro.professorNome || (registro as any).professorNome || chamada?.professorNome || "").split(" ")[0]}
                               </span>
                             )}
                           </TableCell>
                           <TableCell>
                             {getStatusBadge(registro.status)}
-                            {registro.tipo === "aula_ao_vivo" && (
+                            {(registro.tipo === "ao_vivo" || registro.origem === "aula_ao_vivo") && (
                               <Badge variant="outline" className="ml-2 text-primary border-primary">
                                 Aula ao Vivo
                               </Badge>

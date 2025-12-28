@@ -454,7 +454,7 @@ export function TeacherClassControl() {
       }));
 
       const registroData = {
-        gradeHorariaId: currentSession.gradeId || "", // Adicionando fallback
+        gradeHorariaId: (currentSession as any).gradeId || "", // Type casting to avoid LSP error if property is missing in interface but exists in DB
         turmaId: currentSession.turmaId,
         turmaNome: currentSession.turmaNome,
         horarioId: currentSession.horarioId,
@@ -468,8 +468,8 @@ export function TeacherClassControl() {
           presente: validatedStudents.includes(s.alunoId),
           tipo: "ao_vivo"
         })),
-        registradoPorId: userData.uid,
-        registradoPorNome: userData.nome,
+        registradoPorId: userData?.uid || "",
+        registradoPorNome: userData?.nome || "",
         criadoEm: formatBrasiliaTime(),
         atualizadoEm: formatBrasiliaTime(),
         origem: "aula_ao_vivo",
