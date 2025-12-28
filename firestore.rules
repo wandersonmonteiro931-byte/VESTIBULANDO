@@ -952,7 +952,7 @@ service cloud.firestore {
       allow delete: if isAdmin() && isUserActive();
     }
     
-    // Presenças de Aula ao Vivo - controle de presença em tempo real
+    // Live Class Presence collection - presenças em aula ao vivo
     match /presencasAulaAoVivo/{presencaId} {
       allow read: if isAuthenticated() && isUserActive() && (
         isAdmin() ||
