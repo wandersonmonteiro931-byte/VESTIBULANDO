@@ -250,6 +250,46 @@ export default function TeacherClassroomPage() {
         dataFim: formatBrasiliaTime(),
       });
 
+      // Validar presenças dos alunos na sessão
+      const participantsRef = collection(db, "presencasAulaAoVivo");
+      const q = query(participantsRef, where("sessaoId", "==", session.id), where("status", "==", "na_sala"));
+      const querySnapshot = await getDocs(q);
+      
+      const batchPromises = querySnapshot.docs.map(async (participantDoc) => {
+        const pData = participantDoc.data();
+        
+        // Update live class presence
+        await updateDoc(doc(db, "presencasAulaAoVivo", participantDoc.id), {
+          presencaValidada: true,
+          dataAtualizacao: formatBrasiliaTime()
+        });
+
+        // Also create a record in the general attendance system if it doesn't exist
+        // This ensures it shows up in "Minhas Presenças"
+        try {
+          const registrosRef = collection(db, "registrosPresencaChamada");
+          // Check for existing registro for this session/student
+          // Using a simple composite-like check or just creating it
+          await addDoc(registrosRef, {
+            alunoId: pData.alunoId,
+            alunoNome: pData.alunoNome,
+            turmaId: session.turmaId,
+            data: new Date().toISOString().slice(0, 10),
+            status: "presente",
+            materia: session.materia,
+            professorId: session.professorId,
+            professorNome: session.professorNome,
+            tipo: "aula_ao_vivo",
+            sessaoId: session.id,
+            criadoEm: formatBrasiliaTime()
+          });
+        } catch (e) {
+          console.error("Error creating general attendance record:", e);
+        }
+      });
+      
+      await Promise.all(batchPromises);
+
       toast({
         title: "Aula Encerrada",
         description: "Todos os alunos presentes tiveram a presenca validada.",

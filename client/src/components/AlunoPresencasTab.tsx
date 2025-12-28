@@ -37,6 +37,16 @@ export function AlunoPresencasTab() {
     enabled: !!userData?.uid,
   });
 
+  const { data: presencasAoVivo } = useRealtimeQuery<any>({
+    collectionName: "presencasAulaAoVivo",
+    queryKey: ["presencasAulaAoVivo", userData?.uid],
+    constraints: userData?.uid ? [
+      where("alunoId", "==", userData.uid),
+      where("presencaValidada", "==", true)
+    ] : [],
+    enabled: !!userData?.uid,
+  });
+
   const { data: chamadas } = useRealtimeQuery<ChamadaDiaria>({
     collectionName: "chamadasDiarias",
     queryKey: ["chamadasDiarias", userData?.turma],
@@ -61,11 +71,11 @@ export function AlunoPresencasTab() {
       porcentagem: 0,
     };
 
-    const presencas = registros.filter(r => r.status === "presente").length;
-    const ausencias = registros.filter(r => r.status === "ausente").length;
-    const justificadas = registros.filter(r => r.status === "justificado").length;
-    const aguardando = registros.filter(r => r.status === "aguardando").length;
-    const total = registros.length;
+    const presencas = (registros?.filter(r => r.status === "presente").length || 0) + (presencasAoVivo?.length || 0);
+    const ausencias = registros?.filter(r => r.status === "ausente").length || 0;
+    const justificadas = registros?.filter(r => r.status === "justificado").length || 0;
+    const aguardando = registros?.filter(r => r.status === "aguardando").length || 0;
+    const total = (registros?.length || 0) + (presencasAoVivo?.length || 0);
     const registrosFinalizados = presencas + ausencias + justificadas;
     const porcentagem = registrosFinalizados > 0 
       ? Math.round(((presencas + justificadas) / registrosFinalizados) * 100) 
