@@ -142,6 +142,8 @@ export function PresencasTab({ userType, professorId }: PresencasTabProps) {
     if (!diaSelecionado || gradesFiltradas.length === 0) return [];
     
     console.log("Presenças existentes carregadas:", presencasExistentes);
+    console.log("Dia selecionado:", diaSelecionado);
+    console.log("Data selecionada (ISO):", selectedDate.toISOString().slice(0, 10));
     
     const aulas: Array<{
       gradeId: string;
@@ -168,10 +170,18 @@ export function PresencasTab({ userType, professorId }: PresencasTabProps) {
         })
         .forEach(slot => {
           const horario = HORARIOS_AULAS.find(h => h.id === slot.horarioId);
-          const presencaExistente = presencasExistentes?.find(p => 
-            p.turmaId === grade.turmaId &&
-            p.horarioId === slot.horarioId
-          );
+          const presencaExistente = presencasExistentes?.find(p => {
+            const matchTurma = p.turmaId === grade.turmaId;
+            const matchHorario = p.horarioId === slot.horarioId;
+            const pData = (p as any).data || p.data;
+            const matchData = pData === selectedDate.toISOString().slice(0, 10);
+            
+            if (matchTurma && matchHorario) {
+              console.log(`Checando slot: ${slot.materia}, pData: ${pData}, target: ${selectedDate.toISOString().slice(0, 10)}, match: ${matchData}`);
+            }
+            
+            return matchTurma && matchHorario && matchData;
+          });
           
           aulas.push({
             gradeId: grade.id,
