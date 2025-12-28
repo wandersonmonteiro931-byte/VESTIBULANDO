@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { collection, where, addDoc, updateDoc, doc } from "firebase/firestore";
+import { collection, where, addDoc, updateDoc, doc, query, onSnapshot } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage, storageAvailable } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -210,6 +210,29 @@ export default function TeacherDashboard() {
     avaliadas: entregas?.filter(e => e.status === "avaliado").length || 0,
   };
 
+  const [activeSession, setActiveSession] = useState<any>(null);
+
+  useEffect(() => {
+    if (!userData?.uid) return;
+    
+    const sessionsRef = collection(db, "sessoesAulaAoVivo");
+    const q = query(
+      sessionsRef, 
+      where("professorId", "==", userData.uid),
+      where("status", "==", "em_andamento")
+    );
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (!snapshot.empty) {
+        setActiveSession({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() });
+      } else {
+        setActiveSession(null);
+      }
+    });
+    
+    return () => unsubscribe();
+  }, [userData?.uid]);
+
   return (
     <SidebarProvider style={{ "--sidebar-width": "280px" } as React.CSSProperties}>
       <div className="flex min-h-screen w-full">
@@ -292,6 +315,14 @@ export default function TeacherDashboard() {
                       </h2>
                       <p className="text-muted-foreground">Gerencie atividades e avalie entregas</p>
                     </div>
+                    {activeSession && (
+                      <Link href={`/sala-professor/${activeSession.id}`}>
+                        <Button className="bg-green-600 hover:bg-green-700 animate-pulse" data-testid="button-return-to-class">
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Voltar para Aula ({activeSession.materia})
+                        </Button>
+                      </Link>
+                    )}
                   </div>
 
                   <div className="mb-8">
