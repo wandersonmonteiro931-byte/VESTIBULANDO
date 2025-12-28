@@ -113,7 +113,10 @@ export function PresencasTab({ userType, professorId }: PresencasTabProps) {
 
   const { data: presencasExistentes, refetch: refetchPresencas } = useRealtimeQuery<RegistroPresencaTurma>({
     collectionName: "registroPresencas",
-    queryKey: ["registroPresencas", selectedDate.toISOString().slice(0, 10)],
+    queryKey: ["registroPresencas", selectedDate.toISOString().slice(0, 10), selectedTurmaFilter],
+    constraints: [
+      where("data", "==", selectedDate.toISOString().slice(0, 10))
+    ],
   });
 
   const gradesPublicadas = useMemo(() => {
@@ -163,10 +166,9 @@ export function PresencasTab({ userType, professorId }: PresencasTabProps) {
         })
         .forEach(slot => {
           const horario = HORARIOS_AULAS.find(h => h.id === slot.horarioId);
-          const presencaExistente = presencasExistentes?.some(p => 
+          const presencaExistente = presencasExistentes?.find(p => 
             p.turmaId === grade.turmaId &&
-            p.horarioId === slot.horarioId &&
-            (p.data === selectedDate.toISOString().slice(0, 10) || (p as any).data === selectedDate.toISOString().slice(0, 10))
+            p.horarioId === slot.horarioId
           );
           
           aulas.push({
@@ -180,7 +182,7 @@ export function PresencasTab({ userType, professorId }: PresencasTabProps) {
             materia: slot.materia,
             professorId: slot.professorId,
             professorNome: slot.professorNome,
-            presencaMarcada: presencaExistente || false,
+            presencaMarcada: !!presencaExistente,
           });
         });
     });
@@ -212,8 +214,7 @@ export function PresencasTab({ userType, professorId }: PresencasTabProps) {
 
     const presencaExistente = presencasExistentes?.find(p =>
       p.turmaId === aula.turmaId &&
-      p.horarioId === aula.horarioId &&
-      (p.data.slice(0, 10) === selectedDate.toISOString().slice(0, 10) || (p as any).data === selectedDate.toISOString().slice(0, 10))
+      p.horarioId === aula.horarioId
     );
 
     if (presencaExistente) {
@@ -288,8 +289,7 @@ export function PresencasTab({ userType, professorId }: PresencasTabProps) {
 
       const presencaExistenteDoc = presencasExistentes?.find(p =>
         p.turmaId === selectedAula.turmaId &&
-        p.horarioId === selectedAula.horarioId &&
-        (p.data.slice(0, 10) === selectedDate.toISOString().slice(0, 10) || (p as any).data === selectedDate.toISOString().slice(0, 10))
+        p.horarioId === selectedAula.horarioId
       );
 
       if (presencaExistenteDoc) {

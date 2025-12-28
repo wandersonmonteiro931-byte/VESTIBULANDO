@@ -513,7 +513,16 @@ export function TeacherClassControl() {
       const existingRegistrySnapshot = await getDocs(existingRegistryQuery);
 
       if (!existingRegistrySnapshot.empty) {
-        await updateDoc(doc(db, "registroPresencas", existingRegistrySnapshot.docs[0].id), registroData);
+        const existingDoc = existingRegistrySnapshot.docs[0];
+        const existingData = existingDoc.data();
+        
+        // Se já existe e não foi gerado automaticamente por aula ao vivo,
+        // ou se queremos garantir que o nosso dado de aula ao vivo prevaleça
+        await updateDoc(doc(db, "registroPresencas", existingDoc.id), {
+          ...registroData,
+          criadoEm: existingData.criadoEm || formatBrasiliaTime(),
+          atualizadoEm: formatBrasiliaTime()
+        });
       } else {
         await addDoc(collection(db, "registroPresencas"), registroData);
       }
