@@ -259,6 +259,9 @@ export default function TeacherClassroomPage() {
       
       console.log(`Found ${querySnapshot.size} participants to validate`);
 
+      const presenceDate = new Date().toISOString().slice(0, 10);
+      const studentPresencesList = [];
+
       for (const participantDoc of querySnapshot.docs) {
         const pData = participantDoc.data();
         const pId = participantDoc.id;
@@ -276,7 +279,7 @@ export default function TeacherClassroomPage() {
             alunoId: pData.alunoId,
             alunoNome: pData.alunoNome,
             turmaId: session.turmaId,
-            data: new Date().toISOString().slice(0, 10),
+            data: presenceDate,
             status: "presente",
             materia: session.materia,
             professorId: session.professorId,
@@ -285,8 +288,57 @@ export default function TeacherClassroomPage() {
             sessaoId: session.id,
             criadoEm: formatBrasiliaTime()
           });
+
+          studentPresencesList.push({
+            alunoId: pData.alunoId,
+            alunoNome: pData.alunoNome,
+            presente: true
+          });
         } catch (e) {
           console.error(`Error processing participant ${pData.alunoNome}:`, e);
+        }
+      }
+
+      // Update the main registry (registroPresencas) for Directorate/Teachers
+      if (studentPresencesList.length > 0) {
+        try {
+          const mainRegistryRef = collection(db, "registroPresencas");
+          const qMain = query(
+            mainRegistryRef, 
+            where("turmaId", "==", session.turmaId),
+            where("horarioId", "==", session.horarioId || ""),
+            where("data", "==", presenceDate)
+          );
+          const mainSnapshot = await getDocs(qMain);
+
+          const mainData = {
+            gradeHorariaId: session.horarioId || "", // Best effort mapping
+            turmaId: session.turmaId,
+            turmaNome: session.turmaNome,
+            horarioId: session.horarioId || "",
+            materia: session.materia,
+            professorId: session.professorId,
+            professorNome: session.professorNome,
+            data: presenceDate,
+            presencas: studentPresencesList,
+            registradoPorId: session.professorId,
+            registradoPorNome: session.professorNome,
+            criadoEm: formatBrasiliaTime(),
+            atualizadoEm: formatBrasiliaTime(),
+            tipo: "aula_ao_vivo",
+            sessaoId: session.id
+          };
+
+          if (!mainSnapshot.empty) {
+            await updateDoc(doc(db, "registroPresencas", mainSnapshot.docs[0].id), {
+              ...mainData,
+              criadoEm: mainSnapshot.docs[0].data().criadoEm
+            });
+          } else {
+            await addDoc(mainRegistryRef, mainData);
+          }
+        } catch (e) {
+          console.error("Error updating main registry:", e);
         }
       }
 
