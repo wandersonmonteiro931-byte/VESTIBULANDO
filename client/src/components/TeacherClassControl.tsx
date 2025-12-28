@@ -12,6 +12,7 @@ import {
   updateDoc,
   doc,
   getDocs,
+  setDoc,
 } from "firebase/firestore";
 import { 
   HORARIOS_AULAS,
@@ -454,7 +455,7 @@ export function TeacherClassControl() {
       }));
 
       const registroData = {
-        gradeHorariaId: (currentSession as any).gradeId || "", // Type casting to avoid LSP error if property is missing in interface but exists in DB
+        gradeHorariaId: (currentSession as any).gradeId || "", 
         turmaId: currentSession.turmaId,
         turmaNome: currentSession.turmaNome,
         horarioId: currentSession.horarioId,
@@ -476,7 +477,33 @@ export function TeacherClassControl() {
         sessaoAoVivoId: currentSession.id
       };
 
-      // Verificar se já existe um registro para este horário/dia/turma
+      // 4. Sincronizar com registros individuais (registrosPresencaChamada)
+      // para aparecer no Histórico do Aluno imediatamente
+      const registrosIndividuaisRef = collection(db, "registrosPresencaChamada");
+      for (const student of allStudents) {
+        const isPresent = validatedStudents.includes(student.alunoId);
+        const individualId = `${student.alunoId}_${currentSession.id}`;
+        
+        await setDoc(doc(db, "registrosPresencaChamada", individualId), {
+          id: individualId,
+          alunoId: student.alunoId,
+          alunoNome: student.alunoNome,
+          turmaId: currentSession.turmaId,
+          data: currentSession.data,
+          horarioId: currentSession.horarioId,
+          status: isPresent ? "presente" : "ausente",
+          tipo: "aula_ao_vivo",
+          origem: "aula_ao_vivo",
+          materia: currentSession.materia,
+          professorId: currentSession.professorId,
+          professorNome: currentSession.professorNome,
+          dataCriacao: formatBrasiliaTime(),
+          chamadaId: currentSession.id, // Usando sessaoId como chamadaId
+          sessaoAoVivoId: currentSession.id
+        });
+      }
+
+      // 5. Verificar se já existe um registro para este horário/dia/turma
       const existingRegistryQuery = query(
         collection(db, "registroPresencas"),
         where("turmaId", "==", currentSession.turmaId),

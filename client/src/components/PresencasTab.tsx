@@ -166,7 +166,7 @@ export function PresencasTab({ userType, professorId }: PresencasTabProps) {
           const presencaExistente = presencasExistentes?.some(p => 
             p.turmaId === grade.turmaId &&
             p.horarioId === slot.horarioId &&
-            p.data === selectedDate.toISOString().slice(0, 10)
+            (p.data === selectedDate.toISOString().slice(0, 10) || (p as any).data === selectedDate.toISOString().slice(0, 10))
           );
           
           aulas.push({
