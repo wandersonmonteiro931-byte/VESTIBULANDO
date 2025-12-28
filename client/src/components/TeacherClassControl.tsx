@@ -462,7 +462,7 @@ export function TeacherClassControl() {
         materia: currentSession.materia,
         professorId: currentSession.professorId,
         professorNome: currentSession.professorNome,
-        data: currentSession.data, // formato YYYY-MM-DD
+        data: currentSession.data.split("T")[0], // formato YYYY-MM-DD
         presencas: allStudents.map(s => ({
           alunoId: s.alunoId,
           alunoNome: s.alunoNome,
@@ -489,7 +489,7 @@ export function TeacherClassControl() {
           alunoId: student.alunoId,
           alunoNome: student.alunoNome,
           turmaId: currentSession.turmaId,
-          data: currentSession.data,
+          data: currentSession.data.split("T")[0],
           horarioId: currentSession.horarioId,
           status: isPresent ? "presente" : "ausente",
           tipo: "ao_vivo",

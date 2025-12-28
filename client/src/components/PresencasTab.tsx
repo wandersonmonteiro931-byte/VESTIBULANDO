@@ -113,9 +113,9 @@ export function PresencasTab({ userType, professorId }: PresencasTabProps) {
 
   const { data: presencasExistentes, refetch: refetchPresencas } = useRealtimeQuery<RegistroPresencaTurma>({
     collectionName: "registroPresencas",
-    queryKey: ["registroPresencas", selectedDate.toISOString().slice(0, 10)],
+    queryKey: ["registroPresencas", selectedDate.toISOString().split("T")[0]],
     constraints: [
-      where("data", "==", selectedDate.toISOString().slice(0, 10))
+      where("data", "==", selectedDate.toISOString().split("T")[0])
     ],
   });
 
@@ -142,8 +142,7 @@ export function PresencasTab({ userType, professorId }: PresencasTabProps) {
     if (!diaSelecionado || gradesFiltradas.length === 0) return [];
     
     console.log("Presenças existentes carregadas:", presencasExistentes);
-    console.log("Dia selecionado:", diaSelecionado);
-    console.log("Data selecionada (ISO):", selectedDate.toISOString().slice(0, 10));
+    console.log("Data selecionada (ISO):", selectedDate.toISOString().split("T")[0]);
     
     const aulas: Array<{
       gradeId: string;
@@ -179,10 +178,6 @@ export function PresencasTab({ userType, professorId }: PresencasTabProps) {
             const pData = ((p as any).data || p.data || "").split("T")[0];
             const targetData = selectedDate.toISOString().split("T")[0];
             const matchData = pData === targetData;
-            
-            if (matchTurma && matchHorario) {
-              console.log(`[Presence Check] Aula: ${slot.materia}, Turma: ${grade.turmaNome}, pData: ${pData}, target: ${targetData}, match: ${matchData}`);
-            }
             
             return matchTurma && matchHorario && matchData;
           });
