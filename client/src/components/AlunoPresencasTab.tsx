@@ -81,8 +81,8 @@ export function AlunoPresencasTab() {
       ? Math.round(((presencas + justificadas) / registrosFinalizados) * 100) 
       : 0;
 
-    return { total, presencas, ausencias, justificadas, aguardando, porcentagem };
-  }, [registros]);
+    return { total: total || 0, presencas, ausencias, justificadas, aguardando, porcentagem };
+  }, [registros, presencasAoVivo]);
 
   const registrosPorDia = useMemo(() => {
     if (!registros || !chamadas) return [];
@@ -284,7 +284,7 @@ export function AlunoPresencasTab() {
                             {formatarData(registro.data)}
                           </TableCell>
                           <TableCell>
-                            {chamada?.horarioNome || "-"}
+                            {registro.tipo === "aula_ao_vivo" ? "Ao Vivo" : (chamada?.horarioNome || "-")}
                             {chamada && (
                               <span className="text-xs text-muted-foreground block">
                                 {chamada.horarioInicio} - {chamada.horarioFim}
@@ -292,15 +292,20 @@ export function AlunoPresencasTab() {
                             )}
                           </TableCell>
                           <TableCell>
-                            {chamada?.materia || "-"}
-                            {chamada && (
+                            {registro.materia || chamada?.materia || "-"}
+                            {(registro.professorNome || chamada?.professorNome) && (
                               <span className="text-xs text-muted-foreground block">
-                                Prof. {chamada.professorNome.split(" ")[0]}
+                                Prof. {(registro.professorNome || chamada?.professorNome || "").split(" ")[0]}
                               </span>
                             )}
                           </TableCell>
                           <TableCell>
                             {getStatusBadge(registro.status)}
+                            {registro.tipo === "aula_ao_vivo" && (
+                              <Badge variant="outline" className="ml-2 text-primary border-primary">
+                                Aula ao Vivo
+                              </Badge>
+                            )}
                             {registro.ausenteAutomatico && (
                               <span className="text-xs text-destructive block mt-1">
                                 Não confirmou a tempo
