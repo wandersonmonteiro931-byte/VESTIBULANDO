@@ -1322,7 +1322,9 @@ export function BoletimTab() {
     pdfDoc.setFont("helvetica", "normal");
     pdfDoc.text(`Presenças: ${boletim.presencas}`, margin, yPos);
     pdfDoc.text(`Faltas: ${boletim.faltas}`, margin + 50, yPos);
-    pdfDoc.text(`Frequência: ${boletim.percentualPresenca !== null && boletim.percentualPresenca !== undefined ? boletim.percentualPresenca.toFixed(1).replace(".", ",") + "%" : "-"}`, margin + 100, yPos);
+    
+    const freqText = `Frequência: ${boletim.percentualPresenca !== null && boletim.percentualPresenca !== undefined ? boletim.percentualPresenca.toFixed(1).replace(".", ",") + "%" : "-"}`;
+    pdfDoc.text(freqText, margin + 100, yPos);
     yPos += 10;
 
     if (boletim.observacoes) {

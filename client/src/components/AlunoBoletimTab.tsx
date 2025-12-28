@@ -125,7 +125,10 @@ export function AlunoBoletimTab() {
     doc.setFont("helvetica", "normal");
     doc.text(`Presenças: ${boletim.presencas}`, margin, yPos);
     doc.text(`Faltas: ${boletim.faltas}`, margin + 50, yPos);
-    doc.text(`Frequência: ${boletim.percentualPresenca !== null && boletim.percentualPresenca !== undefined ? boletim.percentualPresenca.toFixed(1).replace(".", ",") + "%" : "-"}`, margin + 100, yPos);
+    
+    // Adicionar info sobre aulas ao vivo se houver
+    const freqInfo = `Frequência: ${boletim.percentualPresenca !== null && boletim.percentualPresenca !== undefined ? boletim.percentualPresenca.toFixed(1).replace(".", ",") + "%" : "-"}`;
+    doc.text(freqInfo, margin + 100, yPos);
     yPos += 10;
 
     if (boletim.observacoes) {
