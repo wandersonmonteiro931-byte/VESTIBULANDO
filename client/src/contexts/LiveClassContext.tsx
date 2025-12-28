@@ -113,10 +113,14 @@ export function LiveClassProvider({ children }: { children: React.ReactNode }) {
 
         unsubscribe = onSnapshot(q, (snapshot) => {
           if (!isMounted) return;
-          const requests = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          })) as SolicitacaoSaida[];
+          // Filter out requests that are not actually pending (extra safety)
+          const requests = snapshot.docs
+            .map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            }))
+            .filter(req => (req as SolicitacaoSaida).status === "pendente") as SolicitacaoSaida[];
+            
           const sortedRequests = requests.sort((a, b) => {
             const dateA = a.dataSolicitacao ? new Date(a.dataSolicitacao).getTime() : 0;
             const dateB = b.dataSolicitacao ? new Date(b.dataSolicitacao).getTime() : 0;
