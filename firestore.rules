@@ -896,7 +896,7 @@ service cloud.firestore {
         isProfessor() ||
         (isAluno() && 
          resource.data.alunoId == request.auth.uid &&
-         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'confirmadoPeloAluno', 'dataConfirmacaoAluno', 'dataAtualizacao']) &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'confirmadoPeloAluno', 'dataConfirmacaoAluno', 'dataAtualizacao', 'browserInfo', 'ipAddress', 'deviceInfo', 'assinaturaDigital', 'geolocalizacao']) &&
          resource.data.status == "aguardando" &&
          request.resource.data.status == "presente" &&
          resource.data.confirmadoPeloAluno == false &&

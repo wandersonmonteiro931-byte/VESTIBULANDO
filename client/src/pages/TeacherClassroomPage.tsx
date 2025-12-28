@@ -255,21 +255,21 @@ export default function TeacherClassroomPage() {
       const q = query(participantsRef, where("sessaoId", "==", session.id), where("status", "==", "na_sala"));
       const querySnapshot = await getDocs(q);
       
-      const batchPromises = querySnapshot.docs.map(async (participantDoc) => {
-        const pData = participantDoc.data();
-        
-        // Update live class presence
-        await updateDoc(doc(db, "presencasAulaAoVivo", participantDoc.id), {
-          presencaValidada: true,
-          dataAtualizacao: formatBrasiliaTime()
-        });
+      console.log(`Found ${querySnapshot.size} participants to validate`);
 
-        // Also create a record in the general attendance system if it doesn't exist
-        // This ensures it shows up in "Minhas Presenças"
+      for (const participantDoc of querySnapshot.docs) {
+        const pData = participantDoc.data();
+        const pId = participantDoc.id;
+        
         try {
+          // Update live class presence
+          await updateDoc(doc(db, "presencasAulaAoVivo", pId), {
+            presencaValidada: true,
+            dataAtualizacao: formatBrasiliaTime()
+          });
+
+          // Also create a record in the general attendance system
           const registrosRef = collection(db, "registrosPresencaChamada");
-          // Check for existing registro for this session/student
-          // Using a simple composite-like check or just creating it
           await addDoc(registrosRef, {
             alunoId: pData.alunoId,
             alunoNome: pData.alunoNome,
@@ -284,15 +284,13 @@ export default function TeacherClassroomPage() {
             criadoEm: formatBrasiliaTime()
           });
         } catch (e) {
-          console.error("Error creating general attendance record:", e);
+          console.error(`Error processing participant ${pData.alunoNome}:`, e);
         }
-      });
-      
-      await Promise.all(batchPromises);
+      }
 
       toast({
         title: "Aula Encerrada",
-        description: "Todos os alunos presentes tiveram a presenca validada.",
+        description: "As presenças foram validadas com sucesso.",
       });
       
       setShowEndConfirmation(false);
