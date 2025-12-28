@@ -191,7 +191,7 @@ export function PresencasTab({ userType, professorId }: PresencasTabProps) {
   const alunosDaTurma = useMemo(() => {
     if (!selectedAula || !alunos) return [];
     return (alunos as any[])
-      .filter(a => a.tipo === "aluno" && a.turma === selectedAula.turmaId && a.ativo !== false)
+      .filter(a => a.tipo === "aluno" && a.turma === selectedAula.turmaId && a.status === "aprovado")
       .sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
   }, [selectedAula, alunos]);
 
@@ -217,11 +217,13 @@ export function PresencasTab({ userType, professorId }: PresencasTabProps) {
     );
 
     if (presencaExistente) {
+      // Se já existe um registro, usamos os dados do registro
+      // mas garantimos que todos os alunos atuais da turma sejam listados
       setPresencas(
         alunosTurma.map(aluno => {
-          const registro = presencaExistente.presencas.find(p => p.alunoId === aluno.uid);
+          const registro = presencaExistente.presencas.find(p => p.alunoId === (aluno.uid || aluno.id));
           return {
-            alunoId: aluno.uid,
+            alunoId: (aluno.uid || aluno.id),
             alunoNome: aluno.nome || "Sem nome",
             presente: registro?.presente ?? true,
             justificativa: registro?.justificativa,
@@ -231,7 +233,7 @@ export function PresencasTab({ userType, professorId }: PresencasTabProps) {
     } else {
       setPresencas(
         alunosTurma.map(aluno => ({
-          alunoId: aluno.uid,
+          alunoId: (aluno.uid || aluno.id),
           alunoNome: aluno.nome || "Sem nome",
           presente: true,
           justificativa: undefined,
@@ -243,11 +245,13 @@ export function PresencasTab({ userType, professorId }: PresencasTabProps) {
   };
 
   const handleTogglePresenca = (alunoId: string) => {
-    setPresencas(prev =>
-      prev.map(p =>
+    setPresencas(prev => {
+      const updated = prev.map(p =>
         p.alunoId === alunoId ? { ...p, presente: !p.presente } : p
-      )
-    );
+      );
+      console.log("Updated presencas:", updated);
+      return updated;
+    });
   };
 
   const handleMarcarTodos = (presente: boolean) => {
@@ -568,6 +572,10 @@ export function PresencasTab({ userType, professorId }: PresencasTabProps) {
                       <Label
                         htmlFor={`presenca-${aluno.alunoId}`}
                         className="text-sm font-medium cursor-pointer"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleTogglePresenca(aluno.alunoId);
+                        }}
                       >
                         {aluno.alunoNome}
                       </Label>
