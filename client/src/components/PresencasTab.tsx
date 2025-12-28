@@ -213,7 +213,7 @@ export function PresencasTab({ userType, professorId }: PresencasTabProps) {
     const presencaExistente = presencasExistentes?.find(p =>
       p.turmaId === aula.turmaId &&
       p.horarioId === aula.horarioId &&
-      p.data.slice(0, 10) === selectedDate.toISOString().slice(0, 10)
+      (p.data.slice(0, 10) === selectedDate.toISOString().slice(0, 10) || (p as any).data === selectedDate.toISOString().slice(0, 10))
     );
 
     if (presencaExistente) {
@@ -285,7 +285,7 @@ export function PresencasTab({ userType, professorId }: PresencasTabProps) {
       const presencaExistenteDoc = presencasExistentes?.find(p =>
         p.turmaId === selectedAula.turmaId &&
         p.horarioId === selectedAula.horarioId &&
-        p.data.slice(0, 10) === selectedDate.toISOString().slice(0, 10)
+        (p.data.slice(0, 10) === selectedDate.toISOString().slice(0, 10) || (p as any).data === selectedDate.toISOString().slice(0, 10))
       );
 
       if (presencaExistenteDoc) {
