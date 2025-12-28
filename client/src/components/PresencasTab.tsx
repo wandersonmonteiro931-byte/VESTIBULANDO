@@ -113,7 +113,7 @@ export function PresencasTab({ userType, professorId }: PresencasTabProps) {
 
   const { data: presencasExistentes, refetch: refetchPresencas } = useRealtimeQuery<RegistroPresencaTurma>({
     collectionName: "registroPresencas",
-    queryKey: ["registroPresencas", selectedDate.toISOString().slice(0, 10), selectedTurmaFilter],
+    queryKey: ["registroPresencas", selectedDate.toISOString().slice(0, 10)],
     constraints: [
       where("data", "==", selectedDate.toISOString().slice(0, 10))
     ],
@@ -140,6 +140,8 @@ export function PresencasTab({ userType, professorId }: PresencasTabProps) {
 
   const aulasDataSelecionada = useMemo(() => {
     if (!diaSelecionado || gradesFiltradas.length === 0) return [];
+    
+    console.log("Presenças existentes carregadas:", presencasExistentes);
     
     const aulas: Array<{
       gradeId: string;

@@ -492,13 +492,13 @@ export function TeacherClassControl() {
           data: currentSession.data,
           horarioId: currentSession.horarioId,
           status: isPresent ? "presente" : "ausente",
-          tipo: "aula_ao_vivo",
+          tipo: "ao_vivo",
           origem: "aula_ao_vivo",
           materia: currentSession.materia,
           professorId: currentSession.professorId,
           professorNome: currentSession.professorNome,
           dataCriacao: formatBrasiliaTime(),
-          chamadaId: currentSession.id, // Usando sessaoId como chamadaId
+          chamadaId: currentSession.id, 
           sessaoAoVivoId: currentSession.id
         });
       }
