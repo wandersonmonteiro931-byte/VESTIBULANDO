@@ -60,6 +60,11 @@ export function DocumentationTab() {
     queryKey: ["/api/boletins"],
   });
 
+  const { data: presencasAoVivo } = useRealtimeQuery<any>({
+    collectionName: "registrosPresencaChamada",
+    queryKey: ["/api/registrosPresencaChamada/all"],
+  });
+
   // Função para converter para horário de Brasília
   const formatBrasiliaTime = (isoString: string | undefined) => {
     if (!isoString) return "N/A";
@@ -346,9 +351,28 @@ export function DocumentationTab() {
     yPos += 7;
 
     const totalLogins = userHistory.filter(h => h.action === "login").length;
-    const historicoPresenca = userHistory.length > 0
-      ? userHistory.slice(0, 30).map(h => [
-          h.action === "login" ? "Presente" : "Saída",
+    
+    // Buscar presenças em aulas ao vivo
+    const userPresencasAoVivo = presencasAoVivo
+      ? presencasAoVivo.filter((p: any) => p.alunoId === selectedUser.uid && (p.presente === true || p.status === "presente"))
+      : [];
+
+    const historicoCombined = [
+      ...userHistory.map(h => ({
+        label: h.action === "login" ? "Presente" : "Saída",
+        timestamp: h.timestamp,
+        tipo: "sistema"
+      })),
+      ...userPresencasAoVivo.map((p: any) => ({
+        label: `Aula Ao Vivo (${p.materia || "Aula"})`,
+        timestamp: p.data || p.criadoEm,
+        tipo: "ao_vivo"
+      }))
+    ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    const historicoPresenca = historicoCombined.length > 0
+      ? historicoCombined.slice(0, 50).map(h => [
+          h.label,
           formatBrasiliaTime(h.timestamp),
         ])
       : [["", ""]];
@@ -366,7 +390,8 @@ export function DocumentationTab() {
     yPos = (doc as any).lastAutoTable.finalY + 5;
     doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
-    doc.text(`Total de Presenças: ${totalLogins}`, margin, yPos);
+    const totalGeral = totalLogins + userPresencasAoVivo.length;
+    doc.text(`Total de Presenças: ${totalGeral} (Sistema: ${totalLogins}, Ao Vivo: ${userPresencasAoVivo.length})`, margin, yPos);
 
     // SEÇÃO 5: BOLETIM ESCOLAR OFICIAL (apenas se houver boletim liberado pela diretoria)
     if (userBoletinsLiberados.length > 0) {

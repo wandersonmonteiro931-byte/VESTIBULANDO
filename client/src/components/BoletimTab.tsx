@@ -119,6 +119,11 @@ export function BoletimTab() {
 
   const periodos = periodoTipo === "bimestre" ? PERIODOS_BIMESTRE : PERIODOS_TRIMESTRE;
 
+  const { data: registrosAulaAoVivo } = useRealtimeQuery<any>({
+    collectionName: "registrosPresencaChamada",
+    queryKey: ["/api/registrosPresencaChamada/all"],
+  });
+
   const frequenciaDoAluno = useMemo(() => {
     if (!selectedAlunoId || !frequencias || !anoLetivo) return { presencas: 0, faltas: 0 };
     
@@ -128,11 +133,21 @@ export function BoletimTab() {
       return matchAluno && matchAno;
     });
     
-    const presencas = registros.filter(f => f.tipo === "presente").length;
+    const presencasSistema = registros.filter(f => f.tipo === "presente").length;
+    
+    // Adicionar presenças de aulas ao vivo
+    const presencasAoVivo = registrosAulaAoVivo
+      ? registrosAulaAoVivo.filter((p: any) => 
+          p.alunoId === selectedAlunoId && 
+          (p.presente === true || p.status === "presente") &&
+          (p.data || p.criadoEm)?.startsWith(anoLetivo)
+        ).length
+      : 0;
+
     const faltas = registros.filter(f => f.tipo === "ausente" || f.tipo === "justificada").length;
     
-    return { presencas, faltas };
-  }, [selectedAlunoId, frequencias, anoLetivo]);
+    return { presencas: presencasSistema + presencasAoVivo, faltas };
+  }, [selectedAlunoId, frequencias, anoLetivo, registrosAulaAoVivo]);
 
   const getFrequenciaAluno = (alunoId: string) => {
     if (!frequencias || !anoLetivo) return { presencas: 0, faltas: 0 };
@@ -143,10 +158,20 @@ export function BoletimTab() {
       return matchAluno && matchAno;
     });
     
-    const presencas = registros.filter(f => f.tipo === "presente").length;
+    const presencasSistema = registros.filter(f => f.tipo === "presente").length;
+
+    // Adicionar presenças de aulas ao vivo
+    const presencasAoVivo = registrosAulaAoVivo
+      ? registrosAulaAoVivo.filter((p: any) => 
+          p.alunoId === alunoId && 
+          (p.presente === true || p.status === "presente") &&
+          (p.data || p.criadoEm)?.startsWith(anoLetivo)
+        ).length
+      : 0;
+
     const faltas = registros.filter(f => f.tipo === "ausente" || f.tipo === "justificada").length;
     
-    return { presencas, faltas };
+    return { presencas: presencasSistema + presencasAoVivo, faltas };
   };
 
   const filteredBoletins = useMemo(() => {

@@ -54,6 +54,20 @@ export function AlunoBoletimTab() {
     return anos.sort((a, b) => parseInt(b) - parseInt(a));
   }, [boletins]);
 
+  const { data: registrosAulaAoVivo } = useRealtimeQuery<any>({
+    collectionName: "registrosPresencaChamada",
+    queryKey: ["/api/registrosPresencaChamada/aluno", userData?.uid],
+    constraints: userData?.uid ? [where("alunoId", "==", userData.uid)] : [],
+    enabled: !!userData?.uid,
+  });
+
+  const { data: frequencias } = useRealtimeQuery<any>({
+    collectionName: "frequencia",
+    queryKey: ["/api/frequencia/aluno", userData?.uid],
+    constraints: userData?.uid ? [where("alunoId", "==", userData.uid)] : [],
+    enabled: !!userData?.uid,
+  });
+
   const filteredBoletins = useMemo(() => {
     if (!boletins) return [];
     return boletins.filter(b => {
@@ -123,11 +137,27 @@ export function AlunoBoletimTab() {
     yPos += 8;
 
     doc.setFont("helvetica", "normal");
-    doc.text(`Presenças: ${boletim.presencas}`, margin, yPos);
-    doc.text(`Faltas: ${boletim.faltas}`, margin + 50, yPos);
-    
     // Adicionar info sobre aulas ao vivo se houver
-    const freqInfo = `Frequência: ${boletim.percentualPresenca !== null && boletim.percentualPresenca !== undefined ? boletim.percentualPresenca.toFixed(1).replace(".", ",") + "%" : "-"}`;
+    const anoLetivo = boletim.anoLetivo;
+    const presencasSistema = frequencias 
+      ? frequencias.filter((f: any) => f.tipo === "presente" && f.data?.startsWith(anoLetivo)).length 
+      : 0;
+    
+    const presencasAoVivo = registrosAulaAoVivo
+      ? registrosAulaAoVivo.filter((p: any) => 
+          (p.presente === true || p.status === "presente") &&
+          (p.data || p.criadoEm)?.startsWith(anoLetivo)
+        ).length
+      : 0;
+
+    const faltas = frequencias
+      ? frequencias.filter((f: any) => (f.tipo === "ausente" || f.tipo === "justificada") && f.data?.startsWith(anoLetivo)).length
+      : 0;
+
+    const totalPresencas = presencasSistema + presencasAoVivo;
+    const freqInfo = `Frequência: ${(totalPresencas + faltas) > 0 ? ((totalPresencas / (totalPresencas + faltas)) * 100).toFixed(1).replace(".", ",") + "%" : "-"}`;
+    doc.text(`Presenças: ${totalPresencas}`, margin, yPos);
+    doc.text(`Faltas: ${faltas}`, margin + 50, yPos);
     doc.text(freqInfo, margin + 100, yPos);
     yPos += 10;
 
