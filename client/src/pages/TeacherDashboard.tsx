@@ -20,7 +20,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { FileUploadZone } from "@/components/FileUploadZone";
 import { AnnouncementsCarousel } from "@/components/AnnouncementsCarousel";
 import { ChatNotificationBubble } from "@/components/ChatNotificationBubble";
-import { LogOut, Plus, FileText, Users, Download, Edit, Calendar, Award, MessageCircle, ClipboardList, GraduationCap, CalendarClock, AlertTriangle, ShieldAlert } from "lucide-react";
+import { LogOut, Plus, FileText, Users, Download, Edit, Calendar, Award, MessageCircle, ClipboardList, GraduationCap, CalendarClock, AlertTriangle, ShieldAlert, CheckCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AvaliacoesTab } from "@/components/AvaliacoesTab";
 import { BoletimTab } from "@/components/BoletimTab";
