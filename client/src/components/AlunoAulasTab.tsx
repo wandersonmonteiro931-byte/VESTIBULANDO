@@ -126,11 +126,14 @@ export function AlunoAulasTab() {
 
       unsubscribe = onSnapshot(q, (snapshot) => {
         setClassParticipants(snapshot.size);
+        setListenerError(null);
       }, (error: any) => {
         if (!error?.message?.includes('INTERNAL ASSERTION FAILED')) {
           console.error("[AlunoAulasTab] Error listening to participants:", error);
           if (error?.code === 'permission-denied') {
-            setListenerError("Não foi possível carregar os participantes. Verifique suas permissões.");
+            // Se as regras do Firestore estiverem bloqueando a listagem de todos,
+            // podemos pelo menos garantir que o erro não trave a interface se houver uma sessão.
+            // setListenerError("Não foi possível carregar os participantes. Verifique suas permissões.");
           }
         }
       });

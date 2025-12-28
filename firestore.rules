@@ -957,7 +957,7 @@ service cloud.firestore {
       allow read: if isAuthenticated() && isUserActive() && (
         isAdmin() ||
         isProfessor() ||
-        (isAluno() && resource.data.alunoId == request.auth.uid)
+        (isAluno() && resource.data.turmaId == getUserTurma())
       );
       allow create: if isAuthenticated() && isUserActive() && (
         isAdmin() ||
