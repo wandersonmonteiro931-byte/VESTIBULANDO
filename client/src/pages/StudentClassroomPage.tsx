@@ -215,10 +215,31 @@ export default function StudentClassroomPage() {
     if (!sessionToUse?.dataInicio) return;
 
     const calculateElapsed = () => {
-      const startTime = new Date(sessionToUse.dataInicio).getTime();
-      const now = Date.now();
-      const elapsed = Math.floor((now - startTime) / 1000);
-      setElapsedSeconds(Math.max(0, elapsed));
+      try {
+        const startStr = sessionToUse.dataInicio;
+        let startTime: number;
+
+        if (startStr.includes("/") && startStr.includes(":")) {
+          // Format from formatBrasiliaTime: "DD/MM/YYYY, HH:mm:ss"
+          const [datePart, timePart] = startStr.split(", ");
+          const [day, month, year] = datePart.split("/").map(Number);
+          const [hours, minutes, seconds] = timePart.split(":").map(Number);
+          startTime = new Date(year, month - 1, day, hours, minutes, seconds).getTime();
+        } else {
+          startTime = new Date(startStr).getTime();
+        }
+
+        if (isNaN(startTime)) {
+          console.error("[StudentClassroomPage] Invalid dataInicio:", startStr);
+          return;
+        }
+
+        const now = Date.now();
+        const elapsed = Math.floor((now - startTime) / 1000);
+        setElapsedSeconds(Math.max(0, elapsed));
+      } catch (error) {
+        console.error("[StudentClassroomPage] Error calculating elapsed time:", error);
+      }
     };
 
     calculateElapsed();
