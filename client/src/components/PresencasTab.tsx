@@ -173,11 +173,14 @@ export function PresencasTab({ userType, professorId }: PresencasTabProps) {
           const presencaExistente = presencasExistentes?.find(p => {
             const matchTurma = p.turmaId === grade.turmaId;
             const matchHorario = p.horarioId === slot.horarioId;
-            const pData = (p as any).data || p.data;
-            const matchData = pData === selectedDate.toISOString().slice(0, 10);
+            
+            // Normalize dates to YYYY-MM-DD
+            const pData = ((p as any).data || p.data || "").split("T")[0];
+            const targetData = selectedDate.toISOString().split("T")[0];
+            const matchData = pData === targetData;
             
             if (matchTurma && matchHorario) {
-              console.log(`Checando slot: ${slot.materia}, pData: ${pData}, target: ${selectedDate.toISOString().slice(0, 10)}, match: ${matchData}`);
+              console.log(`[Presence Check] Aula: ${slot.materia}, Turma: ${grade.turmaNome}, pData: ${pData}, target: ${targetData}, match: ${matchData}`);
             }
             
             return matchTurma && matchHorario && matchData;
@@ -224,10 +227,13 @@ export function PresencasTab({ userType, professorId }: PresencasTabProps) {
       .filter(a => a.tipo === "aluno" && a.turma === aula.turmaId && a.ativo !== false)
       .sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
 
-    const presencaExistente = presencasExistentes?.find(p =>
-      p.turmaId === aula.turmaId &&
-      p.horarioId === aula.horarioId
-    );
+    const presencaExistente = presencasExistentes?.find(p => {
+      const pData = ((p as any).data || p.data || "").split("T")[0];
+      const targetData = selectedDate.toISOString().split("T")[0];
+      return p.turmaId === aula.turmaId &&
+             p.horarioId === aula.horarioId &&
+             pData === targetData;
+    });
 
     if (presencaExistente) {
       // Se já existe um registro, usamos os dados do registro
@@ -299,10 +305,13 @@ export function PresencasTab({ userType, professorId }: PresencasTabProps) {
         atualizadoEm: getNowBrasiliaISO(),
       };
 
-      const presencaExistenteDoc = presencasExistentes?.find(p =>
-        p.turmaId === selectedAula.turmaId &&
-        p.horarioId === selectedAula.horarioId
-      );
+      const presencaExistenteDoc = presencasExistentes?.find(p => {
+        const pData = ((p as any).data || p.data || "").split("T")[0];
+        const targetData = selectedDate.toISOString().split("T")[0];
+        return p.turmaId === selectedAula.turmaId &&
+               p.horarioId === selectedAula.horarioId &&
+               pData === targetData;
+      });
 
       if (presencaExistenteDoc) {
         await updateDoc(doc(db, "registroPresencas", presencaExistenteDoc.id), {
