@@ -1,15 +1,15 @@
-import { initializeApp, getApps, getApp, deleteApp, type FirebaseApp } from "firebase/app";
+import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth, createUserWithEmailAndPassword } from "firebase/auth";
-import { getFirestore, type Firestore, enableIndexedDbPersistence, CACHE_SIZE_UNLIMITED, initializeFirestore, memoryLocalCache } from "firebase/firestore";
+import { getFirestore, type Firestore, initializeFirestore, memoryLocalCache } from "firebase/firestore";
 import { getStorage, type FirebaseStorage } from "firebase/storage";
 
-
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: `${import.meta.env.VITE_FIREBASE_PROJECT_ID}.firebaseapp.com`,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: `${import.meta.env.VITE_FIREBASE_PROJECT_ID}.firebasestorage.app`,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  apiKey: "AIzaSyAKPmqetUP_w8SGqr3ooLXAbASpFlRNWBY",
+  authDomain: "plataforma-enem-f3682.firebaseapp.com",
+  projectId: "plataforma-enem-f3682",
+  storageBucket: "plataforma-enem-f3682.firebasestorage.app",
+  messagingSenderId: "1086290785401",
+  appId: "1:1086290785401:web:123ba3c7d224b6497710a8",
 };
 
 let app: FirebaseApp;
@@ -22,70 +22,34 @@ let storageAvailable = false;
 let firebaseError: Error | null = null;
 
 try {
-  console.log("🔧 Verificando configuração do Firebase...");
-  console.log("API Key presente:", !!firebaseConfig.apiKey);
-  console.log("Project ID presente:", !!firebaseConfig.projectId);
-  console.log("App ID presente:", !!firebaseConfig.appId);
-  
-  if (!firebaseConfig.apiKey || !firebaseConfig.projectId || !firebaseConfig.appId) {
-    const missing = [];
-    if (!firebaseConfig.apiKey) missing.push("VITE_FIREBASE_API_KEY");
-    if (!firebaseConfig.projectId) missing.push("VITE_FIREBASE_PROJECT_ID");
-    if (!firebaseConfig.appId) missing.push("VITE_FIREBASE_APP_ID");
-    
-    throw new Error(
-      `❌ Credenciais do Firebase faltando: ${missing.join(", ")}.\n\n` +
-      `Por favor, configure essas variáveis nos Secrets do Replit:\n` +
-      `1. Acesse https://console.firebase.google.com/\n` +
-      `2. Vá em Project Settings > Your apps\n` +
-      `3. Copie as credenciais e adicione nos Secrets do Replit`
-    );
-  }
-
-  console.log("✅ Inicializando Firebase...");
-  console.log("📌 Project ID:", firebaseConfig.projectId);
-  
   const existingApps = getApps();
-  if (existingApps.length > 0) {
-    app = getApp();
-    console.log("📌 Reutilizando app Firebase existente");
-  } else {
-    app = initializeApp(firebaseConfig);
-  }
-  
+  app = existingApps.length > 0 ? getApp() : initializeApp(firebaseConfig);
   auth = getAuth(app);
-  
+
   try {
     db = getFirestore(app);
   } catch {
     db = initializeFirestore(app, {
       localCache: memoryLocalCache(),
-      experimentalForceLongPolling: true
+      experimentalForceLongPolling: true,
     });
   }
-  
+
   try {
     storage = getStorage(app);
     storageAvailable = true;
-    console.log("✅ Firebase Storage inicializado");
   } catch (storageError) {
-    console.warn("⚠️ Firebase Storage não disponível (plano gratuito não suporta). Uploads de arquivos desabilitados.");
+    console.warn("Firebase Storage indisponível. Os uploads permanecerão desativados.", storageError);
     storage = null;
     storageAvailable = false;
   }
-  
-  const secondaryApps = existingApps.filter(a => a.name === "secondary");
-  if (secondaryApps.length > 0) {
-    secondaryApp = secondaryApps[0];
-  } else {
-    secondaryApp = initializeApp(firebaseConfig, "secondary");
-  }
+
+  const existingSecondaryApp = existingApps.find((firebaseApp) => firebaseApp.name === "secondary");
+  secondaryApp = existingSecondaryApp ?? initializeApp(firebaseConfig, "secondary");
   secondaryAuth = getAuth(secondaryApp);
-  console.log("✅ Firebase inicializado com sucesso!");
 } catch (error) {
   firebaseError = error as Error;
-  console.error("❌ Erro ao inicializar Firebase:", error);
-  console.error("Mensagem:", (error as Error).message);
+  console.error("Erro ao inicializar o Firebase:", error);
 }
 
 export async function createUserWithoutSignIn(email: string, password: string) {
