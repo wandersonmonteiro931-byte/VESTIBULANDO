@@ -235,7 +235,7 @@ export default function TeacherDashboard() {
 
   return (
     <SidebarProvider style={{ "--sidebar-width": "280px" } as React.CSSProperties}>
-      <div className="flex min-h-screen w-full">
+      <div className="dashboard-modern dashboard-teacher flex min-h-screen w-full">
         <DashboardSidebar
           role="professor"
           selectedItem={selectedSection}
@@ -245,16 +245,16 @@ export default function TeacherDashboard() {
           userRole="Professor"
         />
         <div className="flex-1 flex flex-col">
-          <header className="sticky top-0 z-50 w-full border-b bg-gradient-to-r from-card via-card to-card/95 backdrop-blur-xl shadow-sm">
-            <div className="flex h-16 items-center justify-between px-4 gap-4">
+          <header className="dashboard-topbar sticky top-0 z-50 w-full">
+            <div className="dashboard-topbar-inner flex items-center justify-between px-4 sm:px-6 gap-4">
               <div className="flex items-center gap-3">
                 <SidebarTrigger data-testid="button-sidebar-toggle" />
                 <div className="hidden sm:flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-br from-primary to-primary/80 rounded-xl shadow-md shadow-primary/20">
+                  <div className="dashboard-brand-mark">
                     <FileText className="h-5 w-5 text-primary-foreground" />
                   </div>
                   <div>
-                    <h1 className="text-lg font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">Vestibulando</h1>
+                    <h1 className="dashboard-brand-title">Vestibulando</h1>
                     <p className="text-xs text-muted-foreground font-medium">Área do Professor</p>
                   </div>
                 </div>
@@ -304,16 +304,15 @@ export default function TeacherDashboard() {
             />
           )}
 
-          <main className="flex-1 overflow-auto p-6">
+          <main className="dashboard-main flex-1 overflow-auto px-4 sm:px-6 py-8">
             <div className="max-w-7xl mx-auto">
               {selectedSection === "inicio" && (
                 <>
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+                  <div className="dashboard-hero flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 mb-8">
                     <div>
-                      <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                        Painel do Professor
-                      </h2>
-                      <p className="text-muted-foreground">Gerencie atividades e avalie entregas</p>
+                      <span className="dashboard-eyebrow">Área docente</span>
+                      <h2 className="dashboard-hero-title">Painel do Professor</h2>
+                      <p className="dashboard-hero-subtitle">Organize aulas, atividades e avaliações em um só lugar.</p>
                     </div>
                     {activeSession && (
                       <Link href={`/sala-professor/${activeSession.id}`}>
@@ -341,7 +340,7 @@ export default function TeacherDashboard() {
                   )}
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <Card className="border-primary/20 bg-gradient-to-br from-card to-primary/5 hover-elevate">
+                    <Card className="dashboard-stat-card dashboard-stat-violet">
                       <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
                         <CardTitle className="text-sm font-semibold">Total de Tarefas</CardTitle>
                         <div className="p-2 bg-primary/10 rounded-lg">
@@ -354,7 +353,7 @@ export default function TeacherDashboard() {
                       </CardContent>
                     </Card>
 
-                    <Card className="border-amber-200/50 dark:border-amber-900/50 bg-gradient-to-br from-card to-amber-50/30 dark:to-amber-950/10 hover-elevate">
+                    <Card className="dashboard-stat-card dashboard-stat-amber">
                       <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
                         <CardTitle className="text-sm font-semibold">Pendentes</CardTitle>
                         <div className="p-2 bg-amber-100 dark:bg-amber-900/40 rounded-lg">
@@ -367,7 +366,7 @@ export default function TeacherDashboard() {
                       </CardContent>
                     </Card>
 
-                    <Card className="border-green-200/50 dark:border-green-900/50 bg-gradient-to-br from-card to-green-50/30 dark:to-green-950/10 hover-elevate">
+                    <Card className="dashboard-stat-card dashboard-stat-green">
                       <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
                         <CardTitle className="text-sm font-semibold">Avaliadas</CardTitle>
                         <div className="p-2 bg-green-100 dark:bg-green-900/40 rounded-lg">

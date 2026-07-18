@@ -284,22 +284,22 @@ export function DashboardSidebar({
   };
 
   return (
-    <Sidebar>
-      <SidebarHeader className="border-b border-sidebar-border p-3">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+    <Sidebar className="dashboard-sidebar-modern">
+      <SidebarHeader className="sidebar-modern-header">
+        <div className="sidebar-modern-brand">
+          <div className="sidebar-modern-logo" aria-hidden="true">
             <GraduationCap className="h-5 w-5" />
           </div>
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold">Vestibulando</span>
-            <span className="text-xs text-muted-foreground capitalize">
+          <div className="min-w-0 flex-1">
+            <span className="sidebar-modern-title">Vestibulando</span>
+            <span className="sidebar-modern-role">
               {userRole || role}
             </span>
           </div>
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="py-1">
+      <SidebarContent className="sidebar-modern-content">
         {showHomeItem && (
           <SidebarGroup className="py-0.5">
             <SidebarMenu>
@@ -308,7 +308,7 @@ export function DashboardSidebar({
                   isActive={selectedItem === "inicio"}
                   onClick={() => onSelectItem("inicio")}
                   data-testid="sidebar-item-inicio"
-                  className="py-1.5"
+                  className="dashboard-menu-button dashboard-home-button"
                 >
                   <Home className="h-4 w-4" />
                   <span>Início</span>
@@ -334,7 +334,7 @@ export function DashboardSidebar({
                 }}
               >
                 <CollapsibleTrigger asChild>
-                  <SidebarGroupLabel className="cursor-pointer hover:bg-sidebar-accent/50 rounded-md transition-colors py-1.5 px-2 flex items-center justify-between w-full text-xs">
+                  <SidebarGroupLabel className="dashboard-category-trigger">
                     <div className="flex items-center gap-1.5">
                       <CategoryIcon className="h-3.5 w-3.5" />
                       <span>{category.label}</span>
@@ -360,7 +360,7 @@ export function DashboardSidebar({
                             <SidebarMenuButton
                               isActive={isActive}
                               onClick={() => handleSelectItem(item.id)}
-                              className="pl-5 py-1"
+                              className="dashboard-menu-button dashboard-submenu-button"
                               data-testid={`sidebar-item-${item.id}`}
                             >
                               {ItemIcon && <ItemIcon className="h-3.5 w-3.5" />}
@@ -382,9 +382,13 @@ export function DashboardSidebar({
       </SidebarContent>
 
       {userName && (
-        <SidebarFooter className="border-t border-sidebar-border p-3">
-          <div className="text-xs text-muted-foreground truncate">
-            {userName}
+        <SidebarFooter className="sidebar-modern-footer">
+          <div className="sidebar-user-avatar" aria-hidden="true">
+            {userName.trim().charAt(0).toUpperCase()}
+          </div>
+          <div className="min-w-0">
+            <div className="sidebar-user-name">{userName}</div>
+            <div className="sidebar-user-caption">Sessão ativa</div>
           </div>
         </SidebarFooter>
       )}

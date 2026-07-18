@@ -292,7 +292,7 @@ export default function StudentDashboard() {
 
   return (
     <SidebarProvider style={{ "--sidebar-width": "280px" } as React.CSSProperties}>
-      <div className="flex min-h-screen w-full">
+      <div className="dashboard-modern dashboard-student flex min-h-screen w-full">
         <DashboardSidebar
           role="aluno"
           selectedItem={selectedSection}
@@ -302,15 +302,15 @@ export default function StudentDashboard() {
           userRole="Aluno"
         />
         <div className="flex-1 flex flex-col">
-          <header className="sticky top-0 z-50 w-full border-b bg-gradient-to-r from-card via-card to-card/95 backdrop-blur-xl shadow-sm">
-            <div className="container flex h-20 items-center justify-between px-6">
+          <header className="dashboard-topbar sticky top-0 z-50 w-full">
+            <div className="dashboard-topbar-inner container flex items-center justify-between px-4 sm:px-6">
               <div className="flex items-center gap-3">
                 <SidebarTrigger data-testid="button-sidebar-toggle" />
-                <div className="p-2.5 bg-gradient-to-br from-primary to-primary/80 rounded-xl shadow-md shadow-primary/20">
+                <div className="dashboard-brand-mark">
                   <FileText className="h-6 w-6 text-primary-foreground" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">Vestibulando</h1>
+                  <h1 className="dashboard-brand-title">Vestibulando</h1>
                   <p className="text-xs text-muted-foreground font-medium">Área do Aluno</p>
                 </div>
               </div>
@@ -369,11 +369,12 @@ export default function StudentDashboard() {
             />
           )}
 
-          <main className="container px-6 py-10 max-w-7xl mx-auto flex-1">
+          <main className="dashboard-main container px-4 sm:px-6 py-8 max-w-7xl mx-auto flex-1">
             {selectedSection === "inicio" && (
               <>
-                <div className="mb-10">
-                  <h2 className="text-4xl font-bold mb-3 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                <div className="dashboard-hero mb-8">
+                  <span className="dashboard-eyebrow">Visão geral</span>
+                  <h2 className="dashboard-hero-title">
                     {(() => {
                       const now = new Date();
                       const brasiliaOffset = -3;
@@ -393,7 +394,7 @@ export default function StudentDashboard() {
                       return `${greeting}, ${userData?.nome?.split(' ')[0]}!`;
                     })()}
                   </h2>
-                  <p className="text-muted-foreground text-lg">Acompanhe suas tarefas e progresso</p>
+                  <p className="dashboard-hero-subtitle">Acompanhe suas tarefas, entregas e evolução acadêmica.</p>
                 </div>
 
                 <div className="mb-10">
@@ -401,7 +402,7 @@ export default function StudentDashboard() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-                  <Card className="border-amber-200/50 dark:border-amber-900/50 bg-gradient-to-br from-card to-amber-50/30 dark:to-amber-950/10 hover-elevate">
+                  <Card className="dashboard-stat-card dashboard-stat-amber">
                     <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
                       <CardTitle className="text-sm font-semibold">Pendentes</CardTitle>
                       <div className="p-2 bg-amber-100 dark:bg-amber-900/40 rounded-lg">
@@ -414,7 +415,7 @@ export default function StudentDashboard() {
                     </CardContent>
                   </Card>
 
-                  <Card className="border-blue-200/50 dark:border-blue-900/50 bg-gradient-to-br from-card to-blue-50/30 dark:to-blue-950/10 hover-elevate">
+                  <Card className="dashboard-stat-card dashboard-stat-blue">
                     <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
                       <CardTitle className="text-sm font-semibold">Entregues</CardTitle>
                       <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg">
@@ -427,7 +428,7 @@ export default function StudentDashboard() {
                     </CardContent>
                   </Card>
 
-                  <Card className="border-green-200/50 dark:border-green-900/50 bg-gradient-to-br from-card to-green-50/30 dark:to-green-950/10 hover-elevate">
+                  <Card className="dashboard-stat-card dashboard-stat-green">
                     <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
                       <CardTitle className="text-sm font-semibold">Avaliadas</CardTitle>
                       <div className="p-2 bg-green-100 dark:bg-green-900/40 rounded-lg">

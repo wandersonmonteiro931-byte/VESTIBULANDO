@@ -2527,7 +2527,7 @@ export default function AdminDashboard() {
   return (
     <SidebarProvider style={{ "--sidebar-width": "280px" } as React.CSSProperties}>
       <>
-      <div className="flex min-h-screen w-full">
+      <div className="dashboard-modern dashboard-admin flex min-h-screen w-full">
         <DashboardSidebar
           role="diretor"
           selectedItem={selectedSection}
@@ -2538,10 +2538,19 @@ export default function AdminDashboard() {
         />
         
         <div className="flex-1 flex flex-col">
-          <header className="sticky top-0 z-50 w-full border-b bg-gradient-to-r from-card via-card to-card/95 backdrop-blur-xl shadow-sm">
-            <div className="flex h-16 items-center justify-between px-4 gap-4">
+          <header className="dashboard-topbar sticky top-0 z-50 w-full">
+            <div className="dashboard-topbar-inner flex items-center justify-between px-4 sm:px-6 gap-4">
               <div className="flex items-center gap-3">
                 <SidebarTrigger data-testid="button-sidebar-toggle" />
+                <div className="hidden sm:flex items-center gap-3">
+                  <div className="dashboard-brand-mark">
+                    <Shield className="h-5 w-5 text-primary-foreground" />
+                  </div>
+                  <div>
+                    <h1 className="dashboard-brand-title">Vestibulando</h1>
+                    <p className="text-xs text-muted-foreground font-medium">Painel da Diretoria</p>
+                  </div>
+                </div>
                 {maintenanceData && maintenanceData.some(m => m.ativa) && (
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-red-600 dark:bg-red-700 rounded-full text-sm blink-red" data-testid="maintenance-warning-badge">
                     <AlertTriangle className="h-4 w-4 text-white animate-pulse" />
@@ -2594,7 +2603,7 @@ export default function AdminDashboard() {
             />
           )}
 
-          <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-6">
+          <main className="dashboard-main flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-6 py-6 sm:py-8">
             <div className="w-full">
               {selectedSection === "aprovacoes" && (
                 <div className="space-y-4">
