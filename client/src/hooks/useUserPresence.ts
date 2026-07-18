@@ -1,355 +1,231 @@
-import { useEffect, useRef } from 'react';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { useEffect, useRef } from "react";
+import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+
+const HEARTBEAT_INTERVAL_MS = 30_000;
+const INACTIVITY_TIMEOUT_MS = 120_000;
 
 /**
- * Hook para gerenciar a presença do usuário em tempo real
- * Atualiza lastActivity enquanto o usuário está ativo
- * Marca como offline quando sai da página ou minimiza
+ * Mantém a presença do usuário no Firestore.
+ *
+ * Regras:
+ * - online somente enquanto a página estiver visível e houver conexão;
+ * - offline imediatamente ao ocultar/fechar a página ou sair da conta;
+ * - lastActivity é renovado a cada 30 segundos enquanto online;
+ * - após 2 minutos sem interação, o usuário fica offline.
+ *
+ * O status exibido por outros usuários também possui expiração por lastActivity,
+ * evitando que uma conexão encerrada abruptamente permaneça online para sempre.
  */
 export function useUserPresence(userId: string | null | undefined) {
-  const activityIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const offlineTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isOnlineRef = useRef(false);
-  const lastActivityUpdateRef = useRef<number>(0);
-  const onlineDebounceRef = useRef<NodeJS.Timeout | null>(null);
-  const inactivityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastUserInteractionRef = useRef<number>(Date.now());
+  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const inactivityRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const activityThrottleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const desiredOnlineRef = useRef(false);
+  const writeSequenceRef = useRef(0);
 
   useEffect(() => {
     if (!userId) return;
 
-    const userRef = doc(db, 'usuarios', userId);
+    const userRef = doc(db, "usuarios", userId);
+    let disposed = false;
 
-    // Função para marcar como online (com proteção contra writes duplicados e debounce)
-    const setOnline = async () => {
-      // Se já está online, não faz nada
-      if (isOnlineRef.current) return;
-      
+    const clearHeartbeat = () => {
+      if (heartbeatRef.current) {
+        clearInterval(heartbeatRef.current);
+        heartbeatRef.current = null;
+      }
+    };
+
+    const clearInactivity = () => {
+      if (inactivityRef.current) {
+        clearTimeout(inactivityRef.current);
+        inactivityRef.current = null;
+      }
+    };
+
+    const writePresence = async (online: boolean) => {
+      const sequence = ++writeSequenceRef.current;
+      desiredOnlineRef.current = online;
+
       try {
-        console.log(`[Presence] Marcando usuário ${userId} como ONLINE`);
-        await updateDoc(userRef, {
-          isOnline: true,
-          lastActivity: serverTimestamp(),
-          statusPresenca: 'online',
-        });
-        isOnlineRef.current = true;
-        lastActivityUpdateRef.current = Date.now();
-        console.log(`[Presence] Usuário ${userId} marcado como ONLINE com sucesso`);
+        if (online) {
+          await updateDoc(userRef, {
+            isOnline: true,
+            lastActivity: serverTimestamp(),
+            statusPresenca: "online",
+          });
+        } else {
+          await updateDoc(userRef, {
+            isOnline: false,
+            lastSeen: serverTimestamp(),
+            lastActivity: serverTimestamp(),
+            statusPresenca: "offline",
+          });
+        }
       } catch (error: any) {
-        // Bug do Firebase SDK 12.4.0 - suprimir apenas este erro específico
-        if (error?.message?.includes('INTERNAL ASSERTION FAILED')) {
-          console.warn('[Presence] Firebase SDK bug detectado - recarregue a página se persistir');
-          return;
+        if (
+          error?.code !== "permission-denied" &&
+          !error?.message?.includes("INTERNAL ASSERTION FAILED")
+        ) {
+          console.error(
+            `[Presence] Não foi possível marcar ${userId} como ${online ? "online" : "offline"}:`,
+            error,
+          );
         }
-        console.error(`[Presence] Erro ao marcar usuário ${userId} como online:`, error);
-      }
-    };
 
-    // Função para marcar como online com debounce (para evitar writes frequentes)
-    const setOnlineDebounced = () => {
-      if (onlineDebounceRef.current) {
-        clearTimeout(onlineDebounceRef.current);
-      }
-      
-      onlineDebounceRef.current = setTimeout(() => {
-        setOnline();
-      }, 500); // Aguarda 500ms de estabilidade antes de marcar como online
-    };
-
-    // Função para marcar como offline
-    const setOffline = async () => {
-      if (!isOnlineRef.current) return; // Já está offline
-      
-      try {
-        console.log(`[Presence] Marcando usuário ${userId} como OFFLINE`);
-        await updateDoc(userRef, {
-          isOnline: false,
-          lastSeen: serverTimestamp(),
-          statusPresenca: 'offline',
-        });
-        isOnlineRef.current = false;
-        console.log(`[Presence] Usuário ${userId} marcado como OFFLINE com sucesso`);
-      } catch (error: any) {
-        // Ignora erros de permissão e o bug interno do Firebase SDK 12.4.0
-        if (error?.code === 'permission-denied') {
-          console.warn(`[Presence] Sem permissão para marcar ${userId} como offline`);
-          isOnlineRef.current = false; // Marca localmente de qualquer forma
-          return;
-        }
-        if (error?.message?.includes('INTERNAL ASSERTION FAILED')) {
-          console.warn('[Presence] Firebase SDK bug detectado, ignorando...');
-          isOnlineRef.current = false;
-          return;
-        }
-        console.error(`[Presence] Erro ao marcar usuário ${userId} como offline:`, error);
-      }
-    };
-
-    // Função para marcar offline via sendBeacon (mais confiável no beforeunload)
-    const setOfflineBeacon = () => {
-      if (!isOnlineRef.current) return;
-      
-      // Marcar localmente como offline
-      isOnlineRef.current = false;
-      
-      // Usar sendBeacon com blob JSON
-      try {
-        const blob = new Blob(
-          [JSON.stringify({ timestamp: new Date().toISOString() })],
-          { type: 'application/json' }
-        );
-        navigator.sendBeacon(`/api/user-offline/${userId}`, blob);
-      } catch (error) {
-        // Fallback silencioso - visibilitychange também tentará marcar offline
-      }
-    };
-
-    // Função para atualizar atividade (com throttle)
-    const updateActivity = async () => {
-      if (!isOnlineRef.current) return;
-      
-      const now = Date.now();
-      const timeSinceLastUpdate = now - lastActivityUpdateRef.current;
-      
-      // Throttle: só atualiza se passaram pelo menos 30 segundos desde a última atualização
-      if (timeSinceLastUpdate < 30000) return;
-      
-      try {
-        await updateDoc(userRef, {
-          lastActivity: serverTimestamp(),
-        });
-        lastActivityUpdateRef.current = now;
-      } catch (error: any) {
-        // Ignora erros de permissão e o bug interno do Firebase SDK 12.4.0
-        if (error?.code === 'permission-denied') {
-          console.warn('[Presence] Sem permissão para atualizar atividade');
-          return;
-        }
-        if (error?.message?.includes('INTERNAL ASSERTION FAILED')) {
-          console.warn('[Presence] Firebase SDK bug detectado, ignorando...');
-          return;
-        }
-        console.error('Erro ao atualizar atividade:', error);
-      }
-    };
-
-    // Detecta se é dispositivo móvel
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    
-    // Handler para quando a página fica visível/oculta
-    const handleVisibilityChange = () => {
-      console.log(`[Presence] visibilitychange - document.hidden: ${document.hidden}, isMobile: ${isMobile}`);
-      
-      if (document.hidden) {
-        // Cancela qualquer debounce de online pendente
-        if (onlineDebounceRef.current) {
-          clearTimeout(onlineDebounceRef.current);
-          onlineDebounceRef.current = null;
-        }
-        
-        // Página foi minimizada ou usuário saiu da aba
-        // No mobile, marca offline imediatamente (0ms)
-        // No desktop, aguarda 3 segundos
-        const offlineDelay = isMobile ? 0 : 3000;
-        
-        console.log(`[Presence] Página oculta - marcando offline em ${offlineDelay}ms`);
-        
-        offlineTimeoutRef.current = setTimeout(() => {
-          setOffline();
-          // Para o intervalo de atualização de atividade
-          if (activityIntervalRef.current) {
-            clearInterval(activityIntervalRef.current);
-            activityIntervalRef.current = null;
-          }
-        }, offlineDelay);
-      } else {
-        console.log(`[Presence] Página visível novamente`);
-        
-        // Página voltou a ficar visível
-        // Cancela o timeout de offline se ainda não executou
-        if (offlineTimeoutRef.current) {
-          clearTimeout(offlineTimeoutRef.current);
-          offlineTimeoutRef.current = null;
-        }
-        // Marca como online com debounce (para evitar múltiplas escritas em alternâncias rápidas)
-        if (!isOnlineRef.current) {
-          setOnlineDebounced();
-        }
-        // Inicia intervalo de atualização de atividade se não existe
-        if (!activityIntervalRef.current && isOnlineRef.current) {
-          activityIntervalRef.current = setInterval(updateActivity, 30000); // Atualiza a cada 30 segundos
-        }
-      }
-    };
-    
-    // Handler para quando a janela perde o foco (especialmente útil no mobile)
-    const handleWindowBlur = () => {
-      console.log(`[Presence] window blur - isMobile: ${isMobile}`);
-      
-      if (isMobile) {
-        // No mobile, quando perde o foco, marca offline imediatamente
-        // Cancela qualquer debounce de online pendente
-        if (onlineDebounceRef.current) {
-          clearTimeout(onlineDebounceRef.current);
-          onlineDebounceRef.current = null;
-        }
-        
-        console.log(`[Presence] Mobile perdeu foco - marcando offline imediatamente`);
-        
-        // Marca offline imediatamente no mobile
-        setOffline();
-        
-        // Para o intervalo de atualização de atividade
-        if (activityIntervalRef.current) {
-          clearInterval(activityIntervalRef.current);
-          activityIntervalRef.current = null;
-        }
-      }
-    };
-    
-    // Handler para quando a janela ganha o foco (especialmente útil no mobile)
-    const handleWindowFocus = () => {
-      console.log(`[Presence] window focus - isMobile: ${isMobile}`);
-      
-      if (isMobile) {
-        // No mobile, quando ganha o foco, marca online
-        if (!isOnlineRef.current) {
-          console.log(`[Presence] Mobile ganhou foco - marcando online`);
-          setOnline();
-          
-          // Inicia intervalo de atualização de atividade
-          if (!activityIntervalRef.current) {
-            activityIntervalRef.current = setInterval(updateActivity, 30000);
-          }
+        // Só desfaz o estado local quando esta ainda é a operação mais recente.
+        if (sequence === writeSequenceRef.current && online) {
+          desiredOnlineRef.current = false;
         }
       }
     };
 
-    // Handler para eventos de interação do usuário (com throttle)
-    const handleUserActivity = () => {
-      const now = Date.now();
-      const timeSinceLastUpdate = now - lastActivityUpdateRef.current;
-      
-      // Atualiza timestamp da última interação do usuário
-      lastUserInteractionRef.current = now;
-      
-      // Reseta o timeout de inatividade
-      if (inactivityTimeoutRef.current) {
-        clearTimeout(inactivityTimeoutRef.current);
-      }
-      
-      // Marca como offline após 2 minutos sem atividade (especialmente útil no mobile)
-      inactivityTimeoutRef.current = setTimeout(() => {
-        if (isOnlineRef.current) {
-          setOffline();
-        }
-      }, 120000); // 2 minutos
-      
-      // Se estava offline, marca como online
-      if (!isOnlineRef.current) {
-        setOnline();
+    const refreshHeartbeat = async () => {
+      if (
+        disposed ||
+        !desiredOnlineRef.current ||
+        document.hidden ||
+        !navigator.onLine
+      ) {
         return;
       }
-      
-      // Se já está online mas passou muito tempo sem atualizar, atualiza
-      if (timeSinceLastUpdate >= 30000) {
-        updateActivity();
-      }
-    };
 
-    // Handler para beforeunload (fechar página/navegador)
-    const handleBeforeUnload = () => {
-      // Usar sendBeacon para tentar marcar como offline
-      setOfflineBeacon();
-    };
-
-    // Handler para pagehide (funciona melhor no mobile que beforeunload)
-    const handlePageHide = () => {
-      setOfflineBeacon();
-    };
-
-    // Marca como online ao iniciar
-    setOnline();
-
-    // Inicia intervalo de atualização de atividade (a cada 30 segundos)
-    activityIntervalRef.current = setInterval(updateActivity, 30000);
-    
-    // Inicia timeout de inatividade (2 minutos)
-    inactivityTimeoutRef.current = setTimeout(() => {
-      if (isOnlineRef.current) {
-        setOffline();
-      }
-    }, 120000);
-
-    // Adiciona listeners para detectar quando usuário sai da página
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    window.addEventListener('pagehide', handlePageHide); // Melhor para mobile
-    window.addEventListener('blur', handleWindowBlur); // Detecta quando o app perde foco (mobile)
-    window.addEventListener('focus', handleWindowFocus); // Detecta quando o app ganha foco (mobile)
-    
-    // Adiciona listeners para detectar atividade do usuário
-    // Mas com throttle - só vai chamar handleUserActivity no máximo a cada 30s
-    let activityThrottle: NodeJS.Timeout | null = null;
-    const throttledActivity = () => {
-      if (activityThrottle) return;
-      activityThrottle = setTimeout(() => {
-        handleUserActivity();
-        activityThrottle = null;
-      }, 1000); // Throttle de 1 segundo para os eventos de atividade
-    };
-
-    window.addEventListener('focus', handleUserActivity);
-    window.addEventListener('mousemove', throttledActivity);
-    window.addEventListener('keydown', throttledActivity);
-    window.addEventListener('click', throttledActivity);
-    window.addEventListener('scroll', throttledActivity);
-    window.addEventListener('touchstart', throttledActivity);
-
-    // Cleanup
-    return () => {
-      // Para todos os timers
-      if (activityIntervalRef.current) {
-        clearInterval(activityIntervalRef.current);
-      }
-      if (offlineTimeoutRef.current) {
-        clearTimeout(offlineTimeoutRef.current);
-      }
-      if (onlineDebounceRef.current) {
-        clearTimeout(onlineDebounceRef.current);
-      }
-      if (inactivityTimeoutRef.current) {
-        clearTimeout(inactivityTimeoutRef.current);
-      }
-      if (activityThrottle) {
-        clearTimeout(activityThrottle);
-      }
-
-      // Remove listeners
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      window.removeEventListener('pagehide', handlePageHide);
-      window.removeEventListener('blur', handleWindowBlur);
-      window.removeEventListener('focus', handleWindowFocus);
-      window.removeEventListener('focus', handleUserActivity);
-      window.removeEventListener('mousemove', throttledActivity);
-      window.removeEventListener('keydown', throttledActivity);
-      window.removeEventListener('click', throttledActivity);
-      window.removeEventListener('scroll', throttledActivity);
-      window.removeEventListener('touchstart', throttledActivity);
-
-      // CRÍTICO: Marca como offline ao desmontar o hook
-      // Usa sendBeacon como fallback se updateDoc falhar
-      if (isOnlineRef.current) {
-        // Tenta marcar offline via Firestore (async - pode não completar)
-        setOffline().catch(() => {
-          // Se falhar, tenta com sendBeacon
-          setOfflineBeacon();
+      try {
+        await updateDoc(userRef, {
+          lastActivity: serverTimestamp(),
+          isOnline: true,
+          statusPresenca: "online",
         });
-        
-        // Também tenta com sendBeacon para garantir
-        setOfflineBeacon();
+      } catch (error: any) {
+        if (
+          error?.code !== "permission-denied" &&
+          !error?.message?.includes("INTERNAL ASSERTION FAILED")
+        ) {
+          console.error("[Presence] Erro ao renovar atividade:", error);
+        }
+      }
+    };
+
+    const startHeartbeat = () => {
+      clearHeartbeat();
+      heartbeatRef.current = setInterval(() => {
+        void refreshHeartbeat();
+      }, HEARTBEAT_INTERVAL_MS);
+    };
+
+    const markOnline = () => {
+      if (disposed || document.hidden || !navigator.onLine) return;
+
+      if (!desiredOnlineRef.current) {
+        void writePresence(true);
+      } else {
+        void refreshHeartbeat();
+      }
+
+      startHeartbeat();
+    };
+
+    const markOffline = () => {
+      clearHeartbeat();
+      clearInactivity();
+
+      if (desiredOnlineRef.current) {
+        // Atualiza o estado local antes da escrita para bloquear novos heartbeats.
+        desiredOnlineRef.current = false;
+        void writePresence(false);
+      }
+    };
+
+    const scheduleInactivity = () => {
+      clearInactivity();
+      inactivityRef.current = setTimeout(() => {
+        markOffline();
+      }, INACTIVITY_TIMEOUT_MS);
+    };
+
+    const handleActivity = () => {
+      if (disposed || document.hidden || !navigator.onLine) return;
+
+      markOnline();
+      scheduleInactivity();
+    };
+
+    const throttledActivity = () => {
+      if (activityThrottleRef.current) return;
+
+      activityThrottleRef.current = setTimeout(() => {
+        activityThrottleRef.current = null;
+        handleActivity();
+      }, 1_000);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Não espera 3 segundos: fechar a aba não mantém a página viva para concluir o timeout.
+        markOffline();
+      } else {
+        handleActivity();
+      }
+    };
+
+    const handlePageExit = () => {
+      // Firestore pode não concluir uma escrita durante o fechamento abrupto.
+      // Mesmo assim, iniciamos a escrita; o leitor usa lastActivity com expiração
+      // como proteção definitiva contra status online preso.
+      markOffline();
+    };
+
+    const handleNetworkOffline = () => {
+      markOffline();
+    };
+
+    const handleNetworkOnline = () => {
+      handleActivity();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("beforeunload", handlePageExit);
+    window.addEventListener("pagehide", handlePageExit);
+    window.addEventListener("online", handleNetworkOnline);
+    window.addEventListener("offline", handleNetworkOffline);
+    window.addEventListener("focus", handleActivity);
+    window.addEventListener("mousemove", throttledActivity);
+    window.addEventListener("keydown", throttledActivity);
+    window.addEventListener("click", throttledActivity);
+    window.addEventListener("scroll", throttledActivity);
+    window.addEventListener("touchstart", throttledActivity);
+
+    if (!document.hidden && navigator.onLine) {
+      markOnline();
+      scheduleInactivity();
+    }
+
+    return () => {
+      disposed = true;
+      clearHeartbeat();
+      clearInactivity();
+
+      if (activityThrottleRef.current) {
+        clearTimeout(activityThrottleRef.current);
+        activityThrottleRef.current = null;
+      }
+
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("beforeunload", handlePageExit);
+      window.removeEventListener("pagehide", handlePageExit);
+      window.removeEventListener("online", handleNetworkOnline);
+      window.removeEventListener("offline", handleNetworkOffline);
+      window.removeEventListener("focus", handleActivity);
+      window.removeEventListener("mousemove", throttledActivity);
+      window.removeEventListener("keydown", throttledActivity);
+      window.removeEventListener("click", throttledActivity);
+      window.removeEventListener("scroll", throttledActivity);
+      window.removeEventListener("touchstart", throttledActivity);
+
+      if (desiredOnlineRef.current) {
+        desiredOnlineRef.current = false;
+        void writePresence(false);
       }
     };
   }, [userId]);

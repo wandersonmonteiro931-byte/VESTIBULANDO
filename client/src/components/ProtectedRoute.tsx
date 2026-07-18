@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
@@ -8,27 +8,40 @@ interface ProtectedRouteProps {
   allowedTypes?: ("aluno" | "professor" | "diretor")[];
 }
 
+function getDashboardPath(tipo?: string): string {
+  switch (tipo) {
+    case "aluno":
+      return "/aluno";
+    case "professor":
+      return "/professor";
+    case "diretor":
+      return "/diretor";
+    default:
+      return "/login";
+  }
+}
+
 export function ProtectedRoute({ children, allowedTypes }: ProtectedRouteProps) {
   const { currentUser, userData, loading } = useAuth();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
+
+  const allowedTypesKey = allowedTypes?.join("|") ?? "";
+  const redirectTarget = useMemo(() => {
+    if (loading) return null;
+    if (!currentUser || !userData) return "/login";
+
+    if (allowedTypesKey && !allowedTypesKey.split("|").includes(userData.tipo)) {
+      return getDashboardPath(userData.tipo);
+    }
+
+    return null;
+  }, [loading, currentUser?.uid, userData?.tipo, allowedTypesKey]);
 
   useEffect(() => {
-    if (!loading && !currentUser) {
-      setLocation("/login");
-    } else if (!loading && userData && allowedTypes && !allowedTypes.includes(userData.tipo)) {
-      switch (userData.tipo) {
-        case "aluno":
-          setLocation("/aluno");
-          break;
-        case "professor":
-          setLocation("/professor");
-          break;
-        case "diretor":
-          setLocation("/diretor");
-          break;
-      }
+    if (redirectTarget && location !== redirectTarget) {
+      setLocation(redirectTarget, { replace: true });
     }
-  }, [currentUser, userData, loading, allowedTypes, setLocation]);
+  }, [redirectTarget, location, setLocation]);
 
   if (loading) {
     return (
@@ -41,9 +54,7 @@ export function ProtectedRoute({ children, allowedTypes }: ProtectedRouteProps) 
     );
   }
 
-  if (!currentUser || (allowedTypes && userData && !allowedTypes.includes(userData.tipo))) {
-    return null;
-  }
+  if (redirectTarget) return null;
 
   return <>{children}</>;
 }

@@ -2,11 +2,15 @@
 setlocal EnableExtensions EnableDelayedExpansion
 chcp 65001 >nul
 cd /d "%~dp0"
-title VESTIBULANDO - Enviar atualizacao para GitHub
+title VESTIBULANDO - Atualizar GitHub e Cloudflare
 
 set "REPO=https://github.com/wandersonmonteiro931-byte/VESTIBULANDO.git"
 set "BRANCH=main"
 set "SITE=https://vestibulando.pages.dev"
+set "NPM_CONFIG_REGISTRY=https://registry.npmjs.org/"
+set "npm_config_registry=https://registry.npmjs.org/"
+set "NPM_CONFIG_ENGINE_STRICT=false"
+set "npm_config_engine_strict=false"
 
 cls
 echo ============================================================
@@ -22,9 +26,25 @@ if errorlevel 1 goto ERRO_NODE
 where npm >nul 2>&1
 if errorlevel 1 goto ERRO_NODE
 
-echo [1/5] Instalando dependencias...
-call npm install --legacy-peer-deps --no-audit --no-fund
-if errorlevel 1 goto ERRO_NPM
+echo Registro npm utilizado:
+call npm config get registry
+echo.
+
+echo [1/5] Conferindo dependencias...
+if exist "node_modules\vite\package.json" (
+  echo Dependencias ja instaladas. Pulando npm install.
+) else (
+  echo Instalando pelo registro oficial do npm...
+  call npm install --legacy-peer-deps --engine-strict=false --registry=https://registry.npmjs.org/ --no-audit --no-fund --fetch-retries=5 --fetch-retry-factor=2 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000
+  if errorlevel 1 (
+    echo.
+    echo A primeira tentativa falhou. Verificando o cache e tentando novamente...
+    call npm cache verify
+    timeout /t 5 /nobreak >nul
+    call npm install --legacy-peer-deps --engine-strict=false --registry=https://registry.npmjs.org/ --no-audit --no-fund --fetch-retries=5 --fetch-retry-factor=2 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000
+    if errorlevel 1 goto ERRO_NPM
+  )
+)
 
 echo.
 echo [2/5] Testando o build do Cloudflare Pages...
@@ -76,9 +96,7 @@ echo.
 echo ============================================================
 echo ATUALIZACAO ENVIADA COM SUCESSO!
 echo ============================================================
-echo O Cloudflare Pages fara o deploy automaticamente se o
-
-echo repositorio estiver conectado ao projeto vestibulando.
+echo O Cloudflare Pages fara o deploy automaticamente.
 echo Aguarde cerca de 1 a 3 minutos.
 
 :ABRIR_SITE
@@ -97,7 +115,10 @@ goto FIM
 echo ERRO: Node.js ou npm nao foi encontrado.
 goto FIM
 :ERRO_NPM
-echo ERRO: falha ao instalar as dependencias.
+echo.
+echo ERRO: falha ao instalar as dependencias pelo registro oficial.
+echo Feche VS Code, terminais e pastas abertas neste projeto.
+echo Depois apague a pasta node_modules, se ela existir, e execute novamente.
 goto FIM
 :ERRO_BUILD
 echo ERRO: o projeto nao conseguiu gerar dist\public\index.html.

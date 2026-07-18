@@ -273,10 +273,6 @@ export function DashboardSidebar({
     return found?.id || null;
   });
 
-  const toggleCategory = (categoryId: string) => {
-    setOpenCategory(prev => prev === categoryId ? null : categoryId);
-  };
-
   const handleSelectItem = (itemId: string) => {
     const parentCategory = categories.find(cat => 
       cat.items.some(item => item.id === itemId)
@@ -331,7 +327,12 @@ export function DashboardSidebar({
 
           return (
             <SidebarGroup key={category.id} className="py-0.5">
-              <Collapsible open={isOpen} onOpenChange={() => toggleCategory(category.id)}>
+              <Collapsible
+                open={isOpen}
+                onOpenChange={(nextOpen) => {
+                  setOpenCategory(nextOpen ? category.id : null);
+                }}
+              >
                 <CollapsibleTrigger asChild>
                   <SidebarGroupLabel className="cursor-pointer hover:bg-sidebar-accent/50 rounded-md transition-colors py-1.5 px-2 flex items-center justify-between w-full text-xs">
                     <div className="flex items-center gap-1.5">

@@ -1,0 +1,13 @@
+CORREÇÃO DO ERRO NPM ETIMEDOUT
+
+O package-lock.json anterior continha dois links internos que só funcionavam no ambiente onde o ZIP foi montado.
+Eles foram substituídos pelo registro público oficial: https://registry.npmjs.org/
+
+Também foi adicionado um arquivo .npmrc e o BAT agora força o registro oficial, tenta novamente em caso de falha de rede e não reinstala dependências a cada execução quando node_modules já está pronto.
+
+Para usar:
+1. Extraia este ZIP em uma pasta nova.
+2. Não copie a pasta node_modules da versão antiga.
+3. Execute ATUALIZAR_GITHUB_E_CLOUDFLARE.bat.
+
+Os avisos EBADENGINE sobre Node 24 não impedem o build; o pacote citado declara suporte até Node 22. Caso algum pacote falhe de verdade, use Node 22 LTS.

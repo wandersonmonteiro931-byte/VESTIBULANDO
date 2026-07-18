@@ -1,8 +1,13 @@
-import { useState, useEffect } from 'react';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import type { User } from '@shared/schema';
-import { format, isToday, isYesterday } from 'date-fns';
+import { useEffect, useRef, useState } from "react";
+import { doc, onSnapshot } from "firebase/firestore";
+import { format, isToday, isYesterday } from "date-fns";
+import { db } from "@/lib/firebase";
+import type { User } from "@shared/schema";
+
+// O emissor renova lastActivity a cada 30 segundos.
+// Após 70 segundos sem renovação, o status online é considerado expirado.
+const ONLINE_STALE_AFTER_MS = 70_000;
+const LOCAL_RECHECK_INTERVAL_MS = 10_000;
 
 export interface UserPresenceStatus {
   isOnline: boolean;
@@ -10,107 +15,139 @@ export interface UserPresenceStatus {
   lastSeenDate?: Date;
 }
 
+type TimestampLike =
+  | string
+  | number
+  | Date
+  | {
+      toDate?: () => Date;
+      seconds?: number;
+      _seconds?: number;
+    }
+  | null
+  | undefined;
+
+function toValidDate(value: TimestampLike): Date | null {
+  if (value == null) return null;
+
+  let date: Date;
+
+  if (value instanceof Date) {
+    date = value;
+  } else if (typeof value === "string" || typeof value === "number") {
+    date = new Date(value);
+  } else if (typeof value.toDate === "function") {
+    date = value.toDate();
+  } else if (typeof value.seconds === "number") {
+    date = new Date(value.seconds * 1_000);
+  } else if (typeof value._seconds === "number") {
+    date = new Date(value._seconds * 1_000);
+  } else {
+    return null;
+  }
+
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatLastSeen(lastSeenDate: Date | null): UserPresenceStatus {
+  if (!lastSeenDate) {
+    return {
+      isOnline: false,
+      statusText: "Offline",
+    };
+  }
+
+  const time = format(lastSeenDate, "HH:mm");
+  let statusText: string;
+
+  if (isToday(lastSeenDate)) {
+    statusText = `Visto por último hoje às ${time}`;
+  } else if (isYesterday(lastSeenDate)) {
+    statusText = `Visto por último ontem às ${time}`;
+  } else {
+    statusText = `Visto por último em ${format(lastSeenDate, "dd/MM/yyyy")} às ${time}`;
+  }
+
+  return {
+    isOnline: false,
+    statusText,
+    lastSeenDate,
+  };
+}
+
+function calculatePresence(userData: User | null): UserPresenceStatus {
+  if (!userData) {
+    return {
+      isOnline: false,
+      statusText: "Offline",
+    };
+  }
+
+  const lastActivityDate = toValidDate(userData.lastActivity as TimestampLike);
+  const declaredOnline = userData.isOnline === true && userData.statusPresenca !== "offline";
+  const activityAge = lastActivityDate ? Date.now() - lastActivityDate.getTime() : Number.POSITIVE_INFINITY;
+  const activityIsFresh = activityAge >= -30_000 && activityAge <= ONLINE_STALE_AFTER_MS;
+
+  // Nunca confia apenas no booleano isOnline. Uma aba fechada abruptamente pode
+  // deixar esse campo preso; lastActivity precisa continuar recente.
+  if (declaredOnline && activityIsFresh) {
+    return {
+      isOnline: true,
+      statusText: "Online agora",
+    };
+  }
+
+  const storedLastSeen = toValidDate(userData.lastSeen as TimestampLike);
+  const effectiveLastSeen =
+    storedLastSeen && lastActivityDate
+      ? storedLastSeen.getTime() >= lastActivityDate.getTime()
+        ? storedLastSeen
+        : lastActivityDate
+      : storedLastSeen ?? lastActivityDate;
+
+  return formatLastSeen(effectiveLastSeen);
+}
+
 /**
- * Hook para observar o status de presença de outro usuário em tempo real
- * Retorna se está online e a última vez visto
+ * Observa a presença de outro usuário e invalida localmente status online antigo.
+ * Assim, mesmo se o navegador fechar antes de gravar isOnline=false, o ponto verde
+ * desaparece automaticamente quando o heartbeat lastActivity expira.
  */
 export function useUserPresenceStatus(userId: string | null | undefined): UserPresenceStatus {
-  const [status, setStatus] = useState<UserPresenceStatus>({
-    isOnline: false,
-    statusText: 'Nunca visto',
-  });
+  const latestUserRef = useRef<User | null>(null);
+  const [status, setStatus] = useState<UserPresenceStatus>(() => calculatePresence(null));
 
   useEffect(() => {
-    if (!userId) {
-      setStatus({ isOnline: false, statusText: 'Nunca visto' });
-      return;
-    }
+    latestUserRef.current = null;
+    setStatus(calculatePresence(null));
 
-    const userRef = doc(db, 'usuarios', userId);
-    
+    if (!userId) return;
+
+    const refreshLocalStatus = () => {
+      setStatus(calculatePresence(latestUserRef.current));
+    };
+
     const unsubscribe = onSnapshot(
-      userRef,
+      doc(db, "usuarios", userId),
       (snapshot) => {
-        if (!snapshot.exists()) {
-          setStatus({ isOnline: false, statusText: 'Nunca visto' });
-          return;
-        }
-
-        const userData = snapshot.data() as User;
-        const isOnline = userData.isOnline || false;
-
-        console.log(`[PresenceStatus] Usuário ${userId} - isOnline:`, isOnline, 'lastSeen:', userData.lastSeen);
-
-        if (isOnline) {
-          setStatus({
-            isOnline: true,
-            statusText: 'Online agora',
-          });
-        } else {
-          // Usuário está offline, calcular última vez visto
-          const lastSeenTimestamp = userData.lastSeen;
-          
-          if (!lastSeenTimestamp) {
-            setStatus({
-              isOnline: false,
-              statusText: 'Nunca visto',
-            });
-            return;
-          }
-
-          try {
-            // Converter timestamp do Firebase para Date
-            let lastSeenDate: Date;
-            
-            if (typeof lastSeenTimestamp === 'string') {
-              lastSeenDate = new Date(lastSeenTimestamp);
-            } else if (lastSeenTimestamp && typeof lastSeenTimestamp === 'object' && 'toDate' in lastSeenTimestamp) {
-              lastSeenDate = (lastSeenTimestamp as any).toDate();
-            } else if (lastSeenTimestamp && typeof lastSeenTimestamp === 'object' && 'seconds' in lastSeenTimestamp) {
-              lastSeenDate = new Date((lastSeenTimestamp as any).seconds * 1000);
-            } else {
-              lastSeenDate = new Date();
-            }
-
-            let statusText: string;
-
-            // Formatar conforme especificação:
-            // CASO SEJA HOJE: "Visto por último hoje às XX:XX"
-            // CASO SEJA ONTEM: "Visto por último ontem às XX:XX"
-            // CASO SEJA OUTRA DATA: "Visto por último em XX/XX/XXXX às XX:XX"
-            
-            const timeStr = format(lastSeenDate, 'HH:mm');
-            
-            if (isToday(lastSeenDate)) {
-              statusText = `Visto por último hoje às ${timeStr}`;
-            } else if (isYesterday(lastSeenDate)) {
-              statusText = `Visto por último ontem às ${timeStr}`;
-            } else {
-              const dateStr = format(lastSeenDate, 'dd/MM/yyyy');
-              statusText = `Visto por último em ${dateStr} às ${timeStr}`;
-            }
-
-            setStatus({
-              isOnline: false,
-              statusText,
-              lastSeenDate,
-            });
-          } catch (error) {
-            console.error('Erro ao processar lastSeen:', error);
-            setStatus({
-              isOnline: false,
-              statusText: 'Nunca visto',
-            });
-          }
-        }
+        latestUserRef.current = snapshot.exists() ? (snapshot.data() as User) : null;
+        refreshLocalStatus();
       },
       (error) => {
-        console.error('Erro ao observar presença do usuário:', error);
-        setStatus({ isOnline: false, statusText: 'Nunca visto' });
-      }
+        console.error("Erro ao observar presença do usuário:", error);
+        latestUserRef.current = null;
+        refreshLocalStatus();
+      },
     );
 
-    return () => unsubscribe();
+    // A expiração precisa ser recalculada mesmo quando nenhum novo snapshot chega.
+    const recheckInterval = window.setInterval(refreshLocalStatus, LOCAL_RECHECK_INTERVAL_MS);
+
+    return () => {
+      unsubscribe();
+      window.clearInterval(recheckInterval);
+      latestUserRef.current = null;
+    };
   }, [userId]);
 
   return status;

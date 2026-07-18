@@ -160,7 +160,7 @@ async function buscarCEP(cep: string) {
 }
 
 export default function Login() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const { userData, refreshUserData } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -264,20 +264,34 @@ export default function Login() {
         return;
       }
       
-      // Redirecionar para o dashboard apropriado
-      switch (userData.tipo) {
-        case "aluno":
-          setLocation("/aluno");
-          break;
-        case "professor":
-          setLocation("/professor");
-          break;
-        case "diretor":
-          setLocation("/diretor");
-          break;
+      // Redirecionar somente quando o endereço realmente precisar mudar.
+      // Isso evita atualizações repetidas de rota durante a troca de perfil.
+      const targetPath =
+        userData.tipo === "aluno"
+          ? "/aluno"
+          : userData.tipo === "professor"
+            ? "/professor"
+            : userData.tipo === "diretor"
+              ? "/diretor"
+              : "/login";
+
+      if (location !== targetPath) {
+        setLocation(targetPath, { replace: true });
       }
     }
-  }, [userData, showCodeDialog, showSuspensionOverlay, showMaintenanceOverlay, showPasswordChangeDialog, setLocation]);
+  }, [
+    userData?.uid,
+    userData?.tipo,
+    userData?.primeiroAcesso,
+    showCodeDialog,
+    showSuspensionOverlay,
+    showMaintenanceOverlay,
+    showBlockedOverlay,
+    showDeactivatedOverlay,
+    showPasswordChangeDialog,
+    location,
+    setLocation,
+  ]);
 
   // Carregar turmas disponíveis
   useEffect(() => {
@@ -731,12 +745,19 @@ export default function Login() {
           console.error("Erro ao limpar manutenções expiradas:", cleanupError);
         }
         
-        await refreshUserData();
-        
+        const refreshed = await refreshUserData();
+        if (!refreshed) {
+          throw new Error("Não foi possível carregar os dados da conta da diretoria.");
+        }
+
         toast({
           title: "Login realizado com sucesso!",
           description: "Bem-vindo à Diretoria!",
         });
+
+        if (location !== "/diretor") {
+          setLocation("/diretor", { replace: true });
+        }
       } else {
         // Login usando CPF ou Matrícula
         const loginIdentifier = formData.loginId.replace(/\D/g, '');
