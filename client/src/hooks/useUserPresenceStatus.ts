@@ -4,10 +4,9 @@ import { format, isToday, isYesterday } from "date-fns";
 import { db } from "@/lib/firebase";
 import type { User } from "@shared/schema";
 
-// O emissor renova lastActivity a cada 30 segundos.
-// Após 70 segundos sem renovação, o status online é considerado expirado.
-const ONLINE_STALE_AFTER_MS = 70_000;
-const LOCAL_RECHECK_INTERVAL_MS = 10_000;
+// O emissor renova lastActivity a cada 25 segundos.
+// Após 75 segundos sem renovação, o status online é considerado expirado.
+const ONLINE_STALE_AFTER_MS = 75_000;
 
 export interface UserPresenceStatus {
   isOnline: boolean;
@@ -75,6 +74,10 @@ function formatLastSeen(lastSeenDate: Date | null): UserPresenceStatus {
   };
 }
 
+function isTruthyOnline(value: unknown): boolean {
+  return value === true || value === "true" || value === 1 || value === "1";
+}
+
 function calculatePresence(userData: User | null): UserPresenceStatus {
   if (!userData) {
     return {
@@ -84,12 +87,17 @@ function calculatePresence(userData: User | null): UserPresenceStatus {
   }
 
   const lastActivityDate = toValidDate(userData.lastActivity as TimestampLike);
-  const declaredOnline = userData.isOnline === true && userData.statusPresenca !== "offline";
-  const activityAge = lastActivityDate ? Date.now() - lastActivityDate.getTime() : Number.POSITIVE_INFINITY;
+  const activityAge = lastActivityDate
+    ? Date.now() - lastActivityDate.getTime()
+    : Number.POSITIVE_INFINITY;
   const activityIsFresh = activityAge >= -30_000 && activityAge <= ONLINE_STALE_AFTER_MS;
+  const statusSaysOnline = userData.statusPresenca === "online";
+  const declaredOnline =
+    (isTruthyOnline(userData.isOnline) || statusSaysOnline) &&
+    userData.statusPresenca !== "offline";
 
-  // Nunca confia apenas no booleano isOnline. Uma aba fechada abruptamente pode
-  // deixar esse campo preso; lastActivity precisa continuar recente.
+  // O ponto verde só aparece quando a presença declarada está acompanhada de
+  // lastActivity recente. Assim não há falso online após fechamento abrupto.
   if (declaredOnline && activityIsFresh) {
     return {
       isOnline: true,
@@ -108,23 +116,65 @@ function calculatePresence(userData: User | null): UserPresenceStatus {
   return formatLastSeen(effectiveLastSeen);
 }
 
+function sameStatus(a: UserPresenceStatus, b: UserPresenceStatus): boolean {
+  return (
+    a.isOnline === b.isOnline &&
+    a.statusText === b.statusText &&
+    a.lastSeenDate?.getTime() === b.lastSeenDate?.getTime()
+  );
+}
+
 /**
- * Observa a presença de outro usuário e invalida localmente status online antigo.
- * Assim, mesmo se o navegador fechar antes de gravar isOnline=false, o ponto verde
- * desaparece automaticamente quando o heartbeat lastActivity expira.
+ * Observa a presença de outro usuário e agenda somente uma revalidação local
+ * para o instante em que o heartbeat expira. Não fica atualizando a lista a
+ * cada poucos segundos, evitando piscadas e renderizações desnecessárias.
  */
 export function useUserPresenceStatus(userId: string | null | undefined): UserPresenceStatus {
   const latestUserRef = useRef<User | null>(null);
+  const expiryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [status, setStatus] = useState<UserPresenceStatus>(() => calculatePresence(null));
 
   useEffect(() => {
     latestUserRef.current = null;
-    setStatus(calculatePresence(null));
+    setStatus((current) => {
+      const next = calculatePresence(null);
+      return sameStatus(current, next) ? current : next;
+    });
+
+    if (expiryTimerRef.current) {
+      clearTimeout(expiryTimerRef.current);
+      expiryTimerRef.current = null;
+    }
 
     if (!userId) return;
 
+    const clearExpiryTimer = () => {
+      if (expiryTimerRef.current) {
+        clearTimeout(expiryTimerRef.current);
+        expiryTimerRef.current = null;
+      }
+    };
+
     const refreshLocalStatus = () => {
-      setStatus(calculatePresence(latestUserRef.current));
+      clearExpiryTimer();
+
+      const nextStatus = calculatePresence(latestUserRef.current);
+      setStatus((current) => (sameStatus(current, nextStatus) ? current : nextStatus));
+
+      if (nextStatus.isOnline && latestUserRef.current) {
+        const lastActivity = toValidDate(
+          latestUserRef.current.lastActivity as TimestampLike,
+        );
+
+        if (lastActivity) {
+          const remaining = Math.max(
+            250,
+            ONLINE_STALE_AFTER_MS - (Date.now() - lastActivity.getTime()) + 250,
+          );
+
+          expiryTimerRef.current = setTimeout(refreshLocalStatus, remaining);
+        }
+      }
     };
 
     const unsubscribe = onSnapshot(
@@ -140,12 +190,9 @@ export function useUserPresenceStatus(userId: string | null | undefined): UserPr
       },
     );
 
-    // A expiração precisa ser recalculada mesmo quando nenhum novo snapshot chega.
-    const recheckInterval = window.setInterval(refreshLocalStatus, LOCAL_RECHECK_INTERVAL_MS);
-
     return () => {
       unsubscribe();
-      window.clearInterval(recheckInterval);
+      clearExpiryTimer();
       latestUserRef.current = null;
     };
   }, [userId]);

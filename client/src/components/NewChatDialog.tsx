@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Search, MessageSquare, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Search, MessageSquare } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -12,11 +11,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { collection, query as firestoreQuery, where, getDocs, addDoc } from "firebase/firestore";
+import {
+  addDoc,
+  collection,
+  getDocs,
+  query as firestoreQuery,
+  where,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { User } from "@shared/schema";
+import type { User } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { UserPresenceIndicator } from "@/components/UserPresenceIndicator";
 
 interface NewChatDialogProps {
   open: boolean;
@@ -24,101 +30,123 @@ interface NewChatDialogProps {
   onConversationCreated: (conversationId: string) => void;
 }
 
-export default function NewChatDialog({ 
-  open, 
-  onOpenChange, 
-  onConversationCreated 
+function uniqueNames(values: string[]): string[] {
+  const seen = new Set<string>();
+
+  return values.filter((value) => {
+    const normalized = value.trim().toLocaleLowerCase("pt-BR");
+    if (!normalized || seen.has(normalized)) return false;
+    seen.add(normalized);
+    return true;
+  });
+}
+
+export default function NewChatDialog({
+  open,
+  onOpenChange,
+  onConversationCreated,
 }: NewChatDialogProps) {
   const { userData } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [allUsers, setAllUsers] = useState<User[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [turmas, setTurmas] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
+  // Depende apenas do UID estável. Atualizações de presença no documento do
+  // usuário não recarregam a lista e, por isso, o modal não fica piscando.
   useEffect(() => {
-    if (open && userData) {
-      loadUsers();
-      loadTurmas();
-    } else {
+    if (!open) {
       setSearchTerm("");
+      return;
     }
-  }, [open, userData]);
 
-  useEffect(() => {
-    if (searchTerm.trim()) {
-      const term = searchTerm.toLowerCase();
-      const filtered = allUsers.filter(user => {
-        const displayName = user.tipo === "diretor" ? "Diretoria" : user.nome;
-        
-        if (user.tipo === "diretor") {
-          return (
-            "diretoria".includes(term) ||
-            "diretor".includes(term) ||
-            "dir".includes(term) ||
-            displayName.toLowerCase().includes(term)
-          );
-        }
-        
-        return (
-          displayName.toLowerCase().includes(term) ||
-          user.nome.toLowerCase().includes(term) ||
-          (user.matricula && user.matricula.includes(term))
+    if (!userData?.uid) return;
+
+    let cancelled = false;
+
+    const loadDialogData = async () => {
+      setIsLoading(true);
+
+      try {
+        const usersRef = collection(db, "usuarios");
+        const usersQuery = firestoreQuery(
+          usersRef,
+          where("ativo", "==", true),
+          where("status", "==", "aprovado"),
         );
-      });
-      setFilteredUsers(filtered);
-    } else {
-      setFilteredUsers(allUsers);
-    }
-  }, [searchTerm, allUsers]);
+        const turmasRef = collection(db, "turmas");
 
-  const loadUsers = async () => {
-    if (!userData) return;
-    
-    setIsLoading(true);
-    try {
-      const usersRef = collection(db, "usuarios");
-      const q = firestoreQuery(
-        usersRef,
-        where("ativo", "==", true),
-        where("status", "==", "aprovado")
-      );
+        const [usersSnapshot, turmasSnapshot] = await Promise.all([
+          getDocs(usersQuery),
+          getDocs(turmasRef),
+        ]);
 
-      const snapshot = await getDocs(q);
-      const users = snapshot.docs
-        .map(doc => ({ uid: doc.id, ...doc.data() } as User))
-        .filter(user => user.uid !== userData.uid)
-        .sort((a, b) => {
-          const nameA = a.tipo === "diretor" ? "Diretoria" : a.nome;
-          const nameB = b.tipo === "diretor" ? "Diretoria" : b.nome;
-          return nameA.localeCompare(nameB);
+        if (cancelled) return;
+
+        const turmasMap: Record<string, string> = {};
+        turmasSnapshot.docs.forEach((turmaDoc) => {
+          const data = turmaDoc.data();
+          turmasMap[turmaDoc.id] = String(data.nome || turmaDoc.id).trim();
         });
-      
-      setAllUsers(users);
-      setFilteredUsers(users);
-    } catch (error) {
-      console.error("❌ Error loading users:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  const loadTurmas = async () => {
-    try {
-      const turmasRef = collection(db, "turmas");
-      const snapshot = await getDocs(turmasRef);
-      const turmasMap: Record<string, string> = {};
-      
-      snapshot.docs.forEach(doc => {
-        const data = doc.data();
-        turmasMap[doc.id] = data.nome || doc.id;
-      });
-      
-      setTurmas(turmasMap);
-    } catch (error) {
-      console.error("❌ Error loading turmas:", error);
-    }
+        const users = usersSnapshot.docs
+          .map((userDoc) => ({ uid: userDoc.id, ...userDoc.data() }) as User)
+          .filter((user) => user.uid !== userData.uid)
+          .sort((a, b) => {
+            const nameA = a.tipo === "diretor" ? "Diretoria" : a.nome;
+            const nameB = b.tipo === "diretor" ? "Diretoria" : b.nome;
+            return nameA.localeCompare(nameB, "pt-BR");
+          });
+
+        setTurmas(turmasMap);
+        setAllUsers(users);
+      } catch (error) {
+        console.error("Erro ao carregar contatos do chat:", error);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    void loadDialogData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, userData?.uid]);
+
+  const filteredUsers = useMemo(() => {
+    const term = searchTerm.trim().toLocaleLowerCase("pt-BR");
+    if (!term) return allUsers;
+
+    return allUsers.filter((user) => {
+      const displayName = user.tipo === "diretor" ? "Diretoria" : user.nome;
+
+      if (user.tipo === "diretor") {
+        return (
+          "diretoria".includes(term) ||
+          "diretor".includes(term) ||
+          "dir".includes(term) ||
+          displayName.toLocaleLowerCase("pt-BR").includes(term)
+        );
+      }
+
+      return (
+        displayName.toLocaleLowerCase("pt-BR").includes(term) ||
+        user.nome.toLocaleLowerCase("pt-BR").includes(term) ||
+        Boolean(user.matricula?.toLocaleLowerCase("pt-BR").includes(term))
+      );
+    });
+  }, [allUsers, searchTerm]);
+
+  const getTeacherClassNames = (user: User): string[] => {
+    if (!Array.isArray(user.turmas)) return [];
+
+    const names = user.turmas
+      .map((turmaId) => String(turmas[turmaId] || turmaId).trim())
+      .filter((name) => name && !/^[a-zA-Z0-9]{20,}$/.test(name));
+
+    return uniqueNames(names);
   };
 
   const handleCreateConversation = async (otherUser: User) => {
@@ -127,22 +155,19 @@ export default function NewChatDialog({
     setIsCreating(true);
     try {
       const conversationsRef = collection(db, "chatConversations");
-      
+
       const q1 = firestoreQuery(
         conversationsRef,
         where("participante1Id", "==", userData.uid),
-        where("participante2Id", "==", otherUser.uid)
+        where("participante2Id", "==", otherUser.uid),
       );
       const q2 = firestoreQuery(
         conversationsRef,
         where("participante1Id", "==", otherUser.uid),
-        where("participante2Id", "==", userData.uid)
+        where("participante2Id", "==", userData.uid),
       );
 
-      const [snapshot1, snapshot2] = await Promise.all([
-        getDocs(q1),
-        getDocs(q2)
-      ]);
+      const [snapshot1, snapshot2] = await Promise.all([getDocs(q1), getDocs(q2)]);
 
       if (!snapshot1.empty) {
         onConversationCreated(snapshot1.docs[0].id);
@@ -178,12 +203,11 @@ export default function NewChatDialog({
       onConversationCreated(conversationDoc.id);
       onOpenChange(false);
     } catch (error) {
-      console.error("Error creating conversation:", error);
+      console.error("Erro ao criar conversa:", error);
     } finally {
       setIsCreating(false);
     }
   };
-
 
   const getUserTypeLabel = (tipo: string) => {
     switch (tipo) {
@@ -219,77 +243,103 @@ export default function NewChatDialog({
               placeholder="Buscar por nome ou matrícula..."
               className="pl-9"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(event) => setSearchTerm(event.target.value)}
               data-testid="input-search-users"
             />
           </div>
 
           <ScrollArea className="h-[400px] rounded-md border p-4">
             {isLoading ? (
-              <div className="flex items-center justify-center h-full">
+              <div className="flex h-full items-center justify-center">
                 <div className="text-muted-foreground">Carregando...</div>
               </div>
             ) : filteredUsers.length > 0 ? (
               <div className="space-y-2">
-                {filteredUsers.map((user) => (
-                  <div
-                    key={user.uid}
-                    className="flex items-center gap-3 p-3 rounded-lg hover-elevate active-elevate-2 cursor-pointer transition-colors"
-                    onClick={() => handleCreateConversation(user)}
-                    data-testid={`user-item-${user.uid}`}
-                  >
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage src={user.fotoUrl || user.fotoBase64 || ""} />
-                      <AvatarFallback className="bg-[#00a884] text-white">
-                        {user.tipo === "diretor" ? "DIR" : user.nome.charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+                {filteredUsers.map((user) => {
+                  const teacherClasses =
+                    user.tipo === "professor" ? getTeacherClassNames(user) : [];
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-semibold truncate" data-testid={`text-user-name-${user.uid}`}>
-                          {user.tipo === "diretor" ? "Diretoria" : user.nome}
-                        </h3>
-                        <Badge
-                          variant="secondary"
-                          className={cn(
-                            "text-xs",
-                            user.tipo === "professor" && "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
-                            user.tipo === "diretor" && "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300"
-                          )}
-                        >
-                          {getUserTypeLabel(user.tipo)}
-                        </Badge>
+                  return (
+                    <div
+                      key={user.uid}
+                      className={cn(
+                        "flex items-center gap-3 rounded-lg p-3 transition-colors",
+                        isCreating
+                          ? "cursor-wait opacity-70"
+                          : "cursor-pointer hover-elevate active-elevate-2",
+                      )}
+                      onClick={() => void handleCreateConversation(user)}
+                      data-testid={`user-item-${user.uid}`}
+                    >
+                      <div className="relative shrink-0">
+                        <Avatar className="h-12 w-12">
+                          <AvatarImage src={user.fotoUrl || user.fotoBase64 || ""} />
+                          <AvatarFallback className="bg-[#00a884] text-white">
+                            {user.tipo === "diretor"
+                              ? "DIR"
+                              : user.nome.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <UserPresenceIndicator
+                          userId={user.uid}
+                          showText={false}
+                          className="absolute bottom-0 right-0"
+                          dotClassName="h-3 w-3 border-2 border-background"
+                        />
                       </div>
-                      {user.tipo === "aluno" && user.turma && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {turmas[user.turma] || user.turma}
-                        </p>
-                      )}
-                      {user.tipo === "professor" && user.turmas && user.turmas.length > 0 && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {user.turmas
-                            .map(turmaId => turmas[turmaId] || turmaId)
-                            .filter(name => name && !name.match(/^[a-zA-Z0-9]{20,}$/))
-                            .join(", ") || "Sem turmas"}
-                        </p>
-                      )}
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3
+                            className="truncate font-semibold"
+                            data-testid={`text-user-name-${user.uid}`}
+                          >
+                            {user.tipo === "diretor" ? "Diretoria" : user.nome}
+                          </h3>
+                          <Badge
+                            variant="secondary"
+                            className={cn(
+                              "text-xs",
+                              user.tipo === "professor" &&
+                                "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
+                              user.tipo === "diretor" &&
+                                "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
+                            )}
+                          >
+                            {getUserTypeLabel(user.tipo)}
+                          </Badge>
+                        </div>
+
+                        {user.tipo === "aluno" && user.turma && (
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            {turmas[user.turma] || user.turma}
+                          </p>
+                        )}
+
+                        {user.tipo === "professor" && (
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            {teacherClasses.length > 0
+                              ? teacherClasses.join(", ")
+                              : "Sem turmas"}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : searchTerm ? (
-              <div className="flex flex-col items-center justify-center h-full text-center">
-                <Search className="h-12 w-12 text-muted-foreground mb-4" />
+              <div className="flex h-full flex-col items-center justify-center text-center">
+                <Search className="mb-4 h-12 w-12 text-muted-foreground" />
                 <p className="text-muted-foreground">Nenhum usuário encontrado</p>
-                <p className="text-sm text-muted-foreground mt-2">
+                <p className="mt-2 text-sm text-muted-foreground">
                   Tente buscar por outro nome ou matrícula
                 </p>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center h-full text-center">
-                <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Carregando usuários...</p>
+              <div className="flex h-full flex-col items-center justify-center text-center">
+                <MessageSquare className="mb-4 h-12 w-12 text-muted-foreground" />
+                <p className="text-muted-foreground">Nenhum contato disponível</p>
               </div>
             )}
           </ScrollArea>

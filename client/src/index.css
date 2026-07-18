@@ -1090,14 +1090,20 @@
 /* Announcements */
 .announcement-modern-card {
   overflow: hidden;
-  border: 1px solid var(--dashboard-line) !important;
-  border-radius: 18px !important;
-  background: var(--dashboard-elevated) !important;
-  box-shadow: 0 8px 26px hsl(220 25% 18% / 0.06) !important;
+  width: 100%;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.announcement-modern-fullbleed {
+  width: 100%;
 }
 
 .announcement-modern-media {
-  border-radius: 17px;
+  width: 100%;
+  border-radius: 0;
   background: hsl(var(--muted) / 0.42);
 }
 

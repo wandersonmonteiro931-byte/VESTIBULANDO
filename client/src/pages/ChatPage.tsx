@@ -16,6 +16,7 @@ import { useChatConversations, ConversationWithBlockInfo } from "@/hooks/useChat
 import { collection, getDocs, addDoc, query as firestoreQuery, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { formatBrasiliaTime, getNowBrasiliaISO } from "@/lib/brasiliaTime";
+import { UserPresenceIndicator } from "@/components/UserPresenceIndicator";
 
 export default function ChatPage() {
   const { userData } = useAuth();
@@ -315,12 +316,20 @@ export default function ChatPage() {
                   onClick={() => handleUserClick(user)}
                   data-testid={`user-item-${user.uid}`}
                 >
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={user.fotoUrl || user.fotoBase64 || ""} />
-                    <AvatarFallback className="bg-[#00a884] text-white">
-                      {user.tipo === "diretor" ? "DIR" : user.nome.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                  <div className="relative shrink-0">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={user.fotoUrl || user.fotoBase64 || ""} />
+                      <AvatarFallback className="bg-[#00a884] text-white">
+                        {user.tipo === "diretor" ? "DIR" : user.nome.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <UserPresenceIndicator
+                      userId={user.uid}
+                      showText={false}
+                      className="absolute bottom-0 right-0"
+                      dotClassName="h-3 w-3 border-2 border-background"
+                    />
+                  </div>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">

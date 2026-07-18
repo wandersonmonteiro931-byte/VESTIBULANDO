@@ -1,19 +1,40 @@
-import { useState, useEffect } from 'react';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import type { User } from '@shared/schema';
+import { useEffect, useRef, useState } from "react";
+import { doc, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import type { User } from "@shared/schema";
+
+function profileSignature(user: User): string {
+  return JSON.stringify({
+    uid: user.uid,
+    nome: user.nome,
+    tipo: user.tipo,
+    fotoUrl: user.fotoUrl || "",
+    fotoBase64: user.fotoBase64 || "",
+    fotoPublica: user.fotoPublica === true,
+    sexo: user.sexo || "",
+    matricula: user.matricula || "",
+    turma: user.turma || "",
+    turmas: Array.isArray(user.turmas) ? user.turmas : [],
+    ativo: user.ativo,
+    status: user.status,
+    bloqueado: user.bloqueado,
+  });
+}
 
 /**
- * Hook para buscar dados atualizados de um usuário em tempo real
- * Útil para garantir que mudanças no cadastro (nome, foto, etc.) 
- * sejam refletidas em todo o sistema, incluindo mensagens antigas do chat
+ * Observa os dados de perfil usados pelo chat.
+ * Atualizações que mudam apenas presença (heartbeat) não recriam o perfil nem
+ * recarregam o avatar, evitando a impressão de que a lista está piscando.
  */
 export function useUserData(userId: string | null | undefined) {
   const [userData, setUserData] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const lastSignatureRef = useRef("");
 
   useEffect(() => {
+    lastSignatureRef.current = "";
+
     if (!userId) {
       setUserData(null);
       setLoading(false);
@@ -23,23 +44,31 @@ export function useUserData(userId: string | null | undefined) {
     setLoading(true);
     setError(null);
 
-    const userRef = doc(db, 'usuarios', userId);
-    
+    const userRef = doc(db, "usuarios", userId);
+
     const unsubscribe = onSnapshot(
       userRef,
       (snapshot) => {
         if (snapshot.exists()) {
-          setUserData(snapshot.data() as User);
+          const nextUserData = snapshot.data() as User;
+          const nextSignature = profileSignature(nextUserData);
+
+          if (nextSignature !== lastSignatureRef.current) {
+            lastSignatureRef.current = nextSignature;
+            setUserData(nextUserData);
+          }
         } else {
+          lastSignatureRef.current = "";
           setUserData(null);
         }
+
         setLoading(false);
       },
-      (err) => {
-        console.error('Erro ao buscar dados do usuário:', err);
-        setError(err as Error);
+      (snapshotError) => {
+        console.error("Erro ao buscar dados do usuário:", snapshotError);
+        setError(snapshotError as Error);
         setLoading(false);
-      }
+      },
     );
 
     return () => unsubscribe();

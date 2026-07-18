@@ -126,10 +126,10 @@ export function AnnouncementsCarousel({ userType, userTurma }: AnnouncementsCaro
   const currentTextSlide = textSlides[currentTextIndex];
 
   return (
-    <div className="announcements-modern grid grid-cols-1 lg:grid-cols-2 gap-5" data-testid="announcements-carousel">
+    <div className="announcements-modern flex flex-col gap-5 w-full" data-testid="announcements-carousel">
       {/* Avisos de imagem - Desktop: esquerda, Mobile: primeiro */}
       {imageSlides.length > 0 && currentImageSlide && (
-        <Card className="announcement-modern-card">
+        <Card className="announcement-modern-card announcement-modern-fullbleed">
           <CardContent className="p-0">
             <div className="relative">
               <div className="announcement-modern-media w-full h-64 overflow-hidden">
@@ -185,7 +185,7 @@ export function AnnouncementsCarousel({ userType, userTurma }: AnnouncementsCaro
 
       {/* Avisos de texto - Desktop: direita, Mobile: segundo */}
       {textSlides.length > 0 && currentTextSlide && (
-        <Card className="announcement-modern-card">
+        <Card className="announcement-modern-card announcement-modern-fullbleed">
           <CardContent className="p-0">
             <div className="relative">
               <div className="announcement-modern-media announcement-modern-text w-full h-64 overflow-hidden flex items-center justify-center p-8">

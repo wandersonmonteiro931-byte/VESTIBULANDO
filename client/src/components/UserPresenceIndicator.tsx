@@ -38,7 +38,7 @@ export function UserPresenceIndicator({
         className={cn(
           "h-2 w-2 rounded-full",
           isOnline 
-            ? "bg-green-500 dark:bg-green-400 animate-pulse" 
+            ? "bg-green-500 dark:bg-green-400" 
             : variant === "light" 
               ? "bg-gray-300 dark:bg-gray-400"
               : "bg-gray-400 dark:bg-gray-600",
