@@ -376,14 +376,21 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
             <h2 className="font-semibold text-white truncate text-sm leading-tight" data-testid="text-chat-participant-name">
               {otherParticipant.tipo === "diretor" ? "Diretoria" : otherParticipant.nome}
             </h2>
-            <UserPresenceIndicator 
-              userId={otherParticipant.id} 
-              showText={true}
-              className="mt-0.5"
-              dotClassName="h-1.5 w-1.5"
-              variant="light"
-              isBlocked={conversation.isBlocked}
-            />
+            {otherUserTyping && !conversation.isBlocked ? (
+              <div className="mt-0.5 flex items-center gap-1.5 text-xs font-medium text-white/90" data-testid="header-typing-indicator">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#25d366]" />
+                <span>Digitando...</span>
+              </div>
+            ) : (
+              <UserPresenceIndicator
+                userId={otherParticipant.id}
+                showText={true}
+                className="mt-0.5"
+                dotClassName="h-1.5 w-1.5"
+                variant="light"
+                isBlocked={conversation.isBlocked}
+              />
+            )}
           </div>
         </div>
 
@@ -541,8 +548,13 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
             className="flex-1 bg-white dark:bg-[#2a3942] border-none focus-visible:ring-1 h-9 text-sm rounded-full px-3"
             value={message}
             onChange={(e) => {
-              setMessage(e.target.value);
-              handleTyping();
+              const nextMessage = e.target.value;
+              setMessage(nextMessage);
+              if (nextMessage.trim()) {
+                handleTyping();
+              } else {
+                stopTyping();
+              }
             }}
             onKeyPress={handleKeyPress}
             onBlur={stopTyping}

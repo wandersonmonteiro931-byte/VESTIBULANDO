@@ -4,9 +4,7 @@ import { format, isToday, isYesterday } from "date-fns";
 import { db } from "@/lib/firebase";
 import type { User } from "@shared/schema";
 
-// O emissor renova lastActivity a cada 25 segundos.
-// Após 75 segundos sem renovação, o status online é considerado expirado.
-const ONLINE_STALE_AFTER_MS = 75_000;
+const ONLINE_STALE_AFTER_MS = 40_000;
 
 export interface UserPresenceStatus {
   isOnline: boolean;
@@ -90,18 +88,18 @@ function calculatePresence(userData: User | null): UserPresenceStatus {
   const activityAge = lastActivityDate
     ? Date.now() - lastActivityDate.getTime()
     : Number.POSITIVE_INFINITY;
-  const activityIsFresh = activityAge >= -30_000 && activityAge <= ONLINE_STALE_AFTER_MS;
+  const activityIsFresh =
+    activityAge >= -30_000 && activityAge <= ONLINE_STALE_AFTER_MS;
+
   const statusSaysOnline = userData.statusPresenca === "online";
   const declaredOnline =
     (isTruthyOnline(userData.isOnline) || statusSaysOnline) &&
     userData.statusPresenca !== "offline";
 
-  // O ponto verde só aparece quando a presença declarada está acompanhada de
-  // lastActivity recente. Assim não há falso online após fechamento abrupto.
   if (declaredOnline && activityIsFresh) {
     return {
       isOnline: true,
-      statusText: "Online agora",
+      statusText: "Online",
     };
   }
 
@@ -125,28 +123,21 @@ function sameStatus(a: UserPresenceStatus, b: UserPresenceStatus): boolean {
 }
 
 /**
- * Observa a presença de outro usuário e agenda somente uma revalidação local
- * para o instante em que o heartbeat expira. Não fica atualizando a lista a
- * cada poucos segundos, evitando piscadas e renderizações desnecessárias.
+ * Observa a presença em tempo real. O próprio usuário grava offline após
+ * 30 segundos sem atividade. A expiração local de 40 segundos é apenas um
+ * fallback para fechamento abrupto ou perda de conexão. Não usa polling.
  */
-export function useUserPresenceStatus(userId: string | null | undefined): UserPresenceStatus {
+export function useUserPresenceStatus(
+  userId: string | null | undefined,
+): UserPresenceStatus {
   const latestUserRef = useRef<User | null>(null);
   const expiryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [status, setStatus] = useState<UserPresenceStatus>(() => calculatePresence(null));
+  const [status, setStatus] = useState<UserPresenceStatus>(() =>
+    calculatePresence(null),
+  );
 
   useEffect(() => {
     latestUserRef.current = null;
-    setStatus((current) => {
-      const next = calculatePresence(null);
-      return sameStatus(current, next) ? current : next;
-    });
-
-    if (expiryTimerRef.current) {
-      clearTimeout(expiryTimerRef.current);
-      expiryTimerRef.current = null;
-    }
-
-    if (!userId) return;
 
     const clearExpiryTimer = () => {
       if (expiryTimerRef.current) {
@@ -159,7 +150,9 @@ export function useUserPresenceStatus(userId: string | null | undefined): UserPr
       clearExpiryTimer();
 
       const nextStatus = calculatePresence(latestUserRef.current);
-      setStatus((current) => (sameStatus(current, nextStatus) ? current : nextStatus));
+      setStatus((current) =>
+        sameStatus(current, nextStatus) ? current : nextStatus,
+      );
 
       if (nextStatus.isOnline && latestUserRef.current) {
         const lastActivity = toValidDate(
@@ -168,19 +161,28 @@ export function useUserPresenceStatus(userId: string | null | undefined): UserPr
 
         if (lastActivity) {
           const remaining = Math.max(
-            250,
-            ONLINE_STALE_AFTER_MS - (Date.now() - lastActivity.getTime()) + 250,
+            100,
+            ONLINE_STALE_AFTER_MS - (Date.now() - lastActivity.getTime()) + 100,
           );
-
           expiryTimerRef.current = setTimeout(refreshLocalStatus, remaining);
         }
       }
     };
 
+    clearExpiryTimer();
+    setStatus((current) => {
+      const next = calculatePresence(null);
+      return sameStatus(current, next) ? current : next;
+    });
+
+    if (!userId) return;
+
     const unsubscribe = onSnapshot(
       doc(db, "usuarios", userId),
       (snapshot) => {
-        latestUserRef.current = snapshot.exists() ? (snapshot.data() as User) : null;
+        latestUserRef.current = snapshot.exists()
+          ? (snapshot.data() as User)
+          : null;
         refreshLocalStatus();
       },
       (error) => {
