@@ -1,5 +1,4 @@
-import { useEffect, useMemo } from "react";
-import { useLocation } from "wouter";
+import { useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
 
@@ -21,27 +20,27 @@ function getDashboardPath(tipo?: string): string {
   }
 }
 
-export function ProtectedRoute({ children, allowedTypes }: ProtectedRouteProps) {
-  const { currentUser, userData, loading } = useAuth();
-  const [location, setLocation] = useLocation();
-
-  const allowedTypesKey = allowedTypes?.join("|") ?? "";
-  const redirectTarget = useMemo(() => {
-    if (loading) return null;
-    if (!currentUser || !userData) return "/login";
-
-    if (allowedTypesKey && !allowedTypesKey.split("|").includes(userData.tipo)) {
-      return getDashboardPath(userData.tipo);
-    }
-
-    return null;
-  }, [loading, currentUser?.uid, userData?.tipo, allowedTypesKey]);
+function FullPageRedirect({ to }: { to: string }) {
+  const startedRef = useRef(false);
 
   useEffect(() => {
-    if (redirectTarget && location !== redirectTarget) {
-      setLocation(redirectTarget, { replace: true });
-    }
-  }, [redirectTarget, location, setLocation]);
+    if (startedRef.current || window.location.pathname === to) return;
+    startedRef.current = true;
+    window.location.replace(to);
+  }, [to]);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="text-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+        <p className="text-muted-foreground">Redirecionando...</p>
+      </div>
+    </div>
+  );
+}
+
+export function ProtectedRoute({ children, allowedTypes }: ProtectedRouteProps) {
+  const { currentUser, userData, loading } = useAuth();
 
   if (loading) {
     return (
@@ -54,7 +53,13 @@ export function ProtectedRoute({ children, allowedTypes }: ProtectedRouteProps) 
     );
   }
 
-  if (redirectTarget) return null;
+  if (!currentUser || !userData) {
+    return <FullPageRedirect to="/login" />;
+  }
+
+  if (allowedTypes?.length && !allowedTypes.includes(userData.tipo)) {
+    return <FullPageRedirect to={getDashboardPath(userData.tipo)} />;
+  }
 
   return <>{children}</>;
 }

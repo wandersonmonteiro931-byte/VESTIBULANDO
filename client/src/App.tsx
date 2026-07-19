@@ -1,4 +1,5 @@
-import { Switch, Route, Redirect } from "wouter";
+import { useEffect, useRef } from "react";
+import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -24,6 +25,18 @@ import StudentClassroomPage from "@/pages/StudentClassroomPage";
 import NotFound from "@/pages/not-found";
 import type { User } from "@shared/schema";
 
+function BrowserRedirect({ to }: { to: string }) {
+  const startedRef = useRef(false);
+
+  useEffect(() => {
+    if (startedRef.current || window.location.pathname === to) return;
+    startedRef.current = true;
+    window.location.replace(to);
+  }, [to]);
+
+  return null;
+}
+
 function RootRedirect() {
   const auth = useAuth();
   const userData: User | null = (auth && typeof auth === 'object' && 'userData' in auth) ? (auth.userData as User | null) : null;
@@ -34,18 +47,18 @@ function RootRedirect() {
   }
 
   if (!userData) {
-    return <Redirect to="/login" />;
+    return <BrowserRedirect to="/login" />;
   }
 
   switch (userData.tipo) {
     case "aluno":
-      return <Redirect to="/aluno" />;
+      return <BrowserRedirect to="/aluno" />;
     case "professor":
-      return <Redirect to="/professor" />;
+      return <BrowserRedirect to="/professor" />;
     case "diretor":
-      return <Redirect to="/diretor" />;
+      return <BrowserRedirect to="/diretor" />;
     default:
-      return <Redirect to="/login" />;
+      return <BrowserRedirect to="/login" />;
   }
 }
 

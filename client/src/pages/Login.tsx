@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
+import { useState, useEffect, useRef } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
@@ -160,7 +159,6 @@ async function buscarCEP(cep: string) {
 }
 
 export default function Login() {
-  const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const { userData, refreshUserData } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -241,6 +239,7 @@ export default function Login() {
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [passwordChangeLoading, setPasswordChangeLoading] = useState(false);
   const [passwordChangeError, setPasswordChangeError] = useState("");
+  const redirectingAfterLoginRef = useRef(false);
 
   // Validar CPF em tempo real quando usuário digitar 11 números
   useEffect(() => {
@@ -256,29 +255,48 @@ export default function Login() {
   }, [formData.cpf, mode]);
 
   useEffect(() => {
-    if (userData && !showCodeDialog && !showSuspensionOverlay && !showMaintenanceOverlay && !showBlockedOverlay && !showDeactivatedOverlay && !showPasswordChangeDialog) {
-      // Verificar se é primeiro acesso (aluno ou professor)
-      if ((userData.tipo === "aluno" || userData.tipo === "professor") && userData.primeiroAcesso !== false) {
-        console.log("🔒 Primeiro acesso detectado - exigindo troca de senha");
-        setShowPasswordChangeDialog(true);
-        return;
-      }
-      
-      // Redirecionar somente quando o endereço realmente precisar mudar.
-      // Isso evita atualizações repetidas de rota durante a troca de perfil.
-      const targetPath =
-        userData.tipo === "aluno"
-          ? "/aluno"
-          : userData.tipo === "professor"
-            ? "/professor"
-            : userData.tipo === "diretor"
-              ? "/diretor"
-              : "/login";
-
-      if (location !== targetPath) {
-        setLocation(targetPath, { replace: true });
-      }
+    if (!userData) {
+      redirectingAfterLoginRef.current = false;
+      return;
     }
+
+    if (
+      showCodeDialog ||
+      showSuspensionOverlay ||
+      showMaintenanceOverlay ||
+      showBlockedOverlay ||
+      showDeactivatedOverlay ||
+      showPasswordChangeDialog
+    ) {
+      return;
+    }
+
+    // Verificar se é primeiro acesso (aluno ou professor).
+    if (
+      (userData.tipo === "aluno" || userData.tipo === "professor") &&
+      userData.primeiroAcesso !== false
+    ) {
+      setShowPasswordChangeDialog(true);
+      return;
+    }
+
+    const targetPath =
+      userData.tipo === "aluno"
+        ? "/aluno"
+        : userData.tipo === "professor"
+          ? "/professor"
+          : userData.tipo === "diretor"
+            ? "/diretor"
+            : "/login";
+
+    if (window.location.pathname === targetPath || redirectingAfterLoginRef.current) {
+      return;
+    }
+
+    // Usa uma única navegação completa depois do login. Isso evita a disputa
+    // entre efeitos do Login e das rotas protegidas que provocava React #185.
+    redirectingAfterLoginRef.current = true;
+    window.location.replace(targetPath);
   }, [
     userData?.uid,
     userData?.tipo,
@@ -289,8 +307,6 @@ export default function Login() {
     showBlockedOverlay,
     showDeactivatedOverlay,
     showPasswordChangeDialog,
-    location,
-    setLocation,
   ]);
 
   // Carregar turmas disponíveis
@@ -415,18 +431,6 @@ export default function Login() {
       buscar();
     }
   }, [formData.cep, mode]);
-
-  // Log quando overlay de suspensão é ativado
-  useEffect(() => {
-    console.log("🔔 Estado do overlay mudou:", {
-      showSuspensionOverlay,
-      hasSuspensionData: !!suspensionData
-    });
-    
-    if (showSuspensionOverlay && suspensionData) {
-      console.log("🚨 OVERLAY DE SUSPENSÃO ATIVADO - DEVE APARECER NA TELA AGORA!");
-    }
-  }, [showSuspensionOverlay, suspensionData]);
 
   // Atualizar contador de suspensão em tempo real
   useEffect(() => {
@@ -755,9 +759,6 @@ export default function Login() {
           description: "Bem-vindo à Diretoria!",
         });
 
-        if (location !== "/diretor") {
-          setLocation("/diretor", { replace: true });
-        }
       } else {
         // Login usando CPF ou Matrícula
         const loginIdentifier = formData.loginId.replace(/\D/g, '');
