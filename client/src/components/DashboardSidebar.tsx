@@ -18,6 +18,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { PendingIndicator } from "@/components/PendingIndicator";
+import logoUrl from "@assets/Blue and White Online School Logo (1)_1761189954480.png";
 import {
   Users,
   GraduationCap,
@@ -311,7 +312,7 @@ export function DashboardSidebar({
       <SidebarHeader className="sidebar-modern-header">
         <div className="sidebar-modern-brand">
           <div className="sidebar-modern-logo" aria-hidden="true">
-            <GraduationCap className="h-5 w-5" />
+            <img src={logoUrl} alt="" className="sidebar-modern-logo-image" />
           </div>
           <div className="min-w-0 flex-1">
             <span className="sidebar-modern-title">Vestibulando</span>
@@ -333,7 +334,7 @@ export function DashboardSidebar({
                   data-testid="sidebar-item-inicio"
                   className="dashboard-menu-button dashboard-home-button"
                 >
-                  <Home className="h-4 w-4" />
+                  <span className="dashboard-menu-icon-wrap"><Home className="h-4 w-4" /></span>
                   <span>Início</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -358,8 +359,8 @@ export function DashboardSidebar({
               >
                 <CollapsibleTrigger asChild>
                   <SidebarGroupLabel className="dashboard-category-trigger">
-                    <div className="flex items-center gap-1.5">
-                      <CategoryIcon className="h-3.5 w-3.5" />
+                    <div className="flex items-center gap-2">
+                      <span className="dashboard-category-icon-wrap"><CategoryIcon className="h-3.5 w-3.5" /></span>
                       <span>{category.label}</span>
                       {categoryHasPending && <PendingIndicator size="sm" />}
                     </div>
@@ -386,7 +387,7 @@ export function DashboardSidebar({
                               className="dashboard-menu-button dashboard-submenu-button"
                               data-testid={`sidebar-item-${item.id}`}
                             >
-                              {ItemIcon && <ItemIcon className="h-3.5 w-3.5" />}
+                              {ItemIcon && <span className="dashboard-menu-icon-wrap"><ItemIcon className="h-3.5 w-3.5" /></span>}
                               <span className="flex-1 text-sm">{item.label}</span>
                               {pendingCount > 0 && (
                                 <PendingIndicator size="sm" />

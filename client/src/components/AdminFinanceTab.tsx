@@ -300,7 +300,7 @@ export function AdminFinanceTab() {
   );
 
   return (
-    <div className="space-y-6" data-testid="admin-finance-tab">
+    <div className="space-y-6 finance-admin-premium" data-testid="admin-finance-tab">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div><span className="dashboard-eyebrow">Gestão financeira</span><h2 className="dashboard-hero-title">Financeiro dos alunos</h2><p className="dashboard-hero-subtitle">Controle faturas, pagamentos, inadimplência e bolsas de estudo.</p></div>
         <div className="flex flex-wrap gap-2">
@@ -311,10 +311,10 @@ export function AdminFinanceTab() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <Card><CardContent className="flex items-center gap-3 p-5"><div className="rounded-xl bg-amber-100 p-3 text-amber-700"><ReceiptText className="h-5 w-5" /></div><div><p className="text-xs text-muted-foreground">A receber</p><p className="text-xl font-bold">{money(summary.open)}</p></div></CardContent></Card>
-        <Card><CardContent className="flex items-center gap-3 p-5"><div className="rounded-xl bg-red-100 p-3 text-red-700"><AlertTriangle className="h-5 w-5" /></div><div><p className="text-xs text-muted-foreground">Vencido</p><p className="text-xl font-bold">{money(summary.overdue)}</p></div></CardContent></Card>
-        <Card><CardContent className="flex items-center gap-3 p-5"><div className="rounded-xl bg-emerald-100 p-3 text-emerald-700"><CheckCircle2 className="h-5 w-5" /></div><div><p className="text-xs text-muted-foreground">Recebido</p><p className="text-xl font-bold">{money(summary.received)}</p></div></CardContent></Card>
-        <Card><CardContent className="flex items-center gap-3 p-5"><div className="rounded-xl bg-blue-100 p-3 text-blue-700"><WalletCards className="h-5 w-5" /></div><div><p className="text-xs text-muted-foreground">Em análise</p><p className="text-xl font-bold">{summary.analysis}</p></div></CardContent></Card>
+        <Card className="finance-kpi-card"><CardContent className="flex items-center gap-3 p-5"><div className="rounded-xl bg-amber-100 p-3 text-amber-700"><ReceiptText className="h-5 w-5" /></div><div><p className="text-xs text-muted-foreground">A receber</p><p className="text-xl font-bold">{money(summary.open)}</p></div></CardContent></Card>
+        <Card className="finance-kpi-card"><CardContent className="flex items-center gap-3 p-5"><div className="rounded-xl bg-red-100 p-3 text-red-700"><AlertTriangle className="h-5 w-5" /></div><div><p className="text-xs text-muted-foreground">Vencido</p><p className="text-xl font-bold">{money(summary.overdue)}</p></div></CardContent></Card>
+        <Card className="finance-kpi-card"><CardContent className="flex items-center gap-3 p-5"><div className="rounded-xl bg-emerald-100 p-3 text-emerald-700"><CheckCircle2 className="h-5 w-5" /></div><div><p className="text-xs text-muted-foreground">Recebido</p><p className="text-xl font-bold">{money(summary.received)}</p></div></CardContent></Card>
+        <Card className="finance-kpi-card"><CardContent className="flex items-center gap-3 p-5"><div className="rounded-xl bg-blue-100 p-3 text-blue-700"><WalletCards className="h-5 w-5" /></div><div><p className="text-xs text-muted-foreground">Em análise</p><p className="text-xl font-bold">{summary.analysis}</p></div></CardContent></Card>
       </div>
 
       <Tabs defaultValue="faturas">
@@ -324,7 +324,7 @@ export function AdminFinanceTab() {
           {isMobile ? (
             <div className="space-y-3">
               {filteredInvoices.length ? filteredInvoices.map((invoice) => (
-                <Card key={invoice.id} className="overflow-hidden border-border/70 shadow-sm">
+                <Card key={invoice.id} className="finance-card overflow-hidden border-border/70 shadow-sm">
                   <CardContent className="space-y-4 p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -341,15 +341,15 @@ export function AdminFinanceTab() {
                     {renderInvoiceActions(invoice)}
                   </CardContent>
                 </Card>
-              )) : <Card><CardContent className="py-10 text-center text-muted-foreground">Nenhuma fatura encontrada.</CardContent></Card>}
+              )) : <Card className="finance-card"><CardContent className="premium-empty-state py-10 text-center"><div className="premium-empty-icon mx-auto"><ReceiptText className="h-7 w-7" /></div><p className="premium-empty-title">Nenhuma fatura encontrada</p><p className="premium-empty-text">Ajuste os filtros ou crie uma nova cobrança.</p></CardContent></Card>}
             </div>
           ) : (
-            <Card><CardContent className="p-0"><div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Aluno</TableHead><TableHead>Referência</TableHead><TableHead>Vencimento</TableHead><TableHead>Total</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader><TableBody>
+            <Card><CardContent className="p-0"><div className="overflow-x-auto premium-table-wrap"><Table><TableHeader><TableRow><TableHead>Aluno</TableHead><TableHead>Referência</TableHead><TableHead>Vencimento</TableHead><TableHead>Total</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader><TableBody>
               {filteredInvoices.map((invoice) => {
                 const status = invoiceStatusLabel(invoice);
                 return <TableRow key={invoice.id}><TableCell><div className="font-medium">{invoice.alunoNome}</div><div className="text-xs text-muted-foreground">{invoice.alunoMatricula || "Sem matrícula"}</div></TableCell><TableCell>{invoice.referencia}</TableCell><TableCell>{dateLabel(invoice.vencimento)}</TableCell><TableCell className="font-semibold">{money(invoice.valorFinal)}</TableCell><TableCell><Badge variant="outline">{status}</Badge></TableCell><TableCell>{renderInvoiceActions(invoice)}</TableCell></TableRow>;
               })}
-              {!filteredInvoices.length && <TableRow><TableCell colSpan={6} className="h-28 text-center text-muted-foreground">Nenhuma fatura encontrada.</TableCell></TableRow>}
+              {!filteredInvoices.length && <TableRow><TableCell colSpan={6} className="h-28 text-center"><div className="premium-inline-empty"><ReceiptText className="h-4 w-4" /> Nenhuma fatura encontrada.</div></TableCell></TableRow>}
             </TableBody></Table></div></CardContent></Card>
           )}
         </TabsContent>
@@ -364,7 +364,7 @@ export function AdminFinanceTab() {
                 const late = studentInvoices.filter(overdue).reduce((s,i)=>s+Number(i.valorFinal||0),0);
                 const paid = studentInvoices.filter((item)=>item.status==="pago").reduce((s,i)=>s+Number(i.valorFinal||0),0);
                 return (
-                  <Card key={student.uid} className="overflow-hidden border-border/70 shadow-sm">
+                  <Card key={student.uid} className="finance-card overflow-hidden border-border/70 shadow-sm">
                     <CardContent className="space-y-4 p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div>
@@ -385,7 +385,7 @@ export function AdminFinanceTab() {
               })}
             </div>
           ) : (
-            <Card><CardContent className="p-0"><div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Aluno</TableHead><TableHead>Bolsa</TableHead><TableHead>Em aberto</TableHead><TableHead>Vencido</TableHead><TableHead>Pago</TableHead><TableHead className="text-right">Ação</TableHead></TableRow></TableHeader><TableBody>{students.sort((a,b) => a.nome.localeCompare(b.nome)).map((student) => {
+            <Card><CardContent className="p-0"><div className="overflow-x-auto premium-table-wrap"><Table><TableHeader><TableRow><TableHead>Aluno</TableHead><TableHead>Bolsa</TableHead><TableHead>Em aberto</TableHead><TableHead>Vencido</TableHead><TableHead>Pago</TableHead><TableHead className="text-right">Ação</TableHead></TableRow></TableHeader><TableBody>{students.sort((a,b) => a.nome.localeCompare(b.nome)).map((student) => {
               const studentInvoices = invoices.filter((item) => item.alunoId === student.uid);
               const scholarship = scholarshipForStudent(student.uid);
               const open = studentInvoices.filter((item) => !["pago","cancelado"].includes(item.status)).reduce((s,i)=>s+Number(i.valorFinal||0),0);
@@ -420,15 +420,15 @@ export function AdminFinanceTab() {
                     </div>
                   </CardContent>
                 </Card>
-              )) : <Card><CardContent className="py-10 text-center text-muted-foreground">Nenhuma bolsa cadastrada.</CardContent></Card>}
+              )) : <Card className="finance-card"><CardContent className="premium-empty-state py-10 text-center"><div className="premium-empty-icon mx-auto"><GraduationCap className="h-7 w-7" /></div><p className="premium-empty-title">Nenhuma bolsa cadastrada</p><p className="premium-empty-text">Cadastre uma bolsa de estudo para exibir aqui.</p></CardContent></Card>}
             </div>
           ) : (
-            <Card><CardContent className="p-0"><div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Aluno</TableHead><TableHead>Bolsa</TableHead><TableHead>Desconto</TableHead><TableHead>Período</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader><TableBody>{scholarships.sort((a,b)=>a.alunoNome.localeCompare(b.alunoNome)).map((item) => <TableRow key={item.id}><TableCell><div className="font-medium">{item.alunoNome}</div><div className="text-xs text-muted-foreground">{item.alunoMatricula || "Sem matrícula"}</div></TableCell><TableCell>{item.nome}</TableCell><TableCell>{item.tipo === "percentual" ? `${item.valor}%` : item.tipo === "integral" ? "100%" : money(item.valor)}</TableCell><TableCell>{dateLabel(item.dataInicio)} — {item.dataFim ? dateLabel(item.dataFim) : "sem fim"}</TableCell><TableCell><Badge variant={item.ativa ? "default" : "secondary"}>{item.ativa ? "Ativa" : "Inativa"}</Badge></TableCell><TableCell><div className="flex justify-end gap-1"><Button size="icon" variant="ghost" onClick={() => openScholarshipEdit(item)}><Pencil className="h-4 w-4" /></Button>{item.ativa && <Button size="sm" variant="outline" onClick={() => updateDoc(doc(db,"scholarships",item.id),{ativa:false,atualizadoEm:new Date().toISOString()})}>Encerrar</Button>}</div></TableCell></TableRow>)}{!scholarships.length && <TableRow><TableCell colSpan={6} className="h-28 text-center text-muted-foreground">Nenhuma bolsa cadastrada.</TableCell></TableRow>}</TableBody></Table></div></CardContent></Card>
+            <Card><CardContent className="p-0"><div className="overflow-x-auto premium-table-wrap"><Table><TableHeader><TableRow><TableHead>Aluno</TableHead><TableHead>Bolsa</TableHead><TableHead>Desconto</TableHead><TableHead>Período</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader><TableBody>{scholarships.sort((a,b)=>a.alunoNome.localeCompare(b.alunoNome)).map((item) => <TableRow key={item.id}><TableCell><div className="font-medium">{item.alunoNome}</div><div className="text-xs text-muted-foreground">{item.alunoMatricula || "Sem matrícula"}</div></TableCell><TableCell>{item.nome}</TableCell><TableCell>{item.tipo === "percentual" ? `${item.valor}%` : item.tipo === "integral" ? "100%" : money(item.valor)}</TableCell><TableCell>{dateLabel(item.dataInicio)} — {item.dataFim ? dateLabel(item.dataFim) : "sem fim"}</TableCell><TableCell><Badge variant={item.ativa ? "default" : "secondary"}>{item.ativa ? "Ativa" : "Inativa"}</Badge></TableCell><TableCell><div className="flex justify-end gap-1"><Button size="icon" variant="ghost" onClick={() => openScholarshipEdit(item)}><Pencil className="h-4 w-4" /></Button>{item.ativa && <Button size="sm" variant="outline" onClick={() => updateDoc(doc(db,"scholarships",item.id),{ativa:false,atualizadoEm:new Date().toISOString()})}>Encerrar</Button>}</div></TableCell></TableRow>)}{!scholarships.length && <TableRow><TableCell colSpan={6} className="h-28 text-center"><div className="premium-inline-empty"><GraduationCap className="h-4 w-4" /> Nenhuma bolsa cadastrada.</div></TableCell></TableRow>}</TableBody></Table></div></CardContent></Card>
           )}
         </TabsContent>
       </Tabs>
 
-      <Dialog open={invoiceDialog} onOpenChange={setInvoiceDialog}><DialogContent className="sm:max-w-2xl"><DialogHeader><DialogTitle>Nova fatura</DialogTitle><DialogDescription>Crie uma cobrança para um aluno. A bolsa ativa será aplicada automaticamente.</DialogDescription></DialogHeader><div className="grid gap-4 sm:grid-cols-2">
+      <Dialog open={invoiceDialog} onOpenChange={setInvoiceDialog}><DialogContent className="finance-dialog sm:max-w-2xl"><DialogHeader><DialogTitle>Nova fatura</DialogTitle><DialogDescription>Crie uma cobrança para um aluno. A bolsa ativa será aplicada automaticamente.</DialogDescription></DialogHeader><div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2 sm:col-span-2"><Label>Aluno *</Label><Select value={invoiceForm.alunoId} onValueChange={(value)=>setInvoiceForm({...invoiceForm,alunoId:value})}><SelectTrigger><SelectValue placeholder="Selecione o aluno" /></SelectTrigger><SelectContent>{students.sort((a,b)=>a.nome.localeCompare(b.nome)).map((item)=><SelectItem key={item.uid} value={item.uid}>{item.nome} {item.matricula ? `• ${item.matricula}` : ""}</SelectItem>)}</SelectContent></Select></div>
         <div className="space-y-2"><Label>Referência *</Label><Input placeholder="Ex.: Agosto/2026" value={invoiceForm.referencia} onChange={(e)=>setInvoiceForm({...invoiceForm,referencia:e.target.value})} /></div><div className="space-y-2"><Label>Vencimento *</Label><Input type="date" value={invoiceForm.vencimento} onChange={(e)=>setInvoiceForm({...invoiceForm,vencimento:e.target.value})} /></div>
         <div className="space-y-2 sm:col-span-2"><Label>Descrição</Label><Input value={invoiceForm.descricao} onChange={(e)=>setInvoiceForm({...invoiceForm,descricao:e.target.value})} /></div>
@@ -437,7 +437,7 @@ export function AdminFinanceTab() {
         <div className="space-y-2 sm:col-span-2"><Label>PIX específico (opcional)</Label><Textarea placeholder="Deixe vazio para usar o PIX padrão" value={invoiceForm.pixCopiaCola} onChange={(e)=>setInvoiceForm({...invoiceForm,pixCopiaCola:e.target.value})} /></div><div className="space-y-2 sm:col-span-2"><Label>Link de pagamento (opcional)</Label><Input value={invoiceForm.linkPagamento} onChange={(e)=>setInvoiceForm({...invoiceForm,linkPagamento:e.target.value})} /></div>
       </div><DialogFooter><Button variant="outline" onClick={()=>setInvoiceDialog(false)}>Cancelar</Button><Button onClick={createInvoice} disabled={saving}>Criar fatura</Button></DialogFooter></DialogContent></Dialog>
 
-      <Dialog open={scholarshipDialog} onOpenChange={(open)=>{setScholarshipDialog(open);if(!open){setEditingScholarship(null);setScholarshipForm(blankScholarship);}}}><DialogContent className="sm:max-w-xl"><DialogHeader><DialogTitle>{editingScholarship ? "Editar bolsa" : "Nova bolsa de estudo"}</DialogTitle><DialogDescription>Defina o desconto e o período de validade da bolsa.</DialogDescription></DialogHeader><div className="grid gap-4 sm:grid-cols-2">
+      <Dialog open={scholarshipDialog} onOpenChange={(open)=>{setScholarshipDialog(open);if(!open){setEditingScholarship(null);setScholarshipForm(blankScholarship);}}}><DialogContent className="finance-dialog sm:max-w-xl"><DialogHeader><DialogTitle>{editingScholarship ? "Editar bolsa" : "Nova bolsa de estudo"}</DialogTitle><DialogDescription>Defina o desconto e o período de validade da bolsa.</DialogDescription></DialogHeader><div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2 sm:col-span-2"><Label>Aluno *</Label><Select disabled={!!editingScholarship} value={scholarshipForm.alunoId} onValueChange={(value)=>setScholarshipForm({...scholarshipForm,alunoId:value})}><SelectTrigger><SelectValue placeholder="Selecione o aluno" /></SelectTrigger><SelectContent>{students.sort((a,b)=>a.nome.localeCompare(b.nome)).map((item)=><SelectItem key={item.uid} value={item.uid}>{item.nome}</SelectItem>)}</SelectContent></Select></div>
         <div className="space-y-2 sm:col-span-2"><Label>Nome da bolsa *</Label><Input value={scholarshipForm.nome} onChange={(e)=>setScholarshipForm({...scholarshipForm,nome:e.target.value})} /></div>
         <div className="space-y-2"><Label>Tipo *</Label><Select value={scholarshipForm.tipo} onValueChange={(value:any)=>setScholarshipForm({...scholarshipForm,tipo:value})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="percentual">Percentual</SelectItem><SelectItem value="valor_fixo">Valor fixo</SelectItem><SelectItem value="integral">Integral (100%)</SelectItem></SelectContent></Select></div>
@@ -446,7 +446,7 @@ export function AdminFinanceTab() {
         <div className="space-y-2 sm:col-span-2"><Label>Motivo/observação</Label><Textarea value={scholarshipForm.motivo} onChange={(e)=>setScholarshipForm({...scholarshipForm,motivo:e.target.value})} /></div>
       </div><DialogFooter><Button variant="outline" onClick={()=>setScholarshipDialog(false)}>Cancelar</Button><Button onClick={saveScholarship} disabled={saving}>Salvar bolsa</Button></DialogFooter></DialogContent></Dialog>
 
-      <Dialog open={settingsDialog} onOpenChange={setSettingsDialog}><DialogContent className="sm:max-w-xl"><DialogHeader><DialogTitle>Configurações de pagamento</DialogTitle><DialogDescription>Dados padrão exibidos nas faturas dos alunos.</DialogDescription></DialogHeader><div className="space-y-4">
+      <Dialog open={settingsDialog} onOpenChange={setSettingsDialog}><DialogContent className="finance-dialog sm:max-w-xl"><DialogHeader><DialogTitle>Configurações de pagamento</DialogTitle><DialogDescription>Dados padrão exibidos nas faturas dos alunos.</DialogDescription></DialogHeader><div className="space-y-4">
         <div className="space-y-2"><Label>Beneficiário</Label><Input value={settingsForm.beneficiario} onChange={(e)=>setSettingsForm({...settingsForm,beneficiario:e.target.value})} /></div><div className="space-y-2"><Label>Chave PIX</Label><Input value={settingsForm.chavePix} onChange={(e)=>setSettingsForm({...settingsForm,chavePix:e.target.value})} /></div><div className="space-y-2"><Label>PIX copia e cola</Label><Textarea value={settingsForm.pixCopiaCola} onChange={(e)=>setSettingsForm({...settingsForm,pixCopiaCola:e.target.value})} /></div><div className="space-y-2"><Label>Link padrão de pagamento</Label><Input value={settingsForm.linkPagamento} onChange={(e)=>setSettingsForm({...settingsForm,linkPagamento:e.target.value})} /></div><div className="space-y-2"><Label>Instruções</Label><Textarea value={settingsForm.instrucoes} onChange={(e)=>setSettingsForm({...settingsForm,instrucoes:e.target.value})} /></div>
       </div><DialogFooter><Button variant="outline" onClick={()=>setSettingsDialog(false)}>Cancelar</Button><Button onClick={saveSettings} disabled={saving}><Landmark className="mr-2 h-4 w-4" /> Salvar</Button></DialogFooter></DialogContent></Dialog>
     </div>

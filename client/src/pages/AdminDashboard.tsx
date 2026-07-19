@@ -50,6 +50,7 @@ import { brasiliaToUTC, utcToBrasilia, formatBrasiliaDateTime, getNowBrasilia, g
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useIsMobile } from "@/hooks/use-mobile";
+import logoUrl from "@assets/Blue and White Online School Logo (1)_1761189954480.png";
 
 const turmaFormSchema = z.object({
   nome: z.string().min(1, "Nome da turma é obrigatório"),
@@ -2541,19 +2542,10 @@ export default function AdminDashboard() {
         />
         
         <div className="flex-1 flex flex-col">
-          <header className="dashboard-topbar sticky top-0 z-50 w-full">
-            <div className="dashboard-topbar-inner flex items-center justify-between px-4 sm:px-6 gap-4">
-              <div className="flex items-center gap-3">
+          <header className="dashboard-topbar elegant-topbar sticky top-0 z-50 w-full">
+            <div className="dashboard-topbar-inner elegant-header flex items-center justify-between px-4 sm:px-6 gap-4">
+              <div className="dashboard-header-left flex items-center gap-3">
                 <SidebarTrigger data-testid="button-sidebar-toggle" />
-                <div className="hidden sm:flex items-center gap-3">
-                  <div className="dashboard-brand-mark">
-                    <Shield className="h-5 w-5 text-primary-foreground" />
-                  </div>
-                  <div>
-                    <h1 className="dashboard-brand-title">Vestibulando</h1>
-                    <p className="text-xs text-muted-foreground font-medium">Painel da Diretoria</p>
-                  </div>
-                </div>
                 {maintenanceData && maintenanceData.some(m => m.ativa) && (
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-red-600 dark:bg-red-700 rounded-full text-sm blink-red" data-testid="maintenance-warning-badge">
                     <AlertTriangle className="h-4 w-4 text-white animate-pulse" />
@@ -2561,8 +2553,14 @@ export default function AdminDashboard() {
                   </div>
                 )}
               </div>
+
+              <div className="dashboard-header-brand-center" aria-label="Vestibulando">
+                <div className="dashboard-brand-mark dashboard-brand-logo dashboard-brand-logo-large shrink-0">
+                  <img src={logoUrl} alt="Logotipo Vestibulando" className="dashboard-brand-logo-image" />
+                </div>
+              </div>
               
-              <div className="flex items-center gap-3">
+              <div className="dashboard-header-right flex items-center gap-3">
                 <div className="text-right mr-2 hidden sm:block">
                   <p className="text-sm font-semibold">{userData?.nome}</p>
                   <p className="text-xs text-muted-foreground">Diretoria</p>
@@ -2574,7 +2572,7 @@ export default function AdminDashboard() {
                     variant="outline" 
                     size="icon"
                     className={cn(
-                      "flex flex-col h-auto py-2 px-3 gap-1 relative",
+                      "header-chat-btn flex flex-col h-auto py-2 px-3 gap-1 relative",
                       hasUnread && "animate-pulse border-primary"
                     )}
                     data-testid="button-chat-header"
@@ -2589,7 +2587,7 @@ export default function AdminDashboard() {
                     )}
                   </Button>
                 </Link>
-                <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout">
+                <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout" className="header-icon-btn">
                   <LogOut className="h-5 w-5" />
                 </Button>
               </div>
@@ -2609,7 +2607,7 @@ export default function AdminDashboard() {
           <main className="dashboard-main flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-6 py-6 sm:py-8">
             <div className="w-full">
               <div className="mb-6 space-y-4">
-                <Card className="overflow-hidden border-primary/15 bg-gradient-to-br from-primary/10 via-background to-slate-50 shadow-sm dark:to-slate-900">
+                <Card className="dashboard-school-panel school-admin-hero overflow-hidden border-primary/15 bg-gradient-to-br from-primary/10 via-background to-slate-50 shadow-sm dark:to-slate-900">
                   <CardContent className="p-4 sm:p-5">
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                       <div>
@@ -2637,7 +2635,7 @@ export default function AdminDashboard() {
                         })}
                       </div>
                     </div>
-                    <div className="mt-4 flex gap-2 overflow-x-auto pb-1 school-quick-pills">
+                    <div className="mt-4 flex gap-2 overflow-x-auto pb-1 school-quick-pills school-quick-pills-premium">
                       {[
                         { id: "aprovacoes", label: "Aprovações", icon: UserCheck },
                         { id: "usuarios", label: "Alunos", icon: Users },
@@ -2654,7 +2652,7 @@ export default function AdminDashboard() {
                             key={shortcut.id}
                             type="button"
                             variant={active ? "default" : "outline"}
-                            className="shrink-0 rounded-full school-quick-pill"
+                            className="shrink-0 rounded-full school-quick-pill school-quick-pill-premium"
                             onClick={() => setSelectedSection(shortcut.id)}
                           >
                             <Icon className="mr-2 h-4 w-4" />

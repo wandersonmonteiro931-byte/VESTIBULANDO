@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ChatConversation, User } from "@shared/schema";
 import NewChatDialog from "../components/NewChatDialog";
 import ProfileEditDialog from "../components/ProfileEditDialog";
@@ -242,11 +243,11 @@ export default function ChatPage() {
   if (!userData) return null;
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background">
+    <div className="premium-chat-page flex h-screen w-full overflow-hidden bg-background">
       {/* Sidebar - Lista de Conversas */}
-      <div className="flex flex-col w-full max-w-[500px] mx-auto border-x border-border bg-background">
+      <div className="premium-chat-shell flex flex-col w-full max-w-[500px] mx-auto border-x border-border bg-background">
         {/* Header */}
-        <div className="whatsapp-header flex items-center justify-between p-4">
+        <div className="whatsapp-header premium-chat-topbar flex items-center justify-between p-4">
           <h1 className="text-xl font-semibold text-white" data-testid="text-chat-title">
             Chat
           </h1>
@@ -286,13 +287,13 @@ export default function ChatPage() {
         </div>
 
         {/* Search Bar */}
-        <div className="whatsapp-search p-3">
+        <div className="whatsapp-search premium-chat-searchbar p-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
               placeholder="Buscar pessoas..."
-              className="pl-9 bg-white dark:bg-[#2a3942] border-none focus-visible:ring-1"
+              className="premium-chat-search-input pl-9 bg-white dark:bg-[#2a3942] border-none focus-visible:ring-1"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               data-testid="input-search-conversation"
@@ -302,17 +303,26 @@ export default function ChatPage() {
 
 
         {/* Conversation List */}
-        <ScrollArea className="flex-1 whatsapp-conversation-list">
+        <ScrollArea className="flex-1 whatsapp-conversation-list premium-chat-list">
           {isLoading || isLoadingUsers ? (
-            <div className="flex items-center justify-center p-8">
-              <div className="text-muted-foreground">Carregando...</div>
+            <div className="space-y-3 p-4">
+              {[...Array(6)].map((_, index) => (
+                <div key={index} className="premium-loading-row flex items-center gap-3 rounded-2xl border border-border/50 bg-card/80 p-3">
+                  <Skeleton className="premium-skeleton h-12 w-12 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="premium-skeleton h-4 w-40 max-w-[60%]" />
+                    <Skeleton className="premium-skeleton h-3 w-24 max-w-[35%]" />
+                  </div>
+                  <Skeleton className="premium-skeleton h-5 w-10 rounded-full" />
+                </div>
+              ))}
             </div>
           ) : searchTerm.trim() && filteredUsers.length > 0 ? (
             <div>
               {filteredUsers.map((user) => (
                 <div
                   key={user.uid}
-                  className="whatsapp-conversation-item flex items-center gap-3 p-3 cursor-pointer border-b border-border hover-elevate"
+                  className="whatsapp-conversation-item premium-chat-conversation flex items-center gap-3 p-3 cursor-pointer border-b border-border hover-elevate"
                   onClick={() => handleUserClick(user)}
                   data-testid={`user-item-${user.uid}`}
                 >
@@ -357,12 +367,10 @@ export default function ChatPage() {
               ))}
             </div>
           ) : searchTerm.trim() && filteredUsers.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-8 text-center">
-              <Search className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">Nenhuma pessoa encontrada</p>
-              <p className="text-sm text-muted-foreground mt-2">
-                Tente buscar por outro nome, email ou matrícula
-              </p>
+            <div className="premium-empty-state flex flex-col items-center justify-center p-8 text-center">
+              <div className="premium-empty-icon"><Search className="h-7 w-7" /></div>
+              <p className="premium-empty-title">Nenhuma pessoa encontrada</p>
+              <p className="premium-empty-text">Tente buscar por outro nome, email ou matrícula.</p>
             </div>
           ) : filteredConversations && filteredConversations.length > 0 ? (
             <div>
@@ -381,12 +389,10 @@ export default function ChatPage() {
               })}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center p-8 text-center">
-              <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">Nenhuma conversa encontrada</p>
-              <p className="text-sm text-muted-foreground mt-2">
-                Inicie uma nova conversa para começar
-              </p>
+            <div className="premium-empty-state flex flex-col items-center justify-center p-8 text-center">
+              <div className="premium-empty-icon"><MessageSquare className="h-7 w-7" /></div>
+              <p className="premium-empty-title">Nenhuma conversa encontrada</p>
+              <p className="premium-empty-text">Inicie uma nova conversa para começar.</p>
             </div>
           )}
         </ScrollArea>

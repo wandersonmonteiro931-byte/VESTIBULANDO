@@ -21,6 +21,7 @@ import { FileUploadZone } from "@/components/FileUploadZone";
 import { AnnouncementsCarousel } from "@/components/AnnouncementsCarousel";
 import { ChatNotificationBubble } from "@/components/ChatNotificationBubble";
 import { LogOut, Plus, FileText, Users, Download, Edit, Calendar, Award, MessageCircle, ClipboardList, GraduationCap, CalendarClock, AlertTriangle, ShieldAlert, CheckCircle, Sparkles, Clock, Video } from "lucide-react";
+import logoUrl from "@assets/Blue and White Online School Logo (1)_1761189954480.png";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AvaliacoesTab } from "@/components/AvaliacoesTab";
 import { BoletimTab } from "@/components/BoletimTab";
@@ -246,22 +247,19 @@ export default function TeacherDashboard() {
           userRole="Professor"
         />
         <div className="flex-1 flex flex-col">
-          <header className="dashboard-topbar sticky top-0 z-50 w-full">
-            <div className="dashboard-topbar-inner flex items-center justify-between px-4 sm:px-6 gap-4">
-              <div className="flex items-center gap-3">
+          <header className="dashboard-topbar elegant-topbar sticky top-0 z-50 w-full">
+            <div className="dashboard-topbar-inner elegant-header flex items-center justify-between px-4 sm:px-6 gap-4">
+              <div className="dashboard-header-left flex items-center gap-3">
                 <SidebarTrigger data-testid="button-sidebar-toggle" />
-                <div className="hidden sm:flex items-center gap-3">
-                  <div className="dashboard-brand-mark">
-                    <FileText className="h-5 w-5 text-primary-foreground" />
-                  </div>
-                  <div>
-                    <h1 className="dashboard-brand-title">Vestibulando</h1>
-                    <p className="text-xs text-muted-foreground font-medium">Área do Professor</p>
-                  </div>
+              </div>
+
+              <div className="dashboard-header-brand-center" aria-label="Vestibulando">
+                <div className="dashboard-brand-mark dashboard-brand-logo dashboard-brand-logo-large shrink-0">
+                  <img src={logoUrl} alt="Logotipo Vestibulando" className="dashboard-brand-logo-image" />
                 </div>
               </div>
               
-              <div className="flex items-center gap-3">
+              <div className="dashboard-header-right flex items-center gap-3">
                 <div className="text-right mr-2 hidden md:block">
                   <p className="text-sm font-semibold">{userData?.nome}</p>
                   <p className="text-xs text-muted-foreground">Professor</p>
@@ -273,7 +271,7 @@ export default function TeacherDashboard() {
                     variant="outline" 
                     size="icon"
                     className={cn(
-                      "flex flex-col h-auto py-2 px-3 gap-1 relative",
+                      "header-chat-btn flex flex-col h-auto py-2 px-3 gap-1 relative",
                       hasUnread && "animate-pulse border-primary"
                     )}
                     data-testid="button-chat-header"
@@ -288,7 +286,7 @@ export default function TeacherDashboard() {
                     )}
                   </Button>
                 </Link>
-                <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout">
+                <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout" className="header-icon-btn">
                   <LogOut className="h-5 w-5" />
                 </Button>
               </div>
@@ -310,7 +308,7 @@ export default function TeacherDashboard() {
               {selectedSection === "inicio" && (
                 <>
                   <div className="mb-6 md:hidden">
-                    <Card className="overflow-hidden border-primary/15 bg-gradient-to-br from-primary/10 via-background to-violet-50 shadow-sm dark:to-slate-900">
+                    <Card className="dashboard-school-panel dashboard-school-intro-card overflow-hidden border-primary/15 bg-gradient-to-br from-primary/10 via-background to-violet-50 shadow-sm dark:to-slate-900">
                       <CardContent className="p-5">
                         <div className="flex items-start justify-between gap-4">
                           <div>
@@ -323,16 +321,16 @@ export default function TeacherDashboard() {
                           <Badge className="rounded-full bg-primary/15 px-3 py-1 text-primary">Professor</Badge>
                         </div>
                         <div className="mt-4 grid grid-cols-2 gap-2">
-                          <Button variant="outline" className="h-auto justify-start rounded-2xl px-3 py-3" onClick={() => setSelectedSection('horarios')}>
+                          <Button variant="outline" className="dashboard-quick-action h-auto justify-start rounded-2xl px-3 py-3" onClick={() => setSelectedSection('horarios')}>
                             <Clock className="mr-2 h-4 w-4 text-primary" /> Horários
                           </Button>
-                          <Button variant="outline" className="h-auto justify-start rounded-2xl px-3 py-3" onClick={() => setSelectedSection('aulaAoVivo')}>
+                          <Button variant="outline" className="dashboard-quick-action h-auto justify-start rounded-2xl px-3 py-3" onClick={() => setSelectedSection('aulaAoVivo')}>
                             <Video className="mr-2 h-4 w-4 text-primary" /> Aula ao vivo
                           </Button>
-                          <Button variant="outline" className="h-auto justify-start rounded-2xl px-3 py-3" onClick={() => setSelectedSection('avaliacoes')}>
+                          <Button variant="outline" className="dashboard-quick-action h-auto justify-start rounded-2xl px-3 py-3" onClick={() => setSelectedSection('avaliacoes')}>
                             <FileText className="mr-2 h-4 w-4 text-primary" /> Avaliações
                           </Button>
-                          <Button variant="outline" className="h-auto justify-start rounded-2xl px-3 py-3" onClick={() => setSelectedSection('correcoes')}>
+                          <Button variant="outline" className="dashboard-quick-action h-auto justify-start rounded-2xl px-3 py-3" onClick={() => setSelectedSection('correcoes')}>
                             <ClipboardList className="mr-2 h-4 w-4 text-primary" /> Correções
                           </Button>
                         </div>

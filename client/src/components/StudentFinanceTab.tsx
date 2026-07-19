@@ -21,6 +21,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { FinancialInvoice, FinancialSettings, Scholarship } from "@shared/schema";
 
 const money = (value?: number) =>
@@ -141,7 +142,7 @@ export function StudentFinanceTab() {
   const invoiceCard = (invoice: FinancialInvoice) => {
     const status = statusInfo(invoice);
     return (
-      <Card key={invoice.id} className="overflow-hidden border-border/70 shadow-sm">
+      <Card key={invoice.id} className="finance-card overflow-hidden border-border/70 shadow-sm">
         <CardHeader className="pb-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
@@ -191,7 +192,7 @@ export function StudentFinanceTab() {
   };
 
   return (
-    <div className="space-y-6" data-testid="student-finance-tab">
+    <div className="space-y-6 finance-student-premium" data-testid="student-finance-tab">
       <div>
         <span className="dashboard-eyebrow">Área financeira</span>
         <h2 className="dashboard-hero-title">Financeiro</h2>
@@ -206,7 +207,7 @@ export function StudentFinanceTab() {
       </div>
 
       {activeScholarship && (
-        <Card className="border-emerald-200 bg-emerald-50/60">
+        <Card className="finance-highlight-card border-emerald-200 bg-emerald-50/60">
           <CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
               <GraduationCap className="mt-1 h-6 w-6 text-emerald-700" />
@@ -227,15 +228,37 @@ export function StudentFinanceTab() {
           <TabsTrigger value="historico">Histórico</TabsTrigger>
         </TabsList>
         <TabsContent value="abertas" className="mt-5 space-y-4">
-          {isLoading ? <Card><CardContent className="p-8 text-center text-muted-foreground">Carregando faturas...</CardContent></Card> : sortedInvoices.filter((item) => !["pago", "cancelado"].includes(item.status)).length ? sortedInvoices.filter((item) => !["pago", "cancelado"].includes(item.status)).map(invoiceCard) : <Card><CardContent className="flex flex-col items-center py-12 text-center"><CheckCircle2 className="mb-3 h-12 w-12 text-emerald-600" /><p className="font-semibold">Nenhuma fatura em aberto</p><p className="text-sm text-muted-foreground">Seu financeiro está em dia.</p></CardContent></Card>}
+          {isLoading ? (
+            <div className="space-y-4">
+              {[...Array(3)].map((_, index) => (
+                <Card key={index} className="finance-card overflow-hidden border-border/70 shadow-sm">
+                  <CardContent className="space-y-4 p-5">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="space-y-2">
+                        <Skeleton className="premium-skeleton h-5 w-32" />
+                        <Skeleton className="premium-skeleton h-4 w-48" />
+                      </div>
+                      <Skeleton className="premium-skeleton h-6 w-20 rounded-full" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                      {[...Array(4)].map((__, sub) => <Skeleton key={sub} className="premium-skeleton h-20 rounded-2xl" />)}
+                    </div>
+                    <Skeleton className="premium-skeleton h-10 w-56 rounded-xl" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : sortedInvoices.filter((item) => !["pago", "cancelado"].includes(item.status)).length ? sortedInvoices.filter((item) => !["pago", "cancelado"].includes(item.status)).map(invoiceCard) : (
+            <Card className="finance-card"><CardContent className="premium-empty-state flex flex-col items-center py-12 text-center"><div className="premium-empty-icon"><CheckCircle2 className="h-7 w-7" /></div><p className="premium-empty-title">Nenhuma fatura em aberto</p><p className="premium-empty-text">Seu financeiro está em dia.</p></CardContent></Card>
+          )}
         </TabsContent>
         <TabsContent value="historico" className="mt-5 space-y-4">
-          {sortedInvoices.filter((item) => ["pago", "cancelado"].includes(item.status)).length ? sortedInvoices.filter((item) => ["pago", "cancelado"].includes(item.status)).map(invoiceCard) : <Card><CardContent className="py-12 text-center text-muted-foreground">Ainda não há histórico financeiro.</CardContent></Card>}
+          {sortedInvoices.filter((item) => ["pago", "cancelado"].includes(item.status)).length ? sortedInvoices.filter((item) => ["pago", "cancelado"].includes(item.status)).map(invoiceCard) : <Card className="finance-card"><CardContent className="premium-empty-state py-12 text-center"><div className="premium-empty-icon mx-auto"><ReceiptText className="h-7 w-7" /></div><p className="premium-empty-title">Ainda não há histórico financeiro</p><p className="premium-empty-text">Quando houver pagamentos ou registros, eles aparecerão aqui.</p></CardContent></Card>}
         </TabsContent>
       </Tabs>
 
       <Dialog open={!!selectedInvoice} onOpenChange={(open) => { if (!open) setSelectedInvoice(null); }}>
-        <DialogContent className="sm:max-w-xl">
+        <DialogContent className="finance-dialog sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>Pagar fatura</DialogTitle>
             <DialogDescription>{selectedInvoice?.referencia} • Total {money(selectedInvoice?.valorFinal)}</DialogDescription>

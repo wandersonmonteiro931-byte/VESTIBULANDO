@@ -1443,16 +1443,21 @@ export default function Login() {
       <Card className="login-modern-card w-full max-w-2xl relative z-10">
         <CardHeader className="space-y-6 text-center pb-8">
           <div className="flex justify-center">
-            <div className="login-brand-mark">
-              <GraduationCap className="h-14 w-14 text-primary-foreground" />
+            <div className="login-brand-mark login-brand-mark-premium">
+              <img src={logoUrl} alt="Vestibulando" className="login-brand-image" />
             </div>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="login-eyebrow">Plataforma educacional</div>
             <CardTitle className="login-title">Vestibulando</CardTitle>
-            <CardDescription className="text-base">
+            <CardDescription className="text-base login-subtitle">
               {mode === "register" ? "Formulário de Solicitação de Matrícula" : mode === "forgotPassword" ? "Recuperar Senha" : mode === "diretorLogin" ? "Login da Diretoria" : "Seja Bem-Vindo! Faça Login com sua Matrícula ou CPF"}
             </CardDescription>
+            <div className="login-feature-grid">
+              <div className="login-feature-chip"><CheckCircle className="h-4 w-4" /><span>Ambiente escolar</span></div>
+              <div className="login-feature-chip"><Users className="h-4 w-4" /><span>Área do aluno e professor</span></div>
+              <div className="login-feature-chip"><Shield className="h-4 w-4" /><span>Acesso protegido</span></div>
+            </div>
           </div>
         </CardHeader>
         
@@ -1539,7 +1544,7 @@ export default function Login() {
               <div className="text-center">
                 <button
                   type="button"
-                  className="text-primary hover:underline text-sm"
+                  className="login-text-link text-sm"
                   onClick={() => {
                     setMode("login");
                     setForgotPasswordStep(1);
@@ -1977,7 +1982,7 @@ export default function Login() {
                   <div className="flex justify-between items-center">
                     <button
                       type="button"
-                      className="text-primary hover:underline text-sm"
+                      className="login-text-link text-sm"
                       onClick={() => setMode("forgotPassword")}
                       data-testid="button-forgot-password"
                     >
@@ -1985,7 +1990,7 @@ export default function Login() {
                     </button>
                     <button
                       type="button"
-                      className="text-primary hover:underline text-sm flex items-center gap-1"
+                      className="login-text-link text-sm flex items-center gap-1"
                       onClick={() => setMode("diretorLogin")}
                       data-testid="button-diretor-login"
                     >
@@ -2028,7 +2033,7 @@ export default function Login() {
                   <div className="text-center">
                     <button
                       type="button"
-                      className="text-primary hover:underline text-sm"
+                      className="login-text-link text-sm"
                       onClick={() => setMode("login")}
                       data-testid="button-back-to-login"
                     >
@@ -2038,7 +2043,7 @@ export default function Login() {
                 </>
               )}
               
-              <Button type="submit" className="w-full" disabled={loading} data-testid="button-submit">
+              <Button type="submit" className="w-full login-primary-button" disabled={loading} data-testid="button-submit">
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {mode === "register" ? "Solicitar Matrícula" : "Entrar"}
               </Button>
@@ -2049,7 +2054,7 @@ export default function Login() {
             <Button
               type="button"
               variant="outline"
-              className="w-full"
+              className="w-full login-secondary-button"
               onClick={() => {
                 setShowStatusDialog(true);
                 setStatusError("");
@@ -2067,7 +2072,7 @@ export default function Login() {
             <div className="text-center text-sm">
               <button
                 type="button"
-                className="text-primary hover:underline"
+                className="login-toggle-link"
                 onClick={() => setMode(mode === "login" || mode === "diretorLogin" ? "register" : "login")}
                 data-testid="button-toggle-mode"
               >

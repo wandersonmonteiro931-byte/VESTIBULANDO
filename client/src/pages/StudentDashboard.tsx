@@ -33,6 +33,7 @@ import { format, formatDistanceToNow, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import jsPDF from "jspdf";
 import assinaturaDeclaracaoUrl from "@assets/Captura de tela 2025-10-23 011843_1761193443162.png";
+import logoUrl from "@assets/Blue and White Online School Logo (1)_1761189954480.png";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { AttendanceConfirmationModal } from "@/components/AttendanceConfirmationModal";
 import { LiveClassNotification } from "@/components/LiveClassNotification";
@@ -304,20 +305,19 @@ export default function StudentDashboard() {
           userRole="Aluno"
         />
         <div className="flex-1 flex flex-col">
-          <header className="dashboard-topbar sticky top-0 z-50 w-full">
-            <div className="dashboard-topbar-inner container flex items-center justify-between px-4 sm:px-6">
-              <div className="flex items-center gap-3">
+          <header className="dashboard-topbar elegant-topbar sticky top-0 z-50 w-full">
+            <div className="dashboard-topbar-inner elegant-header container flex items-center justify-between px-4 sm:px-6">
+              <div className="dashboard-header-left flex items-center gap-3">
                 <SidebarTrigger data-testid="button-sidebar-toggle" />
-                <div className="dashboard-brand-mark">
-                  <FileText className="h-6 w-6 text-primary-foreground" />
-                </div>
-                <div>
-                  <h1 className="dashboard-brand-title">Vestibulando</h1>
-                  <p className="text-xs text-muted-foreground font-medium">Área do Aluno</p>
+              </div>
+
+              <div className="dashboard-header-brand-center" aria-label="Vestibulando">
+                <div className="dashboard-brand-mark dashboard-brand-logo dashboard-brand-logo-large">
+                  <img src={logoUrl} alt="Logotipo Vestibulando" className="dashboard-brand-logo-image" />
                 </div>
               </div>
               
-              <div className="flex items-center gap-3">
+              <div className="dashboard-header-right flex items-center gap-3">
                 <div className="text-right mr-2 hidden sm:block">
                   <p className="text-sm font-semibold">{userData?.nome}</p>
                   <p className="text-xs text-muted-foreground">Turma {nomeTurma}</p>
@@ -327,7 +327,7 @@ export default function StudentDashboard() {
                   size="sm" 
                   onClick={generateDeclaracaoMatricula}
                   data-testid="button-declaracao-matricula"
-                  className="hidden sm:flex"
+                  className="hidden sm:flex header-pill-btn"
                 >
                   <Download className="h-4 w-4 mr-2" />
                   Declaração
@@ -339,7 +339,7 @@ export default function StudentDashboard() {
                     variant="outline" 
                     size="icon"
                     className={cn(
-                      "flex flex-col h-auto py-2 px-3 gap-1 relative",
+                      "header-chat-btn flex flex-col h-auto py-2 px-3 gap-1 relative",
                       hasUnread && "animate-pulse border-primary"
                     )}
                     data-testid="button-chat-header"
@@ -354,7 +354,7 @@ export default function StudentDashboard() {
                     )}
                   </Button>
                 </Link>
-                <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout">
+                <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout" className="header-icon-btn">
                   <LogOut className="h-5 w-5" />
                 </Button>
               </div>
@@ -375,7 +375,7 @@ export default function StudentDashboard() {
             {selectedSection === "inicio" && (
               <>
                 <div className="mb-6 md:hidden">
-                  <Card className="overflow-hidden border-primary/15 bg-gradient-to-br from-primary/10 via-background to-sky-50 shadow-sm dark:to-slate-900">
+                  <Card className="dashboard-school-panel dashboard-school-intro-card overflow-hidden border-primary/15 bg-gradient-to-br from-primary/10 via-background to-sky-50 shadow-sm dark:to-slate-900">
                     <CardContent className="p-5">
                       <div className="flex items-start justify-between gap-4">
                         <div>
@@ -388,16 +388,16 @@ export default function StudentDashboard() {
                         <Badge className="rounded-full bg-primary/15 px-3 py-1 text-primary">Aluno</Badge>
                       </div>
                       <div className="mt-4 grid grid-cols-2 gap-2">
-                        <Button variant="outline" className="h-auto justify-start rounded-2xl px-3 py-3" onClick={() => setSelectedSection('horarios')}>
+                        <Button variant="outline" className="dashboard-quick-action h-auto justify-start rounded-2xl px-3 py-3" onClick={() => setSelectedSection('horarios')}>
                           <Clock className="mr-2 h-4 w-4 text-primary" /> Meu horário
                         </Button>
-                        <Button variant="outline" className="h-auto justify-start rounded-2xl px-3 py-3" onClick={() => setSelectedSection('aulas')}>
+                        <Button variant="outline" className="dashboard-quick-action h-auto justify-start rounded-2xl px-3 py-3" onClick={() => setSelectedSection('aulas')}>
                           <Video className="mr-2 h-4 w-4 text-primary" /> Aulas ao vivo
                         </Button>
-                        <Button variant="outline" className="h-auto justify-start rounded-2xl px-3 py-3" onClick={() => setSelectedSection('todas')}>
+                        <Button variant="outline" className="dashboard-quick-action h-auto justify-start rounded-2xl px-3 py-3" onClick={() => setSelectedSection('todas')}>
                           <ClipboardList className="mr-2 h-4 w-4 text-primary" /> Tarefas
                         </Button>
-                        <Button variant="outline" className="h-auto justify-start rounded-2xl px-3 py-3" onClick={() => setSelectedSection('financeiro')}>
+                        <Button variant="outline" className="dashboard-quick-action h-auto justify-start rounded-2xl px-3 py-3" onClick={() => setSelectedSection('financeiro')}>
                           <WalletCards className="mr-2 h-4 w-4 text-primary" /> Financeiro
                         </Button>
                       </div>
