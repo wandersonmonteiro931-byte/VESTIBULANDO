@@ -20,7 +20,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { FileUploadZone } from "@/components/FileUploadZone";
 import { AnnouncementsCarousel } from "@/components/AnnouncementsCarousel";
 import { ChatNotificationBubble } from "@/components/ChatNotificationBubble";
-import { LogOut, Plus, FileText, Users, Download, Edit, Calendar, Award, MessageCircle, ClipboardList, GraduationCap, CalendarClock, AlertTriangle, ShieldAlert, CheckCircle } from "lucide-react";
+import { LogOut, Plus, FileText, Users, Download, Edit, Calendar, Award, MessageCircle, ClipboardList, GraduationCap, CalendarClock, AlertTriangle, ShieldAlert, CheckCircle, Sparkles, Clock, Video } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AvaliacoesTab } from "@/components/AvaliacoesTab";
 import { BoletimTab } from "@/components/BoletimTab";
@@ -46,6 +46,7 @@ import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { getNowBrasiliaISO } from "@/lib/brasiliaTime";
 import { cn } from "@/lib/utils";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
 
 const tarefaFormSchema = z.object({
   titulo: z.string().min(1, "Título é obrigatório"),
@@ -304,10 +305,48 @@ export default function TeacherDashboard() {
             />
           )}
 
-          <main className="dashboard-main flex-1 overflow-auto px-4 sm:px-6 py-8">
+          <main className="dashboard-main flex-1 overflow-auto px-4 sm:px-6 pt-6 pb-28 md:pb-8">
             <div className="max-w-7xl mx-auto">
               {selectedSection === "inicio" && (
                 <>
+                  <div className="mb-6 md:hidden">
+                    <Card className="overflow-hidden border-primary/15 bg-gradient-to-br from-primary/10 via-background to-violet-50 shadow-sm dark:to-slate-900">
+                      <CardContent className="p-5">
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+                              <Sparkles className="h-3.5 w-3.5" /> Painel escolar
+                            </div>
+                            <h2 className="text-2xl font-bold tracking-tight text-foreground">Olá, professor {userData?.nome?.split(' ')[0]}</h2>
+                            <p className="mt-2 text-sm text-muted-foreground">Organize suas aulas, correções e registros com rapidez.</p>
+                          </div>
+                          <Badge className="rounded-full bg-primary/15 px-3 py-1 text-primary">Professor</Badge>
+                        </div>
+                        <div className="mt-4 grid grid-cols-2 gap-2">
+                          <Button variant="outline" className="h-auto justify-start rounded-2xl px-3 py-3" onClick={() => setSelectedSection('horarios')}>
+                            <Clock className="mr-2 h-4 w-4 text-primary" /> Horários
+                          </Button>
+                          <Button variant="outline" className="h-auto justify-start rounded-2xl px-3 py-3" onClick={() => setSelectedSection('aulaAoVivo')}>
+                            <Video className="mr-2 h-4 w-4 text-primary" /> Aula ao vivo
+                          </Button>
+                          <Button variant="outline" className="h-auto justify-start rounded-2xl px-3 py-3" onClick={() => setSelectedSection('avaliacoes')}>
+                            <FileText className="mr-2 h-4 w-4 text-primary" /> Avaliações
+                          </Button>
+                          <Button variant="outline" className="h-auto justify-start rounded-2xl px-3 py-3" onClick={() => setSelectedSection('correcoes')}>
+                            <ClipboardList className="mr-2 h-4 w-4 text-primary" /> Correções
+                          </Button>
+                        </div>
+                        {activeSession && (
+                          <Link href={`/sala-professor/${activeSession.id}`}>
+                            <Button className="mt-4 w-full bg-green-600 hover:bg-green-700">
+                              <CheckCircle className="mr-2 h-4 w-4" /> Voltar para aula em andamento
+                            </Button>
+                          </Link>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+
                   <div className="dashboard-hero flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 mb-8">
                     <div>
                       <span className="dashboard-eyebrow">Área docente</span>

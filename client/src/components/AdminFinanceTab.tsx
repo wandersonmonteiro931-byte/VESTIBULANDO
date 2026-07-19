@@ -15,6 +15,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { db } from "@/lib/firebase";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 import { useToast } from "@/hooks/use-toast";
@@ -70,6 +71,7 @@ const blankScholarship = {
 export function AdminFinanceTab() {
   const { userData } = useAuth();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [search, setSearch] = useState("");
   const [invoiceDialog, setInvoiceDialog] = useState(false);
   const [scholarshipDialog, setScholarshipDialog] = useState(false);
@@ -255,6 +257,48 @@ export function AdminFinanceTab() {
     setSettingsDialog(true);
   };
 
+  const invoiceStatusLabel = (invoice: FinancialInvoice) =>
+    invoice.status === "pago"
+      ? "Pago"
+      : invoice.status === "em_analise"
+        ? "Pagamento informado"
+        : invoice.status === "cancelado"
+          ? "Cancelado"
+          : overdue(invoice)
+            ? "Vencido"
+            : "Em aberto";
+
+  const renderInvoiceActions = (invoice: FinancialInvoice) => (
+    <div className="flex flex-wrap justify-end gap-2">
+      {invoice.comprovanteUrl && (
+        <Button size="icon" variant="ghost" asChild title="Abrir comprovante">
+          <a href={invoice.comprovanteUrl} target="_blank" rel="noreferrer">
+            <ExternalLink className="h-4 w-4" />
+          </a>
+        </Button>
+      )}
+      {invoice.status !== "pago" && invoice.status !== "cancelado" && (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => updateInvoiceStatus(invoice, "pago", { pagoEm: new Date().toISOString(), confirmadoPor: userData?.uid || "" })}
+        >
+          <CheckCircle2 className="mr-1 h-4 w-4" /> Confirmar
+        </Button>
+      )}
+      {invoice.status === "em_analise" && (
+        <Button size="sm" variant="ghost" onClick={() => updateInvoiceStatus(invoice, "pendente", { observacaoPagamento: "Pagamento informado não localizado pela diretoria." })}>
+          Recusar
+        </Button>
+      )}
+      {invoice.status !== "cancelado" && invoice.status !== "pago" && (
+        <Button size="icon" variant="ghost" onClick={() => updateInvoiceStatus(invoice, "cancelado")} title="Cancelar">
+          <XCircle className="h-4 w-4 text-red-600" />
+        </Button>
+      )}
+    </div>
+  );
+
   return (
     <div className="space-y-6" data-testid="admin-finance-tab">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -277,30 +321,111 @@ export function AdminFinanceTab() {
         <TabsList className="grid w-full grid-cols-3 lg:w-[600px]"><TabsTrigger value="faturas">Faturas</TabsTrigger><TabsTrigger value="alunos">Por aluno</TabsTrigger><TabsTrigger value="bolsas">Bolsas de estudo</TabsTrigger></TabsList>
         <TabsContent value="faturas" className="mt-5 space-y-4">
           <div className="relative max-w-md"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-9" placeholder="Buscar aluno, matrícula ou referência..." value={search} onChange={(e) => setSearch(e.target.value)} /></div>
-          <Card><CardContent className="p-0"><div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Aluno</TableHead><TableHead>Referência</TableHead><TableHead>Vencimento</TableHead><TableHead>Total</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader><TableBody>
-            {filteredInvoices.map((invoice) => {
-              const status = invoice.status === "pago" ? "Pago" : invoice.status === "em_analise" ? "Pagamento informado" : invoice.status === "cancelado" ? "Cancelado" : overdue(invoice) ? "Vencido" : "Em aberto";
-              return <TableRow key={invoice.id}><TableCell><div className="font-medium">{invoice.alunoNome}</div><div className="text-xs text-muted-foreground">{invoice.alunoMatricula || "Sem matrícula"}</div></TableCell><TableCell>{invoice.referencia}</TableCell><TableCell>{dateLabel(invoice.vencimento)}</TableCell><TableCell className="font-semibold">{money(invoice.valorFinal)}</TableCell><TableCell><Badge variant="outline">{status}</Badge></TableCell><TableCell><div className="flex justify-end gap-1">
-                {invoice.comprovanteUrl && <Button size="icon" variant="ghost" asChild title="Abrir comprovante"><a href={invoice.comprovanteUrl} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4" /></a></Button>}
-                {invoice.status !== "pago" && invoice.status !== "cancelado" && <Button size="sm" variant="outline" onClick={() => updateInvoiceStatus(invoice, "pago", { pagoEm: new Date().toISOString(), confirmadoPor: userData?.uid || "" })}><CheckCircle2 className="mr-1 h-4 w-4" /> Confirmar</Button>}
-                {invoice.status === "em_analise" && <Button size="sm" variant="ghost" onClick={() => updateInvoiceStatus(invoice, "pendente", { observacaoPagamento: "Pagamento informado não localizado pela diretoria." })}>Recusar</Button>}
-                {invoice.status !== "cancelado" && invoice.status !== "pago" && <Button size="icon" variant="ghost" onClick={() => updateInvoiceStatus(invoice, "cancelado")} title="Cancelar"><XCircle className="h-4 w-4 text-red-600" /></Button>}
-              </div></TableCell></TableRow>;
-            })}
-            {!filteredInvoices.length && <TableRow><TableCell colSpan={6} className="h-28 text-center text-muted-foreground">Nenhuma fatura encontrada.</TableCell></TableRow>}
-          </TableBody></Table></div></CardContent></Card>
+          {isMobile ? (
+            <div className="space-y-3">
+              {filteredInvoices.length ? filteredInvoices.map((invoice) => (
+                <Card key={invoice.id} className="overflow-hidden border-border/70 shadow-sm">
+                  <CardContent className="space-y-4 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="font-semibold leading-tight">{invoice.alunoNome}</div>
+                        <div className="text-xs text-muted-foreground">{invoice.alunoMatricula || "Sem matrícula"}</div>
+                      </div>
+                      <Badge variant="outline">{invoiceStatusLabel(invoice)}</Badge>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-xl bg-muted/50 p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Referência</p><p className="mt-1 font-semibold">{invoice.referencia}</p></div>
+                      <div className="rounded-xl bg-muted/50 p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Vencimento</p><p className="mt-1 font-semibold">{dateLabel(invoice.vencimento)}</p></div>
+                      <div className="col-span-2 rounded-xl bg-primary/10 p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Total</p><p className="mt-1 text-lg font-bold text-primary">{money(invoice.valorFinal)}</p></div>
+                    </div>
+                    {renderInvoiceActions(invoice)}
+                  </CardContent>
+                </Card>
+              )) : <Card><CardContent className="py-10 text-center text-muted-foreground">Nenhuma fatura encontrada.</CardContent></Card>}
+            </div>
+          ) : (
+            <Card><CardContent className="p-0"><div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Aluno</TableHead><TableHead>Referência</TableHead><TableHead>Vencimento</TableHead><TableHead>Total</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader><TableBody>
+              {filteredInvoices.map((invoice) => {
+                const status = invoiceStatusLabel(invoice);
+                return <TableRow key={invoice.id}><TableCell><div className="font-medium">{invoice.alunoNome}</div><div className="text-xs text-muted-foreground">{invoice.alunoMatricula || "Sem matrícula"}</div></TableCell><TableCell>{invoice.referencia}</TableCell><TableCell>{dateLabel(invoice.vencimento)}</TableCell><TableCell className="font-semibold">{money(invoice.valorFinal)}</TableCell><TableCell><Badge variant="outline">{status}</Badge></TableCell><TableCell>{renderInvoiceActions(invoice)}</TableCell></TableRow>;
+              })}
+              {!filteredInvoices.length && <TableRow><TableCell colSpan={6} className="h-28 text-center text-muted-foreground">Nenhuma fatura encontrada.</TableCell></TableRow>}
+            </TableBody></Table></div></CardContent></Card>
+          )}
         </TabsContent>
 
-        <TabsContent value="alunos" className="mt-5"><Card><CardContent className="p-0"><div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Aluno</TableHead><TableHead>Bolsa</TableHead><TableHead>Em aberto</TableHead><TableHead>Vencido</TableHead><TableHead>Pago</TableHead><TableHead className="text-right">Ação</TableHead></TableRow></TableHeader><TableBody>{students.sort((a,b) => a.nome.localeCompare(b.nome)).map((student) => {
-          const studentInvoices = invoices.filter((item) => item.alunoId === student.uid);
-          const scholarship = scholarshipForStudent(student.uid);
-          const open = studentInvoices.filter((item) => !["pago","cancelado"].includes(item.status)).reduce((s,i)=>s+Number(i.valorFinal||0),0);
-          const late = studentInvoices.filter(overdue).reduce((s,i)=>s+Number(i.valorFinal||0),0);
-          const paid = studentInvoices.filter((item)=>item.status==="pago").reduce((s,i)=>s+Number(i.valorFinal||0),0);
-          return <TableRow key={student.uid}><TableCell><div className="font-medium">{student.nome}</div><div className="text-xs text-muted-foreground">{student.matricula || "Sem matrícula"}</div></TableCell><TableCell>{scholarship ? <Badge className="bg-emerald-100 text-emerald-800">{scholarship.nome}</Badge> : <span className="text-muted-foreground">Sem bolsa</span>}</TableCell><TableCell>{money(open)}</TableCell><TableCell className={late > 0 ? "font-semibold text-red-600" : ""}>{money(late)}</TableCell><TableCell>{money(paid)}</TableCell><TableCell className="text-right"><Button size="sm" variant="outline" onClick={() => { setInvoiceForm({ ...blankInvoice, alunoId: student.uid }); setInvoiceDialog(true); }}><Plus className="mr-1 h-4 w-4" /> Fatura</Button></TableCell></TableRow>;
-        })}</TableBody></Table></div></CardContent></Card></TabsContent>
+        <TabsContent value="alunos" className="mt-5">
+          {isMobile ? (
+            <div className="space-y-3">
+              {students.sort((a,b) => a.nome.localeCompare(b.nome)).map((student) => {
+                const studentInvoices = invoices.filter((item) => item.alunoId === student.uid);
+                const scholarship = scholarshipForStudent(student.uid);
+                const open = studentInvoices.filter((item) => !["pago","cancelado"].includes(item.status)).reduce((s,i)=>s+Number(i.valorFinal||0),0);
+                const late = studentInvoices.filter(overdue).reduce((s,i)=>s+Number(i.valorFinal||0),0);
+                const paid = studentInvoices.filter((item)=>item.status==="pago").reduce((s,i)=>s+Number(i.valorFinal||0),0);
+                return (
+                  <Card key={student.uid} className="overflow-hidden border-border/70 shadow-sm">
+                    <CardContent className="space-y-4 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="font-semibold leading-tight">{student.nome}</div>
+                          <div className="text-xs text-muted-foreground">{student.matricula || "Sem matrícula"}</div>
+                        </div>
+                        {scholarship ? <Badge className="bg-emerald-100 text-emerald-800">{scholarship.nome}</Badge> : <Badge variant="outline">Sem bolsa</Badge>}
+                      </div>
+                      <div className="grid grid-cols-1 gap-2">
+                        <div className="rounded-xl bg-muted/50 p-3 flex items-center justify-between"><span className="text-sm text-muted-foreground">Em aberto</span><span className="font-semibold">{money(open)}</span></div>
+                        <div className="rounded-xl bg-muted/50 p-3 flex items-center justify-between"><span className="text-sm text-muted-foreground">Vencido</span><span className={late > 0 ? "font-semibold text-red-600" : "font-semibold"}>{money(late)}</span></div>
+                        <div className="rounded-xl bg-muted/50 p-3 flex items-center justify-between"><span className="text-sm text-muted-foreground">Pago</span><span className="font-semibold">{money(paid)}</span></div>
+                      </div>
+                      <Button size="sm" variant="outline" className="w-full" onClick={() => { setInvoiceForm({ ...blankInvoice, alunoId: student.uid }); setInvoiceDialog(true); }}><Plus className="mr-1 h-4 w-4" /> Nova fatura</Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <Card><CardContent className="p-0"><div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Aluno</TableHead><TableHead>Bolsa</TableHead><TableHead>Em aberto</TableHead><TableHead>Vencido</TableHead><TableHead>Pago</TableHead><TableHead className="text-right">Ação</TableHead></TableRow></TableHeader><TableBody>{students.sort((a,b) => a.nome.localeCompare(b.nome)).map((student) => {
+              const studentInvoices = invoices.filter((item) => item.alunoId === student.uid);
+              const scholarship = scholarshipForStudent(student.uid);
+              const open = studentInvoices.filter((item) => !["pago","cancelado"].includes(item.status)).reduce((s,i)=>s+Number(i.valorFinal||0),0);
+              const late = studentInvoices.filter(overdue).reduce((s,i)=>s+Number(i.valorFinal||0),0);
+              const paid = studentInvoices.filter((item)=>item.status==="pago").reduce((s,i)=>s+Number(i.valorFinal||0),0);
+              return <TableRow key={student.uid}><TableCell><div className="font-medium">{student.nome}</div><div className="text-xs text-muted-foreground">{student.matricula || "Sem matrícula"}</div></TableCell><TableCell>{scholarship ? <Badge className="bg-emerald-100 text-emerald-800">{scholarship.nome}</Badge> : <span className="text-muted-foreground">Sem bolsa</span>}</TableCell><TableCell>{money(open)}</TableCell><TableCell className={late > 0 ? "font-semibold text-red-600" : ""}>{money(late)}</TableCell><TableCell>{money(paid)}</TableCell><TableCell className="text-right"><Button size="sm" variant="outline" onClick={() => { setInvoiceForm({ ...blankInvoice, alunoId: student.uid }); setInvoiceDialog(true); }}><Plus className="mr-1 h-4 w-4" /> Fatura</Button></TableCell></TableRow>;
+            })}</TableBody></Table></div></CardContent></Card>
+          )}
+        </TabsContent>
 
-        <TabsContent value="bolsas" className="mt-5"><Card><CardContent className="p-0"><div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Aluno</TableHead><TableHead>Bolsa</TableHead><TableHead>Desconto</TableHead><TableHead>Período</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader><TableBody>{scholarships.sort((a,b)=>a.alunoNome.localeCompare(b.alunoNome)).map((item) => <TableRow key={item.id}><TableCell><div className="font-medium">{item.alunoNome}</div><div className="text-xs text-muted-foreground">{item.alunoMatricula || "Sem matrícula"}</div></TableCell><TableCell>{item.nome}</TableCell><TableCell>{item.tipo === "percentual" ? `${item.valor}%` : item.tipo === "integral" ? "100%" : money(item.valor)}</TableCell><TableCell>{dateLabel(item.dataInicio)} — {item.dataFim ? dateLabel(item.dataFim) : "sem fim"}</TableCell><TableCell><Badge variant={item.ativa ? "default" : "secondary"}>{item.ativa ? "Ativa" : "Inativa"}</Badge></TableCell><TableCell><div className="flex justify-end gap-1"><Button size="icon" variant="ghost" onClick={() => openScholarshipEdit(item)}><Pencil className="h-4 w-4" /></Button>{item.ativa && <Button size="sm" variant="outline" onClick={() => updateDoc(doc(db,"scholarships",item.id),{ativa:false,atualizadoEm:new Date().toISOString()})}>Encerrar</Button>}</div></TableCell></TableRow>)}{!scholarships.length && <TableRow><TableCell colSpan={6} className="h-28 text-center text-muted-foreground">Nenhuma bolsa cadastrada.</TableCell></TableRow>}</TableBody></Table></div></CardContent></Card></TabsContent>
+        <TabsContent value="bolsas" className="mt-5">
+          {isMobile ? (
+            <div className="space-y-3">
+              {scholarships.sort((a,b)=>a.alunoNome.localeCompare(b.alunoNome)).length ? scholarships.sort((a,b)=>a.alunoNome.localeCompare(b.alunoNome)).map((item) => (
+                <Card key={item.id} className="overflow-hidden border-border/70 shadow-sm">
+                  <CardContent className="space-y-4 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="font-semibold leading-tight">{item.alunoNome}</div>
+                        <div className="text-xs text-muted-foreground">{item.alunoMatricula || "Sem matrícula"}</div>
+                      </div>
+                      <Badge variant={item.ativa ? "default" : "secondary"}>{item.ativa ? "Ativa" : "Inativa"}</Badge>
+                    </div>
+                    <div className="rounded-xl bg-muted/50 p-3">
+                      <div className="font-semibold">{item.nome}</div>
+                      <div className="mt-1 text-sm text-muted-foreground">{item.tipo === "percentual" ? `${item.valor}%` : item.tipo === "integral" ? "100%" : money(item.valor)} de desconto</div>
+                      <div className="mt-2 text-xs text-muted-foreground">{dateLabel(item.dataInicio)} — {item.dataFim ? dateLabel(item.dataFim) : "sem fim"}</div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button size="sm" variant="outline" className="flex-1" onClick={() => openScholarshipEdit(item)}><Pencil className="mr-1 h-4 w-4" /> Editar</Button>
+                      {item.ativa && <Button size="sm" variant="ghost" className="flex-1" onClick={() => updateDoc(doc(db,"scholarships",item.id),{ativa:false,atualizadoEm:new Date().toISOString()})}>Encerrar</Button>}
+                    </div>
+                  </CardContent>
+                </Card>
+              )) : <Card><CardContent className="py-10 text-center text-muted-foreground">Nenhuma bolsa cadastrada.</CardContent></Card>}
+            </div>
+          ) : (
+            <Card><CardContent className="p-0"><div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Aluno</TableHead><TableHead>Bolsa</TableHead><TableHead>Desconto</TableHead><TableHead>Período</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader><TableBody>{scholarships.sort((a,b)=>a.alunoNome.localeCompare(b.alunoNome)).map((item) => <TableRow key={item.id}><TableCell><div className="font-medium">{item.alunoNome}</div><div className="text-xs text-muted-foreground">{item.alunoMatricula || "Sem matrícula"}</div></TableCell><TableCell>{item.nome}</TableCell><TableCell>{item.tipo === "percentual" ? `${item.valor}%` : item.tipo === "integral" ? "100%" : money(item.valor)}</TableCell><TableCell>{dateLabel(item.dataInicio)} — {item.dataFim ? dateLabel(item.dataFim) : "sem fim"}</TableCell><TableCell><Badge variant={item.ativa ? "default" : "secondary"}>{item.ativa ? "Ativa" : "Inativa"}</Badge></TableCell><TableCell><div className="flex justify-end gap-1"><Button size="icon" variant="ghost" onClick={() => openScholarshipEdit(item)}><Pencil className="h-4 w-4" /></Button>{item.ativa && <Button size="sm" variant="outline" onClick={() => updateDoc(doc(db,"scholarships",item.id),{ativa:false,atualizadoEm:new Date().toISOString()})}>Encerrar</Button>}</div></TableCell></TableRow>)}{!scholarships.length && <TableRow><TableCell colSpan={6} className="h-28 text-center text-muted-foreground">Nenhuma bolsa cadastrada.</TableCell></TableRow>}</TableBody></Table></div></CardContent></Card>
+          )}
+        </TabsContent>
       </Tabs>
 
       <Dialog open={invoiceDialog} onOpenChange={setInvoiceDialog}><DialogContent className="sm:max-w-2xl"><DialogHeader><DialogTitle>Nova fatura</DialogTitle><DialogDescription>Crie uma cobrança para um aluno. A bolsa ativa será aplicada automaticamente.</DialogDescription></DialogHeader><div className="grid gap-4 sm:grid-cols-2">

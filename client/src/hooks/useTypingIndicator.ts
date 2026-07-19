@@ -3,9 +3,8 @@ import { doc, onSnapshot, serverTimestamp, updateDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase";
 
 const STOP_TYPING_AFTER_MS = 2_000;
-const REMOTE_TYPING_STALE_AFTER_MS = 2_700;
-const TRUE_WRITE_THROTTLE_MS = 350;
-const ALLOWED_CLOCK_SKEW_MS = 60_000;
+const REMOTE_TYPING_STALE_AFTER_MS = 5_000;
+const TRUE_WRITE_THROTTLE_MS = 700;
 
 type TimestampLike =
   | string
@@ -38,11 +37,6 @@ interface UseTypingIndicatorProps {
   isParticipant1: boolean;
 }
 
-/**
- * Indicador de digitação baseado no instante da última tecla.
- * O timestamp evita que uma aba inativa grave `false` e esconda a digitação
- * que está acontecendo em outra aba da mesma conta.
- */
 export function useTypingIndicator({
   conversationId,
   userId,
@@ -52,6 +46,7 @@ export function useTypingIndicator({
   const stopOwnTypingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const remoteExpiryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTrueWriteRef = useRef(0);
+  const desiredTypingRef = useRef(false);
   const writeQueueRef = useRef<Promise<void>>(Promise.resolve());
 
   const clearOwnTimer = () => {
@@ -87,24 +82,24 @@ export function useTypingIndicator({
         }
 
         const data = snapshot.data();
+        const isTyping = isParticipant1
+          ? data.participante2Digitando === true
+          : data.participante1Digitando === true;
         const typingTimestamp = isParticipant1
           ? data.participante2UltimaDigitacao
           : data.participante1UltimaDigitacao;
+
+        if (!isTyping) {
+          setOtherUserTyping(false);
+          return;
+        }
+
         const timestampMs = toMillis(typingTimestamp as TimestampLike);
-
-        if (timestampMs == null) {
-          setOtherUserTyping(false);
-          return;
-        }
-
-        const rawAge = Date.now() - timestampMs;
-        if (rawAge < -ALLOWED_CLOCK_SKEW_MS) {
-          setOtherUserTyping(false);
-          return;
-        }
-
-        const age = Math.max(0, rawAge);
-        const remaining = REMOTE_TYPING_STALE_AFTER_MS - age;
+        const age = timestampMs == null ? 0 : Date.now() - timestampMs;
+        const remaining =
+          timestampMs == null
+            ? REMOTE_TYPING_STALE_AFTER_MS
+            : REMOTE_TYPING_STALE_AFTER_MS - age;
 
         if (remaining <= 0) {
           setOtherUserTyping(false);
@@ -130,14 +125,19 @@ export function useTypingIndicator({
   }, [conversationId, userId, isParticipant1]);
 
   const queueTypingWrite = useCallback(
-    (typing: boolean) => {
+    (typing: boolean, force = false) => {
       if (!conversationId || !userId) return;
 
       const now = Date.now();
-      if (typing && now - lastTrueWriteRef.current < TRUE_WRITE_THROTTLE_MS) {
+      if (
+        typing &&
+        !force &&
+        now - lastTrueWriteRef.current < TRUE_WRITE_THROTTLE_MS
+      ) {
         return;
       }
 
+      desiredTypingRef.current = typing;
       if (typing) lastTrueWriteRef.current = now;
 
       const fieldName = isParticipant1
@@ -151,19 +151,13 @@ export function useTypingIndicator({
       writeQueueRef.current = writeQueueRef.current
         .catch(() => undefined)
         .then(async () => {
+          if (desiredTypingRef.current !== typing) return;
+
           try {
-            if (typing) {
-              await updateDoc(conversationRef, {
-                [fieldName]: true,
-                [timestampField]: serverTimestamp(),
-              });
-            } else {
-              // Não altera o timestamp ao parar. Os outros clientes ocultam o
-              // indicador pelo tempo desde a última tecla, evitando conflitos.
-              await updateDoc(conversationRef, {
-                [fieldName]: false,
-              });
-            }
+            await updateDoc(conversationRef, {
+              [fieldName]: typing,
+              [timestampField]: serverTimestamp(),
+            });
           } catch (error) {
             console.error("Erro ao atualizar o indicador de digitação:", error);
           }
@@ -176,22 +170,22 @@ export function useTypingIndicator({
     queueTypingWrite(true);
     clearOwnTimer();
     stopOwnTypingTimerRef.current = setTimeout(() => {
-      queueTypingWrite(false);
+      queueTypingWrite(false, true);
     }, STOP_TYPING_AFTER_MS);
   }, [queueTypingWrite]);
 
   const stopTyping = useCallback(() => {
     clearOwnTimer();
-    queueTypingWrite(false);
+    queueTypingWrite(false, true);
   }, [queueTypingWrite]);
 
   useEffect(() => {
     return () => {
       clearOwnTimer();
-      // Não grava false durante desmontagens de rota: outra aba da mesma conta
-      // pode continuar digitando na mesma conversa.
+      desiredTypingRef.current = false;
+      queueTypingWrite(false, true);
     };
-  }, []);
+  }, [queueTypingWrite]);
 
   return {
     otherUserTyping,

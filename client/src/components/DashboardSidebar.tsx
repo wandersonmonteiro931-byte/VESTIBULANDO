@@ -10,6 +10,7 @@ import {
   SidebarMenuButton,
   SidebarHeader,
   SidebarFooter,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import {
   Collapsible,
@@ -283,6 +284,8 @@ export function DashboardSidebar({
 
   const showHomeItem = role === "professor" || role === "aluno";
 
+  const { isMobile, setOpenMobile } = useSidebar();
+
   const [openCategory, setOpenCategory] = useState<string | null>(() => {
     const found = categories.find(cat => 
       cat.items.some(item => item.id === selectedItem)
@@ -298,6 +301,9 @@ export function DashboardSidebar({
       setOpenCategory(parentCategory.id);
     }
     onSelectItem(itemId);
+    if (isMobile) {
+      setOpenMobile(false);
+    }
   };
 
   return (
@@ -323,7 +329,7 @@ export function DashboardSidebar({
               <SidebarMenuItem>
                 <SidebarMenuButton
                   isActive={selectedItem === "inicio"}
-                  onClick={() => onSelectItem("inicio")}
+                  onClick={() => { onSelectItem("inicio"); if (isMobile) { setOpenMobile(false); } }}
                   data-testid="sidebar-item-inicio"
                   className="dashboard-menu-button dashboard-home-button"
                 >

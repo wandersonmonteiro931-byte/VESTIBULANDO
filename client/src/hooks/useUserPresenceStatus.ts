@@ -4,8 +4,7 @@ import { format, isToday, isYesterday } from "date-fns";
 import { db } from "@/lib/firebase";
 import type { User } from "@shared/schema";
 
-const ONLINE_STALE_AFTER_MS = 32_000;
-const ALLOWED_CLOCK_SKEW_MS = 60_000;
+const ONLINE_STALE_AFTER_MS = 40_000;
 
 export interface UserPresenceStatus {
   isOnline: boolean;
@@ -47,35 +46,29 @@ function toValidDate(value: TimestampLike): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function clampFutureDate(date: Date | null): Date | null {
-  if (!date) return null;
-  return date.getTime() > Date.now() ? new Date() : date;
-}
-
 function formatLastSeen(lastSeenDate: Date | null): UserPresenceStatus {
-  const safeDate = clampFutureDate(lastSeenDate);
-  if (!safeDate) {
+  if (!lastSeenDate) {
     return {
       isOnline: false,
       statusText: "Offline",
     };
   }
 
-  const time = format(safeDate, "HH:mm");
+  const time = format(lastSeenDate, "HH:mm");
   let statusText: string;
 
-  if (isToday(safeDate)) {
+  if (isToday(lastSeenDate)) {
     statusText = `Visto por último hoje às ${time}`;
-  } else if (isYesterday(safeDate)) {
+  } else if (isYesterday(lastSeenDate)) {
     statusText = `Visto por último ontem às ${time}`;
   } else {
-    statusText = `Visto por último em ${format(safeDate, "dd/MM/yyyy")} às ${time}`;
+    statusText = `Visto por último em ${format(lastSeenDate, "dd/MM/yyyy")} às ${time}`;
   }
 
   return {
     isOnline: false,
     statusText,
-    lastSeenDate: safeDate,
+    lastSeenDate,
   };
 }
 
@@ -92,12 +85,11 @@ function calculatePresence(userData: User | null): UserPresenceStatus {
   }
 
   const lastActivityDate = toValidDate(userData.lastActivity as TimestampLike);
-  const rawAge = lastActivityDate
+  const activityAge = lastActivityDate
     ? Date.now() - lastActivityDate.getTime()
     : Number.POSITIVE_INFINITY;
-  const activityAge = Math.max(0, rawAge);
   const activityIsFresh =
-    rawAge >= -ALLOWED_CLOCK_SKEW_MS && activityAge <= ONLINE_STALE_AFTER_MS;
+    activityAge >= -30_000 && activityAge <= ONLINE_STALE_AFTER_MS;
 
   const statusSaysOnline = userData.statusPresenca === "online";
   const declaredOnline =
@@ -113,13 +105,11 @@ function calculatePresence(userData: User | null): UserPresenceStatus {
 
   const storedLastSeen = toValidDate(userData.lastSeen as TimestampLike);
   const effectiveLastSeen =
-    userData.statusPresenca === "offline" && storedLastSeen
-      ? storedLastSeen
-      : storedLastSeen && lastActivityDate
-        ? storedLastSeen.getTime() >= lastActivityDate.getTime()
-          ? storedLastSeen
-          : lastActivityDate
-        : storedLastSeen ?? lastActivityDate;
+    storedLastSeen && lastActivityDate
+      ? storedLastSeen.getTime() >= lastActivityDate.getTime()
+        ? storedLastSeen
+        : lastActivityDate
+      : storedLastSeen ?? lastActivityDate;
 
   return formatLastSeen(effectiveLastSeen);
 }
@@ -133,9 +123,9 @@ function sameStatus(a: UserPresenceStatus, b: UserPresenceStatus): boolean {
 }
 
 /**
- * Observa a presença em tempo real. A conta fica offline após 30 segundos sem
- * atividade em todas as abas. A expiração local de 32 segundos cobre fechamento
- * abrupto ou perda de conexão sem usar polling.
+ * Observa a presença em tempo real. O próprio usuário grava offline após
+ * 30 segundos sem atividade. A expiração local de 40 segundos é apenas um
+ * fallback para fechamento abrupto ou perda de conexão. Não usa polling.
  */
 export function useUserPresenceStatus(
   userId: string | null | undefined,
@@ -170,10 +160,9 @@ export function useUserPresenceStatus(
         );
 
         if (lastActivity) {
-          const age = Math.max(0, Date.now() - lastActivity.getTime());
           const remaining = Math.max(
             100,
-            ONLINE_STALE_AFTER_MS - age + 100,
+            ONLINE_STALE_AFTER_MS - (Date.now() - lastActivity.getTime()) + 100,
           );
           expiryTimerRef.current = setTimeout(refreshLocalStatus, remaining);
         }

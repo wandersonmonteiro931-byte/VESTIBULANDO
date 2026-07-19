@@ -17,7 +17,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { FileUploadZone } from "@/components/FileUploadZone";
 import { AnnouncementsCarousel } from "@/components/AnnouncementsCarousel";
 import { ChatNotificationBubble } from "@/components/ChatNotificationBubble";
-import { LogOut, FileText, Upload, Download, Calendar, Award, CheckCircle2, Clock, AlertTriangle, MessageCircle } from "lucide-react";
+import { LogOut, FileText, Upload, Download, Calendar, Award, CheckCircle2, Clock, AlertTriangle, MessageCircle, WalletCards, Video, ClipboardList, Sparkles } from "lucide-react";
 import { AlunoAvaliacoesTab } from "@/components/AlunoAvaliacoesTab";
 import { AlunoBoletimTab } from "@/components/AlunoBoletimTab";
 import { AlunoPresencasTab } from "@/components/AlunoPresencasTab";
@@ -38,6 +38,7 @@ import { AttendanceConfirmationModal } from "@/components/AttendanceConfirmation
 import { LiveClassNotification } from "@/components/LiveClassNotification";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
 
 export default function StudentDashboard() {
   const { userData, signOut } = useAuth();
@@ -370,9 +371,40 @@ export default function StudentDashboard() {
             />
           )}
 
-          <main className="dashboard-main container px-4 sm:px-6 py-8 max-w-7xl mx-auto flex-1">
+          <main className="dashboard-main container px-4 sm:px-6 pt-6 pb-28 md:pb-8 max-w-7xl mx-auto flex-1">
             {selectedSection === "inicio" && (
               <>
+                <div className="mb-6 md:hidden">
+                  <Card className="overflow-hidden border-primary/15 bg-gradient-to-br from-primary/10 via-background to-sky-50 shadow-sm dark:to-slate-900">
+                    <CardContent className="p-5">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+                            <Sparkles className="h-3.5 w-3.5" /> Espaço do aluno
+                          </div>
+                          <h2 className="text-2xl font-bold tracking-tight text-foreground">Sua jornada escolar começa aqui</h2>
+                          <p className="mt-2 text-sm text-muted-foreground">Turma {nomeTurma} • {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}</p>
+                        </div>
+                        <Badge className="rounded-full bg-primary/15 px-3 py-1 text-primary">Aluno</Badge>
+                      </div>
+                      <div className="mt-4 grid grid-cols-2 gap-2">
+                        <Button variant="outline" className="h-auto justify-start rounded-2xl px-3 py-3" onClick={() => setSelectedSection('horarios')}>
+                          <Clock className="mr-2 h-4 w-4 text-primary" /> Meu horário
+                        </Button>
+                        <Button variant="outline" className="h-auto justify-start rounded-2xl px-3 py-3" onClick={() => setSelectedSection('aulas')}>
+                          <Video className="mr-2 h-4 w-4 text-primary" /> Aulas ao vivo
+                        </Button>
+                        <Button variant="outline" className="h-auto justify-start rounded-2xl px-3 py-3" onClick={() => setSelectedSection('todas')}>
+                          <ClipboardList className="mr-2 h-4 w-4 text-primary" /> Tarefas
+                        </Button>
+                        <Button variant="outline" className="h-auto justify-start rounded-2xl px-3 py-3" onClick={() => setSelectedSection('financeiro')}>
+                          <WalletCards className="mr-2 h-4 w-4 text-primary" /> Financeiro
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
                 <div className="dashboard-hero mb-8">
                   <span className="dashboard-eyebrow">Visão geral</span>
                   <h2 className="dashboard-hero-title">
