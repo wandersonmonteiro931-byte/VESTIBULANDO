@@ -32,7 +32,9 @@ import { PresencasTab } from "@/components/PresencasTab";
 import { AdminFinanceTab } from "@/components/AdminFinanceTab";
 import { ChatNotificationBubble } from "@/components/ChatNotificationBubble";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { PortalBrand } from "@/components/PortalBrand";
+import { PortalProfileHeader } from "@/components/PortalProfileHeader";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, ArrowRightLeft, Clock, Search, Eye, AlertTriangle, Settings, Power, PowerOff, Archive, Download, ChevronDown, ChevronUp, MessageCircle, Camera, Upload, X, Copy, Shield, RotateCcw, UserCheck, School } from "lucide-react";
 import { Link } from "wouter";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -50,7 +52,6 @@ import { brasiliaToUTC, utcToBrasilia, formatBrasiliaDateTime, getNowBrasilia, g
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useIsMobile } from "@/hooks/use-mobile";
-import logoUrl from "@assets/Blue and White Online School Logo (1)_1761189954480.png";
 
 const turmaFormSchema = z.object({
   nome: z.string().min(1, "Nome da turma é obrigatório"),
@@ -2532,20 +2533,11 @@ export default function AdminDashboard() {
     <SidebarProvider style={{ "--sidebar-width": "280px" } as React.CSSProperties}>
       <>
       <div className="dashboard-modern dashboard-admin flex min-h-screen w-full">
-        <DashboardSidebar
-          role="diretor"
-          selectedItem={selectedSection}
-          onSelectItem={setSelectedSection}
-          pendingCounts={pendingCounts}
-          userName={userData?.nome}
-          userRole="Diretoria"
-        />
-        
-        <div className="flex-1 flex flex-col">
+        <div className="min-w-0 flex-1 flex flex-col">
           <header className="dashboard-topbar elegant-topbar sticky top-0 z-50 w-full">
             <div className="dashboard-topbar-inner elegant-header flex items-center justify-between px-4 sm:px-6 gap-4">
               <div className="dashboard-header-left flex items-center gap-3">
-                <SidebarTrigger data-testid="button-sidebar-toggle" />
+                <PortalBrand compactLabel="Diretoria" />
                 {maintenanceData && maintenanceData.some(m => m.ativa) && (
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-red-600 dark:bg-red-700 rounded-full text-sm blink-red" data-testid="maintenance-warning-badge">
                     <AlertTriangle className="h-4 w-4 text-white animate-pulse" />
@@ -2553,18 +2545,8 @@ export default function AdminDashboard() {
                   </div>
                 )}
               </div>
-
-              <div className="dashboard-header-brand-center" aria-label="Vestibulando">
-                <div className="dashboard-brand-mark dashboard-brand-logo dashboard-brand-logo-large shrink-0">
-                  <img src={logoUrl} alt="Logotipo Vestibulando" className="dashboard-brand-logo-image" />
-                </div>
-              </div>
               
               <div className="dashboard-header-right flex items-center gap-3">
-                <div className="text-right mr-2 hidden sm:block">
-                  <p className="text-sm font-semibold">{userData?.nome}</p>
-                  <p className="text-xs text-muted-foreground">Diretoria</p>
-                </div>
                 <ThemeToggle />
                 <BrasiliaClock />
                 <Link href="/chat">
@@ -2605,6 +2587,20 @@ export default function AdminDashboard() {
           )}
 
           <main className="dashboard-main flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-6 py-6 sm:py-8">
+            <PortalProfileHeader
+              user={userData}
+              role="diretor"
+              contextLabel="Gestão escolar"
+            />
+            <DashboardSidebar
+              role="diretor"
+              selectedItem={selectedSection}
+              onSelectItem={setSelectedSection}
+              pendingCounts={pendingCounts}
+              userName={userData?.nome}
+              userRole="Diretoria"
+            />
+
             <div className="w-full">
               <div className="mb-6 space-y-4">
                 <Card className="dashboard-school-panel school-admin-hero overflow-hidden border-primary/15 bg-gradient-to-br from-primary/10 via-background to-slate-50 shadow-sm dark:to-slate-900">

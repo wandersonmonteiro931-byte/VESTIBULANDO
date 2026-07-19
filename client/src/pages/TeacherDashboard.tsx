@@ -21,7 +21,6 @@ import { FileUploadZone } from "@/components/FileUploadZone";
 import { AnnouncementsCarousel } from "@/components/AnnouncementsCarousel";
 import { ChatNotificationBubble } from "@/components/ChatNotificationBubble";
 import { LogOut, Plus, FileText, Users, Download, Edit, Calendar, Award, MessageCircle, ClipboardList, GraduationCap, CalendarClock, AlertTriangle, ShieldAlert, CheckCircle, Sparkles, Clock, Video } from "lucide-react";
-import logoUrl from "@assets/Blue and White Online School Logo (1)_1761189954480.png";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AvaliacoesTab } from "@/components/AvaliacoesTab";
 import { BoletimTab } from "@/components/BoletimTab";
@@ -31,9 +30,11 @@ import { HorarioViewer } from "@/components/HorarioViewer";
 import { PresencasTab } from "@/components/PresencasTab";
 import { PendingIndicator } from "@/components/PendingIndicator";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
+import { PortalBrand } from "@/components/PortalBrand";
+import { PortalProfileHeader } from "@/components/PortalProfileHeader";
 import { AttendanceConfirmationModal } from "@/components/AttendanceConfirmationModal";
 import { TeacherClassControl } from "@/components/TeacherClassControl";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { Link } from "wouter";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
@@ -238,32 +239,14 @@ export default function TeacherDashboard() {
   return (
     <SidebarProvider style={{ "--sidebar-width": "280px" } as React.CSSProperties}>
       <div className="dashboard-modern dashboard-teacher flex min-h-screen w-full">
-        <DashboardSidebar
-          role="professor"
-          selectedItem={selectedSection}
-          onSelectItem={setSelectedSection}
-          pendingCounts={{ correcoes: pendingCount }}
-          userName={userData?.nome}
-          userRole="Professor"
-        />
-        <div className="flex-1 flex flex-col">
+        <div className="min-w-0 flex-1 flex flex-col">
           <header className="dashboard-topbar elegant-topbar sticky top-0 z-50 w-full">
             <div className="dashboard-topbar-inner elegant-header flex items-center justify-between px-4 sm:px-6 gap-4">
               <div className="dashboard-header-left flex items-center gap-3">
-                <SidebarTrigger data-testid="button-sidebar-toggle" />
-              </div>
-
-              <div className="dashboard-header-brand-center" aria-label="Vestibulando">
-                <div className="dashboard-brand-mark dashboard-brand-logo dashboard-brand-logo-large shrink-0">
-                  <img src={logoUrl} alt="Logotipo Vestibulando" className="dashboard-brand-logo-image" />
-                </div>
+                <PortalBrand compactLabel="Professor" />
               </div>
               
               <div className="dashboard-header-right flex items-center gap-3">
-                <div className="text-right mr-2 hidden md:block">
-                  <p className="text-sm font-semibold">{userData?.nome}</p>
-                  <p className="text-xs text-muted-foreground">Professor</p>
-                </div>
                 <ThemeToggle />
                 <BrasiliaClock />
                 <Link href="/chat">
@@ -304,6 +287,20 @@ export default function TeacherDashboard() {
           )}
 
           <main className="dashboard-main flex-1 overflow-auto px-4 sm:px-6 pt-6 pb-28 md:pb-8">
+            <PortalProfileHeader
+              user={userData}
+              role="professor"
+              contextLabel={userData?.materias?.length ? userData.materias.join(" • ") : "Corpo docente"}
+            />
+            <DashboardSidebar
+              role="professor"
+              selectedItem={selectedSection}
+              onSelectItem={setSelectedSection}
+              pendingCounts={{ correcoes: pendingCount }}
+              userName={userData?.nome}
+              userRole="Professor"
+            />
+
             <div className="max-w-7xl mx-auto">
               {selectedSection === "inicio" && (
                 <>

@@ -33,11 +33,12 @@ import { format, formatDistanceToNow, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import jsPDF from "jspdf";
 import assinaturaDeclaracaoUrl from "@assets/Captura de tela 2025-10-23 011843_1761193443162.png";
-import logoUrl from "@assets/Blue and White Online School Logo (1)_1761189954480.png";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
+import { PortalBrand } from "@/components/PortalBrand";
+import { PortalProfileHeader } from "@/components/PortalProfileHeader";
 import { AttendanceConfirmationModal } from "@/components/AttendanceConfirmationModal";
 import { LiveClassNotification } from "@/components/LiveClassNotification";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 
@@ -296,42 +297,14 @@ export default function StudentDashboard() {
   return (
     <SidebarProvider style={{ "--sidebar-width": "280px" } as React.CSSProperties}>
       <div className="dashboard-modern dashboard-student flex min-h-screen w-full">
-        <DashboardSidebar
-          role="aluno"
-          selectedItem={selectedSection}
-          onSelectItem={setSelectedSection}
-          pendingCounts={{ pendentes: pendingCount, advertencias: warningsCount }}
-          userName={userData?.nome}
-          userRole="Aluno"
-        />
-        <div className="flex-1 flex flex-col">
+        <div className="min-w-0 flex-1 flex flex-col">
           <header className="dashboard-topbar elegant-topbar sticky top-0 z-50 w-full">
             <div className="dashboard-topbar-inner elegant-header container flex items-center justify-between px-4 sm:px-6">
               <div className="dashboard-header-left flex items-center gap-3">
-                <SidebarTrigger data-testid="button-sidebar-toggle" />
-              </div>
-
-              <div className="dashboard-header-brand-center" aria-label="Vestibulando">
-                <div className="dashboard-brand-mark dashboard-brand-logo dashboard-brand-logo-large">
-                  <img src={logoUrl} alt="Logotipo Vestibulando" className="dashboard-brand-logo-image" />
-                </div>
+                <PortalBrand compactLabel="Aluno" />
               </div>
               
               <div className="dashboard-header-right flex items-center gap-3">
-                <div className="text-right mr-2 hidden sm:block">
-                  <p className="text-sm font-semibold">{userData?.nome}</p>
-                  <p className="text-xs text-muted-foreground">Turma {nomeTurma}</p>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={generateDeclaracaoMatricula}
-                  data-testid="button-declaracao-matricula"
-                  className="hidden sm:flex header-pill-btn"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Declaração
-                </Button>
                 <ThemeToggle />
                 <BrasiliaClock />
                 <Link href="/chat">
@@ -372,6 +345,21 @@ export default function StudentDashboard() {
           )}
 
           <main className="dashboard-main container px-4 sm:px-6 pt-6 pb-28 md:pb-8 max-w-7xl mx-auto flex-1">
+            <PortalProfileHeader
+              user={userData}
+              role="aluno"
+              contextLabel={`Turma ${nomeTurma || "não definida"}`}
+              documentAction={{ label: "DECLARAÇÃO", onClick: generateDeclaracaoMatricula }}
+            />
+            <DashboardSidebar
+              role="aluno"
+              selectedItem={selectedSection}
+              onSelectItem={setSelectedSection}
+              pendingCounts={{ pendentes: pendingCount, advertencias: warningsCount }}
+              userName={userData?.nome}
+              userRole="Aluno"
+            />
+
             {selectedSection === "inicio" && (
               <>
                 <div className="mb-6 md:hidden">

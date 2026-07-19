@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
+import "./portal-reference.css";
 
 const isFirestoreError = (message: string | undefined) => {
   if (!message) return false;

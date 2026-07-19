@@ -20,6 +20,7 @@ import { ptBR } from "date-fns/locale";
 import { formatBrasiliaDateTime, getNowBrasiliaISO, brasiliaToUTC } from "@/lib/brasiliaTime";
 import { HORARIOS_DISPONIVEIS } from "@shared/schema";
 import logoUrl from "@assets/Blue and White Online School Logo (1)_1761189954480.png";
+import { PortalBrand } from "@/components/PortalBrand";
 
 // Verifica se uma matrícula já existe no banco de dados
 async function matriculaJaExiste(db: any, matricula: string): Promise<boolean> {
@@ -1436,6 +1437,9 @@ export default function Login() {
 
   return (
     <div className="login-modern min-h-screen flex items-center justify-center p-4 sm:p-6 relative overflow-hidden">
+      <div className="portal-login-topbar">
+        <PortalBrand compactLabel="Acesso" />
+      </div>
       <div className="absolute inset-0 bg-grid-pattern opacity-[0.02]"></div>
       <div className="absolute top-4 right-4 z-10">
         <ThemeToggle />
