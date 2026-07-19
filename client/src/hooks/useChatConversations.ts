@@ -9,6 +9,17 @@ import {
 import { db } from "@/lib/firebase";
 import type { ChatConversation } from "@shared/schema";
 
+
+function timestampSignature(value: any): string {
+  if (value == null) return "";
+  if (typeof value === "string" || typeof value === "number") return String(value);
+  if (typeof value.toMillis === "function") return String(value.toMillis());
+  if (typeof value.toDate === "function") return String(value.toDate().getTime());
+  if (typeof value.seconds === "number") return String(value.seconds);
+  if (typeof value._seconds === "number") return String(value._seconds);
+  return "";
+}
+
 export interface ConversationWithBlockInfo extends ChatConversation {
   isBlocked?: boolean;
   iBlockedOther?: boolean;
@@ -26,6 +37,8 @@ function conversationSignature(conversations: ConversationWithBlockInfo[]): stri
         conversation.mensagensNaoLidas2 || 0,
         conversation.participante1Digitando ? 1 : 0,
         conversation.participante2Digitando ? 1 : 0,
+        timestampSignature((conversation as any).participante1UltimaDigitacao),
+        timestampSignature((conversation as any).participante2UltimaDigitacao),
         conversation.isBlocked ? 1 : 0,
         conversation.iBlockedOther ? 1 : 0,
         conversation.otherBlockedMe ? 1 : 0,

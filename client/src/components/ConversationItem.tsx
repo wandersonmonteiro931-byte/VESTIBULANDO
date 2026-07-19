@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +10,31 @@ import { motion } from "framer-motion";
 import { UserPresenceIndicator } from "@/components/UserPresenceIndicator";
 import { Ban } from "lucide-react";
 import type { ConversationWithBlockInfo } from "@/hooks/useChatConversations";
+
+
+
+type TimestampLike =
+  | string
+  | number
+  | Date
+  | { toDate?: () => Date; seconds?: number; _seconds?: number }
+  | null
+  | undefined;
+
+function typingTimestampToMillis(value: TimestampLike): number | null {
+  if (value == null) return null;
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === "string" || typeof value === "number") {
+    const result = new Date(value).getTime();
+    return Number.isNaN(result) ? null : result;
+  }
+  if (typeof value.toDate === "function") return value.toDate().getTime();
+  if (typeof value.seconds === "number") return value.seconds * 1_000;
+  if (typeof value._seconds === "number") return value._seconds * 1_000;
+  return null;
+}
+
+const TYPING_VISIBLE_FOR_MS = 2_700;
 
 interface ConversationItemProps {
   conversation: ConversationWithBlockInfo;
@@ -25,9 +51,32 @@ export default function ConversationItem({ conversation, otherParticipant, unrea
   const { userData } = useAuth();
   
   const isParticipant1 = conversation.participante1Id === userData?.uid;
-  const otherUserTyping = isParticipant1 
-    ? conversation.participante2Digitando 
-    : conversation.participante1Digitando;
+  const otherTypingTimestamp = isParticipant1
+    ? (conversation as any).participante2UltimaDigitacao
+    : (conversation as any).participante1UltimaDigitacao;
+  const typingTimestampMs = useMemo(
+    () => typingTimestampToMillis(otherTypingTimestamp as TimestampLike),
+    [otherTypingTimestamp],
+  );
+  const [otherUserTyping, setOtherUserTyping] = useState(false);
+
+  useEffect(() => {
+    if (typingTimestampMs == null) {
+      setOtherUserTyping(false);
+      return;
+    }
+
+    const age = Math.max(0, Date.now() - typingTimestampMs);
+    const remaining = TYPING_VISIBLE_FOR_MS - age;
+    if (remaining <= 0) {
+      setOtherUserTyping(false);
+      return;
+    }
+
+    setOtherUserTyping(true);
+    const timer = setTimeout(() => setOtherUserTyping(false), remaining + 100);
+    return () => clearTimeout(timer);
+  }, [typingTimestampMs]);
 
   return (
     <Link
