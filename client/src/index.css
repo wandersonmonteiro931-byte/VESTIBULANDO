@@ -3682,3 +3682,112 @@
     font-size: 0.82rem !important;
   }
 }
+
+/* Ajustes finos de alinhamento para o tema clássico */
+.dashboard-topbar-inner.elegant-header {
+  position: relative;
+}
+
+.dashboard-header-left,
+.dashboard-header-right {
+  flex: 1 1 0%;
+  min-width: 0;
+}
+
+.dashboard-header-brand-center {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dashboard-header-right {
+  justify-content: flex-end;
+}
+
+.dashboard-header-right .text-right {
+  max-width: 240px;
+}
+
+.dashboard-header-right .text-right p:first-child {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.school-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.school-kpi-card {
+  min-height: 126px;
+  border: 1px solid var(--portal-border) !important;
+  background: linear-gradient(180deg, #ffffff, #f7f9fc) !important;
+  border-radius: 22px !important;
+  box-shadow: 0 10px 24px rgba(34, 49, 74, 0.06) !important;
+}
+
+.school-kpi-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #edf4ff, #dfecff);
+  color: #2c6bcf;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.school-kpi-value {
+  font-size: 2rem !important;
+  font-weight: 800 !important;
+  color: #27334c !important;
+}
+
+.school-kpi-label {
+  color: #687188 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.75rem !important;
+  font-weight: 700;
+}
+
+.school-quick-pill-premium {
+  height: 40px !important;
+  border-radius: 999px !important;
+  border-color: var(--portal-border) !important;
+  background: linear-gradient(180deg, #ffffff, #f9fbfd) !important;
+  color: #2d364d !important;
+}
+
+.school-quick-pill-premium[class*="default"],
+.school-quick-pill-premium.bg-primary,
+.school-quick-pill-premium[data-active="true"] {
+  background: linear-gradient(180deg, #2778d9, #1f67c2) !important;
+  border-color: #1f67c2 !important;
+  color: #ffffff !important;
+}
+
+@media (max-width: 1024px) {
+  .school-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .school-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .school-kpi-card {
+    min-height: 112px;
+    border-radius: 18px !important;
+  }
+
+  .dashboard-header-right .text-right {
+    display: none;
+  }
+}
