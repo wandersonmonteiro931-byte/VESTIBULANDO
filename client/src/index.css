@@ -2906,3 +2906,197 @@
     font-size: 0.88rem;
   }
 }
+
+
+/* ============================================================
+   AJUSTES FINAIS DE PROPORÇÃO / ALINHAMENTO DO DASHBOARD
+   (sem alterar o chat)
+   ============================================================ */
+
+.dashboard-topbar-inner.elegant-header,
+.elegant-header.dashboard-topbar-inner {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+}
+
+.dashboard-header-left {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-width: 52px;
+}
+
+.dashboard-header-brand-center {
+  position: static;
+  inset: auto;
+  top: auto;
+  left: auto;
+  transform: none;
+  justify-self: center;
+  width: 100%;
+  max-width: 200px;
+  pointer-events: none;
+}
+
+.dashboard-header-right {
+  justify-self: end;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.dashboard-header-right .text-right {
+  max-width: 220px;
+}
+
+.dashboard-header-right .text-right p {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dashboard-brand-logo-large {
+  width: 52px;
+  height: 52px;
+  padding: 4px;
+  border-radius: 18px;
+}
+
+.dashboard-brand-logo {
+  box-shadow: 0 12px 24px hsl(221 39% 20% / 0.12);
+}
+
+.dashboard-topbar,
+.dashboard-topbar-inner,
+.elegant-header {
+  min-height: 64px;
+}
+
+.header-pill-btn,
+[data-testid="button-declaracao-matricula"],
+.header-icon-btn,
+[data-testid="button-theme-toggle"],
+[data-testid="button-logout"],
+.header-chat-btn,
+[data-testid="button-chat-header"],
+.header-clock-pill {
+  flex-shrink: 0;
+}
+
+.dashboard-sidebar-modern .sidebar-modern-logo {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+}
+
+.dashboard-sidebar-modern .sidebar-modern-logo-image {
+  object-fit: contain;
+}
+
+.dashboard-sidebar-modern .dashboard-menu-icon-wrap,
+.dashboard-sidebar-modern .dashboard-category-icon-wrap {
+  flex-shrink: 0;
+}
+
+.dashboard-sidebar-modern .dashboard-menu-icon-wrap svg,
+.dashboard-sidebar-modern .dashboard-category-icon-wrap svg {
+  width: 17px;
+  height: 17px;
+  stroke-width: 2.1;
+}
+
+.dashboard-hero {
+  overflow: hidden;
+}
+
+@media (min-width: 768px) and (max-width: 1180px) {
+  .dashboard-header-right .text-right {
+    display: none;
+  }
+
+  .dashboard-topbar-inner.elegant-header,
+  .elegant-header.dashboard-topbar-inner {
+    grid-template-columns: 52px minmax(0, 1fr) auto;
+    gap: 0.75rem;
+  }
+
+  .dashboard-brand-logo-large {
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+  }
+}
+
+@media (max-width: 767px) {
+  .dashboard-topbar,
+  .dashboard-topbar-inner,
+  .elegant-header {
+    min-height: 56px;
+  }
+
+  .dashboard-topbar-inner.elegant-header,
+  .elegant-header.dashboard-topbar-inner {
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr) auto;
+    align-items: center !important;
+    gap: 0.45rem !important;
+    padding-top: 0.45rem !important;
+    padding-bottom: 0.45rem !important;
+  }
+
+  .dashboard-topbar-inner > div:first-child,
+  .dashboard-topbar-inner > div:last-child {
+    width: auto !important;
+  }
+
+  .dashboard-header-left {
+    min-width: 38px;
+  }
+
+  .dashboard-header-brand-center {
+    width: auto;
+    max-width: 100%;
+  }
+
+  .dashboard-brand-logo-large {
+    width: 42px;
+    height: 42px;
+    padding: 3px;
+    border-radius: 14px;
+  }
+
+  .dashboard-header-right {
+    gap: 0.3rem !important;
+    flex-wrap: nowrap !important;
+  }
+
+  .header-icon-btn,
+  [data-testid="button-theme-toggle"],
+  [data-testid="button-logout"] {
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+  }
+
+  .header-chat-btn,
+  [data-testid="button-chat-header"] {
+    min-width: 48px;
+    height: 34px;
+    padding: 0.2rem 0.45rem !important;
+    border-radius: 12px !important;
+  }
+
+  .header-chat-btn span,
+  [data-testid="button-chat-header"] span {
+    font-size: 0.62rem;
+    line-height: 1;
+  }
+
+  .header-clock-pill {
+    height: 34px;
+    padding: 0 0.52rem;
+    border-radius: 11px;
+    font-size: 0.74rem;
+  }
+}
