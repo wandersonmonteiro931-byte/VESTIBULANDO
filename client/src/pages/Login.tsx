@@ -19,6 +19,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { formatBrasiliaDateTime, getNowBrasiliaISO, brasiliaToUTC } from "@/lib/brasiliaTime";
 import { HORARIOS_DISPONIVEIS } from "@shared/schema";
+import logoUrl from "@assets/Blue and White Online School Logo (1)_1761189954480.png";
 
 // Verifica se uma matrícula já existe no banco de dados
 async function matriculaJaExiste(db: any, matricula: string): Promise<boolean> {
