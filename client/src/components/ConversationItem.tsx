@@ -32,7 +32,7 @@ export default function ConversationItem({ conversation, otherParticipant, unrea
   return (
     <Link
       href={`/chat/${conversation.id}`}
-      className="whatsapp-conversation-item premium-chat-conversation flex items-center gap-3 p-3 cursor-pointer border-b border-border hover-elevate"
+      className="whatsapp-conversation-item flex items-center gap-3 p-3 cursor-pointer border-b border-border hover-elevate"
       data-testid={`conversation-item-${conversation.id}`}
     >
       <div className="relative">

@@ -345,9 +345,9 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
   if (!userData) return null;
 
   return (
-    <div className="premium-chat-window flex flex-col h-full w-full">
+    <div className="flex flex-col h-full w-full">
       {/* Header */}
-      <div className="chat-header-fixed whatsapp-header premium-chat-topbar flex items-center gap-1 px-3 py-2.5 md:px-4 md:py-3">
+      <div className="chat-header-fixed whatsapp-header flex items-center gap-1 px-3 py-2.5 md:px-4 md:py-3">
         <Button
           size="icon"
           variant="ghost"
@@ -359,7 +359,7 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
         </Button>
 
         <div 
-          className="premium-chat-contact flex items-center gap-2 flex-1 min-w-0 cursor-pointer hover:bg-white/5 rounded-lg p-1 transition-colors"
+          className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer hover:bg-white/5 rounded-lg p-1 transition-colors"
           onClick={() => setShowUserProfile(true)}
           data-testid="button-open-user-profile"
         >
@@ -405,17 +405,10 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
       </div>
 
       {/* Messages Area */}
-      <div className="chat-messages-area whatsapp-bg premium-chat-messages p-4" style={{"--chat-watermark": `url(${watermarkLogo})`} as React.CSSProperties}>
+      <div className="chat-messages-area whatsapp-bg p-4" style={{"--chat-watermark": `url(${watermarkLogo})`} as React.CSSProperties}>
         {isLoading ? (
-          <div className="space-y-4 p-1">
-            {[...Array(5)].map((_, index) => (
-              <div key={index} className={`flex ${index % 2 === 0 ? "justify-start" : "justify-end"}`}>
-                <div className="space-y-2">
-                  <div className="premium-skeleton h-3 w-16 rounded-full"></div>
-                  <div className="premium-skeleton h-14 w-56 max-w-[70vw] rounded-[20px]"></div>
-                </div>
-              </div>
-            ))}
+          <div className="flex items-center justify-center h-full">
+            <div className="text-muted-foreground">Carregando mensagens...</div>
           </div>
         ) : (
           <div className="space-y-4">
@@ -502,7 +495,7 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
 
       {/* Input Area */}
       {conversation.isBlocked ? (
-        <div className="whatsapp-input-area premium-chat-input-bar px-3 py-3 md:px-4 md:py-4">
+        <div className="whatsapp-input-area px-3 py-3 md:px-4 md:py-4">
           <div className="flex flex-col items-center justify-center gap-2 py-2">
             {conversation.iBlockedOther ? (
               <>
@@ -530,7 +523,7 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
           </div>
         </div>
       ) : (
-        <div className="whatsapp-input-area premium-chat-input-bar flex items-center gap-1.5 px-3 py-2.5 md:px-4 md:py-3">
+        <div className="whatsapp-input-area flex items-center gap-1.5 px-3 py-2.5 md:px-4 md:py-3">
           <Button
             size="icon"
             variant="ghost"
@@ -552,7 +545,7 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
           <Input
             type="text"
             placeholder="Digite uma mensagem"
-            className="premium-chat-input flex-1 bg-white dark:bg-[#2a3942] border-none focus-visible:ring-1 h-9 text-sm rounded-full px-3"
+            className="flex-1 bg-white dark:bg-[#2a3942] border-none focus-visible:ring-1 h-9 text-sm rounded-full px-3"
             value={message}
             onChange={(e) => {
               const nextMessage = e.target.value;
@@ -571,7 +564,7 @@ export default function ChatWindow({ conversation, onBack }: ChatWindowProps) {
 
           <Button
             size="icon"
-            className="premium-chat-send bg-[#00a884] hover:bg-[#008069] text-white shrink-0 h-9 w-9"
+            className="bg-[#00a884] hover:bg-[#008069] text-white shrink-0 h-9 w-9"
             onClick={handleSendMessage}
             disabled={isSending || !message.trim()}
             data-testid="button-send"

@@ -146,7 +146,7 @@ export default function ChatConversationPage() {
   }
 
   return (
-    <div className="premium-chat-conversation-page fixed inset-0 w-full overflow-hidden bg-background md:relative md:h-screen">
+    <div className="fixed inset-0 w-full overflow-hidden bg-background md:relative md:h-screen">
       <ChatWindow conversation={conversation} onBack={handleBack} />
     </div>
   );

@@ -2489,122 +2489,6 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-
-
-/* ============================================================
-   FINAL PREMIUM SCHOOL FINISH
-   chat + tables + forms + live class + finance
-   ============================================================ */
-.premium-chat-page,
-.premium-chat-conversation-page {
-  background:
-    radial-gradient(circle at 0% 0%, hsl(var(--primary) / 0.10), transparent 20rem),
-    radial-gradient(circle at 100% 0%, hsl(194 84% 54% / 0.10), transparent 24rem),
-    linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted) / 0.16));
-}
-
-.premium-chat-shell,
-.premium-chat-window {
-  background: linear-gradient(180deg, hsl(var(--card) / 0.98), hsl(var(--card) / 0.96));
-}
-
-.premium-chat-shell {
-  box-shadow: 0 24px 60px hsl(220 32% 12% / 0.10);
-}
-
-.premium-chat-topbar {
-  background:
-    radial-gradient(circle at 0% 0%, rgba(255,255,255,0.16), transparent 24%),
-    radial-gradient(circle at 100% 0%, rgba(255,255,255,0.10), transparent 20%),
-    linear-gradient(135deg, hsl(var(--primary)), hsl(195 84% 42%)) !important;
-  border-bottom: 1px solid rgba(255,255,255,0.12);
-  box-shadow: 0 10px 26px hsl(var(--primary) / 0.20);
-}
-
-.premium-chat-searchbar {
-  background: linear-gradient(180deg, hsl(var(--card)), hsl(var(--muted) / 0.22));
-  border-bottom: 1px solid hsl(var(--border) / 0.65);
-}
-
-.premium-chat-search-input,
-.premium-chat-input {
-  min-height: 44px;
-  border-radius: 16px !important;
-  border: 1px solid hsl(var(--border) / 0.65) !important;
-  background: linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted) / 0.08)) !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.45), 0 8px 18px hsl(220 28% 14% / 0.04);
-}
-
-.premium-chat-search-input:focus,
-.premium-chat-input:focus {
-  border-color: hsl(var(--primary) / 0.35) !important;
-  box-shadow: 0 0 0 4px hsl(var(--primary) / 0.10);
-}
-
-.premium-chat-list {
-  background:
-    linear-gradient(180deg, hsl(var(--card) / 0.98), hsl(var(--background) / 0.98));
-}
-
-.premium-chat-conversation {
-  position: relative;
-  background: transparent;
-  transition: transform 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
-}
-
-.premium-chat-conversation::after {
-  content: "";
-  position: absolute;
-  left: 1rem;
-  right: 1rem;
-  bottom: 0;
-  height: 1px;
-  background: hsl(var(--border) / 0.55);
-}
-
-.premium-chat-conversation:hover {
-  background: hsl(var(--muted) / 0.38);
-  transform: translateY(-1px);
-}
-
-.premium-chat-messages {
-  background:
-    radial-gradient(circle at 100% 0%, hsl(var(--primary) / 0.05), transparent 18rem),
-    linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted) / 0.14));
-}
-
-.premium-chat-window .message-received,
-.premium-chat-window .message-sent {
-  border-radius: 18px !important;
-  box-shadow: 0 10px 22px hsl(220 26% 14% / 0.08);
-  padding: 0.75rem 0.85rem;
-}
-
-.premium-chat-window .message-received {
-  background: linear-gradient(180deg, #ffffff, #f7fbff);
-}
-
-.dark .premium-chat-window .message-received {
-  background: linear-gradient(180deg, #1e2935, #1b2530);
-}
-
-.premium-chat-window .message-sent {
-  background: linear-gradient(135deg, #dff8e1, #d0f0ff);
-}
-
-.dark .premium-chat-window .message-sent {
-  background: linear-gradient(135deg, #0b5d4e, #104d69);
-}
-
-.premium-chat-input-bar {
-  background: linear-gradient(180deg, hsl(var(--card)), hsl(var(--muted) / 0.18)) !important;
-}
-
-.premium-chat-send {
-  border-radius: 14px !important;
-  box-shadow: 0 12px 20px hsl(var(--primary) / 0.24);
-}
-
 .liveclass-premium-page {
   background:
     radial-gradient(circle at 10% 0%, hsl(var(--primary) / 0.12), transparent 24rem),
@@ -2841,39 +2725,7 @@
 }
 
 @media (max-width: 767px) {
-  .premium-chat-shell {
-    max-width: 100%;
-    border-inline: none;
-  }
-
-  .premium-chat-topbar {
-    border-radius: 0 0 18px 18px;
-  }
-
-  .premium-chat-searchbar {
-    padding-top: 0.75rem;
-  }
-
-  .premium-chat-conversation {
-    border-radius: 16px;
-    margin: 0.2rem 0.45rem;
-  }
-
-  .premium-chat-conversation::after {
-    left: 0.75rem;
-    right: 0.75rem;
-  }
-
-  .premium-chat-window .message-received,
-  .premium-chat-window .message-sent {
-    max-width: 84%;
-  }
-
-  .liveclass-header-pills {
-    display: none;
-  }
-
-  .liveclass-brand-chip {
+.liveclass-brand-chip {
     width: 100%;
     padding: 0.4rem 0.55rem;
   }
@@ -2930,17 +2782,6 @@
     radial-gradient(circle at 100% 0%, hsl(var(--primary) / 0.08), transparent 24%),
     linear-gradient(180deg, hsl(var(--background) / 0.99), hsl(var(--card) / 0.98));
 }
-
-.dashboard-modern .card,
-.liveclass-premium-shell .card,
-.finance-card,
-.finance-kpi-card,
-.finance-highlight-card,
-.premium-chat-conversation,
-.premium-chat-shell {
-  animation: premiumFadeUp 320ms ease both;
-}
-
 .dashboard-modern .card:hover,
 .liveclass-premium-shell .card:hover,
 .finance-card:hover,
@@ -2949,25 +2790,6 @@
   transform: translateY(-2px);
   transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
 }
-
-.dashboard-modern button,
-.liveclass-premium-page button,
-.finance-student-premium button,
-.finance-admin-premium button,
-.premium-chat-page button,
-.premium-chat-conversation-page button {
-  transition: transform 160ms ease, box-shadow 180ms ease, background-color 180ms ease, border-color 180ms ease;
-}
-
-.dashboard-modern button:hover,
-.liveclass-premium-page button:hover,
-.finance-student-premium button:hover,
-.finance-admin-premium button:hover,
-.premium-chat-page button:hover,
-.premium-chat-conversation-page button:hover {
-  transform: translateY(-1px);
-}
-
 .premium-skeleton {
   position: relative;
   overflow: hidden;
@@ -3057,16 +2879,6 @@
 .finance-admin-premium .bg-primary\/10 {
   background: var(--premium-primary-soft) !important;
 }
-
-.dashboard-modern main svg,
-.liveclass-premium-page svg,
-.finance-student-premium svg,
-.finance-admin-premium svg,
-.premium-chat-page svg,
-.premium-chat-conversation-page svg {
-  stroke-width: 2.05;
-}
-
 [role="dialog"] h2,
 [role="alertdialog"] h2 {
   letter-spacing: -0.02em;
