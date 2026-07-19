@@ -3100,3 +3100,585 @@
     font-size: 0.74rem;
   }
 }
+
+/* ============================================================
+   VESTIBULANDO — TEMA PORTAL ESCOLAR CLÁSSICO
+   Pedido do usuário: aproximar toda a plataforma do visual da
+   referência "Pais e Alunos", sem perder funcionalidades.
+   Escopo: login, aluno, professor, diretoria, aulas ao vivo,
+   formulários, tabelas, financeiro e dashboards.
+   O chat permanece sem alterações estruturais/visuais aqui.
+   ============================================================ */
+
+.dashboard-modern,
+.liveclass-premium-page,
+.login-modern {
+  --portal-bg: #f3f5f8;
+  --portal-surface: #ffffff;
+  --portal-surface-soft: #fafbfc;
+  --portal-panel: #f3f0de;
+  --portal-panel-border: #dfcf83;
+  --portal-table-head: #f6f7fb;
+  --portal-border: #dde2ea;
+  --portal-border-strong: #cad2df;
+  --portal-text: #293247;
+  --portal-muted: #687188;
+  --portal-link: #4b57cf;
+  --portal-top: #191422;
+  --portal-top-2: #241a30;
+  --portal-accent: #f5c842;
+  --portal-accent-2: #ffd968;
+  --portal-success: #0fb970;
+  --portal-shadow: 0 14px 36px rgba(31, 42, 68, 0.06);
+}
+
+.dashboard-modern {
+  background:
+    linear-gradient(180deg, #f6f7fa 0%, #eef2f6 100%);
+}
+
+.liveclass-premium-page,
+.login-modern {
+  background:
+    linear-gradient(180deg, #f6f7fa 0%, #eef2f6 100%) !important;
+}
+
+.dashboard-topbar.elegant-topbar,
+.liveclass-premium-header {
+  min-height: 60px;
+  background: linear-gradient(90deg, var(--portal-top), var(--portal-top-2)) !important;
+  border-bottom: none !important;
+  box-shadow: 0 8px 24px rgba(15, 15, 25, 0.16) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.elegant-topbar::before,
+.elegant-topbar::after {
+  display: none !important;
+}
+
+.dashboard-topbar.elegant-topbar::after,
+.liveclass-premium-header::after {
+  content: "";
+  display: block !important;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(245, 200, 66, 0.7), transparent);
+}
+
+.dashboard-topbar-inner.elegant-header {
+  min-height: 60px !important;
+  padding-top: 0.35rem !important;
+  padding-bottom: 0.35rem !important;
+}
+
+.dashboard-header-left,
+.dashboard-header-right,
+.liveclass-premium-header .container {
+  color: #ffffff;
+}
+
+.dashboard-header-right p,
+.dashboard-header-right span,
+.dashboard-header-right .text-muted-foreground,
+.liveclass-premium-header .text-muted-foreground {
+  color: rgba(255, 255, 255, 0.76) !important;
+}
+
+.dashboard-brand-logo-large {
+  width: 56px !important;
+  height: 56px !important;
+  padding: 5px !important;
+  border-radius: 999px !important;
+  border: 2px solid rgba(245, 200, 66, 0.85) !important;
+  background: linear-gradient(180deg, #fffef9, #f5f7fb) !important;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22) !important;
+}
+
+.dashboard-brand-logo-image,
+.sidebar-modern-logo-image,
+.login-brand-image {
+  object-fit: contain;
+}
+
+.header-icon-btn,
+[data-testid="button-theme-toggle"],
+[data-testid="button-logout"],
+.header-pill-btn,
+[data-testid="button-declaracao-matricula"],
+.header-chat-btn,
+[data-testid="button-chat-header"],
+.header-clock-pill,
+.liveclass-premium-header button {
+  background: rgba(255, 255, 255, 0.96) !important;
+  color: var(--portal-text) !important;
+  border: 1px solid rgba(228, 232, 239, 0.92) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08) !important;
+}
+
+.header-chat-btn,
+[data-testid="button-chat-header"] {
+  min-width: 64px;
+}
+
+.header-icon-btn:hover,
+[data-testid="button-theme-toggle"]:hover,
+[data-testid="button-logout"]:hover,
+.header-pill-btn:hover,
+[data-testid="button-declaracao-matricula"]:hover,
+.header-chat-btn:hover,
+[data-testid="button-chat-header"]:hover,
+.liveclass-premium-header button:hover {
+  transform: translateY(-1px);
+  background: #ffffff !important;
+}
+
+.dashboard-sidebar-modern {
+  background: linear-gradient(180deg, #f8f8f7 0%, #f1f3f6 100%) !important;
+  border-right: 1px solid var(--portal-border) !important;
+}
+
+.sidebar-modern-header {
+  padding: 1rem 1rem 0.9rem !important;
+  background: linear-gradient(180deg, #ffffff 0%, #f6f7fa 100%);
+  border-bottom: 1px solid var(--portal-border);
+}
+
+.sidebar-modern-brand {
+  gap: 0.75rem;
+}
+
+.sidebar-modern-logo {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 12px !important;
+  border: 1px solid var(--portal-border) !important;
+  background: linear-gradient(180deg, #ffffff, #f4f6fa) !important;
+  box-shadow: 0 6px 16px rgba(35, 49, 72, 0.08);
+}
+
+.sidebar-modern-title {
+  font-size: 1rem !important;
+  color: var(--portal-text) !important;
+  font-weight: 800 !important;
+}
+
+.sidebar-modern-role {
+  color: var(--portal-muted) !important;
+  font-size: 0.8rem !important;
+}
+
+.sidebar-modern-content {
+  padding: 0.8rem 0.8rem 1rem !important;
+}
+
+.dashboard-category-trigger {
+  padding: 0.7rem 0.75rem !important;
+  border-radius: 12px !important;
+  color: #5f6881 !important;
+  font-size: 0.76rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.dashboard-category-trigger:hover {
+  background: rgba(75, 87, 207, 0.05) !important;
+  color: #38425d !important;
+}
+
+.dashboard-menu-icon-wrap,
+.dashboard-category-icon-wrap {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 999px !important;
+  background: linear-gradient(180deg, #edf4ff, #dfeeff) !important;
+  color: #2f6ecf !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+}
+
+.dashboard-menu-button {
+  min-height: 44px !important;
+  padding: 0.65rem 0.8rem !important;
+  border-radius: 12px !important;
+  color: #31405f !important;
+  border: 1px solid transparent !important;
+  background: transparent !important;
+}
+
+.dashboard-menu-button:hover {
+  background: rgba(75, 87, 207, 0.05) !important;
+  color: #25304a !important;
+}
+
+.dashboard-menu-button[data-active="true"] {
+  background: linear-gradient(180deg, #eef5ff, #e5f0ff) !important;
+  color: #21406f !important;
+  border-color: #cfe0ff !important;
+  box-shadow: none !important;
+  position: relative;
+}
+
+.dashboard-menu-button[data-active="true"]::before {
+  content: "";
+  position: absolute;
+  left: -0.8rem;
+  top: 8px;
+  bottom: 8px;
+  width: 4px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #3d82ff, #235ec0);
+}
+
+.sidebar-modern-footer {
+  background: #ffffff !important;
+  border-top: 1px solid var(--portal-border) !important;
+  padding: 0.95rem 1rem !important;
+}
+
+.sidebar-user-avatar {
+  background: linear-gradient(180deg, #eff4ff, #dfeaff) !important;
+  color: #2856aa !important;
+}
+
+.dashboard-main,
+.liveclass-premium-body {
+  max-width: 1280px !important;
+}
+
+.dashboard-hero,
+.dashboard-school-panel,
+.finance-student-premium > div:first-child,
+.finance-admin-premium > div:first-child,
+.liveclass-premium-shell > .rounded-3xl,
+.liveclass-premium-shell > .card:first-child {
+  background: linear-gradient(180deg, #f7f4e6, #f2eed9) !important;
+  border: 1px solid var(--portal-panel-border) !important;
+  box-shadow: none !important;
+}
+
+.dashboard-hero,
+.dashboard-school-panel {
+  border-radius: 16px !important;
+  padding: 1.2rem 1.4rem !important;
+}
+
+.dashboard-eyebrow,
+.login-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+  background: #eef3ff;
+  color: var(--portal-link);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.dashboard-hero-title,
+.login-title {
+  color: var(--portal-text) !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.03em;
+}
+
+.dashboard-hero-subtitle,
+.login-subtitle {
+  color: var(--portal-muted) !important;
+}
+
+.dashboard-modern .card,
+.liveclass-premium-shell .card,
+.finance-student-premium .card,
+.finance-admin-premium .card,
+.login-modern-card {
+  background: linear-gradient(180deg, var(--portal-surface), var(--portal-surface-soft)) !important;
+  border: 1px solid var(--portal-border) !important;
+  border-radius: 16px !important;
+  box-shadow: var(--portal-shadow) !important;
+}
+
+.login-modern {
+  align-items: flex-start !important;
+  padding-top: 3rem !important;
+  padding-bottom: 3rem !important;
+}
+
+.login-modern::before,
+.login-modern-card::before {
+  display: none !important;
+}
+
+.login-modern-card {
+  max-width: 980px !important;
+  overflow: hidden;
+}
+
+.login-brand-mark,
+.login-brand-mark-premium {
+  width: 76px !important;
+  height: 76px !important;
+  border-radius: 18px !important;
+  padding: 6px !important;
+  background: linear-gradient(180deg, #ffffff, #f4f6fa) !important;
+  border: 1px solid var(--portal-border) !important;
+  box-shadow: 0 10px 24px rgba(31, 42, 68, 0.12) !important;
+}
+
+.login-primary-button {
+  background: linear-gradient(180deg, #5666e9, #4150ca) !important;
+  border-color: #4150ca !important;
+  color: white !important;
+}
+
+.login-secondary-button,
+.login-toggle-link,
+.login-text-link {
+  color: var(--portal-link) !important;
+}
+
+.dashboard-modern main table,
+.finance-admin-premium table,
+.liveclass-premium-page table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+
+.dashboard-modern main .overflow-x-auto,
+.finance-admin-premium .overflow-x-auto,
+.liveclass-premium-page .overflow-x-auto,
+.premium-table-wrap {
+  border: 1px solid var(--portal-border);
+  border-radius: 14px;
+  background: #ffffff;
+  overflow: auto;
+  box-shadow: 0 8px 20px rgba(31, 42, 68, 0.04);
+}
+
+.dashboard-modern main thead tr,
+.finance-admin-premium thead tr,
+.liveclass-premium-page thead tr {
+  background: var(--portal-table-head) !important;
+}
+
+.dashboard-modern main th,
+.finance-admin-premium th,
+.liveclass-premium-page th {
+  color: #667089 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.74rem !important;
+  font-weight: 800 !important;
+  border-bottom: 1px solid var(--portal-border) !important;
+}
+
+.dashboard-modern main td,
+.finance-admin-premium td,
+.liveclass-premium-page td {
+  color: var(--portal-text) !important;
+  border-bottom: 1px solid #edf0f4 !important;
+  vertical-align: middle;
+}
+
+.dashboard-modern main tbody tr:hover,
+.finance-admin-premium tbody tr:hover,
+.liveclass-premium-page tbody tr:hover {
+  background: #fafcff !important;
+}
+
+.dashboard-modern main input,
+.dashboard-modern main textarea,
+.dashboard-modern main select,
+.dashboard-modern main button[role="combobox"],
+.dashboard-modern main [role="textbox"],
+.finance-student-premium input,
+.finance-student-premium textarea,
+.finance-student-premium button[role="combobox"],
+.finance-admin-premium input,
+.finance-admin-premium textarea,
+.finance-admin-premium button[role="combobox"],
+.login-modern input,
+.login-modern textarea,
+.login-modern button[role="combobox"] {
+  min-height: 42px;
+  border-radius: 10px !important;
+  border: 1px solid var(--portal-border-strong) !important;
+  background: #ffffff !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.9) !important;
+}
+
+.dashboard-modern main label,
+.finance-student-premium label,
+.finance-admin-premium label,
+.login-modern label {
+  color: #4f5b77 !important;
+  font-weight: 700 !important;
+  font-size: 0.88rem;
+}
+
+.dashboard-modern main [role="tablist"],
+.finance-student-premium [role="tablist"],
+.finance-admin-premium [role="tablist"],
+.liveclass-premium-page [role="tablist"] {
+  justify-content: flex-start !important;
+  gap: 1rem !important;
+  padding: 0 0 0.35rem !important;
+  border-bottom: 1px solid var(--portal-border) !important;
+  background: transparent !important;
+  overflow-x: auto;
+}
+
+.dashboard-modern main [role="tab"],
+.finance-student-premium [role="tab"],
+.finance-admin-premium [role="tab"],
+.liveclass-premium-page [role="tab"] {
+  border-radius: 0 !important;
+  border: none !important;
+  border-bottom: 2px solid transparent !important;
+  background: transparent !important;
+  color: #606b84 !important;
+  padding: 0.8rem 0.1rem !important;
+  min-height: auto !important;
+  font-size: 0.8rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  box-shadow: none !important;
+}
+
+.dashboard-modern main [role="tab"][data-state="active"],
+.finance-student-premium [role="tab"][data-state="active"],
+.finance-admin-premium [role="tab"][data-state="active"],
+.liveclass-premium-page [role="tab"][data-state="active"] {
+  color: var(--portal-link) !important;
+  border-bottom-color: var(--portal-link) !important;
+}
+
+.dashboard-modern main .badge,
+.dashboard-modern main [class*="badge"],
+.finance-student-premium [class*="badge"],
+.finance-admin-premium [class*="badge"] {
+  border-radius: 999px;
+}
+
+.dashboard-stat-card,
+.dashboard-modern main .grid .dashboard-stat-card,
+.finance-student-premium .grid.gap-4 > .card,
+.finance-admin-premium .grid.gap-4 > .card {
+  border-radius: 16px !important;
+  border: 1px solid var(--portal-border) !important;
+  background: linear-gradient(180deg, #ffffff, #fbfcff) !important;
+}
+
+.dashboard-stat-card .text-3xl,
+.dashboard-stat-card .text-2xl {
+  color: var(--portal-text) !important;
+}
+
+.dashboard-modern .announcement-modern-card,
+.dashboard-modern .announcement-card,
+.dashboard-modern .embla__slide > div {
+  border-radius: 16px !important;
+  border: 1px solid var(--portal-border) !important;
+  background: #ffffff !important;
+  box-shadow: var(--portal-shadow) !important;
+}
+
+.dashboard-modern [role="dialog"],
+.liveclass-premium-page [role="dialog"],
+.login-modern [role="dialog"] {
+  border-radius: 18px !important;
+  border: 1px solid var(--portal-border) !important;
+  box-shadow: 0 26px 60px rgba(19, 29, 48, 0.18) !important;
+  background: linear-gradient(180deg, #ffffff, #f9fbfd) !important;
+}
+
+.dashboard-modern [role="dialog"] [data-radix-dialog-title],
+.liveclass-premium-page [role="dialog"] [data-radix-dialog-title],
+.login-modern [role="dialog"] [data-radix-dialog-title] {
+  color: var(--portal-text) !important;
+}
+
+.dashboard-modern main .animate-pulse.bg-muted,
+.liveclass-premium-page .animate-pulse.bg-muted,
+.finance-student-premium .animate-pulse.bg-muted,
+.finance-admin-premium .animate-pulse.bg-muted,
+.login-modern .animate-pulse.bg-muted {
+  background: linear-gradient(90deg, #edf2f7 25%, #f6f8fb 37%, #edf2f7 63%) !important;
+  background-size: 400% 100% !important;
+  animation: portalSkeletonShine 1.35s ease-in-out infinite !important;
+}
+
+@keyframes portalSkeletonShine {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+.dashboard-modern main .empty-state,
+.dashboard-modern main .no-data,
+.liveclass-premium-page .empty-state,
+.finance-student-premium .empty-state,
+.finance-admin-premium .empty-state {
+  border: 1px dashed var(--portal-border-strong);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #fcfdff, #f6f8fc);
+}
+
+.dashboard-modern .card:hover,
+.liveclass-premium-shell .card:hover,
+.finance-student-premium .card:hover,
+.finance-admin-premium .card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 32px rgba(31, 42, 68, 0.08) !important;
+}
+
+@media (max-width: 768px) {
+  .dashboard-topbar.elegant-topbar,
+  .liveclass-premium-header {
+    min-height: 56px !important;
+  }
+
+  .dashboard-topbar-inner.elegant-header {
+    min-height: 56px !important;
+  }
+
+  .dashboard-brand-logo-large {
+    width: 48px !important;
+    height: 48px !important;
+  }
+
+  .dashboard-main,
+  .liveclass-premium-body {
+    padding-top: 1rem !important;
+  }
+
+  .dashboard-hero,
+  .dashboard-school-panel,
+  .finance-student-premium > div:first-child,
+  .finance-admin-premium > div:first-child {
+    padding: 1rem !important;
+    border-radius: 14px !important;
+  }
+
+  .dashboard-modern main th,
+  .finance-admin-premium th,
+  .liveclass-premium-page th {
+    font-size: 0.68rem !important;
+  }
+
+  .dashboard-modern main td,
+  .finance-admin-premium td,
+  .liveclass-premium-page td {
+    font-size: 0.82rem !important;
+  }
+}
