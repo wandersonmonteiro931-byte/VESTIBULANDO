@@ -29,6 +29,7 @@ import { HorariosTab } from "@/components/HorariosTab";
 import { ConfiguracaoHorariosTab } from "@/components/ConfiguracaoHorariosTab";
 import { CalendarioProgramacaoTab } from "@/components/CalendarioProgramacaoTab";
 import { PresencasTab } from "@/components/PresencasTab";
+import { AdminFinanceTab } from "@/components/AdminFinanceTab";
 import { ChatNotificationBubble } from "@/components/ChatNotificationBubble";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -3889,6 +3890,9 @@ export default function AdminDashboard() {
 
           {selectedSection === "avisos" && (
             <AnnouncementsTab />
+          )}
+          {selectedSection === "financeiro" && (
+            <AdminFinanceTab />
           )}
 
           {selectedSection === "horarios" && (

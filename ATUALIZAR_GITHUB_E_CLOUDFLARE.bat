@@ -7,6 +7,7 @@ title VESTIBULANDO - Atualizar GitHub e Cloudflare
 set "REPO=https://github.com/wandersonmonteiro931-byte/VESTIBULANDO.git"
 set "BRANCH=main"
 set "SITE=https://vestibulando.pages.dev"
+set "FIREBASE_PROJECT=plataforma-enem-f3682"
 set "NPM_CONFIG_REGISTRY=https://registry.npmjs.org/"
 set "npm_config_registry=https://registry.npmjs.org/"
 set "NPM_CONFIG_ENGINE_STRICT=false"
@@ -30,7 +31,7 @@ echo Registro npm utilizado:
 call npm config get registry
 echo.
 
-echo [1/5] Conferindo dependencias...
+echo [1/6] Conferindo dependencias...
 if exist "node_modules\vite\package.json" (
   echo Dependencias ja instaladas. Pulando npm install.
 ) else (
@@ -47,13 +48,26 @@ if exist "node_modules\vite\package.json" (
 )
 
 echo.
-echo [2/5] Testando o build do Cloudflare Pages...
+echo [2/6] Testando o build do Cloudflare Pages...
 call npm run build:pages
 if errorlevel 1 goto ERRO_BUILD
 if not exist "dist\public\index.html" goto ERRO_BUILD
 
 echo.
-echo [3/5] Preparando o GitHub...
+echo [3/6] Publicando regras e indices do Firestore...
+call npx firebase deploy --only firestore:rules,firestore:indexes --project %FIREBASE_PROJECT%
+if errorlevel 1 (
+  echo.
+  echo O Firebase precisa de autorizacao neste computador.
+  echo O navegador sera aberto para fazer login.
+  call npx firebase login
+  if errorlevel 1 goto ERRO_FIREBASE
+  call npx firebase deploy --only firestore:rules,firestore:indexes --project %FIREBASE_PROJECT%
+  if errorlevel 1 goto ERRO_FIREBASE
+)
+
+echo.
+echo [4/6] Preparando o GitHub...
 if not exist ".git" (
   git init
   if errorlevel 1 goto ERRO_PUSH
@@ -74,7 +88,7 @@ git reset origin/%BRANCH%
 if errorlevel 1 goto ERRO_PUSH
 
 echo.
-echo [4/5] Criando a atualizacao...
+echo [5/6] Criando a atualizacao...
 git add -A
 git diff --cached --quiet
 if not errorlevel 1 (
@@ -88,7 +102,7 @@ git commit -m "Atualizacao automatica %DATA% %HORA%"
 if errorlevel 1 goto ERRO_PUSH
 
 echo.
-echo [5/5] Enviando para o GitHub...
+echo [6/6] Enviando para o GitHub...
 git push -u origin %BRANCH%
 if errorlevel 1 goto ERRO_PUSH
 
@@ -123,6 +137,13 @@ goto FIM
 :ERRO_BUILD
 echo ERRO: o projeto nao conseguiu gerar dist\public\index.html.
 goto FIM
+
+:ERRO_FIREBASE
+echo ERRO: nao foi possivel publicar as regras do Firebase.
+echo Sem essas regras, o modulo Financeiro nao conseguira salvar ou ler faturas.
+echo Confirme o login da conta que administra o projeto %FIREBASE_PROJECT%.
+goto FIM
+
 :ERRO_PUSH
 echo ERRO: nao foi possivel enviar para o GitHub.
 echo Na primeira vez, conclua o login do GitHub quando solicitado.

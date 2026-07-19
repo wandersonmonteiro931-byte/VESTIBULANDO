@@ -1006,5 +1006,55 @@ service cloud.firestore {
       // Apenas admins podem deletar sinais
       allow delete: if isAdmin() && isUserActive();
     }
+
+    // ==================== FINANCEIRO ====================
+
+    // Faturas dos alunos
+    match /financialInvoices/{invoiceId} {
+      // Diretores podem ver todas; alunos apenas as próprias faturas
+      allow read: if isAuthenticated() && isUserActive() && (
+        isAdmin() ||
+        (isAluno() && resource.data.alunoId == request.auth.uid)
+      );
+
+      // Apenas a diretoria cria faturas
+      allow create: if isAdmin() && isUserActive() &&
+        request.resource.data.criadoPor == request.auth.uid;
+
+      // A diretoria gerencia todos os campos.
+      // O aluno pode somente anexar/atualizar o comprovante e enviar para análise.
+      allow update: if isAuthenticated() && isUserActive() && (
+        isAdmin() ||
+        (isAluno() &&
+          resource.data.alunoId == request.auth.uid &&
+          request.resource.data.alunoId == resource.data.alunoId &&
+          request.resource.data.status == 'em_analise' &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'comprovanteUrl',
+            'comprovanteNome',
+            'comprovanteEnviadoEm',
+            'pagamentoInformadoEm',
+            'status',
+            'atualizadoEm'
+          ]))
+      );
+
+      allow delete: if isAdmin() && isUserActive();
+    }
+
+    // Bolsas de estudo
+    match /scholarships/{scholarshipId} {
+      allow read: if isAuthenticated() && isUserActive() && (
+        isAdmin() ||
+        (isAluno() && resource.data.alunoId == request.auth.uid)
+      );
+      allow create, update, delete: if isAdmin() && isUserActive();
+    }
+
+    // Configurações de PIX e pagamento
+    match /financialSettings/{settingsId} {
+      allow read: if isAuthenticated() && isUserActive();
+      allow create, update, delete: if isAdmin() && isUserActive();
+    }
   }
 }

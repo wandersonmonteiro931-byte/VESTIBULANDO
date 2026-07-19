@@ -132,11 +132,11 @@ export function AnnouncementsCarousel({ userType, userTurma }: AnnouncementsCaro
         <Card className="announcement-modern-card announcement-modern-fullbleed">
           <CardContent className="p-0">
             <div className="relative">
-              <div className="announcement-modern-media w-full h-64 overflow-hidden">
+              <div className="announcement-modern-media announcement-modern-image w-full overflow-hidden">
                 <img
                   src={currentImageSlide.announcement.slides[currentImageSlide.slideIndex].conteudo}
                   alt={currentImageSlide.announcement.titulo || "Aviso"}
-                  className="w-full h-full object-cover"
+                  className="block w-full h-auto object-contain"
                   data-testid="announcement-image"
                 />
               </div>

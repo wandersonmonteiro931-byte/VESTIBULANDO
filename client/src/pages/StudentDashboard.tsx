@@ -22,6 +22,7 @@ import { AlunoAvaliacoesTab } from "@/components/AlunoAvaliacoesTab";
 import { AlunoBoletimTab } from "@/components/AlunoBoletimTab";
 import { AlunoPresencasTab } from "@/components/AlunoPresencasTab";
 import { AlunoAulasTab } from "@/components/AlunoAulasTab";
+import { StudentFinanceTab } from "@/components/StudentFinanceTab";
 import { HorarioViewer } from "@/components/HorarioViewer";
 import { Link } from "wouter";
 import { queryClient } from "@/lib/queryClient";
@@ -815,6 +816,10 @@ export default function StudentDashboard() {
                     </>
                   )}
                 </div>
+              )}
+
+              {selectedSection === "financeiro" && (
+                <StudentFinanceTab />
               )}
 
               {selectedSection === "boletim" && (

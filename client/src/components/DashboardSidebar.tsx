@@ -44,6 +44,7 @@ import {
   Home,
   Clock,
   Video,
+  WalletCards,
 } from "lucide-react";
 
 export interface MenuItem {
@@ -123,6 +124,14 @@ const diretorCategories: MenuCategory[] = [
     items: [
       { id: "documentos-internos", label: "Docs Internos", icon: FileText },
       { id: "documentacao", label: "Documentação", icon: FileText },
+    ],
+  },
+  {
+    id: "financeiro",
+    label: "Financeiro",
+    icon: WalletCards,
+    items: [
+      { id: "financeiro", label: "Faturas e Bolsas", icon: WalletCards },
     ],
   },
   {
@@ -232,6 +241,14 @@ const alunoCategories: MenuCategory[] = [
     items: [
       { id: "notas", label: "Notas", icon: Award },
       { id: "boletim", label: "Boletim", icon: FileCheck },
+    ],
+  },
+  {
+    id: "financeiro",
+    label: "Financeiro",
+    icon: WalletCards,
+    items: [
+      { id: "financeiro", label: "Faturas e Bolsas", icon: WalletCards },
     ],
   },
   {

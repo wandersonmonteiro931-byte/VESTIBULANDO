@@ -1107,6 +1107,21 @@
   background: hsl(var(--muted) / 0.42);
 }
 
+.announcement-modern-image {
+  height: auto;
+  min-height: 0;
+  background: transparent;
+}
+
+.announcement-modern-image img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: none;
+  object-fit: contain;
+  object-position: center;
+}
+
 .announcement-modern-text {
   background:
     linear-gradient(145deg, hsl(var(--primary) / 0.055), transparent 55%),
