@@ -306,10 +306,13 @@ export function LiveClassProvider({ children }: { children: React.ReactNode }) {
 
     try {
       // Usar backend para contornar bug do Firebase SDK 12.4.0
+      const idToken = await auth.currentUser?.getIdToken();
+      if (!idToken) throw new Error("Sessão expirada. Entre novamente.");
       const response = await fetch('/api/leave-request', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
         },
         body: JSON.stringify({
           sessaoId: currentSession.id,

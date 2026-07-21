@@ -13,6 +13,8 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { FirebaseErrorScreen } from "@/components/FirebaseErrorScreen";
 import { SuspensionAlertOverlay } from "@/components/SuspensionAlertOverlay";
 import { WarningAlertOverlay } from "@/components/WarningAlertOverlay";
+import { MfaRequiredOverlay } from "@/components/MfaRequiredOverlay";
+import { AccessibilityPreferencesLoader } from "@/components/AccessibilityControls";
 import Login from "@/pages/Login";
 import StudentDashboard from "@/pages/StudentDashboard";
 import TeacherDashboard from "@/pages/TeacherDashboard";
@@ -22,6 +24,9 @@ import ChatConversationPage from "@/pages/ChatConversationPage";
 import LiveClassPage from "@/pages/LiveClassPage";
 import TeacherClassroomPage from "@/pages/TeacherClassroomPage";
 import StudentClassroomPage from "@/pages/StudentClassroomPage";
+import SchoolPlatformPage from "@/pages/SchoolPlatformPage";
+import DocumentValidationPage from "@/pages/DocumentValidationPage";
+import FirestoreFilePage from "@/pages/FirestoreFilePage";
 import NotFound from "@/pages/not-found";
 import type { User } from "@shared/schema";
 
@@ -57,6 +62,9 @@ function RootRedirect() {
       return <BrowserRedirect to="/professor" />;
     case "diretor":
       return <BrowserRedirect to="/diretor" />;
+    case "responsavel":
+    case "funcionario":
+      return <BrowserRedirect to="/escola" />;
     default:
       return <BrowserRedirect to="/login" />;
   }
@@ -74,6 +82,14 @@ function Router() {
     <Switch>
       <Route path="/" component={RootRedirect} />
       <Route path="/login" component={Login} />
+      <Route path="/validar" component={DocumentValidationPage} />
+      <Route path="/validar/:code" component={DocumentValidationPage} />
+
+      <Route path="/arquivo/:fileId">
+        <ProtectedRoute allowedTypes={["aluno", "professor", "diretor", "responsavel", "funcionario"]}>
+          <FirestoreFilePage />
+        </ProtectedRoute>
+      </Route>
       
       <Route path="/aluno">
         <ProtectedRoute allowedTypes={["aluno"]}>
@@ -92,15 +108,21 @@ function Router() {
           <AdminDashboard />
         </ProtectedRoute>
       </Route>
+
+      <Route path="/escola">
+        <ProtectedRoute allowedTypes={["aluno", "professor", "diretor", "responsavel", "funcionario"]}>
+          <SchoolPlatformPage />
+        </ProtectedRoute>
+      </Route>
       
       <Route path="/chat">
-        <ProtectedRoute allowedTypes={["aluno", "professor", "diretor"]}>
+        <ProtectedRoute allowedTypes={["aluno", "professor", "diretor", "responsavel", "funcionario"]}>
           <ChatPage />
         </ProtectedRoute>
       </Route>
       
       <Route path="/chat/:conversationId">
-        <ProtectedRoute allowedTypes={["aluno", "professor", "diretor"]}>
+        <ProtectedRoute allowedTypes={["aluno", "professor", "diretor", "responsavel", "funcionario"]}>
           <ChatConversationPage />
         </ProtectedRoute>
       </Route>
@@ -131,6 +153,7 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <AccessibilityPreferencesLoader />
       <ThemeProvider>
         <SuspensionAlertProvider>
           <WarningAlertProvider>
@@ -140,6 +163,7 @@ function App() {
                   <Toaster />
                   <SuspensionAlertOverlay />
                   <WarningAlertOverlay />
+                  <MfaRequiredOverlay />
                   <Router />
                 </TooltipProvider>
               </LiveClassProvider>

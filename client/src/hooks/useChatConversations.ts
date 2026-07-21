@@ -66,7 +66,8 @@ export function useChatConversations() {
 
     let conversationsAsParticipant1: ChatConversation[] = [];
     let conversationsAsParticipant2: ChatConversation[] = [];
-    let currentBlocks: { bloqueadorId: string; bloqueadoId: string }[] = [];
+    let blocksCreatedByMe: { bloqueadorId: string; bloqueadoId: string }[] = [];
+    let blocksTargetingMe: { bloqueadorId: string; bloqueadoId: string }[] = [];
     let q1Loaded = false;
     let q2Loaded = false;
     let blocksLoaded = false;
@@ -82,6 +83,7 @@ export function useChatConversations() {
         (conversation) => byId.set(conversation.id, conversation),
       );
 
+      const currentBlocks = [...blocksCreatedByMe, ...blocksTargetingMe];
       const nextConversations: ConversationWithBlockInfo[] = Array.from(byId.values())
         .filter(
           (conversation) =>
@@ -125,23 +127,49 @@ export function useChatConversations() {
     };
 
     const blocksRef = collection(db, "userBlocks");
-    const blockQuery = firestoreQuery(blocksRef, where("ativo", "==", true));
+    const blocksCreatedQuery = firestoreQuery(blocksRef, where("bloqueadorId", "==", userId), where("ativo", "==", true));
+    const blocksTargetingQuery = firestoreQuery(blocksRef, where("bloqueadoId", "==", userId), where("ativo", "==", true));
+    let createdBlocksLoaded = false;
+    let targetingBlocksLoaded = false;
 
-    const unsubscribeBlocks = onSnapshot(
-      blockQuery,
+    const updateBlockState = () => {
+      blocksLoaded = createdBlocksLoaded && targetingBlocksLoaded;
+      updateConversations();
+    };
+
+    const unsubscribeCreatedBlocks = onSnapshot(
+      blocksCreatedQuery,
       (snapshot) => {
-        currentBlocks = snapshot.docs.map((blockDoc) => ({
+        blocksCreatedByMe = snapshot.docs.map((blockDoc) => ({
           bloqueadorId: blockDoc.data().bloqueadorId,
           bloqueadoId: blockDoc.data().bloqueadoId,
         }));
-        blocksLoaded = true;
-        updateConversations();
+        createdBlocksLoaded = true;
+        updateBlockState();
       },
       (snapshotError) => {
         console.error("Erro ao carregar bloqueios do chat:", snapshotError);
-        currentBlocks = [];
-        blocksLoaded = true;
-        updateConversations();
+        blocksCreatedByMe = [];
+        createdBlocksLoaded = true;
+        updateBlockState();
+      },
+    );
+
+    const unsubscribeTargetingBlocks = onSnapshot(
+      blocksTargetingQuery,
+      (snapshot) => {
+        blocksTargetingMe = snapshot.docs.map((blockDoc) => ({
+          bloqueadorId: blockDoc.data().bloqueadorId,
+          bloqueadoId: blockDoc.data().bloqueadoId,
+        }));
+        targetingBlocksLoaded = true;
+        updateBlockState();
+      },
+      (snapshotError) => {
+        console.error("Erro ao carregar bloqueios recebidos no chat:", snapshotError);
+        blocksTargetingMe = [];
+        targetingBlocksLoaded = true;
+        updateBlockState();
       },
     );
 
@@ -186,7 +214,8 @@ export function useChatConversations() {
     return () => {
       unsubscribe1();
       unsubscribe2();
-      unsubscribeBlocks();
+      unsubscribeCreatedBlocks();
+      unsubscribeTargetingBlocks();
     };
   }, [userData?.uid]);
 

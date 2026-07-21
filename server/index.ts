@@ -3,11 +3,12 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+app.set("trust proxy", 1);
+app.use(express.json({ limit: "2mb" }));
+app.use(express.urlencoded({ extended: false, limit: "2mb" }));
 
 // Middleware adicional para processar JSON raw (usado por sendBeacon)
-app.use(express.json({ type: 'application/json' }));
+app.use(express.json({ type: 'application/json', limit: "2mb" }));
 app.use(express.text({ type: 'text/plain' }));
 
 app.use((req, res, next) => {
@@ -43,12 +44,12 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
-
-    res.status(status).json({ message });
-    throw err;
+    console.error("Erro não tratado na API:", err);
+    if (res.headersSent) return next(err);
+    res.status(status).json({ message: status >= 500 ? "Erro interno do servidor" : message });
   });
 
   // importantly only setup vite in development and after

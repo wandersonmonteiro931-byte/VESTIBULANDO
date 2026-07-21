@@ -1,8 +1,8 @@
 import { useState, useMemo } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { collection, addDoc, updateDoc, doc, where, deleteDoc, getDocs, query, writeBatch } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage, storageAvailable } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
+import { storeFileInFirestore } from "@/lib/firestoreFileStore";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -278,12 +278,16 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
       let arquivoNome: string | null = null;
 
       if (attachmentFile) {
-        if (!storageAvailable || !storage) {
-          throw new Error("O upload de arquivos não está disponível no plano gratuito. Use o modelo 'Questões Online' para criar avaliações sem precisar anexar arquivos.");
-        }
-        const storageRef = ref(storage, `avaliacoes/${userData.uid}/${Date.now()}_${attachmentFile.name}`);
-        await uploadBytes(storageRef, attachmentFile);
-        arquivoUrl = await getDownloadURL(storageRef);
+        const storedFile = await storeFileInFirestore(attachmentFile, {
+          ownerId: userData.uid,
+          ownerRole: userData.tipo,
+          audienceUserIds: [userData.uid],
+          audienceRoles: ["diretor", "administrador", "responsavel"],
+          studentIds: [],
+          classIds: data.turmaId ? [data.turmaId] : [],
+          purpose: "modelo-avaliacao",
+        });
+        arquivoUrl = storedFile.url;
         arquivoNome = attachmentFile.name;
       }
 
@@ -465,12 +469,16 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
       let arquivoNome = editingAvaliacao.arquivoNome;
 
       if (attachmentFile) {
-        if (!storageAvailable || !storage) {
-          throw new Error("O upload de arquivos não está disponível no plano gratuito. Use o modelo 'Questões Online' para criar avaliações sem precisar anexar arquivos.");
-        }
-        const storageRef = ref(storage, `avaliacoes/${data.id}/${attachmentFile.name}`);
-        await uploadBytes(storageRef, attachmentFile);
-        arquivoUrl = await getDownloadURL(storageRef);
+        const storedFile = await storeFileInFirestore(attachmentFile, {
+          ownerId: userData.uid,
+          ownerRole: userData.tipo,
+          audienceUserIds: [userData.uid],
+          audienceRoles: ["diretor", "administrador", "responsavel"],
+          studentIds: [],
+          classIds: data.turmaId ? [data.turmaId] : [],
+          purpose: "modelo-avaliacao",
+        });
+        arquivoUrl = storedFile.url;
         arquivoNome = attachmentFile.name;
       }
 

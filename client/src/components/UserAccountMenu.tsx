@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Settings, User as UserIcon } from "lucide-react";
+import { Settings, ShieldCheck, User as UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import EditProfileDialog from "./EditProfileDialog";
+import { SecurityCenterDialog } from "./SecurityCenterDialog";
 
 interface UserAccountMenuProps {
   onClose?: () => void;
@@ -19,6 +20,7 @@ interface UserAccountMenuProps {
 export default function UserAccountMenu({ onClose, variant = "avatar" }: UserAccountMenuProps) {
   const { userData, refreshUserData } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [securityOpen, setSecurityOpen] = useState(false);
 
   const getInitials = (nome: string) => {
     const names = nome.split(" ");
@@ -68,6 +70,10 @@ export default function UserAccountMenu({ onClose, variant = "avatar" }: UserAcc
             <UserIcon className="h-4 w-4 mr-2" />
             Editar Perfil
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setSecurityOpen(true)} className="cursor-pointer">
+            <ShieldCheck className="h-4 w-4 mr-2" />
+            Segurança e MFA
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -78,6 +84,7 @@ export default function UserAccountMenu({ onClose, variant = "avatar" }: UserAcc
           onUpdate={handleUpdate}
         />
       )}
+      <SecurityCenterDialog open={securityOpen} onOpenChange={setSecurityOpen} />
     </>
   );
 }

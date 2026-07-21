@@ -18,6 +18,7 @@ import {
   GraduationCap,
   Home,
   Key,
+  LayoutDashboard,
   MessageSquare,
   School,
   Settings,
@@ -55,6 +56,12 @@ interface DashboardSidebarProps {
 }
 
 const diretorCategories: MenuCategory[] = [
+  {
+    id: "gestao-integrada",
+    label: "Gestão 360",
+    icon: LayoutDashboard,
+    items: [{ id: "gestao-escolar-360", label: "30 módulos e 483 funções", icon: LayoutDashboard }],
+  },
   {
     id: "gestao-usuarios",
     label: "Usuários",
@@ -132,6 +139,12 @@ const diretorCategories: MenuCategory[] = [
 
 const professorCategories: MenuCategory[] = [
   {
+    id: "gestao-integrada",
+    label: "Gestão 360",
+    icon: LayoutDashboard,
+    items: [{ id: "gestao-escolar-360", label: "Central docente completa", icon: LayoutDashboard }],
+  },
+  {
     id: "academico",
     label: "Acadêmico",
     icon: GraduationCap,
@@ -173,6 +186,12 @@ const professorCategories: MenuCategory[] = [
 ];
 
 const alunoCategories: MenuCategory[] = [
+  {
+    id: "gestao-integrada",
+    label: "Gestão 360",
+    icon: LayoutDashboard,
+    items: [{ id: "gestao-escolar-360", label: "Minha central escolar", icon: LayoutDashboard }],
+  },
   {
     id: "academico",
     label: "Horários",

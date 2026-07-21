@@ -1,14 +1,16 @@
 import type { User } from "@shared/schema";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import UserAccountMenu from "@/components/UserAccountMenu";
+import { Link } from "wouter";
 import {
   CalendarCheck,
   ChevronDown,
   GraduationCap,
+  LayoutDashboard,
   Printer,
 } from "lucide-react";
 
-type PortalRole = "aluno" | "professor" | "diretor";
+type PortalRole = "aluno" | "professor" | "diretor" | "responsavel" | "funcionario";
 
 interface PortalProfileHeaderProps {
   user?: User | null;
@@ -18,24 +20,31 @@ interface PortalProfileHeaderProps {
     label: string;
     onClick: () => void;
   };
+  showSuiteAction?: boolean;
 }
 
 const roleLabels: Record<PortalRole, string> = {
   aluno: "Aluno",
   professor: "Professor",
   diretor: "Diretoria",
+  responsavel: "Responsável",
+  funcionario: "Equipe escolar",
 };
 
 const statusLabels: Record<PortalRole, string> = {
   aluno: "Frequência",
   professor: "Vínculo docente",
   diretor: "Situação do sistema",
+  responsavel: "Vínculo familiar",
+  funcionario: "Perfil institucional",
 };
 
 const statusDescriptions: Record<PortalRole, string> = {
   aluno: "Consulte em Minhas presenças",
   professor: "Acesso docente ativo",
   diretor: "Administração ativa",
+  responsavel: "Acompanhamento autorizado",
+  funcionario: "Acesso institucional ativo",
 };
 
 function getInitials(name?: string) {
@@ -50,6 +59,7 @@ export function PortalProfileHeader({
   role,
   contextLabel,
   documentAction,
+  showSuiteAction = true,
 }: PortalProfileHeaderProps) {
   const roleLabel = roleLabels[role];
   const photo = user?.fotoUrl || user?.fotoBase64;
@@ -83,6 +93,14 @@ export function PortalProfileHeader({
 
         <div className="portal-profile-actions">
           <UserAccountMenu variant="settings" />
+          {showSuiteAction && (
+            <Link href="/escola">
+              <button type="button" className="portal-profile-action" aria-label="Abrir gestão escolar completa">
+                <LayoutDashboard aria-hidden="true" />
+                <span>GESTÃO 360</span>
+              </button>
+            </Link>
+          )}
           <button type="button" className="portal-profile-action" onClick={action.onClick}>
             <Printer aria-hidden="true" />
             <span>{action.label}</span>

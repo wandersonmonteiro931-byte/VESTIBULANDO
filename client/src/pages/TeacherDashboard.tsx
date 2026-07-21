@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { collection, where, addDoc, updateDoc, doc, query, onSnapshot } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage, storageAvailable } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
+import { storeFileInFirestore } from "@/lib/firestoreFileStore";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { AccessibilityControls } from "@/components/AccessibilityControls";
 import { BrasiliaClock } from "@/components/BrasiliaClock";
 import { StatusBadge } from "@/components/StatusBadge";
 import { FileUploadZone } from "@/components/FileUploadZone";
@@ -49,6 +50,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { getNowBrasiliaISO } from "@/lib/brasiliaTime";
 import { cn } from "@/lib/utils";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
+import { SchoolManagementSuite } from "@/features/school/SchoolManagementSuite";
 
 const tarefaFormSchema = z.object({
   titulo: z.string().min(1, "Título é obrigatório"),
@@ -130,12 +132,15 @@ export default function TeacherDashboard() {
       let arquivoNome = undefined;
       
       if (attachmentFile) {
-        if (!storageAvailable || !storage) {
-          throw new Error("O upload de arquivos não está disponível no plano gratuito. Crie tarefas sem anexos ou solicite que os alunos respondam diretamente.");
-        }
-        const storageRef = ref(storage, `tarefas/${userData.uid}/${Date.now()}_${attachmentFile.name}`);
-        await uploadBytes(storageRef, attachmentFile);
-        arquivoAnexo = await getDownloadURL(storageRef);
+        const storedFile = await storeFileInFirestore(attachmentFile, {
+          ownerId: userData.uid,
+          ownerRole: userData.tipo,
+          audienceUserIds: [userData.uid],
+          audienceRoles: ["diretor", "administrador", "responsavel"],
+          classIds: [data.turma],
+          purpose: "material-tarefa",
+        });
+        arquivoAnexo = storedFile.url;
         arquivoNome = attachmentFile.name;
       }
       
@@ -247,6 +252,7 @@ export default function TeacherDashboard() {
               </div>
               
               <div className="dashboard-header-right flex items-center gap-3">
+                <AccessibilityControls />
                 <ThemeToggle />
                 <BrasiliaClock />
                 <Link href="/chat">
@@ -417,6 +423,9 @@ export default function TeacherDashboard() {
               )}
 
               <div className="space-y-6">
+                {selectedSection === "gestao-escolar-360" && (
+                  <SchoolManagementSuite />
+                )}
                 {selectedSection === "avaliacoes" && (
                   <AvaliacoesTab userType="professor" />
                 )}

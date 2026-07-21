@@ -82,14 +82,15 @@ export function useUnreadMessages() {
         }
       });
 
+      const latest = latestMessage as UnreadInfo["latestMessage"];
       const newMessageArrived = !isInitialLoadRef.current && 
         totalUnread > previousUnreadRef.current && 
-        latestMessage && 
-        latestMessage.timestamp !== latestMessageIdRef.current;
+        latest !== null && 
+        latest.timestamp !== latestMessageIdRef.current;
 
-      if (newMessageArrived && latestMessage) {
+      if (newMessageArrived && latest) {
         setShowNotification(true);
-        latestMessageIdRef.current = latestMessage.timestamp;
+        latestMessageIdRef.current = latest.timestamp;
       }
 
       previousUnreadRef.current = totalUnread;

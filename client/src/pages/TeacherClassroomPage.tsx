@@ -169,11 +169,12 @@ export default function TeacherClassroomPage() {
 
   useEffect(() => {
     if (!session?.dataInicio) return;
+    const sessionStart = session.dataInicio;
 
     const calculateElapsed = () => {
       try {
         // Handle ISO string or common date formats from Firebase
-        const startStr = session.dataInicio;
+        const startStr = sessionStart;
         let startTime: number;
 
         if (startStr.includes("/") && startStr.includes(":")) {

@@ -51,6 +51,8 @@
 }
 
 .dashboard-topbar-inner.elegant-header {
+  display: flex !important;
+  grid-template-columns: none !important;
   width: 100% !important;
   max-width: none !important;
   min-height: 44px !important;
@@ -70,7 +72,9 @@
 .portal-brand {
   display: inline-flex;
   align-items: center;
-  min-width: 156px;
+  width: max-content;
+  min-width: 198px;
+  flex: 0 0 auto;
   height: 27px;
   overflow: hidden;
   border-radius: 6px;
@@ -439,10 +443,18 @@
   display: flex;
   align-items: stretch;
   width: 100%;
+  height: 42px;
   min-height: 42px;
   overflow-x: auto;
+  overflow-y: hidden;
   border-bottom: 2px solid #e0e0e3;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+}
+
+.portal-primary-tabs::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
 }
 
 .portal-primary-tab {
@@ -943,6 +955,33 @@
 .dark .dashboard-modern main th,
 .dark .dashboard-modern main td {
   border-color: #414249 !important;
+}
+
+/* Mantém a navegação principal em uma única linha sem criar rolagem vertical.
+   Estes seletores precisam ser mais específicos que o estilo genérico de tabs. */
+.dashboard-modern main .portal-primary-tabs {
+  display: flex !important;
+  align-items: stretch !important;
+  flex-wrap: nowrap !important;
+  gap: 0 !important;
+  width: 100%;
+  height: 42px !important;
+  min-height: 42px !important;
+  padding: 0 !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  scrollbar-width: none;
+}
+
+.dashboard-modern main .portal-primary-tabs::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.dashboard-modern main .portal-primary-tab {
+  min-height: 42px !important;
+  flex: 0 0 auto !important;
 }
 
 @media (max-width: 900px) {

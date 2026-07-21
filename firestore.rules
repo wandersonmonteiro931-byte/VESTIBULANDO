@@ -17,7 +17,11 @@ service cloud.firestore {
     }
     
     function isAdmin() {
-      return isAuthenticated() && userDocExists() && getUserData().tipo == 'diretor';
+      return isAuthenticated() && userDocExists() && (
+        getUserData().tipo == 'diretor' ||
+        (getUserData().keys().hasAny(['papel']) && getUserData().papel == 'administrador') ||
+        (getUserData().keys().hasAny(['papelDetalhado']) && getUserData().papelDetalhado == 'administrador')
+      );
     }
     
     function isProfessor() {
@@ -26,6 +30,101 @@ service cloud.firestore {
     
     function isAluno() {
       return isAuthenticated() && userDocExists() && getUserData().tipo == 'aluno';
+    }
+
+    function isGuardian() {
+      return isAuthenticated() && userDocExists() && getUserData().tipo == 'responsavel';
+    }
+
+    function userRole() {
+      return getUserData().keys().hasAny(['papelDetalhado'])
+        ? getUserData().papelDetalhado
+        : (getUserData().keys().hasAny(['papel']) ? getUserData().papel : getUserData().tipo);
+    }
+
+    function isInstitutionalStaff() {
+      return isAuthenticated() && userDocExists() && userRole() in [
+        'diretor', 'administrador', 'secretaria', 'coordenador', 'financeiro',
+        'bibliotecario', 'psicologo', 'inspetor', 'funcionario', 'rh', 'cantina', 'transporte'
+      ];
+    }
+
+    function hasPermission(permission) {
+      return isAdmin() || (
+        getUserData().keys().hasAny(['permissoes']) &&
+        ('*' in getUserData().permissoes || permission in getUserData().permissoes)
+      );
+    }
+
+    function canManageSchoolModule(moduleId) {
+      return isAdmin() || hasPermission(moduleId + '.manage') ||
+        (userRole() == 'secretaria' && moduleId in [
+          'instituicao', 'acessos', 'alunos', 'responsaveis', 'matriculas',
+          'estrutura-academica', 'calendario-horarios', 'documentos-escolares',
+          'comunicacao', 'secretaria', 'operacoes', 'lgpd-seguranca'
+        ]) ||
+        (userRole() == 'coordenador' && moduleId in [
+          'estrutura-academica', 'calendario-horarios', 'diario-planejamento',
+          'frequencia', 'atividades', 'avaliacoes', 'notas-boletim',
+          'acompanhamento', 'conteudos', 'aulas-ao-vivo', 'bem-estar',
+          'inclusao', 'relatorios'
+        ]) ||
+        (userRole() == 'professor' && moduleId in [
+          'diario-planejamento', 'frequencia', 'atividades', 'avaliacoes',
+          'notas-boletim', 'acompanhamento', 'conteudos', 'aulas-ao-vivo',
+          'portal-professor', 'bem-estar'
+        ]) ||
+        (userRole() == 'professor_substituto' && moduleId in [
+          'diario-planejamento', 'frequencia', 'atividades', 'avaliacoes',
+          'conteudos', 'aulas-ao-vivo', 'portal-professor', 'bem-estar'
+        ]) ||
+        (userRole() == 'monitor' && moduleId in ['frequencia', 'atividades', 'conteudos', 'aulas-ao-vivo', 'bem-estar']) ||
+        (userRole() == 'financeiro' && moduleId in ['responsaveis', 'matriculas', 'financeiro', 'secretaria', 'relatorios', 'integracoes']) ||
+        (userRole() == 'bibliotecario' && moduleId in ['conteudos', 'operacoes']) ||
+        (userRole() == 'psicologo' && moduleId in ['acompanhamento', 'bem-estar', 'inclusao']) ||
+        (userRole() == 'inspetor' && moduleId in ['frequencia', 'bem-estar', 'operacoes']) ||
+        (userRole() == 'aluno' && moduleId in ['portal-aluno', 'secretaria', 'lgpd-seguranca']) ||
+        (userRole() == 'responsavel' && moduleId in ['responsaveis', 'portal-responsaveis', 'frequencia', 'secretaria', 'lgpd-seguranca']) ||
+        (userRole() == 'funcionario' && moduleId in ['secretaria', 'operacoes']) ||
+        (userRole() == 'rh' && moduleId in ['acessos', 'operacoes', 'lgpd-seguranca']) ||
+        (userRole() == 'cantina' && moduleId == 'operacoes') ||
+        (userRole() == 'transporte' && moduleId in ['bem-estar', 'operacoes']);
+    }
+
+    function canReadSchoolFile(fileData) {
+      return isAuthenticated() && isUserActive() && (
+        isAdmin() ||
+        fileData.ownerId == request.auth.uid ||
+        (fileData.keys().hasAny(['audienceUserIds']) && request.auth.uid in fileData.audienceUserIds) ||
+        (fileData.keys().hasAny(['audienceRoles']) && userRole() in fileData.audienceRoles) ||
+        (isAluno() && fileData.keys().hasAny(['studentIds']) && request.auth.uid in fileData.studentIds) ||
+        (isAluno() && fileData.keys().hasAny(['classIds']) && getUserData().turma in fileData.classIds)
+      );
+    }
+
+    function guardianLinkExists(studentId) {
+      return isGuardian() && exists(/databases/$(database)/documents/guardianLinks/$(request.auth.uid + '_' + studentId));
+    }
+
+    function guardianLink(studentId) {
+      return get(/databases/$(database)/documents/guardianLinks/$(request.auth.uid + '_' + studentId)).data;
+    }
+
+    function guardianCan(studentId, permission) {
+      return guardianLinkExists(studentId) &&
+        guardianLink(studentId).active == true &&
+        guardianLink(studentId).keys().hasAny(['permissions']) && (
+          '*' in guardianLink(studentId).permissions ||
+          permission in guardianLink(studentId).permissions
+        );
+    }
+
+    function isConversationParticipant(conversationId) {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/chatConversations/$(conversationId)) && (
+          get(/databases/$(database)/documents/chatConversations/$(conversationId)).data.participante1Id == request.auth.uid ||
+          get(/databases/$(database)/documents/chatConversations/$(conversationId)).data.participante2Id == request.auth.uid
+        );
     }
     
     function isUserActive() {
@@ -42,11 +141,9 @@ service cloud.firestore {
       // Dados sensíveis como CPF são protegidos a nível de aplicação
       allow get: if isAuthenticated();
       
-      // Allow list/query operation for:
-      // 1. Anyone (authenticated or not) - needed for login by CPF/matricula
-      // 2. Admins - for admin dashboard
-      // Note: This is safe because passwords are stored in Firebase Auth, not Firestore
-      allow list: if true;
+      // O login por CPF/matrícula é resolvido pela API com limitação de
+      // tentativas; consultas à coleção completa exigem autenticação.
+      allow list: if isAuthenticated();
       
       // Allow creating user doc in two scenarios:
       // 1. Self-registration: User creating their own 'aluno' account
@@ -61,8 +158,7 @@ service cloud.firestore {
          request.resource.data.email == request.auth.token.email &&
          request.resource.data.ativo == true) ||
         // Scenario 2: Admin creating account for approval
-        (exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) && 
-         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'diretor' &&
+        (isAdmin() && hasPermission('acessos.manage') &&
          request.resource.data.uid == userId &&
          request.resource.data.keys().hasAll(['uid', 'nome', 'email', 'tipo', 'ativo']))
       );
@@ -72,17 +168,24 @@ service cloud.firestore {
       allow update: if isAuthenticated() && request.auth.uid == userId &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isOnline', 'lastSeen', 'lastActivity', 'statusPresenca']);
       
-      // Users can update their own basic info (but not uid, tipo, ativo), admins can update all
+      // O próprio usuário altera apenas perfil, preferências e marcadores de
+      // segurança. Papéis, permissões, bloqueios, status e validade são administrativos.
       allow update: if isAuthenticated() && (
-        (request.auth.uid == userId && 
-         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['uid', 'tipo', 'ativo'])) ||
-        (exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) && 
-         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'diretor')
+        (request.auth.uid == userId &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+           'uid', 'nome', 'nomeSocial', 'dataNascimento', 'sexo', 'nacionalidade',
+           'escolaridade', 'telefone', 'cep', 'rua', 'bairro', 'cidade', 'estado',
+           'disponibilidade', 'horarioEspecialObservacao', 'fotoUrl', 'fotoBase64',
+           'fotoPublica', 'mensagemStatus', 'preferenciasNotificacao',
+           'acessibilidadePreferencias', 'chatTermsAccepted', 'chatTermsAcceptedDate',
+           'primeiroAcesso', 'forcarTrocaSenha', 'senhaAlteradaEm', 'mfaAtivado', 'mfaAtivadoEm',
+           'mfaDesativadoEm', 'sessoesRevogadasEm', 'sessaoPreservadaId'
+         ])) ||
+        isAdmin()
       );
       
       // Only admins can delete users
-      allow delete: if exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) && 
-                       get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tipo == 'diretor';
+      allow delete: if isAdmin() && hasPermission('acessos.manage');
     }
     
     // Tarefas collection
@@ -91,7 +194,10 @@ service cloud.firestore {
       allow read: if isAuthenticated() && isUserActive() && (
         isAdmin() ||
         (isProfessor() && resource.data.professorId == request.auth.uid) ||
-        (isAluno() && resource.data.turma == getUserData().turma)
+        (isAluno() && resource.data.turma == getUserData().turma) ||
+        (isGuardian() &&
+          getUserData().keys().hasAny(['filhosTurmasAcademicasIds']) &&
+          resource.data.turma in getUserData().filhosTurmasAcademicasIds)
       );
       
       // Only professors can create tarefas
@@ -121,6 +227,7 @@ service cloud.firestore {
       allow read: if isAuthenticated() && isUserActive() && (
         isAdmin() ||
         (isAluno() && resource.data.alunoId == request.auth.uid) ||
+        (isGuardian() && guardianCan(resource.data.alunoId, 'academic.view')) ||
         (isProfessor() && resource.data.professorId == request.auth.uid) ||
         (isProfessor() && professorOwnsTarefa(resource.data.tarefaId))
       );
@@ -156,34 +263,20 @@ service cloud.firestore {
     
     // Solicitacoes collection - for pending user registrations
     match /solicitacoes/{solicitacaoId} {
-      // Anyone can create a solicitacao (unauthenticated registration)
-      allow create: if true;
-      
-      // Anyone can read solicitacoes (needed for status verification)
-      allow read: if true;
-      
-      // Only admins can delete solicitacoes
-      allow delete: if isAdmin();
-      
-      // Admins can update any solicitacao
-      // Anyone can update solicitacao if it's "devolvido" or "reprovado"
-      allow update: if isAdmin() || 
-                       (resource.data.status in ['devolvido', 'reprovado']);
+      // Inscrição, consulta e correção públicas passam pela API limitada e
+      // validada. O cliente administrativo mantém acesso integral autenticado.
+      allow read, create, update, delete: if isAdmin();
     }
     
     // Reprovacoes collection - for rejected user registrations
     match /reprovacoes/{reprovacaoId} {
-      // Anyone can read reprovacoes (to check if they were rejected)
-      allow read: if true;
+      allow read: if isAdmin();
       
       // Only admins can create and update reprovacoes
       allow create: if isAdmin();
       allow update: if isAdmin();
       
-      // Only admins can delete reprovacoes
-      // Note: Users are allowed to delete their own rejection when re-registering
-      // This is done through the application flow, not direct Firestore access
-      allow delete: if isAdmin() || true;
+      allow delete: if isAdmin();
     }
     
     // Disciplinary Actions collection - advertências e suspensões
@@ -192,7 +285,8 @@ service cloud.firestore {
       // Diretores podem ler todas as ações disciplinares
       allow read: if isAuthenticated() && (
         isAdmin() ||
-        (isAluno() && resource.data.alunoId == request.auth.uid)
+        (isAluno() && resource.data.alunoId == request.auth.uid) ||
+        (isGuardian() && guardianCan(resource.data.alunoId, 'discipline.view'))
       );
       
       // Apenas diretores podem criar ações disciplinares
@@ -286,26 +380,24 @@ service cloud.firestore {
     // Chat Messages collection
     match /chatMessages/{messageId} {
       // Leitura de mensagem individual (get)
-      allow get: if isAuthenticated() && (
-        isAdmin() ||
-        resource.data.remetenteId == request.auth.uid ||
-        resource.data.destinatarioId == request.auth.uid
-      );
+      allow get: if isAuthenticated() && (isAdmin() || isConversationParticipant(resource.data.conversationId));
       
-      // Listagem de mensagens (queries) - permite queries autenticadas
-      // A filtragem de quais mensagens o usuário pode ver é feita no cliente
-      allow list: if isAuthenticated();
+      // A conversa consultada deve pertencer ao usuário; não há listagem global.
+      allow list: if isAuthenticated() && (isAdmin() || isConversationParticipant(resource.data.conversationId));
       
       // Apenas usuários autenticados podem criar mensagens
       allow create: if isAuthenticated() && isUserActive() &&
-                       request.resource.data.remetenteId == request.auth.uid;
+                       request.resource.data.remetenteId == request.auth.uid &&
+                       isConversationParticipant(request.resource.data.conversationId);
       
       // Apenas o remetente ou destinatário podem atualizar (para marcar como lida ou deletada)
-      allow update: if isAuthenticated() && (
-        resource.data.remetenteId == request.auth.uid ||
-        resource.data.destinatarioId == request.auth.uid ||
-        isAdmin()
-      );
+      allow update: if isAuthenticated() && (isAdmin() || isConversationParticipant(resource.data.conversationId)) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'entregue', 'dataEntrega', 'lida', 'dataLeitura',
+          'deletadaPorRemetente', 'deletadaPorDestinatario',
+          'dataDeletadaPorRemetente', 'dataDeletadaPorDestinatario',
+          'deletadaParaTodos', 'dataDeletadaParaTodos', 'deletadaParaTodosPorId'
+        ]);
       
       // Apenas diretores podem deletar mensagens (fisicamente)
       allow delete: if isAdmin();
@@ -331,7 +423,14 @@ service cloud.firestore {
         resource.data.participante1Id == request.auth.uid ||
         resource.data.participante2Id == request.auth.uid ||
         isAdmin()
-      );
+      ) && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'ultimaMensagem', 'ultimaMensagemTimestamp', 'ultimaMensagemRemetenteId',
+        'ultimaMensagemEntregue', 'ultimaMensagemLida', 'mensagensNaoLidas1',
+        'mensagensNaoLidas2', 'participante1Digitando', 'participante2Digitando',
+        'participante1UltimaDigitacao', 'participante2UltimaDigitacao',
+        'deletadaPorParticipante1', 'deletadaPorParticipante2',
+        'dataDelecaoParticipante1', 'dataDelecaoParticipante2', 'dataUltimaAtualizacao'
+      ]);
       
       // Apenas diretores podem deletar conversas
       allow delete: if isAdmin();
@@ -357,8 +456,12 @@ service cloud.firestore {
     
     // User Blocks collection - bloqueios entre usuários
     match /userBlocks/{blockId} {
-      // Usuários podem listar bloqueios (necessário para verificar antes de enviar mensagens)
-      allow list: if isAuthenticated();
+      // Consultas devem estar limitadas a bloqueios dos quais o usuário participa.
+      allow list: if isAuthenticated() && (
+        isAdmin() ||
+        resource.data.bloqueadorId == request.auth.uid ||
+        resource.data.bloqueadoId == request.auth.uid
+      );
       
       // Usuários podem ler bloqueios onde são participantes, diretores podem ler todos
       allow get: if isAuthenticated() && (
@@ -373,7 +476,8 @@ service cloud.firestore {
       
       // Apenas o bloqueador pode atualizar (para desbloquear)
       allow update: if isAuthenticated() && isUserActive() &&
-                       resource.data.bloqueadorId == request.auth.uid;
+                       resource.data.bloqueadorId == request.auth.uid &&
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ativo', 'dataDesbloqueio']);
       
       // Apenas diretores ou o bloqueador podem deletar
       allow delete: if isAuthenticated() && (
@@ -480,6 +584,7 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (
         isAdmin() ||
         (isAluno() && resource.data.alunoId == request.auth.uid) ||
+        (isGuardian() && guardianCan(resource.data.alunoId, 'academic.view')) ||
         (isProfessor() && resource.data.professorId == request.auth.uid) ||
         (isProfessor() && professorOwnsAvaliacao(resource.data.avaliacaoId))
       );
@@ -530,7 +635,8 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (
         isAdmin() ||
         isProfessor() ||
-        (isAluno() && resource.data.alunoId == request.auth.uid && resource.data.liberado == true)
+        (isAluno() && resource.data.alunoId == request.auth.uid && resource.data.liberado == true) ||
+        (isGuardian() && guardianCan(resource.data.alunoId, 'academic.view') && resource.data.liberado == true)
       );
       
       // Apenas diretores podem criar boletins
@@ -560,7 +666,8 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (
         isAdmin() ||
         isProfessor() ||
-        (isAluno() && resource.data.alunoId == request.auth.uid)
+        (isAluno() && resource.data.alunoId == request.auth.uid) ||
+        (isGuardian() && guardianCan(resource.data.alunoId, 'academic.view'))
       );
       
       // Apenas diretores podem criar documentos de boletim
@@ -878,7 +985,8 @@ service cloud.firestore {
       allow read: if isAuthenticated() && isUserActive() && (
         isAdmin() ||
         isProfessor() ||
-        (isAluno() && resource.data.alunoId == request.auth.uid)
+        (isAluno() && resource.data.alunoId == request.auth.uid) ||
+        (isGuardian() && guardianCan(resource.data.alunoId, 'attendance.view'))
       );
       
       // Apenas diretores e professores podem criar registros
@@ -1014,7 +1122,8 @@ service cloud.firestore {
       // Diretores podem ver todas; alunos apenas as próprias faturas
       allow read: if isAuthenticated() && isUserActive() && (
         isAdmin() ||
-        (isAluno() && resource.data.alunoId == request.auth.uid)
+        (isAluno() && resource.data.alunoId == request.auth.uid) ||
+        (isGuardian() && guardianCan(resource.data.alunoId, 'finance.view'))
       );
 
       // Apenas a diretoria cria faturas
@@ -1046,7 +1155,8 @@ service cloud.firestore {
     match /scholarships/{scholarshipId} {
       allow read: if isAuthenticated() && isUserActive() && (
         isAdmin() ||
-        (isAluno() && resource.data.alunoId == request.auth.uid)
+        (isAluno() && resource.data.alunoId == request.auth.uid) ||
+        (isGuardian() && guardianCan(resource.data.alunoId, 'finance.view'))
       );
       allow create, update, delete: if isAdmin() && isUserActive();
     }
@@ -1055,6 +1165,164 @@ service cloud.firestore {
     match /financialSettings/{settingsId} {
       allow read: if isAuthenticated() && isUserActive();
       allow create, update, delete: if isAdmin() && isUserActive();
+    }
+
+    // ==================== NÚCLEO ESCOLAR 360 ====================
+
+    // Arquivos em blocos no próprio Firestore. Esta coleção substitui
+    // completamente o Firebase Storage e mantém verificação de acesso/hash.
+    match /schoolFiles/{fileId} {
+      allow get: if canReadSchoolFile(resource.data);
+      allow list: if false;
+      allow create: if isAuthenticated() && isUserActive() &&
+        request.resource.data.ownerId == request.auth.uid &&
+        request.auth.uid in request.resource.data.audienceUserIds &&
+        request.resource.data.status == 'uploading' &&
+        request.resource.data.size is int &&
+        request.resource.data.size > 0 &&
+        request.resource.data.size <= 8388608 &&
+        request.resource.data.chunkCount is int &&
+        request.resource.data.chunkCount > 0 &&
+        request.resource.data.chunkCount <= 21;
+      allow update: if isAuthenticated() && isUserActive() &&
+        resource.data.ownerId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'completedAt', 'failedAt']);
+      allow delete: if false;
+
+      match /chunks/{chunkId} {
+        function parentFile() {
+          return get(/databases/$(database)/documents/schoolFiles/$(fileId)).data;
+        }
+        allow get, list: if parentFile().status == 'ready' && canReadSchoolFile(parentFile());
+        allow create: if isAuthenticated() && isUserActive() &&
+          parentFile().ownerId == request.auth.uid &&
+          request.resource.data.ownerId == request.auth.uid &&
+          request.resource.data.fileId == fileId &&
+          request.resource.data.index is int &&
+          request.resource.data.byteLength is int &&
+          request.resource.data.byteLength > 0 &&
+          request.resource.data.byteLength <= 409600 &&
+          request.resource.data.data is string &&
+          request.resource.data.data.size() <= 550000;
+        allow update, delete: if false;
+      }
+    }
+
+    // Vínculos determinísticos entre responsáveis e estudantes.
+    match /guardianLinks/{linkId} {
+      allow read: if isAuthenticated() && isUserActive() && (
+        isAdmin() ||
+        isInstitutionalStaff() ||
+        userRole() in ['professor', 'professor_substituto', 'monitor'] ||
+        resource.data.guardianId == request.auth.uid ||
+        resource.data.studentId == request.auth.uid
+      );
+      allow create, update, delete: if isAdmin() && hasPermission('acessos.manage');
+    }
+
+    // Registros operacionais dos 30 módulos. Exclusões são sempre lógicas.
+    match /schoolRecords/{recordId} {
+      allow read: if isAuthenticated() && isUserActive() && (
+        isAdmin() ||
+        request.auth.uid in resource.data.audienceUserIds ||
+        userRole() in resource.data.audienceRoles
+      );
+
+      allow create: if isAuthenticated() && isUserActive() &&
+        request.resource.data.createdBy == request.auth.uid &&
+        request.auth.uid in request.resource.data.audienceUserIds &&
+        request.resource.data.moduleId is string &&
+        request.resource.data.capabilityId is string &&
+        request.resource.data.capability is string &&
+        request.resource.data.capabilityIndex is int &&
+        request.resource.data.customData is map &&
+        request.resource.data.automation is map &&
+        request.resource.data.title is string &&
+        request.resource.data.status is string && (
+          canManageSchoolModule(request.resource.data.moduleId)
+        );
+
+      allow update: if isAuthenticated() && isUserActive() && (
+        isAdmin() ||
+        canManageSchoolModule(resource.data.moduleId) ||
+        resource.data.createdBy == request.auth.uid ||
+        resource.data.assigneeId == request.auth.uid
+      ) &&
+        request.resource.data.id == resource.data.id &&
+        request.resource.data.moduleId == resource.data.moduleId &&
+        request.resource.data.createdBy == resource.data.createdBy &&
+        request.resource.data.createdAt == resource.data.createdAt;
+
+      allow delete: if false;
+    }
+
+    // Notas internas ficam separadas do registro compartilhável para evitar exposição.
+    match /schoolPrivateNotes/{noteId} {
+      allow read: if isAuthenticated() && isUserActive() && (
+        isAdmin() ||
+        isInstitutionalStaff() ||
+        userRole() in ['professor', 'professor_substituto', 'monitor'] ||
+        request.auth.uid in resource.data.allowedUserIds
+      );
+      allow create: if isAuthenticated() && isUserActive() &&
+        (isInstitutionalStaff() || userRole() in ['professor', 'professor_substituto', 'monitor']) &&
+        request.resource.data.createdBy == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // Auditoria imutável. Cada ator pode gravar sua própria ação; leitura global é restrita.
+    match /schoolAuditLogs/{auditId} {
+      allow get: if isAuthenticated() && isUserActive() && (
+        isAdmin() || resource.data.actorId == request.auth.uid
+      );
+      allow list: if isAdmin() && isUserActive();
+      allow create: if isAuthenticated() && isUserActive() &&
+        request.resource.data.actorId == request.auth.uid &&
+        request.resource.data.immutable == true;
+      allow update, delete: if false;
+    }
+
+    // Central de notificações em tempo real, sem consultas periódicas.
+    match /schoolNotifications/{notificationId} {
+      allow read: if isAuthenticated() && isUserActive() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && isUserActive() && request.resource.data.createdBy == request.auth.uid;
+      allow update: if isAuthenticated() && isUserActive() &&
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read', 'readAt']);
+      allow delete: if isAdmin();
+    }
+
+    // Validação pública expõe somente metadados mínimos, nunca o prontuário completo.
+    match /schoolDocumentValidations/{validationId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated() && isUserActive() && (
+        isAdmin() || hasPermission('documentos-escolares.manage')
+      );
+      allow delete: if false;
+    }
+
+    // Metadados dos backups automáticos e dos testes de recuperação. Somente o
+    // backend grava; a direção pode acompanhar o resultado no painel.
+    match /schoolBackups/{backupId} {
+      allow read: if isAdmin() && isUserActive();
+      allow write: if false;
+
+      match /chunks/{chunkId} {
+        allow read: if isAdmin() && isUserActive();
+        allow write: if false;
+      }
+    }
+
+    match /schoolBackupTests/{testId} {
+      allow read: if isAdmin() && isUserActive();
+      allow write: if false;
+    }
+
+    // Alertas automáticos gerados pelo backend (por exemplo, excesso de
+    // tentativas). Somente a direção pode consultá-los.
+    match /securityAlerts/{alertId} {
+      allow read: if isAdmin() && isUserActive();
+      allow write: if false;
     }
   }
 }

@@ -18,12 +18,7 @@
 3. Selecione **Modo de produção**
 4. Escolha a localização mais próxima dos seus usuários
 
-### 4. Habilitar Storage
-1. Vá em **Storage**
-2. Clique em "Começar"
-3. Use a mesma localização do Firestore
-
-### 5. Configurar App Web
+### 4. Configurar App Web
 1. Vá em **Configurações do Projeto** (ícone de engrenagem)
 2. Role até "Seus apps"
 3. Clique no ícone web (</>)
@@ -44,19 +39,12 @@ Para implantar:
 firebase deploy --only firestore:rules
 ```
 
-### Regras do Storage
-
-As regras do Storage estão definidas no arquivo `storage.rules` na raiz do projeto.
-
-Para implantar:
+### Implantar regras e índices
 ```bash
-firebase deploy --only storage:rules
+firebase deploy --only firestore:rules,firestore:indexes
 ```
 
-### Implantar Ambas
-```bash
-firebase deploy --only firestore:rules,storage:rules
-```
+O Firebase Storage não é usado. Anexos de até 8 MB são divididos em blocos na coleção protegida `schoolFiles` do próprio Firestore.
 
 ## Criar Primeiro Usuário Admin
 
@@ -74,9 +62,9 @@ firebase deploy --only firestore:rules,storage:rules
 - Verifique se as regras foram implantadas
 - Confirme os campos `tipo` e `ativo` do usuário no Firestore
 
-### Erro de CORS no Storage
-- Certifique-se de que as regras do Storage estão implantadas
-- Verifique se o Storage está habilitado no Firebase Console
+### Erro ao abrir um anexo
+- Confirme que as regras atuais do Firestore foram publicadas.
+- Confirme que todos os blocos do arquivo estão com o estado `ready`.
 
 ### Usuário Não Consegue Fazer Login
 - Verifique se o domínio está autorizado em Authentication > Settings > Authorized domains
@@ -84,4 +72,3 @@ firebase deploy --only firestore:rules,storage:rules
 ## Arquivos de Regras
 
 - **firestore.rules** - Regras de segurança do Firestore (ÚNICO local para editar)
-- **storage.rules** - Regras de segurança do Storage

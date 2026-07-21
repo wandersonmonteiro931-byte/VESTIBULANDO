@@ -21,7 +21,8 @@
 O atualizador publica automaticamente:
 - firestore.rules
 - firestore.indexes.json
-- storage.rules
+
+Comprovantes usam blocos protegidos no Firestore. O Firebase Storage não precisa ser ativado.
 
 Na primeira execução, o navegador poderá solicitar login na conta que administra o projeto Firebase plataforma-enem-f3682.
 

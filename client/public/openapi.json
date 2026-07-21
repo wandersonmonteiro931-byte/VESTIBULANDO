@@ -1,0 +1,85 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Vestibulando School API",
+    "version": "3.0.0",
+    "description": "API autenticada do núcleo escolar: sessões, senhas, integrações, filas, backups e continuidade."
+  },
+  "servers": [{ "url": "/", "description": "Mesmo domínio da aplicação" }],
+  "components": {
+    "securitySchemes": {
+      "firebaseBearer": { "type": "http", "scheme": "bearer", "bearerFormat": "Firebase ID token" },
+      "webhookSecret": { "type": "apiKey", "in": "header", "name": "x-webhook-secret" },
+      "cronSecret": { "type": "apiKey", "in": "header", "name": "x-cron-secret" }
+    },
+    "schemas": {
+      "Success": { "type": "object", "properties": { "success": { "type": "boolean" }, "message": { "type": "string" } } },
+      "Error": { "type": "object", "properties": { "success": { "type": "boolean", "example": false }, "message": { "type": "string" } } }
+    }
+  },
+  "paths": {
+    "/api/health": {
+      "get": { "summary": "Saúde da API", "responses": { "200": { "description": "Serviço disponível" } } }
+    },
+    "/api/v1/public/auth/resolve": {
+      "post": { "summary": "Resolve e-mail, CPF ou matrícula sem expor a coleção de usuários", "responses": { "200": { "description": "Resultado mínimo da resolução" }, "429": { "description": "Limite excedido" } } }
+    },
+    "/api/v1/public/auth/verify-recovery": {
+      "post": { "summary": "Valida conjuntamente os dados para recuperação de senha", "responses": { "200": { "description": "Identidade confirmada" }, "404": { "description": "Dados não conferem" }, "429": { "description": "Limite excedido" } } }
+    },
+    "/api/v1/public/enrollment/status": {
+      "post": { "summary": "Consulta status mínimo de matrícula", "responses": { "200": { "description": "Status ou ausência de registro" }, "429": { "description": "Limite excedido" } } }
+    },
+    "/api/v1/public/enrollment/apply": {
+      "post": { "summary": "Envia inscrição com matrícula atômica e bloqueio de duplicidade", "responses": { "201": { "description": "Inscrição criada" }, "409": { "description": "Duplicidade, turma fechada ou sem vagas" }, "429": { "description": "Limite excedido" } } }
+    },
+    "/api/v1/public/enrollment/correction/verify": {
+      "post": { "summary": "Confirma CPF e nascimento antes de liberar uma correção", "responses": { "200": { "description": "Token temporário e dados do próprio cadastro" }, "404": { "description": "Identidade não confirmada" } } }
+    },
+    "/api/v1/public/enrollment/correction/{recordId}": {
+      "post": { "summary": "Reenvia uma correção com token temporário assinado", "parameters": [{ "in": "path", "name": "recordId", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "Cadastro reenviado" }, "401": { "description": "Token inválido ou expirado" } } }
+    },
+    "/api/v1/session/login": {
+      "post": { "summary": "Registra login com IP, dispositivo e sessão", "security": [{ "firebaseBearer": [] }], "responses": { "200": { "description": "Login auditado" }, "401": { "description": "Token inválido" }, "429": { "description": "Limite excedido" } } }
+    },
+    "/api/v1/session/logout": {
+      "post": { "summary": "Registra logout com IP, dispositivo e sessão", "security": [{ "firebaseBearer": [] }], "responses": { "200": { "description": "Logout auditado" }, "401": { "description": "Token inválido" }, "429": { "description": "Limite excedido" } } }
+    },
+    "/api/update-password": {
+      "post": { "summary": "Altera uma senha sem armazená-la no Firestore", "security": [{ "firebaseBearer": [] }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["userId", "newPassword"], "properties": { "userId": { "type": "string" }, "newPassword": { "type": "string", "minLength": 10 } } } } } }, "responses": { "200": { "description": "Senha atualizada" }, "400": { "description": "Senha fraca" }, "403": { "description": "Sem permissão" } } }
+    },
+    "/api/leave-request": {
+      "post": { "summary": "Solicita saída de aula ao vivo", "security": [{ "firebaseBearer": [] }], "responses": { "200": { "description": "Solicitação criada" }, "403": { "description": "O aluno autenticado não corresponde" } } }
+    },
+    "/api/v1/admin/users/{userId}/revoke-sessions": {
+      "post": { "summary": "Revoga refresh tokens de uma conta", "security": [{ "firebaseBearer": [] }], "parameters": [{ "in": "path", "name": "userId", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "Sessões revogadas" }, "403": { "description": "Administrador necessário" } } }
+    },
+    "/api/v1/webhooks/{provider}": {
+      "post": { "summary": "Recebe webhook e coloca o evento na fila", "security": [{ "webhookSecret": [] }], "parameters": [{ "in": "path", "name": "provider", "required": true, "schema": { "type": "string" } }], "responses": { "202": { "description": "Operação enfileirada" }, "401": { "description": "Assinatura inválida" } } }
+    },
+    "/api/v1/integrations/catalog": {
+      "get": { "summary": "Lista conectores e informa quais estão configurados sem expor segredos", "security": [{ "firebaseBearer": [] }], "responses": { "200": { "description": "Catálogo e estado dos conectores" }, "403": { "description": "Permissão de integrações necessária" } } }
+    },
+    "/api/v1/integrations/dispatch": {
+          "post": { "summary": "Enfileira envio idempotente para e-mail, push, WhatsApp, Pix, banco, nota fiscal, assinatura, videoconferência ou calendários", "security": [{ "firebaseBearer": [] }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["provider", "operation", "payload"], "properties": { "provider": { "type": "string", "enum": ["email", "push", "whatsapp", "pix", "bank", "invoice", "signature", "videoconference", "google-calendar", "microsoft-calendar"] }, "operation": { "type": "string" }, "payload": { "type": "object" }, "idempotencyKey": { "type": "string" } } } } } }, "responses": { "202": { "description": "Envio enfileirado" }, "422": { "description": "Conector ainda sem credencial no servidor" }, "403": { "description": "Permissão de integrações necessária" } } }
+    },
+    "/api/v1/jobs/{jobId}": {
+      "get": { "summary": "Consulta uma operação assíncrona", "security": [{ "firebaseBearer": [] }], "parameters": [{ "in": "path", "name": "jobId", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "Estado da operação" }, "404": { "description": "Não encontrada" } } }
+    },
+    "/api/v1/cron/process-integration-queue": {
+      "post": { "summary": "Processa a fila de integração", "security": [{ "cronSecret": [] }], "responses": { "200": { "description": "Lote processado" } } }
+    },
+    "/api/v1/cron/process-reminders": {
+      "post": { "summary": "Envia lembretes de prazos nas próximas 48 horas", "security": [{ "cronSecret": [] }], "responses": { "200": { "description": "Lembretes processados" } } }
+    },
+    "/api/v1/cron/daily-backup": {
+      "post": { "summary": "Gera backup diário gzip em blocos protegidos no Firestore", "security": [{ "cronSecret": [] }], "responses": { "200": { "description": "Backup criado e indexado" } } }
+    },
+    "/api/v1/cron/verify-latest-backup": {
+      "post": { "summary": "Testa hash, descompressão e formato do último backup", "security": [{ "cronSecret": [] }], "responses": { "200": { "description": "Backup íntegro" }, "422": { "description": "Backup inválido" } } }
+    },
+    "/api/v1/admin/security/remove-legacy-passwords": {
+      "post": { "summary": "Pré-visualiza ou remove campos legados de senha em texto puro", "security": [{ "firebaseBearer": [] }], "responses": { "200": { "description": "Prévia ou migração concluída" }, "403": { "description": "Administrador necessário" } } }
+    }
+  }
+}

@@ -1,10 +1,11 @@
 import { useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
+import type { User } from "@shared/schema";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  allowedTypes?: ("aluno" | "professor" | "diretor")[];
+  allowedTypes?: User["tipo"][];
 }
 
 function getDashboardPath(tipo?: string): string {
@@ -15,6 +16,9 @@ function getDashboardPath(tipo?: string): string {
       return "/professor";
     case "diretor":
       return "/diretor";
+    case "responsavel":
+    case "funcionario":
+      return "/escola";
     default:
       return "/login";
   }

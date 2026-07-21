@@ -1,5 +1,12 @@
 import { z } from "zod";
 
+export const BASE_USER_TYPES = ["aluno", "professor", "diretor", "responsavel", "funcionario"] as const;
+export const DETAILED_SCHOOL_ROLES = [
+  "diretor", "administrador", "secretaria", "coordenador", "professor", "professor_substituto",
+  "monitor", "financeiro", "bibliotecario", "psicologo", "inspetor", "aluno", "responsavel",
+  "funcionario", "rh", "cantina", "transporte",
+] as const;
+
 // Lista padronizada de horários disponíveis para estudos
 export const HORARIOS_DISPONIVEIS = [
   "Manhã - Seg a Sex",
@@ -19,7 +26,16 @@ export const userSchema = z.object({
   uid: z.string(),
   nome: z.string().min(1, "Nome é obrigatório"),
   email: z.string().email("Email inválido"),
-  tipo: z.enum(["aluno", "professor", "diretor"]),
+  tipo: z.enum(BASE_USER_TYPES),
+  papel: z.enum(DETAILED_SCHOOL_ROLES).optional(),
+  papelDetalhado: z.enum(DETAILED_SCHOOL_ROLES).optional(),
+  permissoes: z.array(z.string()).optional().default([]),
+  unidadesIds: z.array(z.string()).optional().default([]),
+  filhosIds: z.array(z.string()).optional().default([]),
+  mfaObrigatorio: z.boolean().optional().default(false),
+  mfaAtivado: z.boolean().optional().default(false),
+  acessoTemporarioAte: z.string().nullable().optional(),
+  sessoesRevogadasEm: z.string().optional(),
   turma: z.string().optional(),
   turmas: z.array(z.string()).optional(), // Array de turmas para professores
   materias: z.array(z.string()).optional(), // Array de matérias que o professor leciona (só professores podem alterar dados nas suas matérias)
@@ -38,14 +54,14 @@ export const userSchema = z.object({
   mensagemStatus: z.string().optional(), // mensagem personalizada de status (ex: "Em reunião até 15h")
   // Campo para controlar primeiro acesso e troca de senha
   primeiroAcesso: z.boolean().optional().default(true), // true se ainda não alterou a senha inicial
-  senhaAtual: z.string().optional(), // senha atual do usuário (armazenada para visualização do diretor)
+  senhaAtual: z.string().optional(), // legado: não gravar; senhas permanecem apenas no Firebase Authentication
   forcarTrocaSenha: z.boolean().optional().default(false), // true se diretor resetou senha e usuário deve alterar no próximo login
   // Campo para controlar aceite dos termos do chat
   chatTermsAccepted: z.boolean().optional().default(false), // true se aceitou os termos do chat
   chatTermsAcceptedDate: z.string().optional(), // data e hora da aceitação dos termos do chat
   // Campos de foto
-  fotoUrl: z.string().optional(), // URL da foto no Firebase Storage
-  fotoBase64: z.string().optional(), // Foto 3x4 em Base64 (deprecated - usar fotoUrl)
+  fotoUrl: z.string().optional(), // URL legada de foto; novas fotos usam fotoBase64 comprimida
+  fotoBase64: z.string().optional(), // Foto 3x4 comprimida no documento do usuário
   fotoPublica: z.boolean().optional().default(false), // se true, foto visível para todos; se false, apenas para diretor
   // Campos obrigatórios para alunos
   dataNascimento: z.string().optional(),
@@ -84,7 +100,7 @@ export const alunoRegistrationSchema = z.object({
 export const diretorQuickAddAlunoSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
   email: z.string().email("Email inválido"),
-  senha: z.string().min(6, "A senha deve ter pelo menos 6 caracteres"),
+  senha: z.string().min(10, "A senha deve ter pelo menos 10 caracteres").regex(/[A-Z]/, "Inclua uma letra maiúscula").regex(/[a-z]/, "Inclua uma letra minúscula").regex(/\d/, "Inclua um número"),
   dataNascimento: z.string().optional(),
   cpf: z.string().optional(),
   sexo: z.string().optional(),
@@ -175,11 +191,14 @@ export const loginHistorySchema = z.object({
   id: z.string(),
   userId: z.string(),
   userNome: z.string(),
-  userTipo: z.enum(["aluno", "professor", "diretor"]),
+  userTipo: z.enum(BASE_USER_TYPES),
   action: z.enum(["login", "logout"]),
   timestamp: z.string(), // ISO datetime em horário de Brasília
   ipAddress: z.string().optional(),
   userAgent: z.string().optional(),
+  device: z.string().optional(),
+  sessionId: z.string().optional(),
+  reason: z.string().optional(),
 });
 
 export const insertLoginHistorySchema = loginHistorySchema.omit({ id: true });
@@ -319,13 +338,13 @@ export const chatMessageSchema = z.object({
   conversationId: z.string(), // ID da conversa (combinação dos IDs dos participantes)
   remetenteId: z.string(), // ID de quem enviou
   remetenteNome: z.string(), // Nome de quem enviou
-  remetenteTipo: z.enum(["aluno", "professor", "diretor"]), // Tipo de quem enviou
+  remetenteTipo: z.enum(BASE_USER_TYPES), // Tipo de quem enviou
   destinatarioId: z.string(), // ID de quem recebe
   destinatarioNome: z.string(), // Nome de quem recebe
-  destinatarioTipo: z.enum(["aluno", "professor", "diretor"]), // Tipo de quem recebe
+  destinatarioTipo: z.enum(BASE_USER_TYPES), // Tipo de quem recebe
   tipo: z.enum(["texto", "audio", "imagem", "documento", "video"]).default("texto"), // Tipo de mensagem
   conteudo: z.string(), // Conteúdo da mensagem (texto ou legenda para arquivos)
-  arquivoUrl: z.string().optional(), // URL do arquivo no Firebase Storage
+  arquivoUrl: z.string().optional(), // URL protegida do repositório Firestore
   arquivoNome: z.string().optional(), // Nome original do arquivo
   arquivoTipo: z.string().optional(), // MIME type do arquivo
   arquivoTamanho: z.number().optional(), // Tamanho do arquivo em bytes
@@ -382,10 +401,10 @@ export const chatConversationSchema = z.object({
   id: z.string(), // ID único da conversa
   participante1Id: z.string(),
   participante1Nome: z.string(),
-  participante1Tipo: z.enum(["aluno", "professor", "diretor"]),
+  participante1Tipo: z.enum(BASE_USER_TYPES),
   participante2Id: z.string(),
   participante2Nome: z.string(),
-  participante2Tipo: z.enum(["aluno", "professor", "diretor"]),
+  participante2Tipo: z.enum(BASE_USER_TYPES),
   ultimaMensagem: z.string().optional(), // Conteúdo da última mensagem
   ultimaMensagemTimestamp: z.string().optional(), // Timestamp da última mensagem
   ultimaMensagemRemetenteId: z.string().optional(), // Quem enviou a última mensagem
@@ -407,7 +426,16 @@ export const chatConversationSchema = z.object({
 
 export const insertChatConversationSchema = chatConversationSchema.omit({ id: true });
 
-export type ChatConversation = z.infer<typeof chatConversationSchema>;
+type ProtectedChatParticipantType = "aluno" | "professor" | "diretor";
+type ChatConversationData = z.infer<typeof chatConversationSchema>;
+
+// A interface visual legada do chat é protegida e trabalha com estes três
+// rótulos. O schema continua aceitando todos os perfis escolares em runtime;
+// este adaptador mantém a interface protegida compilável sem alterar seu código.
+export type ChatConversation = Omit<ChatConversationData, "participante1Tipo" | "participante2Tipo"> & {
+  participante1Tipo: ProtectedChatParticipantType;
+  participante2Tipo: ProtectedChatParticipantType;
+};
 export type InsertChatConversation = z.infer<typeof insertChatConversationSchema>;
 
 // Chat Penalty schema - penalidades automáticas do chat
@@ -416,7 +444,7 @@ export const chatPenaltySchema = z.object({
   usuarioId: z.string(),
   usuarioNome: z.string(),
   usuarioMatricula: z.string().optional(),
-  usuarioTipo: z.enum(["aluno", "professor", "diretor"]),
+  usuarioTipo: z.enum(BASE_USER_TYPES),
   tipo: z.enum(["advertencia", "bloqueio_24h", "suspensao_conta"]),
   mensagemInfratora: z.string(), // Conteúdo da mensagem que violou as regras
   conversationId: z.string(), // ID da conversa onde ocorreu a infração
@@ -461,10 +489,10 @@ export const chatReportSchema = z.object({
   conversationId: z.string(), // ID da conversa denunciada
   denuncianteId: z.string(), // ID de quem denunciou
   denuncianteNome: z.string(), // Nome de quem denunciou
-  denuncianteTipo: z.enum(["aluno", "professor", "diretor"]), // Tipo de quem denunciou
+  denuncianteTipo: z.enum(BASE_USER_TYPES), // Tipo de quem denunciou
   denunciadoId: z.string(), // ID de quem foi denunciado
   denunciadoNome: z.string(), // Nome de quem foi denunciado
-  denunciadoTipo: z.enum(["aluno", "professor", "diretor"]), // Tipo de quem foi denunciado
+  denunciadoTipo: z.enum(BASE_USER_TYPES), // Tipo de quem foi denunciado
   motivo: z.string(), // Comentário/motivo da denúncia
   mensagensConversa: z.string().optional(), // JSON string com cópia de todas as mensagens da conversa
   dataDenuncia: z.string(), // Data/hora da denúncia
@@ -1249,6 +1277,8 @@ export const registroPresencaTurmaSchema = z.object({
   materia: z.string(),
   professorId: z.string(),
   professorNome: z.string(),
+  origem: z.enum(["manual", "aula_ao_vivo", "importacao"]).optional(),
+  tipo: z.enum(["presencial", "ao_vivo"]).optional(),
   data: z.string(), // YYYY-MM-DD
   presencas: z.array(registroPresencaItemSchema),
   registradoPorId: z.string(),
@@ -1502,6 +1532,10 @@ export const registroPresencaChamadaSchema = z.object({
   alunoId: z.string(),
   alunoNome: z.string(),
   alunoMatricula: z.string().optional(),
+  materia: z.string().optional(),
+  professorNome: z.string().optional(),
+  origem: z.enum(["chamada", "aula_ao_vivo", "importacao"]).optional(),
+  tipo: z.enum(["presencial", "ao_vivo"]).optional(),
   
   // Status da presença
   status: z.enum(["aguardando", "presente", "ausente", "justificado"]).default("aguardando"),
@@ -1696,6 +1730,7 @@ export const solicitacaoSaidaSchema = z.object({
   
   // Motivo do aluno (opcional)
   motivoAluno: z.string().optional(),
+  motivo: z.string().optional(), // compatibilidade com registros anteriores
   
   // Resposta
   respondidoPor: z.string().optional(),
@@ -1718,7 +1753,7 @@ export const notificacaoPresencaSchema = z.object({
   
   // Destinatário
   destinatarioId: z.string(),
-  destinatarioTipo: z.enum(["aluno", "professor", "diretor"]),
+  destinatarioTipo: z.enum(BASE_USER_TYPES),
   
   // Tipo de notificação
   tipo: z.enum([

@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { AccessibilityControls } from "@/components/AccessibilityControls";
 import { MonitoringTab } from "@/components/MonitoringTab";
 import { DocumentationTab } from "@/components/DocumentationTab";
 import { AnnouncementsTab } from "@/components/AnnouncementsTab";
@@ -30,12 +31,13 @@ import { ConfiguracaoHorariosTab } from "@/components/ConfiguracaoHorariosTab";
 import { CalendarioProgramacaoTab } from "@/components/CalendarioProgramacaoTab";
 import { PresencasTab } from "@/components/PresencasTab";
 import { AdminFinanceTab } from "@/components/AdminFinanceTab";
+import { SchoolManagementSuite } from "@/features/school/SchoolManagementSuite";
 import { ChatNotificationBubble } from "@/components/ChatNotificationBubble";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { PortalBrand } from "@/components/PortalBrand";
 import { PortalProfileHeader } from "@/components/PortalProfileHeader";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, ArrowRightLeft, Clock, Search, Eye, AlertTriangle, Settings, Power, PowerOff, Archive, Download, ChevronDown, ChevronUp, MessageCircle, Camera, Upload, X, Copy, Shield, RotateCcw, UserCheck, School } from "lucide-react";
+import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, ArrowRightLeft, Clock, Search, Eye, AlertTriangle, Settings, Power, PowerOff, Archive, Download, ChevronDown, ChevronUp, MessageCircle, Camera, Upload, X, Copy, Shield, RotateCcw, UserCheck, School, LayoutDashboard } from "lucide-react";
 import { Link } from "wouter";
 import { Checkbox } from "@/components/ui/checkbox";
 import { queryClient } from "@/lib/queryClient";
@@ -69,7 +71,7 @@ const professorDiretorFormSchema = z.object({
   dataNascimento: z.string().min(1, "Data de nascimento é obrigatória"),
   cpf: z.string().min(14, "CPF inválido"),
   email: z.string().email("Email inválido"),
-  senha: z.string().min(6, "A senha deve ter pelo menos 6 caracteres"),
+  senha: z.string().min(10, "A senha deve ter pelo menos 10 caracteres").regex(/[A-Z]/, "Inclua uma letra maiúscula").regex(/[a-z]/, "Inclua uma letra minúscula").regex(/\d/, "Inclua um número"),
   telefone: z.string().min(1, "Telefone é obrigatório"),
   cep: z.string().min(9, "CEP inválido"),
   rua: z.string().optional(),
@@ -483,7 +485,8 @@ export default function AdminDashboard() {
           matricula: solicitacao.matricula,
           dataSolicitacao: solicitacao.dataSolicitacao,
           dataAprovacao: getNowBrasiliaISO(),
-          senhaAtual: senha,
+          primeiroAcesso: true,
+          forcarTrocaSenha: true,
           // Campos adicionais do cadastro
           dataNascimento: solicitacao.dataNascimento,
           cpf: solicitacao.cpf,
@@ -542,7 +545,8 @@ export default function AdminDashboard() {
               matricula: solicitacao.matricula,
               dataSolicitacao: solicitacao.dataSolicitacao,
               dataAprovacao: getNowBrasiliaISO(),
-              senhaAtual: senha,
+              primeiroAcesso: true,
+              forcarTrocaSenha: true,
               // Campos adicionais do cadastro
               dataNascimento: solicitacao.dataNascimento,
               cpf: solicitacao.cpf,
@@ -1030,8 +1034,8 @@ export default function AdminDashboard() {
         horarioEspecialObservacao: data.horarioEspecialObservacao || "",
         fotoBase64: data.fotoBase64 || "",
         fotoPublica: data.fotoPublica || false,
-        senhaAtual: data.senha,
         primeiroAcesso: true,
+        forcarTrocaSenha: true,
         dataCriacao: getNowBrasiliaISO(),
       });
       
@@ -1067,7 +1071,7 @@ export default function AdminDashboard() {
       if (error.code === "auth/email-already-in-use") {
         message = "Este email já está em uso";
       } else if (error.code === "auth/weak-password") {
-        message = "A senha deve ter pelo menos 6 caracteres";
+        message = "A senha deve ter pelo menos 10 caracteres, com maiúscula, minúscula e número";
       } else if (error.code === "auth/invalid-email") {
         message = "Email inválido";
       }
@@ -1164,8 +1168,9 @@ export default function AdminDashboard() {
         dataNascimento: data.dataNascimento,
         escolaridade: data.escolaridade,
         disponibilidade: disponibilidadeHorario,
-        senhaAtual: data.senha,
         ativo: true,
+        primeiroAcesso: true,
+        forcarTrocaSenha: true,
         status: "aprovado",
         dataCriacao: getNowBrasiliaISO(),
       });
@@ -2294,10 +2299,12 @@ export default function AdminDashboard() {
 
   const resetPasswordMutation = useMutation({
     mutationFn: async ({ userId, novaSenha }: { userId: string; novaSenha: string }) => {
+      const idToken = await firebaseAuth.currentUser?.getIdToken();
+      if (!idToken) throw new Error("Sessão administrativa expirada. Entre novamente.");
       // Atualizar senha no Firebase Authentication via API
       const response = await fetch("/api/update-password", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
         body: JSON.stringify({ userId, newPassword: novaSenha }),
       });
 
@@ -2309,8 +2316,10 @@ export default function AdminDashboard() {
       // Atualizar no Firestore
       const userRef = doc(db, "usuarios", userId);
       await updateDoc(userRef, {
-        senhaAtual: novaSenha,
         primeiroAcesso: true,
+        forcarTrocaSenha: true,
+        senhaRedefinidaEm: getNowBrasiliaISO(),
+        senhaRedefinidaPor: userData?.uid || "",
       });
     },
     onSuccess: () => {
@@ -2318,7 +2327,7 @@ export default function AdminDashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/usuarios/all"] });
       toast({
         title: "Senha resetada",
-        description: "A senha foi resetada no Firebase Authentication e Firestore. O usuário será forçado a alterá-la no próximo acesso.",
+        description: "A senha foi redefinida com segurança no Firebase Authentication. Ela não é armazenada no banco e deverá ser trocada no próximo acesso.",
       });
       setResetPasswordDialogOpen(false);
       setSelectedUserForPassword(null);
@@ -2336,10 +2345,12 @@ export default function AdminDashboard() {
 
   const changePasswordMutation = useMutation({
     mutationFn: async ({ userId, novaSenha }: { userId: string; novaSenha: string }) => {
+      const idToken = await firebaseAuth.currentUser?.getIdToken();
+      if (!idToken) throw new Error("Sessão administrativa expirada. Entre novamente.");
       // Atualizar senha no Firebase Authentication via API usando o UID
       const response = await fetch("/api/update-password", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
         body: JSON.stringify({ userId, newPassword: novaSenha }),
       });
 
@@ -2351,7 +2362,8 @@ export default function AdminDashboard() {
       // Atualizar no Firestore
       const userRef = doc(db, "usuarios", userId);
       await updateDoc(userRef, {
-        senhaAtual: novaSenha,
+        senhaRedefinidaEm: getNowBrasiliaISO(),
+        senhaRedefinidaPor: userData?.uid || "",
       });
     },
     onSuccess: () => {
@@ -2547,6 +2559,7 @@ export default function AdminDashboard() {
               </div>
               
               <div className="dashboard-header-right flex items-center gap-3">
+                <AccessibilityControls />
                 <ThemeToggle />
                 <BrasiliaClock />
                 <Link href="/chat">
@@ -2633,6 +2646,7 @@ export default function AdminDashboard() {
                     </div>
                     <div className="mt-4 flex gap-2 overflow-x-auto pb-1 school-quick-pills school-quick-pills-premium">
                       {[
+                        { id: "gestao-escolar-360", label: "Gestão 360", icon: LayoutDashboard },
                         { id: "aprovacoes", label: "Aprovações", icon: UserCheck },
                         { id: "usuarios", label: "Alunos", icon: Users },
                         { id: "professores", label: "Professores", icon: School },
@@ -2660,6 +2674,9 @@ export default function AdminDashboard() {
                   </CardContent>
                 </Card>
               </div>
+              {selectedSection === "gestao-escolar-360" && (
+                <SchoolManagementSuite />
+              )}
               {selectedSection === "aprovacoes" && (
                 <div className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
@@ -4142,21 +4159,11 @@ export default function AdminDashboard() {
           )}
 
           {selectedSection === "auditoria-chat" && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Auditoria do Chat</CardTitle>
-                <CardDescription>Funcionalidade em reconstrução</CardDescription>
-              </CardHeader>
-            </Card>
+            <SchoolManagementSuite initialModuleId="comunicacao" />
           )}
 
           {selectedSection === "denuncias" && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Denúncias</CardTitle>
-                <CardDescription>Funcionalidade em reconstrução</CardDescription>
-              </CardHeader>
-            </Card>
+            <SchoolManagementSuite initialModuleId="bem-estar" />
           )}
 
           {selectedSection === "documentos-internos" && (
@@ -4970,10 +4977,10 @@ export default function AdminDashboard() {
               <Input
                 id="senha-inicial"
                 type="password"
-                placeholder="Defina uma senha de pelo menos 6 caracteres"
+                placeholder="Mínimo de 10 caracteres, maiúscula, minúscula e número"
                 value={senhaInicial}
                 onChange={(e) => setSenhaInicial(e.target.value)}
-                minLength={6}
+                minLength={10}
                 data-testid="input-senha-inicial"
               />
               <p className="text-sm text-muted-foreground">
@@ -4999,7 +5006,7 @@ export default function AdminDashboard() {
               type="button"
               variant="default"
               onClick={() => {
-                if (solicitacaoToApprove && senhaInicial.length >= 6) {
+                if (solicitacaoToApprove && senhaInicial.length >= 10 && /[A-Z]/.test(senhaInicial) && /[a-z]/.test(senhaInicial) && /\d/.test(senhaInicial)) {
                   approveUserMutation.mutate({ 
                     solicitacaoId: solicitacaoToApprove.docId, 
                     senha: senhaInicial
@@ -5009,7 +5016,7 @@ export default function AdminDashboard() {
                   setSenhaInicial("");
                 }
               }}
-              disabled={approveUserMutation.isPending || senhaInicial.length < 6}
+              disabled={approveUserMutation.isPending || senhaInicial.length < 10 || !/[A-Z]/.test(senhaInicial) || !/[a-z]/.test(senhaInicial) || !/\d/.test(senhaInicial)}
               data-testid="button-confirm-approve"
             >
               {approveUserMutation.isPending ? "Aprovando..." : "Aprovar e Criar Conta"}
@@ -9023,7 +9030,7 @@ export default function AdminDashboard() {
         <DialogContent data-testid="dialog-view-password" className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="text-xl">
-              DADOS PARA LOGIN DE {selectedUserForPassword?.tipo === "aluno" ? "ALUNO" : selectedUserForPassword?.tipo === "professor" ? "PROFESSOR" : "DIRETOR"}
+              DADOS DE ACESSO DE {selectedUserForPassword?.tipo === "aluno" ? "ALUNO" : selectedUserForPassword?.tipo === "professor" ? "PROFESSOR" : "DIRETOR"}
             </DialogTitle>
             <DialogDescription>
               Informações de acesso de {selectedUserForPassword?.nome}
@@ -9043,17 +9050,17 @@ export default function AdminDashboard() {
               </p>
             </div>
             <div className="p-4 border rounded-lg bg-muted/30">
-              <Label className="text-sm text-muted-foreground">Senha Atual</Label>
-              <p className="text-lg font-mono font-bold mt-1" data-testid="text-user-password">
-                {selectedUserForPassword?.senhaAtual || "Não definida"}
+              <Label className="text-sm text-muted-foreground">Senha</Label>
+              <p className="text-sm font-semibold mt-1" data-testid="text-user-password">
+                Protegida no Firebase Authentication — não pode ser visualizada
               </p>
             </div>
             <div className="flex items-start gap-3 p-4 border-2 border-destructive/50 rounded-lg bg-destructive/5">
               <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-bold text-destructive text-sm">NÃO COMPARTILHE</p>
+                <p className="font-bold text-destructive text-sm">PROTEÇÃO DE CREDENCIAIS</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Essas informações são confidenciais e de uso exclusivo do usuário.
+                  Use “Redefinir senha” para gerar um novo acesso. Senhas não são armazenadas nem exibidas pelo sistema.
                 </p>
               </div>
             </div>
@@ -9063,7 +9070,7 @@ export default function AdminDashboard() {
               variant="outline" 
               onClick={() => {
                 const tipoUsuario = selectedUserForPassword?.tipo === "aluno" ? "ALUNO" : selectedUserForPassword?.tipo === "professor" ? "PROFESSOR" : "DIRETOR";
-                const textoCopiar = `DADOS PARA LOGIN DE ${tipoUsuario}\nInformações de acesso de ${selectedUserForPassword?.nome}\n\nCPF\n${selectedUserForPassword?.cpf || "Não informado"}\n\nMatrícula\n${selectedUserForPassword?.matricula || "Não informada"}\n\nSenha Atual\n${selectedUserForPassword?.senhaAtual || "Não definida"}\n\nNÃO COMPARTILHE\nEssas informações são confidenciais e de uso exclusivo do usuário.`;
+                const textoCopiar = `DADOS DE ACESSO DE ${tipoUsuario}\nUsuário: ${selectedUserForPassword?.nome}\n\nCPF\n${selectedUserForPassword?.cpf || "Não informado"}\n\nMatrícula\n${selectedUserForPassword?.matricula || "Não informada"}\n\nA senha é protegida e deve ser redefinida individualmente quando necessário.`;
                 navigator.clipboard.writeText(textoCopiar);
                 toast({
                   title: "Copiado!",
@@ -9128,10 +9135,10 @@ export default function AdminDashboard() {
             </Button>
             <Button
               onClick={() => {
-                if (!newPassword || newPassword.length < 6) {
+                if (!newPassword || newPassword.length < 10 || !/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/\d/.test(newPassword)) {
                   toast({
                     title: "Senha inválida",
-                    description: "A senha deve ter pelo menos 6 caracteres",
+                    description: "Use 10 caracteres ou mais, com maiúscula, minúscula e número",
                     variant: "destructive",
                   });
                   return;
@@ -9204,10 +9211,10 @@ export default function AdminDashboard() {
             </Button>
             <Button
               onClick={() => {
-                if (!newPassword || newPassword.length < 6) {
+                if (!newPassword || newPassword.length < 10 || !/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/\d/.test(newPassword)) {
                   toast({
                     title: "Senha inválida",
-                    description: "A senha deve ter pelo menos 6 caracteres",
+                    description: "Use 10 caracteres ou mais, com maiúscula, minúscula e número",
                     variant: "destructive",
                   });
                   return;

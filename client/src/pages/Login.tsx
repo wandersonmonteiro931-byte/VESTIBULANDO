@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { getMultiFactorResolver, signInWithEmailAndPassword, TotpMultiFactorGenerator, type MultiFactorResolver } from "firebase/auth";
+import { addDoc, collection, doc, getDoc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,60 +21,31 @@ import { formatBrasiliaDateTime, getNowBrasiliaISO, brasiliaToUTC } from "@/lib/
 import { HORARIOS_DISPONIVEIS } from "@shared/schema";
 import logoUrl from "@assets/Blue and White Online School Logo (1)_1761189954480.png";
 import { PortalBrand } from "@/components/PortalBrand";
+import { getSessionId } from "@/lib/sessionSecurity";
 
-// Verifica se uma matrícula já existe no banco de dados
-async function matriculaJaExiste(db: any, matricula: string): Promise<boolean> {
-  const { collection, query, where, getDocs } = await import("firebase/firestore");
-  const usuariosRef = collection(db, "usuarios");
-  const q = query(usuariosRef, where("matricula", "==", matricula));
-  const snapshot = await getDocs(q);
-  return !snapshot.empty;
-}
-
-// Gera uma matrícula sequencial única usando transação atômica
-async function generateUniqueMatricula(db: any): Promise<string> {
-  const { doc, runTransaction, getDoc } = await import("firebase/firestore");
-  
-  // Usar transação para garantir atomicidade e verificar duplicatas
-  const matricula = await runTransaction(db, async (transaction) => {
-    const contadorRef = doc(db, "system", "matriculaCounter");
-    const contadorDoc = await transaction.get(contadorRef);
-    
-    let proximaMatricula = 100; // Valor inicial: 0100
-    
-    if (contadorDoc.exists()) {
-      const data = contadorDoc.data();
-      proximaMatricula = (data.ultimaMatricula || 99) + 1;
-    }
-    
-    // Garantir que a matrícula tenha 4 dígitos
-    let matriculaGerada = proximaMatricula.toString().padStart(4, '0');
-    
-    // Verificar se a matrícula já existe (proteção extra contra duplicatas)
-    // Se existir, incrementar até encontrar uma disponível
-    let tentativas = 0;
-    const maxTentativas = 1000; // Proteção contra loop infinito
-    
-    while (await matriculaJaExiste(db, matriculaGerada) && tentativas < maxTentativas) {
-      proximaMatricula++;
-      matriculaGerada = proximaMatricula.toString().padStart(4, '0');
-      tentativas++;
-    }
-    
-    if (tentativas >= maxTentativas) {
-      throw new Error("Não foi possível gerar uma matrícula única. Contate o administrador.");
-    }
-    
-    // Atualizar o contador atomicamente com a matrícula que será usada
-    transaction.set(contadorRef, { 
-      ultimaMatricula: proximaMatricula,
-      ultimaAtualizacao: getNowBrasiliaISO()
+async function registerSuccessfulLogin(profile: any) {
+  const current = auth.currentUser;
+  if (!current) return;
+  const timestamp = new Date().toISOString();
+  try {
+    const token = await current.getIdToken();
+    const response = await fetch("/api/v1/session/login", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ device: navigator.platform || "web", sessionId: getSessionId() }) });
+    if (!response.ok) throw new Error("API de sessão indisponível");
+  } catch {
+    // Em hospedagem somente estática, preserva o histórico sem IP; a API de
+    // servidor complementa IP e dispositivo quando estiver publicada.
+    await addDoc(collection(db, "loginHistory"), {
+      userId: current.uid,
+      userNome: profile?.nome || current.displayName || current.email || current.uid,
+      userTipo: profile?.tipo || "funcionario",
+      action: "login",
+      timestamp,
+      ipAddress: "indisponível no cliente",
+      userAgent: navigator.userAgent.slice(0, 500),
+      device: navigator.platform || "web",
+      sessionId: getSessionId(),
     });
-    
-    return matriculaGerada;
-  });
-  
-  return matricula;
+  }
 }
 
 // Função para formatar CPF
@@ -172,6 +143,7 @@ export default function Login() {
   const [rejectionComment, setRejectionComment] = useState("");
   const [userToReject, setUserToReject] = useState<any>(null);
   const [editingSolicitacaoId, setEditingSolicitacaoId] = useState<string | null>(null);
+  const [correctionToken, setCorrectionToken] = useState<string | null>(null);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [statusMatricula, setStatusMatricula] = useState("");
   const [statusChecking, setStatusChecking] = useState(false);
@@ -210,7 +182,6 @@ export default function Login() {
     dataNascimento: "",
     email: "",
   });
-  const [userDataForReset, setUserDataForReset] = useState<any>(null);
   
   const [disponibilidade, setDisponibilidade] = useState<string[]>([]);
   const [horarioEspecialObservacao, setHorarioEspecialObservacao] = useState("");
@@ -241,6 +212,11 @@ export default function Login() {
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [passwordChangeLoading, setPasswordChangeLoading] = useState(false);
   const [passwordChangeError, setPasswordChangeError] = useState("");
+  const [mfaResolver, setMfaResolver] = useState<MultiFactorResolver | null>(null);
+  const [mfaCode, setMfaCode] = useState("");
+  const [showMfaDialog, setShowMfaDialog] = useState(false);
+  const [mfaLoading, setMfaLoading] = useState(false);
+  const [mfaError, setMfaError] = useState("");
   const redirectingAfterLoginRef = useRef(false);
 
   // Validar CPF em tempo real quando usuário digitar 11 números
@@ -273,9 +249,9 @@ export default function Login() {
       return;
     }
 
-    // Verificar se é primeiro acesso (aluno ou professor).
+    // Verificar se é primeiro acesso de qualquer perfil operacional.
     if (
-      (userData.tipo === "aluno" || userData.tipo === "professor") &&
+      (userData.tipo === "aluno" || userData.tipo === "professor" || userData.tipo === "responsavel" || userData.tipo === "funcionario") &&
       userData.primeiroAcesso !== false
     ) {
       setShowPasswordChangeDialog(true);
@@ -289,7 +265,9 @@ export default function Login() {
           ? "/professor"
           : userData.tipo === "diretor"
             ? "/diretor"
-            : "/login";
+            : userData.tipo === "responsavel" || userData.tipo === "funcionario"
+              ? "/escola"
+              : "/login";
 
     if (window.location.pathname === targetPath || redirectingAfterLoginRef.current) {
       return;
@@ -311,28 +289,15 @@ export default function Login() {
     showPasswordChangeDialog,
   ]);
 
-  // Carregar turmas disponíveis
+  // Carregar turmas disponíveis em tempo real, sem consultas repetitivas.
   useEffect(() => {
-    const carregarTurmas = async () => {
-      try {
-        const { collection, getDocs, query, where } = await import("firebase/firestore");
-        
-        console.log("🔍 Tentando carregar turmas...");
-        
-        // Buscar todas as turmas (ativas e inativas)
-        const turmasQuery = collection(db, "turmas");
-        console.log("📋 Query criada, executando getDocs...");
-        const turmasSnapshot = await getDocs(turmasQuery);
-        console.log("✅ getDocs concluído, número de documentos:", turmasSnapshot.docs.length);
-        
-        // Processar turmas com status (usando vagasPreenchidas do documento)
-        const turmasComStatus = turmasSnapshot.docs.map(doc => {
+    if (mode !== "register") return;
+    const unsubscribe = onSnapshot(collection(db, "turmas"), (turmasSnapshot) => {
+      const turmasComStatus = turmasSnapshot.docs.map(doc => {
           const turmaData = doc.data() as any;
           const vagasTotais = turmaData.vagasTotais || 0;
           const vagasPreenchidas = turmaData.vagasPreenchidas || 0;
           const vagasRestantes = Math.max(0, vagasTotais - vagasPreenchidas);
-          
-          console.log(`📌 Turma ${turmaData.nome}: ${vagasPreenchidas}/${vagasTotais} vagas preenchidas, ${vagasRestantes} restantes`);
           
           // Determinar status da turma
           let status = "aberta";
@@ -378,36 +343,9 @@ export default function Login() {
             podeMatricular
           };
         });
-        
-        // Ordenar alfabeticamente por nome
-        const turmasOrdenadas = turmasComStatus.sort((a, b) => {
-          return a.nome.localeCompare(b.nome);
-        });
-        
-        setTurmasDisponiveis(turmasOrdenadas);
-      } catch (error: any) {
-        console.error("❌ Erro ao carregar turmas:", error);
-        console.error("❌ Código do erro:", error?.code);
-        console.error("❌ Mensagem:", error?.message);
-        
-        // Se for erro de permissão, tentar uma query mais simples para diagnosticar
-        if (error?.code === "permission-denied") {
-          console.log("⚠️ ERRO DE PERMISSÃO! As regras do Firestore ainda não foram atualizadas.");
-          console.log("⚠️ Verifique se você publicou as regras no projeto correto do Firebase.");
-        }
-      }
-    };
-    
-    if (mode === "register") {
-      carregarTurmas();
-      
-      // Atualizar turmas a cada 1 segundo para refletir mudanças em tempo real
-      const intervalId = setInterval(() => {
-        carregarTurmas();
-      }, 1000);
-      
-      return () => clearInterval(intervalId);
-    }
+      setTurmasDisponiveis(turmasComStatus.sort((a, b) => a.nome.localeCompare(b.nome)));
+    }, (error) => console.error("Erro ao acompanhar turmas:", error));
+    return unsubscribe;
   }, [mode]);
 
   // Buscar CEP quando usuário digitar
@@ -504,108 +442,50 @@ export default function Login() {
           return;
         }
         
-        const { collection, addDoc, updateDoc, getDocs, query, where, deleteDoc } = await import("firebase/firestore");
-        
         let matricula: string;
-        
+
         try {
-          
-          // Se estiver editando uma solicitação reprovada, atualizar ao invés de criar nova
-          if (editingSolicitacaoId) {
-            // Buscar matrícula existente
-            const solicitacaoRef = doc(db, "solicitacoes", editingSolicitacaoId);
-            const solicitacaoDoc = await getDoc(solicitacaoRef);
-            
-            if (solicitacaoDoc.exists()) {
-              matricula = solicitacaoDoc.data().matricula;
-              
-              // Buscar o nome da turma selecionada
-              const turmaSelecionada = turmasDisponiveis.find(t => t.id === formData.turma);
-              const turmaNome = turmaSelecionada ? turmaSelecionada.nome : formData.turma;
-              
-              // Atualizar solicitação existente com status "pendente" novamente
-              await updateDoc(solicitacaoRef, {
-                nome: formData.nome,
-                email: formData.email,
-                turma: turmaNome,
-                turmaId: formData.turma,
-                status: "pendente",
-                dataSolicitacao: getNowBrasiliaISO(),
-                dataNascimento: formData.dataNascimento,
-                cpf: formData.cpf,
-                sexo: formData.sexo,
-                escolaridade: formData.escolaridade,
-                telefone: formData.telefone,
-                cep: formData.cep,
-                rua: formData.rua,
-                bairro: formData.bairro,
-                cidade: formData.cidade,
-                estado: formData.estado,
-                disponibilidade: disponibilidade,
-                horarioEspecialObservacao: horarioEspecialObservacao || null,
-                fotoBase64: photoBase64,
-                fotoPublica: photoPublic,
-                comentarioReprovacao: null, // Limpar comentário de reprovação
-                dataReprovacao: null,
-                comentarioDevolucao: null, // Limpar comentário de devolução
-                dataDevolucao: null,
-              });
-              
-              // Limpar estado de edição
-              setEditingSolicitacaoId(null);
-              setUserToReject(null);
-            } else {
-              throw new Error("Solicitação não encontrada");
-            }
-          } else {
-            // Criar nova solicitação
-            matricula = await generateUniqueMatricula(db);
-            const dataSolicitacao = getNowBrasiliaISO();
-            
-            // Buscar o nome da turma selecionada
-            const turmaSelecionada = turmasDisponiveis.find(t => t.id === formData.turma);
-            const turmaNome = turmaSelecionada ? turmaSelecionada.nome : formData.turma;
-            
-            // Limpar reprovações antigas (se existir)
-            const reprovacaoSnapshot = await getDocs(query(collection(db, "reprovacoes"), where("email", "==", formData.email)));
-            
-            if (!reprovacaoSnapshot.empty) {
-              for (const docRef of reprovacaoSnapshot.docs) {
-                await deleteDoc(doc(db, "reprovacoes", docRef.id));
-              }
-            }
-            
-            await addDoc(collection(db, "solicitacoes"), {
-              nome: formData.nome,
-              email: formData.email,
-              tipo: "aluno",
-              turma: turmaNome,
-              turmaId: formData.turma,
-              status: "pendente",
-              matricula: matricula,
-              dataSolicitacao: dataSolicitacao,
-              dataNascimento: formData.dataNascimento,
-              cpf: formData.cpf,
-              sexo: formData.sexo,
-              escolaridade: formData.escolaridade,
-              telefone: formData.telefone,
-              cep: formData.cep,
-              rua: formData.rua,
-              bairro: formData.bairro,
-              cidade: formData.cidade,
-              estado: formData.estado,
-              disponibilidade: disponibilidade,
-              horarioEspecialObservacao: horarioEspecialObservacao || null,
-              fotoBase64: photoBase64,
-              fotoPublica: photoPublic,
-            });
-          }
-        } catch (firestoreError: any) {
-          console.error("Erro ao salvar solicitação:", firestoreError);
-          
+          const turmaSelecionada = turmasDisponiveis.find((turma) => turma.id === formData.turma);
+          const application = {
+            nome: formData.nome,
+            email: formData.email,
+            turma: turmaSelecionada?.nome || formData.turma,
+            turmaId: formData.turma,
+            dataNascimento: formData.dataNascimento,
+            cpf: formData.cpf,
+            sexo: formData.sexo,
+            escolaridade: formData.escolaridade,
+            telefone: formData.telefone,
+            cep: formData.cep,
+            rua: formData.rua,
+            bairro: formData.bairro,
+            cidade: formData.cidade,
+            estado: formData.estado,
+            disponibilidade,
+            horarioEspecialObservacao: horarioEspecialObservacao || null,
+            fotoBase64: photoBase64,
+            fotoPublica: photoPublic,
+          };
+          const endpoint = editingSolicitacaoId
+            ? `/api/v1/public/enrollment/correction/${encodeURIComponent(editingSolicitacaoId)}`
+            : "/api/v1/public/enrollment/apply";
+          if (editingSolicitacaoId && !correctionToken) throw new Error("Confirme novamente sua identidade antes de reenviar o cadastro.");
+          const response = await fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ application, correctionToken }),
+          });
+          const result = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(result.message || "Não foi possível salvar a solicitação.");
+          matricula = result.matricula;
+          setEditingSolicitacaoId(null);
+          setCorrectionToken(null);
+          setUserToReject(null);
+        } catch (submissionError: any) {
+          console.error("Erro ao salvar solicitação:", submissionError);
           toast({
             title: editingSolicitacaoId ? "Erro ao atualizar solicitação" : "Erro ao criar solicitação",
-            description: "Não foi possível enviar sua solicitação. Tente novamente.",
+            description: submissionError.message || "Não foi possível enviar sua solicitação. Tente novamente.",
             variant: "destructive",
           });
           setLoading(false);
@@ -688,6 +568,8 @@ export default function Login() {
           setLoading(false);
           return;
         }
+
+        await registerSuccessfulLogin(currentUserData);
         
         console.log("✅ Login de diretor bem-sucedido!");
         
@@ -762,119 +644,53 @@ export default function Login() {
         });
 
       } else {
-        // Login usando CPF ou Matrícula
-        const loginIdentifier = formData.loginId.replace(/\D/g, '');
+        // Login usando CPF, matrícula ou e-mail institucional
+        const rawLoginIdentifier = formData.loginId.trim().toLowerCase();
+        const loginIdentifier = rawLoginIdentifier.replace(/\D/g, '');
         console.log("🔑 Tentando login com identificador:", loginIdentifier);
         
-        // Buscar usuário pelo CPF ou Matrícula
-        const { collection, getDocs, query, where } = await import("firebase/firestore");
-        let userSnapshot;
-        
-        // Tentar buscar por CPF primeiro (11 dígitos)
-        if (loginIdentifier.length === 11) {
-          console.log("🔍 Buscando por CPF...");
-          userSnapshot = await getDocs(query(collection(db, "usuarios"), where("cpf", "==", formatarCPF(loginIdentifier))));
-          console.log("✅ Busca por CPF concluída, encontrados:", userSnapshot.docs.length);
-        } else if (loginIdentifier.length === 4) {
-          // Buscar por matrícula (4 dígitos)
-          console.log("🔍 Buscando por matrícula...");
-          userSnapshot = await getDocs(query(collection(db, "usuarios"), where("matricula", "==", loginIdentifier)));
-          console.log("✅ Busca por matrícula concluída, encontrados:", userSnapshot.docs.length);
-        } else {
+        // A resolução do identificador ocorre no backend com limitação de
+        // tentativas. Nenhum cadastro completo é consultado publicamente.
+        if (!rawLoginIdentifier.includes("@") && loginIdentifier.length !== 11 && loginIdentifier.length !== 4) {
           toast({
             title: "Credenciais inválidas",
-            description: "Por favor, informe um CPF (11 dígitos) ou Matrícula (4 dígitos) válidos",
+            description: "Informe um e-mail, CPF (11 dígitos) ou matrícula (4 dígitos) válido",
             variant: "destructive",
           });
           setLoading(false);
           return;
         }
-        
-        if (userSnapshot.empty) {
-          // Verificar se há solicitação (pendente ou reprovada)
-          try {
-            let solicitacaoSnapshot;
-            
-            if (loginIdentifier.length === 11) {
-              solicitacaoSnapshot = await getDocs(query(collection(db, "solicitacoes"), where("cpf", "==", formatarCPF(loginIdentifier))));
-            } else if (loginIdentifier.length === 4) {
-              solicitacaoSnapshot = await getDocs(query(collection(db, "solicitacoes"), where("matricula", "==", loginIdentifier)));
-            }
-            
-            if (solicitacaoSnapshot && !solicitacaoSnapshot.empty) {
-              const solicitacaoDoc = solicitacaoSnapshot.docs[0];
-              const solicitacaoData = solicitacaoDoc.data();
-              
-              if (solicitacaoData.status === "reprovado") {
-                setRejectionComment(solicitacaoData.comentarioReprovacao || "Sua solicitação foi reprovada pelo administrador.");
-                setUserToReject({ ...solicitacaoData, docId: solicitacaoDoc.id });
-                setShowRejectionDialog(true);
-                setLoading(false);
-                return;
-              } else if (solicitacaoData.status === "standby") {
-                toast({
-                  title: "Em fila de espera",
-                  description: solicitacaoData.comentarioStandby || "Você está em fila de espera. Aguarde avaliação interna.",
-                  variant: "default",
-                });
-                setLoading(false);
-                return;
-              } else if (solicitacaoData.status === "devolvido") {
-                // Cadastro devolvido - permitir edição
-                setEditingSolicitacaoId(solicitacaoDoc.id);
-                setFormData({
-                  loginId: "",
-                  password: "",
-                  nome: solicitacaoData.nome || "",
-                  turma: solicitacaoData.turma || "",
-                  dataNascimento: solicitacaoData.dataNascimento || "",
-                  cpf: solicitacaoData.cpf || "",
-                  sexo: solicitacaoData.sexo || "",
-                  escolaridade: solicitacaoData.escolaridade || "",
-                  telefone: solicitacaoData.telefone || "",
-                  cep: solicitacaoData.cep || "",
-                  rua: solicitacaoData.rua || "",
-                  bairro: solicitacaoData.bairro || "",
-                  cidade: solicitacaoData.cidade || "",
-                  estado: solicitacaoData.estado || "",
-                  email: solicitacaoData.email || "",
-                });
-                
-                if (solicitacaoData.disponibilidade) {
-                  setDisponibilidade(solicitacaoData.disponibilidade);
-                }
-                
-                if (solicitacaoData.fotoBase64) {
-                  setPhotoBase64(solicitacaoData.fotoBase64);
-                }
-                
-                if (solicitacaoData.fotoPublica !== undefined) {
-                  setPhotoPublic(solicitacaoData.fotoPublica);
-                }
-                
-                toast({
-                  title: "Cadastro devolvido",
-                  description: solicitacaoData.comentarioDevolucao || "Seu cadastro precisa de correções. Por favor, revise as informações abaixo.",
-                  variant: "default",
-                });
-                
-                setMode("register");
-                setLoading(false);
-                return;
-              } else if (solicitacaoData.status === "pendente") {
-                toast({
-                  title: "Solicitação pendente",
-                  description: "Sua solicitação ainda está aguardando análise do administrador.",
-                  variant: "default",
-                });
-                setLoading(false);
-                return;
-              }
-            }
-          } catch (checkError) {
-            console.error("Erro ao verificar solicitação:", checkError);
+        const resolveResponse = await fetch("/api/v1/public/auth/resolve", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ identifier: rawLoginIdentifier }),
+        });
+        const resolved = await resolveResponse.json().catch(() => ({}));
+        if (!resolveResponse.ok) throw new Error(resolved.message || "Não foi possível consultar a conta.");
+
+        if (!resolved.found) {
+          const application = resolved.application;
+          if (application?.status === "reprovado") {
+            setRejectionComment("A solicitação foi reprovada. Consulte a secretaria para receber os detalhes com segurança.");
+            setShowRejectionDialog(true);
+          } else if (application?.status === "standby") {
+            toast({ title: "Em fila de espera", description: "Você está em fila de espera. Aguarde a avaliação da escola." });
+          } else if (application?.status === "devolvido") {
+            setStatusMatricula(application.matricula || loginIdentifier);
+            setShowStatusDialog(true);
+            toast({ title: "Cadastro devolvido", description: "Confirme CPF e data de nascimento em ‘Acompanhar solicitação’ para corrigir o cadastro." });
+          } else if (application?.status === "pendente") {
+            toast({ title: "Solicitação pendente", description: "Sua solicitação ainda está aguardando análise da escola." });
+          } else {
+            toast({ title: "Usuário não encontrado", description: "Não foi encontrado nenhum usuário com estas credenciais", variant: "destructive" });
           }
-          
+          setLoading(false);
+          return;
+        }
+
+        const userData = resolved.user;
+        const userEmail = userData?.email;
+        if (!userData) {
           toast({
             title: "Usuário não encontrado",
             description: "Não foi encontrado nenhum usuário com estas credenciais",
@@ -883,10 +699,6 @@ export default function Login() {
           setLoading(false);
           return;
         }
-        
-        const userData = userSnapshot.docs[0].data();
-        const userEmail = userData.email;
-        const userId = userSnapshot.docs[0].id;
         
         if (!userEmail) {
           toast({
@@ -1052,6 +864,7 @@ export default function Login() {
         }
         
         await refreshUserData();
+        await registerSuccessfulLogin(userData);
         
         toast({
           title: "Login realizado com sucesso!",
@@ -1063,6 +876,19 @@ export default function Login() {
       console.error("Código do erro:", error.code);
       console.error("Mensagem do erro:", error.message);
       
+      if (error.code === "auth/multi-factor-auth-required") {
+        const resolver = getMultiFactorResolver(auth, error);
+        const totpHint = resolver.hints.find((hint) => hint.factorId === TotpMultiFactorGenerator.FACTOR_ID);
+        if (totpHint) {
+          setMfaResolver(resolver);
+          setMfaCode("");
+          setMfaError("");
+          setShowMfaDialog(true);
+          setLoading(false);
+          return;
+        }
+      }
+
       let message = "Ocorreu um erro. Tente novamente.";
       if (error.code === "auth/wrong-password") {
         message = "Senha incorreta";
@@ -1096,75 +922,55 @@ export default function Login() {
     }
   };
 
+  const handleMfaVerification = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!mfaResolver || !/^\d{6}$/.test(mfaCode)) {
+      setMfaError("Informe o código de 6 dígitos do aplicativo autenticador.");
+      return;
+    }
+    setMfaLoading(true);
+    setMfaError("");
+    try {
+      const hint = mfaResolver.hints.find((entry) => entry.factorId === TotpMultiFactorGenerator.FACTOR_ID);
+      if (!hint) throw new Error("Fator TOTP não encontrado para esta conta.");
+      const assertion = TotpMultiFactorGenerator.assertionForSignIn(hint.uid, mfaCode);
+      await mfaResolver.resolveSignIn(assertion);
+      const profileSnapshot = auth.currentUser ? await getDoc(doc(db, "usuarios", auth.currentUser.uid)) : null;
+      await registerSuccessfulLogin(profileSnapshot?.data());
+      await refreshUserData();
+      setShowMfaDialog(false);
+      setMfaResolver(null);
+      toast({ title: "Verificação concluída", description: "A autenticação em duas etapas foi confirmada." });
+    } catch (error: any) {
+      setMfaError(error.code === "auth/invalid-verification-code" || error.code === "auth/invalid-multi-factor-session" ? "Código inválido ou expirado. Gere um novo código no aplicativo." : error.message);
+    } finally {
+      setMfaLoading(false);
+    }
+  };
+
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (forgotPasswordStep === 1) {
-      // Passo 1: Buscar usuário pelo CPF
-      setLoading(true);
-      
-      try {
-        const cpfFormatted = formatarCPF(forgotPasswordData.cpf);
-        const { collection, getDocs, query, where } = await import("firebase/firestore");
-        
-        const userSnapshot = await getDocs(
-          query(collection(db, "usuarios"), where("cpf", "==", cpfFormatted))
-        );
-        
-        if (userSnapshot.empty) {
-          toast({
-            title: "CPF não encontrado",
-            description: "Não foi encontrado nenhum usuário com este CPF",
-            variant: "destructive",
-          });
-          setLoading(false);
-          return;
-        }
-        
-        const userData = userSnapshot.docs[0];
-        setUserDataForReset({ id: userData.id, ...userData.data() });
-        setForgotPasswordStep(2);
-        setLoading(false);
-      } catch (error) {
-        console.error("Erro ao buscar CPF:", error);
-        toast({
-          title: "Erro",
-          description: "Não foi possível verificar o CPF. Tente novamente.",
-          variant: "destructive",
-        });
-        setLoading(false);
+      // Não revela se o CPF existe. A identidade é validada em conjunto com
+      // nome, nascimento e e-mail no passo seguinte, no backend limitado.
+      if (forgotPasswordData.cpf.replace(/\D/g, "").length !== 11) {
+        toast({ title: "CPF inválido", description: "Informe os 11 dígitos do CPF.", variant: "destructive" });
+        return;
       }
+      setForgotPasswordStep(2);
     } else if (forgotPasswordStep === 2) {
-      // Passo 2: Verificar informações do usuário e enviar email de recuperação
-      if (!userDataForReset) {
-        toast({
-          title: "Erro",
-          description: "Dados do usuário não encontrados",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      // Verificar se os dados conferem
-      const nomeConferido = forgotPasswordData.nomeCompleto.trim().toLowerCase() === userDataForReset.nome.trim().toLowerCase();
-      const dataNascimentoConferida = forgotPasswordData.dataNascimento === userDataForReset.dataNascimento;
-      const emailConferido = forgotPasswordData.email.trim().toLowerCase() === userDataForReset.email.trim().toLowerCase();
-      
-      if (!nomeConferido || !dataNascimentoConferida || !emailConferido) {
-        toast({
-          title: "Dados incorretos",
-          description: "As informações fornecidas não conferem com os dados cadastrados. Verifique e tente novamente.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      // Dados conferidos - enviar email de recuperação
       setLoading(true);
-      
       try {
+        const verificationResponse = await fetch("/api/v1/public/auth/verify-recovery", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cpf: forgotPasswordData.cpf, name: forgotPasswordData.nomeCompleto, birthDate: forgotPasswordData.dataNascimento, email: forgotPasswordData.email }),
+        });
+        const verification = await verificationResponse.json().catch(() => ({}));
+        if (!verificationResponse.ok || !verification.verified) throw new Error(verification.message || "Os dados informados não conferem.");
         const { sendPasswordResetEmail } = await import("firebase/auth");
-        await sendPasswordResetEmail(auth, userDataForReset.email);
+        await sendPasswordResetEmail(auth, verification.email);
         
         toast({
           title: "Email enviado com sucesso!",
@@ -1180,11 +986,10 @@ export default function Login() {
           dataNascimento: "",
           email: "",
         });
-        setUserDataForReset(null);
       } catch (resetError: any) {
         console.error("Erro ao enviar email:", resetError);
         
-        let errorMessage = "Não foi possível enviar o email de recuperação. Tente novamente mais tarde.";
+        let errorMessage = resetError.message || "Não foi possível enviar o email de recuperação. Tente novamente mais tarde.";
         
         if (resetError.code === "auth/too-many-requests") {
           errorMessage = "Muitas tentativas. Aguarde alguns minutos antes de tentar novamente.";
@@ -1232,62 +1037,19 @@ export default function Login() {
     setStatusError("");
 
     try {
-      const { collection, query, where, getDocs } = await import("firebase/firestore");
-      
-      // Buscar nas solicitações
-      const solicitacoesRef = collection(db, "solicitacoes");
-      const solicitacoesQuery = query(solicitacoesRef, where("matricula", "==", statusMatricula));
-      const solicitacoesSnapshot = await getDocs(solicitacoesQuery);
-
-      if (!solicitacoesSnapshot.empty) {
-        const solicitacao = solicitacoesSnapshot.docs[0].data();
-        setStatusResult({
-          matricula: solicitacao.matricula,
-          nome: solicitacao.nome,
-          status: solicitacao.status,
-          tipo: solicitacao.tipo,
-          turma: solicitacao.turma,
-          dataSolicitacao: solicitacao.dataSolicitacao,
-          comentarioReprovacao: solicitacao.comentarioReprovacao || null,
-          comentarioDevolucao: solicitacao.comentarioDevolucao || null
-        });
-        setStatusError("");
-        setStatusChecking(false);
-        return;
-      }
-
-      // Buscar nos usuários aprovados
-      const usuariosRef = collection(db, "usuarios");
-      const usuariosQuery = query(usuariosRef, where("matricula", "==", statusMatricula));
-      const usuariosSnapshot = await getDocs(usuariosQuery);
-
-      if (!usuariosSnapshot.empty) {
-        const usuario = usuariosSnapshot.docs[0].data();
-        setStatusResult({
-          matricula: usuario.matricula,
-          nome: usuario.nome,
-          status: usuario.status,
-          tipo: usuario.tipo,
-          turma: usuario.turma,
-          ativo: usuario.ativo
-        });
-        setStatusError("");
-        setStatusChecking(false);
-        return;
-      }
-
-      // Não encontrou
-      setStatusError("Não foi encontrada nenhuma solicitação com esta matrícula.");
-      setStatusChecking(false);
+      const response = await fetch("/api/v1/public/enrollment/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enrollment: statusMatricula }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.message || "Não foi possível verificar o status.");
+      if (!result.found) setStatusError("Não foi encontrada nenhuma solicitação com esta matrícula.");
+      else setStatusResult(result.result);
     } catch (error: any) {
       console.error("Erro ao verificar status:", error);
-      
-      // Mensagem mais específica se for erro de permissões
-      if (error.code === "permission-denied") {
-        setStatusError("É necessário ajustar as regras do Firestore. Veja o arquivo FIREBASE_RULES_SETUP.md para instruções.");
-      } else {
-        setStatusError(error.message || "Não foi possível verificar o status. Tente novamente.");
-      }
+      setStatusError(error.message || "Não foi possível verificar o status. Tente novamente.");
+    } finally {
       setStatusChecking(false);
     }
   };
@@ -1300,72 +1062,59 @@ export default function Login() {
     );
   };
 
-  const handleConfirmIdentity = () => {
+  const handleConfirmIdentity = async () => {
     if (!pendingSolicitacao) return;
-    
-    const cpfDigitado = confirmationData.cpf.replace(/\D/g, '');
-    const cpfCadastrado = (pendingSolicitacao.cpf || '').replace(/\D/g, '');
-    const cpfMatch = cpfDigitado === cpfCadastrado;
-    
-    const partes1 = confirmationData.dataNascimento.split('-');
-    const partes2 = (pendingSolicitacao.dataNascimento || '').split('-');
-    
-    const ano1 = partes1[0];
-    const mes1 = partes1[1];
-    const dia1 = partes1[2];
-    
-    const ano2 = partes2[0];
-    const mes2 = partes2[1];
-    const dia2 = partes2[2];
-    
-    const dateMatch = (Math.abs(parseInt(dia1) - parseInt(dia2)) <= 1) && mes1 === mes2 && ano1 === ano2;
-    
-    if (!cpfMatch || !dateMatch) {
-      setConfirmationError("CPF ou data de nascimento não conferem com o cadastro.");
-      return;
-    }
-    
-    setEditingSolicitacaoId(pendingSolicitacao.id);
+    setStatusChecking(true);
+    setConfirmationError("");
+    try {
+      const response = await fetch("/api/v1/public/enrollment/correction/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enrollment: pendingSolicitacao.matricula || statusMatricula, cpf: confirmationData.cpf, birthDate: confirmationData.dataNascimento }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.message || "CPF ou data de nascimento não conferem com o cadastro.");
+      const application = result.application || {};
+      setEditingSolicitacaoId(result.id);
+      setCorrectionToken(result.correctionToken);
     setFormData({
       loginId: "",
       password: "",
-      nome: pendingSolicitacao.nome || "",
-      turma: pendingSolicitacao.turma || "",
-      dataNascimento: pendingSolicitacao.dataNascimento || "",
-      cpf: pendingSolicitacao.cpf || "",
-      sexo: pendingSolicitacao.sexo || "",
-      escolaridade: pendingSolicitacao.escolaridade || "",
-      telefone: pendingSolicitacao.telefone || "",
-      cep: pendingSolicitacao.cep || "",
-      rua: pendingSolicitacao.rua || "",
-      bairro: pendingSolicitacao.bairro || "",
-      cidade: pendingSolicitacao.cidade || "",
-      estado: pendingSolicitacao.estado || "",
-      email: pendingSolicitacao.email || "",
+        nome: application.nome || "",
+        turma: application.turmaId || "",
+        dataNascimento: application.dataNascimento || "",
+        cpf: application.cpf || "",
+        sexo: application.sexo || "",
+        escolaridade: application.escolaridade || "",
+        telefone: application.telefone || "",
+        cep: application.cep || "",
+        rua: application.rua || "",
+        bairro: application.bairro || "",
+        cidade: application.cidade || "",
+        estado: application.estado || "",
+        email: application.email || "",
     });
-    
-    if (pendingSolicitacao.disponibilidade) {
-      setDisponibilidade(pendingSolicitacao.disponibilidade);
+      if (application.disponibilidade) {
+        setDisponibilidade(application.disponibilidade);
     }
-    
-    if (pendingSolicitacao.fotoBase64) {
-      setPhotoBase64(pendingSolicitacao.fotoBase64);
+      setHorarioEspecialObservacao(application.horarioEspecialObservacao || "");
+      if (application.fotoBase64) {
+        setPhotoBase64(application.fotoBase64);
     }
-    
-    if (pendingSolicitacao.fotoPublica !== undefined) {
-      setPhotoPublic(pendingSolicitacao.fotoPublica);
+      if (application.fotoPublica !== undefined) {
+        setPhotoPublic(application.fotoPublica);
     }
-    
-    setShowConfirmationDialog(false);
-    setShowStatusDialog(false);
-    setConfirmationData({ cpf: "", dataNascimento: "" });
-    setPendingSolicitacao(null);
-    setMode("register");
-    
-    toast({
-      title: "Identidade confirmada",
-      description: "Você pode editar seu cadastro e reenviar.",
-    });
+      setShowConfirmationDialog(false);
+      setShowStatusDialog(false);
+      setConfirmationData({ cpf: "", dataNascimento: "" });
+      setPendingSolicitacao(null);
+      setMode("register");
+      toast({ title: "Identidade confirmada", description: "Você pode editar seu cadastro e reenviar." });
+    } catch (error: any) {
+      setConfirmationError(error.message || "CPF ou data de nascimento não conferem com o cadastro.");
+    } finally {
+      setStatusChecking(false);
+    }
   };
 
   const handlePasswordChange = async (e: React.FormEvent) => {
@@ -1378,8 +1127,8 @@ export default function Login() {
       return;
     }
     
-    if (newPassword.length < 6) {
-      setPasswordChangeError("A senha deve ter no mínimo 6 caracteres.");
+    if (newPassword.length < 10 || !/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/\d/.test(newPassword)) {
+      setPasswordChangeError("Use pelo menos 10 caracteres, com letra maiúscula, minúscula e número.");
       return;
     }
     
@@ -1399,7 +1148,9 @@ export default function Login() {
         // Atualizar no Firestore para marcar que não é mais primeiro acesso
         const { updateDoc, doc: firestoreDoc } = await import("firebase/firestore");
         await updateDoc(firestoreDoc(db, "usuarios", auth.currentUser.uid), {
-          primeiroAcesso: false
+          primeiroAcesso: false,
+          forcarTrocaSenha: false,
+          senhaAlteradaEm: new Date().toISOString(),
         });
         
         // Atualizar userData local
@@ -1424,7 +1175,7 @@ export default function Login() {
       let errorMessage = "Não foi possível alterar a senha. Tente novamente.";
       
       if (error.code === "auth/weak-password") {
-        errorMessage = "Senha muito fraca. Use no mínimo 6 caracteres.";
+        errorMessage = "Senha muito fraca. Use 10 caracteres ou mais, com maiúscula, minúscula e número.";
       } else if (error.code === "auth/requires-recent-login") {
         errorMessage = "Por questões de segurança, você precisa fazer login novamente para alterar a senha.";
       }
@@ -1559,7 +1310,6 @@ export default function Login() {
                       dataNascimento: "",
                       email: "",
                     });
-                    setUserDataForReset(null);
                   }}
                   data-testid="button-back-to-login"
                 >
@@ -1951,18 +1701,23 @@ export default function Login() {
               {mode === "login" && (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="loginId">CPF ou Matrícula</Label>
+                    <Label htmlFor="loginId">E-mail, CPF ou matrícula</Label>
                     <Input
                       id="loginId"
                       type="text"
-                      placeholder="000.000.000-00 ou 0000"
+                      placeholder="nome@escola.com, 000.000.000-00 ou 0000"
                       value={formData.loginId}
                       onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, '');
+                        const rawValue = e.target.value;
+                        if (rawValue.includes("@") || /[a-zA-Z]/.test(rawValue)) {
+                          setFormData({ ...formData, loginId: rawValue });
+                          return;
+                        }
+                        const value = rawValue.replace(/\D/g, '');
                         if (value.length <= 4) {
                           setFormData({ ...formData, loginId: value });
                         } else {
-                          setFormData({ ...formData, loginId: formatarCPF(e.target.value) });
+                          setFormData({ ...formData, loginId: formatarCPF(rawValue) });
                         }
                       }}
                       required
@@ -2150,7 +1905,7 @@ export default function Login() {
                     <p className="text-sm font-medium text-yellow-600 dark:text-yellow-400">Status: Cadastro Devolvido</p>
                     <p className="text-sm mt-2">
                       <strong>Motivo:</strong><br />
-                      {statusResult.comentarioDevolucao || "Não informado"}
+                      {statusResult.comentarioDevolucao || "Disponível após a confirmação de identidade."}
                     </p>
                     <p className="text-sm mt-3 p-2 bg-background rounded">
                       Seu cadastro foi devolvido para correções. Clique no botão abaixo para editar e reenviar.
@@ -2175,7 +1930,7 @@ export default function Login() {
                     <p className="text-sm font-medium text-destructive">Status: Reprovado</p>
                     <p className="text-sm mt-2">
                       <strong>Motivo:</strong><br />
-                      {statusResult.comentarioReprovacao || "Não informado"}
+                      {statusResult.comentarioReprovacao || "Consulte a secretaria para receber os detalhes com segurança."}
                     </p>
                   </div>
                 )}
@@ -2184,23 +1939,10 @@ export default function Login() {
 
             {statusResult && statusResult.status === "devolvido" ? (
               <Button
-                onClick={async () => {
-                  const { collection, query, where, getDocs } = await import("firebase/firestore");
-                  const solicitacaoSnapshot = await getDocs(
-                    query(collection(db, "solicitacoes"), where("matricula", "==", statusMatricula))
-                  );
-                  
-                  if (!solicitacaoSnapshot.empty) {
-                    const solicitacaoDoc = solicitacaoSnapshot.docs[0];
-                    const solicitacaoData = solicitacaoDoc.data();
-                    
-                    setPendingSolicitacao({
-                      id: solicitacaoDoc.id,
-                      ...solicitacaoData
-                    });
-                    setConfirmationError("");
-                    setShowConfirmationDialog(true);
-                  }
+                onClick={() => {
+                  setPendingSolicitacao({ matricula: statusResult.matricula || statusMatricula });
+                  setConfirmationError("");
+                  setShowConfirmationDialog(true);
                 }}
                 className="w-full"
                 data-testid="button-edit-returned"
@@ -2701,10 +2443,10 @@ export default function Login() {
                   setPasswordChangeError("");
                 }}
                 required
-                minLength={6}
+                minLength={10}
                 data-testid="input-new-password"
               />
-              <p className="text-xs text-muted-foreground">Mínimo de 6 caracteres</p>
+              <p className="text-xs text-muted-foreground">Mínimo de 10 caracteres, com maiúscula, minúscula e número</p>
             </div>
             
             <div className="space-y-2">
@@ -2719,7 +2461,7 @@ export default function Login() {
                   setPasswordChangeError("");
                 }}
                 required
-                minLength={6}
+                minLength={10}
                 data-testid="input-confirm-password"
               />
             </div>
@@ -2746,6 +2488,31 @@ export default function Login() {
                 "Alterar Senha e Continuar"
               )}
             </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Autenticação em duas etapas por aplicativo TOTP */}
+      <Dialog open={showMfaDialog} onOpenChange={(open) => {
+        setShowMfaDialog(open);
+        if (!open) {
+          setMfaResolver(null);
+          setMfaCode("");
+          setMfaError("");
+        }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Shield className="h-5 w-5 text-primary" />Verificação em duas etapas</DialogTitle>
+            <DialogDescription>Abra seu aplicativo autenticador e informe o código temporário de 6 dígitos.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleMfaVerification} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="mfa-code">Código de segurança</Label>
+              <Input id="mfa-code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} value={mfaCode} onChange={(event) => { setMfaCode(event.target.value.replace(/\D/g, "").slice(0, 6)); setMfaError(""); }} placeholder="000000" className="text-center text-xl tracking-[0.35em]" autoFocus />
+            </div>
+            {mfaError && <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">{mfaError}</div>}
+            <Button type="submit" className="w-full" disabled={mfaLoading || mfaCode.length !== 6}>{mfaLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Shield className="mr-2 h-4 w-4" />}Confirmar código</Button>
           </form>
         </DialogContent>
       </Dialog>
@@ -2814,10 +2581,10 @@ export default function Login() {
               <Button
                 onClick={handleConfirmIdentity}
                 className="flex-1"
-                disabled={!confirmationData.cpf || !confirmationData.dataNascimento}
+                disabled={statusChecking || !confirmationData.cpf || !confirmationData.dataNascimento}
                 data-testid="button-confirm-identity"
               >
-                Confirmar
+                {statusChecking && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Confirmar
               </Button>
             </div>
           </div>

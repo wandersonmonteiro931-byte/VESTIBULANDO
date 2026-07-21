@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { collection, where, addDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage, storageAvailable } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
+import { storeFileInFirestore } from "@/lib/firestoreFileStore";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWarningAlert } from "@/contexts/WarningAlertContext";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { AccessibilityControls } from "@/components/AccessibilityControls";
 import { BrasiliaClock } from "@/components/BrasiliaClock";
 import { StatusBadge } from "@/components/StatusBadge";
 import { FileUploadZone } from "@/components/FileUploadZone";
@@ -34,6 +35,7 @@ import { ptBR } from "date-fns/locale";
 import jsPDF from "jspdf";
 import assinaturaDeclaracaoUrl from "@assets/Captura de tela 2025-10-23 011843_1761193443162.png";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
+import { SchoolManagementSuite } from "@/features/school/SchoolManagementSuite";
 import { PortalBrand } from "@/components/PortalBrand";
 import { PortalProfileHeader } from "@/components/PortalProfileHeader";
 import { AttendanceConfirmationModal } from "@/components/AttendanceConfirmationModal";
@@ -126,13 +128,16 @@ export default function StudentDashboard() {
       const tarefa = tarefas?.find(t => t.id === tarefaId);
       if (!tarefa) throw new Error("Tarefa não encontrada");
       
-      if (!storageAvailable || !storage) {
-        throw new Error("O envio de arquivos não está disponível no momento. Por favor, entre em contato com a escola.");
-      }
-      
-      const storageRef = ref(storage, `entregas/${userData.uid}/${tarefaId}/${file.name}`);
-      await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(storageRef);
+      const storedFile = await storeFileInFirestore(file, {
+        ownerId: userData.uid,
+        ownerRole: userData.tipo,
+        audienceUserIds: [tarefa.professorId],
+        audienceRoles: ["diretor", "administrador"],
+        studentIds: [userData.uid],
+        purpose: "entrega-tarefa",
+        sensitive: true,
+      });
+      const downloadURL = storedFile.url;
       
       const prazo = new Date(tarefa.prazo);
       const now = new Date();
@@ -305,6 +310,7 @@ export default function StudentDashboard() {
               </div>
               
               <div className="dashboard-header-right flex items-center gap-3">
+                <AccessibilityControls />
                 <ThemeToggle />
                 <BrasiliaClock />
                 <Link href="/chat">
@@ -359,6 +365,10 @@ export default function StudentDashboard() {
               userName={userData?.nome}
               userRole="Aluno"
             />
+
+            {selectedSection === "gestao-escolar-360" && (
+              <SchoolManagementSuite />
+            )}
 
             {selectedSection === "inicio" && (
               <>
