@@ -32,6 +32,7 @@ import { CalendarioProgramacaoTab } from "@/components/CalendarioProgramacaoTab"
 import { PresencasTab } from "@/components/PresencasTab";
 import { AdminFinanceTab } from "@/components/AdminFinanceTab";
 import { SchoolManagementSuite } from "@/features/school/SchoolManagementSuite";
+import { SchoolOperationsHome } from "@/features/school/SchoolOperationsHome";
 import { ChatNotificationBubble } from "@/components/ChatNotificationBubble";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { PortalBrand } from "@/components/PortalBrand";
@@ -172,13 +173,31 @@ function MaintenanceTimer({ startTime, onFinalize }: { startTime: string; onFina
 export default function AdminDashboard() {
   const { userData, signOut, refreshUserData } = useAuth();
   const { toast } = useToast();
-  const [selectedSection, setSelectedSection] = useState("aprovacoes");
+  const [selectedSection, setSelectedSectionState] = useState(() => new URLSearchParams(window.location.search).get("secao") || "gestao-escolar-360");
+  const setSelectedSection = (section: string) => {
+    setSelectedSectionState(section);
+    const url = new URL(window.location.href);
+    url.searchParams.set("secao", section);
+    url.searchParams.delete("acao");
+    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+  };
   
   const { hasUnread, latestMessage, showNotification, dismissNotification } = useUnreadMessages();
   const isMobile = useIsMobile();
   const [createTurmaDialogOpen, setCreateTurmaDialogOpen] = useState(false);
   const [createAlunoDialogOpen, setCreateAlunoDialogOpen] = useState(false);
   const [createProfessorDiretorDialogOpen, setCreateProfessorDiretorDialogOpen] = useState(false);
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const action = url.searchParams.get("acao");
+    if (action === "novo-aluno") setCreateAlunoDialogOpen(true);
+    if (action === "novo-professor") setCreateProfessorDiretorDialogOpen(true);
+    if (action === "nova-turma") setCreateTurmaDialogOpen(true);
+    if (action) {
+      url.searchParams.delete("acao");
+      window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+    }
+  }, []);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [userToReject, setUserToReject] = useState<any | null>(null);
@@ -2646,7 +2665,7 @@ export default function AdminDashboard() {
                     </div>
                     <div className="mt-4 flex gap-2 overflow-x-auto pb-1 school-quick-pills school-quick-pills-premium">
                       {[
-                        { id: "gestao-escolar-360", label: "Gestão 360", icon: LayoutDashboard },
+                        { id: "gestao-escolar-360", label: "Painel da escola", icon: LayoutDashboard },
                         { id: "aprovacoes", label: "Aprovações", icon: UserCheck },
                         { id: "usuarios", label: "Alunos", icon: Users },
                         { id: "professores", label: "Professores", icon: School },
@@ -2675,7 +2694,12 @@ export default function AdminDashboard() {
                 </Card>
               </div>
               {selectedSection === "gestao-escolar-360" && (
-                <SchoolManagementSuite />
+                <SchoolOperationsHome onNavigate={(section, action) => {
+                  setSelectedSection(section);
+                  if (action === "novo-aluno") setCreateAlunoDialogOpen(true);
+                  if (action === "novo-professor") setCreateProfessorDiretorDialogOpen(true);
+                  if (action === "nova-turma") setCreateTurmaDialogOpen(true);
+                }} />
               )}
               {selectedSection === "aprovacoes" && (
                 <div className="space-y-4">

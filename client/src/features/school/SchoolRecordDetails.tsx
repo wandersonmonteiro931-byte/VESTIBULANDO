@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { where } from "firebase/firestore";
-import { AlertTriangle, ArchiveRestore, Bot, CheckCircle2, Clock3, Download, Edit3, FileText, History, Loader2, MessageSquarePlus, Paperclip, Printer, Send, Trash2, UserRound } from "lucide-react";
+import { ArchiveRestore, Clock3, Download, Edit3, FileText, History, Loader2, MessageSquarePlus, Paperclip, Printer, Send, Trash2, UserRound } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import QRCode from "qrcode";
@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 import type { SchoolModuleDefinition } from "./schoolCatalog";
-import { capabilityBlueprint, capabilityIdentifier } from "./schoolCapabilityEngine";
+import { capabilityBlueprint } from "./schoolCapabilityEngine";
 import { addSchoolRecordComment, changeSchoolRecordStatus, downloadSchoolAttachment, registerAuditEvent, type SchoolActor, type SchoolRecord } from "./schoolData";
 
 interface SchoolRecordDetailsProps {
@@ -142,7 +142,7 @@ export function SchoolRecordDetails({
         body: [
           ["Aluno", record.studentName || "—"], ["Turma", record.className || "—"], ["Unidade", record.unitName || "—"],
           ["Responsável", record.assigneeName || "—"], ["Descrição", record.description || "—"],
-          ["Funcionalidade", record.capability || module.capabilities[record.capabilityIndex] || module.capabilities[0]],
+          ["Tipo de cadastro", record.capability || record.workflow],
           ...Object.entries(record.customData || {}).map(([key, value]) => [labelForKey(key, module, record.capability), displayValue(value)]),
         ],
         theme: "grid",
@@ -185,9 +185,9 @@ export function SchoolRecordDetails({
           <div className="school-details-heading">
             <div>
               <DialogTitle>{record.title}</DialogTitle>
-              <DialogDescription>{record.code} · {record.capabilityId || capabilityIdentifier(module, record.capabilityIndex || 0)} · {record.workflow}</DialogDescription>
+              <DialogDescription>{record.code} · {record.workflow}</DialogDescription>
             </div>
-            <Badge className="school-status-badge" variant={record.deletedAt ? "destructive" : "secondary"}>{record.deletedAt ? "na lixeira" : record.status}</Badge>
+            <Badge className="school-status-badge" variant={record.deletedAt ? "destructive" : "secondary"}>{record.deletedAt ? "arquivado" : record.status}</Badge>
           </div>
         </DialogHeader>
 
@@ -200,8 +200,8 @@ export function SchoolRecordDetails({
 
           <TabsContent value="details" className="space-y-5">
             <div className="school-detail-grid">
-              <div><span>Funcionalidade/requisito</span><strong>{record.capability || module.capabilities[record.capabilityIndex] || module.capabilities[0]}</strong></div>
-              <div><span>Processo</span><strong>{record.workflow}</strong></div>
+              <div><span>Tipo de cadastro</span><strong>{record.capability || record.workflow}</strong></div>
+              <div><span>Etapa</span><strong>{record.workflow}</strong></div>
               <div><span>Status</span><strong>{record.status}</strong></div>
               <div><span>Aluno</span><strong>{record.studentName || "—"}</strong></div>
               <div><span>Turma</span><strong>{record.className || "—"}</strong></div>
@@ -210,19 +210,13 @@ export function SchoolRecordDetails({
               <div><span>Criado por</span><strong>{record.createdByName}</strong></div>
               <div><span>Atualizado</span><strong>{formatDate(record.updatedAt)}</strong></div>
             </div>
-            {record.description && <div className="school-detail-text"><span>Descrição e observações</span><p>{record.description}</p></div>}
+            {record.description && <div className="school-detail-text"><span>Observações</span><p>{record.description}</p></div>}
             {Object.keys(record.customData || {}).length > 0 && (
               <div>
-                <h4 className="school-detail-section-title">Dados específicos</h4>
+                <h4 className="school-detail-section-title">Informações do cadastro</h4>
                 <div className="school-detail-grid">
                   {Object.entries(record.customData).map(([key, value]) => <div key={key}><span>{labelForKey(key, module, record.capability)}</span><strong>{displayValue(value)}</strong></div>)}
                 </div>
-              </div>
-            )}
-            {record.automation && (
-              <div className={`school-automation-summary is-${record.automation.health}`}>
-                <div className="school-automation-heading"><Bot className="h-5 w-5" /><div><strong>Automação verificada</strong><span>{record.automation.nextAction}</span></div>{record.automation.health === "ok" ? <CheckCircle2 className="h-5 w-5" /> : <AlertTriangle className="h-5 w-5" />}</div>
-                <div className="school-automation-columns"><div><span>Regras aplicadas</span><ul>{record.automation.rules.map((rule) => <li key={rule}>{rule}</li>)}</ul></div><div><span>Alertas</span>{record.automation.warnings.length ? <ul>{record.automation.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul> : <p>Nenhuma inconsistência automática.</p>}</div></div>
               </div>
             )}
             <div>
@@ -288,7 +282,7 @@ export function SchoolRecordDetails({
             ) : (
               canWrite && <>
                 <Button variant="outline" onClick={() => onEdit(record)}><Edit3 className="mr-2 h-4 w-4" />Editar</Button>
-                <Button variant="destructive" onClick={() => onDelete(record)}><Trash2 className="mr-2 h-4 w-4" />Mover para lixeira</Button>
+                <Button variant="destructive" onClick={() => onDelete(record)}><Trash2 className="mr-2 h-4 w-4" />Arquivar</Button>
               </>
             )}
           </div>

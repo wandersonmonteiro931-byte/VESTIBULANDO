@@ -1,4 +1,4 @@
-const CACHE_NAME = "vestibulando-shell-v8-propagacao-segura";
+const CACHE_NAME = "vestibulando-shell-v10-telas-operacionais";
 const APP_SHELL = ["/", "/manifest.webmanifest", "/school-icon.svg", "/school-icon-192.png", "/school-icon-512.png"];
 
 self.addEventListener("install", (event) => {

@@ -81,6 +81,7 @@ const correcaoFormSchema = z.object({
 
 interface AvaliacoesTabProps {
   userType: "professor" | "diretor";
+  scope?: "all" | "atividades" | "avaliacoes";
 }
 
 // Interface para opções de questão
@@ -107,7 +108,7 @@ interface QuestaoTemp {
   instrucoesEspecificas?: string;
 }
 
-export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
+export function AvaliacoesTab({ userType, scope = "all" }: AvaliacoesTabProps) {
   const { userData } = useAuth();
   const { toast } = useToast();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -148,7 +149,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
     defaultValues: {
       titulo: "",
       descricao: "",
-      tipo: "atividade",
+      tipo: scope === "avaliacoes" ? "prova" : "atividade",
       materia: "",
       destinatarioTipo: "turma",
       turmaId: "",
@@ -219,6 +220,14 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
     constraints: [where("tipo", "==", "aluno"), where("status", "==", "aprovado")],
     transform: (docs) => docs as User[],
   });
+
+  const scopedAvaliacoes = useMemo(() => (avaliacoes || []).filter((avaliacao) => {
+    if (scope === "atividades") return avaliacao.tipo === "atividade" || avaliacao.tipo === "trabalho";
+    if (scope === "avaliacoes") return avaliacao.tipo === "prova" || avaliacao.tipo === "simulado";
+    return true;
+  }), [avaliacoes, scope]);
+  const scopedIds = useMemo(() => new Set(scopedAvaliacoes.map((avaliacao) => avaliacao.id)), [scopedAvaliacoes]);
+  const scopedEntregas = useMemo(() => (entregas || []).filter((entrega) => scopedIds.has(entrega.avaliacaoId)), [entregas, scopedIds]);
 
   // Filtrar turmas disponíveis: diretor vê todas, professor vê apenas suas turmas cadastradas
   const turmasDisponiveis = useMemo(() => {
@@ -909,8 +918,8 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
     return entregas?.filter(e => e.avaliacaoId === avaliacaoId) || [];
   };
 
-  const pendingCorrections = entregas?.filter(e => e.status === "enviada" || e.status === "atrasada").length || 0;
-  const deliveredCorrections = entregas?.filter(e => e.status === "corrigida").length || 0;
+  const pendingCorrections = scopedEntregas.filter(e => e.status === "enviada" || e.status === "atrasada").length;
+  const deliveredCorrections = scopedEntregas.filter(e => e.status === "corrigida").length;
 
   // Verificar se a correção pode ser editada (dentro de 24 horas)
   const canEditCorrection = (entrega: AvaliacaoEntrega) => {
@@ -1589,22 +1598,22 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
   };
 
   const filterAvaliacoes = (tab: string) => {
-    if (!avaliacoes) return [];
+    if (!scopedAvaliacoes.length) return [];
     const now = new Date();
     
     switch (tab) {
       case "agendadas":
-        return avaliacoes.filter(a => isFuture(new Date(a.dataInicio)) && a.status !== "cancelada");
+        return scopedAvaliacoes.filter(a => isFuture(new Date(a.dataInicio)) && a.status !== "cancelada");
       case "andamento":
-        return avaliacoes.filter(a => {
+        return scopedAvaliacoes.filter(a => {
           const inicio = new Date(a.dataInicio);
           const fim = new Date(a.dataFim);
           return isWithinInterval(now, { start: inicio, end: fim }) && a.status !== "cancelada";
         });
       case "encerradas":
-        return avaliacoes.filter(a => isPast(new Date(a.dataFim)) || a.status === "cancelada");
+        return scopedAvaliacoes.filter(a => isPast(new Date(a.dataFim)) || a.status === "cancelada");
       default:
-        return avaliacoes;
+        return scopedAvaliacoes;
     }
   };
 
@@ -1612,12 +1621,12 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h3 className="text-2xl font-bold">Atividades e Avaliações</h3>
-          <p className="text-muted-foreground">Gerencie provas, simulados, atividades e trabalhos</p>
+          <h3 className="text-2xl font-bold">{scope === "atividades" ? "Atividades e trabalhos" : scope === "avaliacoes" ? "Avaliações e provas" : "Atividades e avaliações"}</h3>
+          <p className="text-muted-foreground">{scope === "atividades" ? "Crie tarefas, acompanhe entregas, corrija e envie feedback" : scope === "avaliacoes" ? "Monte provas e simulados, aplique, corrija e publique resultados" : "Gerencie provas, simulados, atividades e trabalhos"}</p>
         </div>
         <Button onClick={() => setCreateDialogOpen(true)} data-testid="button-create-avaliacao">
           <Plus className="h-4 w-4 mr-2" />
-          Nova Demanda
+          {scope === "atividades" ? "Nova atividade" : scope === "avaliacoes" ? "Nova avaliação" : "Nova demanda"}
         </Button>
       </div>
 
@@ -1628,7 +1637,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{avaliacoes?.length || 0}</div>
+            <div className="text-2xl font-bold">{scopedAvaliacoes.length}</div>
           </CardContent>
         </Card>
 
@@ -1761,7 +1770,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
         </TabsContent>
 
         <TabsContent value="correcoes" className="space-y-4">
-          {entregas?.filter(e => e.status === "enviada" || e.status === "atrasada").length === 0 ? (
+          {scopedEntregas.filter(e => e.status === "enviada" || e.status === "atrasada").length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                 <CheckCircle className="h-16 w-16 text-green-500 mb-4" />
@@ -1770,7 +1779,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
               </CardContent>
             </Card>
           ) : (
-            entregas?.filter(e => e.status === "enviada" || e.status === "atrasada").map(entrega => (
+            scopedEntregas.filter(e => e.status === "enviada" || e.status === "atrasada").map(entrega => (
               <Card key={entrega.id} className="hover-elevate">
                 <CardHeader>
                   <div className="flex items-start justify-between gap-2">
@@ -1839,7 +1848,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
         </TabsContent>
 
         <TabsContent value="entregues" className="space-y-4">
-          {entregas?.filter(e => e.status === "corrigida").length === 0 ? (
+          {scopedEntregas.filter(e => e.status === "corrigida").length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                 <FileCheck className="h-16 w-16 text-muted-foreground mb-4" />
@@ -1848,7 +1857,7 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
               </CardContent>
             </Card>
           ) : (
-            entregas?.filter(e => e.status === "corrigida").map(entrega => {
+            scopedEntregas.filter(e => e.status === "corrigida").map(entrega => {
               const canEdit = canEditCorrection(entrega);
               const horasRestantes = entrega.dataCorrecao 
                 ? Math.max(0, 24 - differenceInHours(new Date(), new Date(entrega.dataCorrecao)))
@@ -1962,9 +1971,9 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-create-avaliacao">
           <DialogHeader>
-            <DialogTitle>Nova Avaliação</DialogTitle>
+            <DialogTitle>{scope === "atividades" ? "Nova atividade ou trabalho" : scope === "avaliacoes" ? "Nova avaliação ou simulado" : "Nova avaliação"}</DialogTitle>
             <DialogDescription>
-              Crie uma prova, simulado ou atividade para seus alunos
+              {scope === "atividades" ? "Crie uma atividade com prazo, anexos, entrega, correção e feedback." : scope === "avaliacoes" ? "Crie uma prova ou simulado com aplicação, questões, gabarito e resultado." : "Crie uma prova, simulado ou atividade para seus alunos"}
             </DialogDescription>
           </DialogHeader>
 
@@ -1984,10 +1993,10 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="prova">Prova</SelectItem>
-                          <SelectItem value="simulado">Simulado</SelectItem>
-                          <SelectItem value="atividade">Atividade</SelectItem>
-                          <SelectItem value="trabalho">Trabalho</SelectItem>
+                          {scope !== "atividades" && <SelectItem value="prova">Prova</SelectItem>}
+                          {scope !== "atividades" && <SelectItem value="simulado">Simulado</SelectItem>}
+                          {scope !== "avaliacoes" && <SelectItem value="atividade">Atividade</SelectItem>}
+                          {scope !== "avaliacoes" && <SelectItem value="trabalho">Trabalho</SelectItem>}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -2521,10 +2530,10 @@ export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="prova">Prova</SelectItem>
-                          <SelectItem value="simulado">Simulado</SelectItem>
-                          <SelectItem value="atividade">Atividade</SelectItem>
-                          <SelectItem value="trabalho">Trabalho</SelectItem>
+                          {scope !== "atividades" && <SelectItem value="prova">Prova</SelectItem>}
+                          {scope !== "atividades" && <SelectItem value="simulado">Simulado</SelectItem>}
+                          {scope !== "avaliacoes" && <SelectItem value="atividade">Atividade</SelectItem>}
+                          {scope !== "avaliacoes" && <SelectItem value="trabalho">Trabalho</SelectItem>}
                         </SelectContent>
                       </Select>
                       <FormMessage />

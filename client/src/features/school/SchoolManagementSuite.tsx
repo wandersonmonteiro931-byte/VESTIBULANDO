@@ -25,7 +25,6 @@ import {
   LockKeyhole,
   MoreHorizontal,
   PackageOpen,
-  PlayCircle,
   Plus,
   RefreshCw,
   RotateCcw,
@@ -37,14 +36,12 @@ import {
   Upload,
   UserPlus,
   UsersRound,
-  Workflow,
 } from "lucide-react";
 import type { ElementType } from "react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -79,11 +76,10 @@ import {
   type SchoolRecord,
 } from "./schoolData";
 import { SchoolAccountDialog } from "./SchoolAccountDialog";
-import { AccessControlPanel } from "./AccessControlPanel";
 import { SchoolRecordDetails } from "./SchoolRecordDetails";
 import { SchoolRecordDialog } from "./SchoolRecordDialog";
-import { IntegrationOperationsPanel, NotificationPreferencesPanel, PrivacyOperationsPanel } from "./GovernancePanels";
-import { capabilityIdentifier, schoolCapabilityCount } from "./schoolCapabilityEngine";
+import { IntegrationOperationsPanel } from "./GovernancePanels";
+import { CapabilityWorkspace, OperationalModuleWorkspace, hasOperationalModuleWorkspace } from "./OperationalModuleWorkspace";
 
 const categoryIcons: Record<ModuleCategory, ElementType> = {
   fundacao: FolderCog,
@@ -96,6 +92,39 @@ const categoryIcons: Record<ModuleCategory, ElementType> = {
 
 const privilegedRoles: SchoolRole[] = ["diretor", "administrador"];
 const staffRoles: SchoolRole[] = ["diretor", "administrador", "secretaria", "coordenador", "financeiro", "bibliotecario", "psicologo", "inspetor", "funcionario", "rh", "cantina", "transporte"];
+
+const moduleCreateLabels: Record<string, string> = {
+  instituicao: "Nova configuração",
+  acessos: "Novo acesso",
+  alunos: "Cadastrar aluno",
+  responsaveis: "Vincular responsável",
+  matriculas: "Nova matrícula",
+  "estrutura-academica": "Novo cadastro acadêmico",
+  "calendario-horarios": "Novo evento ou horário",
+  "diario-planejamento": "Novo planejamento",
+  frequencia: "Registrar frequência",
+  atividades: "Criar atividade",
+  avaliacoes: "Criar avaliação",
+  "notas-boletim": "Lançar nota ou resultado",
+  acompanhamento: "Novo acompanhamento",
+  conteudos: "Adicionar conteúdo",
+  "aulas-ao-vivo": "Agendar aula",
+  "documentos-escolares": "Emitir documento",
+  "portal-aluno": "Nova configuração do aluno",
+  "portal-professor": "Nova configuração docente",
+  "portal-responsaveis": "Nova configuração familiar",
+  comunicacao: "Novo comunicado",
+  "bem-estar": "Novo atendimento ou ocorrência",
+  inclusao: "Novo atendimento especializado",
+  financeiro: "Novo lançamento financeiro",
+  secretaria: "Abrir protocolo",
+  relatorios: "Criar relatório",
+  operacoes: "Novo registro administrativo",
+  "lgpd-seguranca": "Novo registro de privacidade",
+  acessibilidade: "Nova configuração acessível",
+  integracoes: "Nova integração",
+  continuidade: "Novo procedimento de backup",
+};
 
 function formatDate(value?: string | null) {
   if (!value) return "—";
@@ -124,8 +153,8 @@ function escapeHtml(value: unknown) {
 }
 
 function exportExcel(records: SchoolRecord[]) {
-  const headers = ["Módulo", "Requisito", "Funcionalidade", "Processo", "Código", "Título", "Status", "Aluno", "Turma", "Unidade", "Responsável", "Atualizado em"];
-  const rows = records.map((record) => [SCHOOL_MODULE_BY_ID[record.moduleId]?.title || record.moduleId, record.capabilityId, record.capability, record.workflow, record.code, record.title, record.status, record.studentName, record.className, record.unitName, record.assigneeName, record.updatedAt]);
+  const headers = ["Setor", "Tipo de cadastro", "Etapa", "Código", "Nome ou identificação", "Status", "Aluno", "Turma", "Unidade", "Responsável", "Atualizado em"];
+  const rows = records.map((record) => [SCHOOL_MODULE_BY_ID[record.moduleId]?.title || record.moduleId, record.capability || record.workflow, record.workflow, record.code, record.title, record.status, record.studentName, record.className, record.unitName, record.assigneeName, record.updatedAt]);
   const table = `<table><thead><tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
   downloadFile(`vestibulando-registros-${new Date().toISOString().slice(0, 10)}.xls`, `\uFEFF<html><head><meta charset="UTF-8"></head><body>${table}</body></html>`, "application/vnd.ms-excel;charset=utf-8");
 }
@@ -140,8 +169,8 @@ function exportPdf(records: SchoolRecord[], module?: SchoolModuleDefinition) {
   pdf.text(`Gerado em ${new Date().toLocaleString("pt-BR")} · ${records.length} registro(s)`, 14, 22);
   autoTable(pdf, {
     startY: 28,
-    head: [["Módulo", "Requisito/funcionalidade", "Processo", "Código/título", "Status", "Aluno/turma", "Atualização"]],
-    body: records.map((record) => [SCHOOL_MODULE_BY_ID[record.moduleId]?.shortTitle || record.moduleId, `${record.capabilityId || ""} ${record.capability || ""}`.trim(), record.workflow, `${record.code}\n${record.title}`, record.status, [record.studentName, record.className].filter(Boolean).join(" · ") || "—", formatDate(record.updatedAt)]),
+    head: [["Setor", "Tipo de cadastro", "Código/título", "Status", "Aluno/turma", "Responsável", "Atualização"]],
+    body: records.map((record) => [SCHOOL_MODULE_BY_ID[record.moduleId]?.shortTitle || record.moduleId, record.capability || record.workflow, `${record.code}\n${record.title}`, record.status, [record.studentName, record.className].filter(Boolean).join(" · ") || "—", record.assigneeName || "—", formatDate(record.updatedAt)]),
     styles: { fontSize: 7.5, cellPadding: 2.2 },
     headStyles: { fillColor: [33, 82, 142] },
   });
@@ -172,7 +201,7 @@ function ModuleNavigator({ modules, selectedId, search, onSearch, onSelect, coun
               {categoryModules.map((module) => (
                 <button key={module.id} type="button" className={cn("school-module-link", selectedId === module.id && "is-active")} onClick={() => onSelect(module.id)}>
                   <span className="school-module-number">{String(module.number).padStart(2, "0")}</span>
-                  <span className="school-module-link-copy"><strong>{module.shortTitle}</strong><small>{module.workflows.length} processos</small></span>
+                  <span className="school-module-link-copy"><strong>{module.shortTitle}</strong><small>Abrir setor</small></span>
                   {counts[module.id] > 0 && <span className="school-module-count">{counts[module.id]}</span>}
                   <ChevronRight className="h-4 w-4" />
                 </button>
@@ -182,53 +211,6 @@ function ModuleNavigator({ modules, selectedId, search, onSearch, onSelect, coun
         })}
       </div>
     </aside>
-  );
-}
-
-function CapabilityDialog({
-  module,
-  records,
-  canWrite,
-  open,
-  onOpenChange,
-  onExecute,
-  onFilter,
-}: {
-  module: SchoolModuleDefinition;
-  records: SchoolRecord[];
-  canWrite: boolean;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onExecute: (capability: string) => void;
-  onFilter: (capability: string) => void;
-}) {
-  const [search, setSearch] = useState("");
-  const normalized = search.trim().toLocaleLowerCase("pt-BR");
-  const activeRecords = records.filter((record) => !record.deletedAt);
-  const capabilities = module.capabilities.map((capability, index) => {
-    const matches = activeRecords.filter((record) => (record.capability || module.capabilities[record.capabilityIndex] || module.capabilities[0]) === capability);
-    return {
-      capability,
-      index,
-      id: capabilityIdentifier(module, index),
-      total: matches.length,
-      pending: matches.filter((record) => isPendingStatus(record.status)).length,
-    };
-  });
-  const filtered = capabilities.filter((item) => !normalized || `${item.id} ${item.capability}`.toLocaleLowerCase("pt-BR").includes(normalized));
-  const inUse = capabilities.filter((item) => item.total > 0).length;
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="school-capability-dialog max-w-5xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Central de funcionalidades · {module.title}</DialogTitle><DialogDescription>Cada requisito abaixo abre uma operação completa com campos contextuais, regras automáticas, responsáveis, prazos, anexos, histórico, notificações e auditoria.</DialogDescription></DialogHeader>
-        <div className="school-capability-overview"><div><strong>{module.capabilities.length}</strong><span>requisitos disponíveis</span></div><div><strong>{inUse}</strong><span>com registros ativos</span></div><div><strong>{activeRecords.length}</strong><span>operações registradas</span></div><div><strong>{capabilities.reduce((total, item) => total + item.pending, 0)}</strong><span>pendências</span></div></div>
-        <div className="school-capability-search"><Search className="h-4 w-4" /><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar requisito pelo nome ou código..." aria-label="Buscar funcionalidade" /></div>
-        <div className="school-capability-grid">
-          {filtered.map((item) => <article key={item.capability} className={cn("school-capability-item", item.total > 0 && "is-active")}><div className="school-capability-copy"><span className="school-capability-code">{item.id}</span><strong>{item.capability}</strong><small>{item.total ? `${item.total} registro(s) · ${item.pending} pendente(s)` : "Pronta para execução"}</small></div><div className="school-capability-actions">{item.total > 0 && <Button size="sm" variant="ghost" onClick={() => onFilter(item.capability)}><Eye className="mr-1.5 h-3.5 w-3.5" />Ver</Button>}{canWrite && <Button size="sm" variant={item.total ? "outline" : "default"} onClick={() => onExecute(item.capability)}><PlayCircle className="mr-1.5 h-3.5 w-3.5" />Executar</Button>}</div></article>)}
-        </div>
-        {!filtered.length && <div className="school-empty-inline">Nenhuma funcionalidade corresponde à busca.</div>}
-      </DialogContent>
-    </Dialog>
   );
 }
 
@@ -295,7 +277,7 @@ function DataContinuityPanel({ records, auditLogs, backups, backupTests, actor, 
   );
 }
 
-export function SchoolManagementSuite({ initialModuleId }: { initialModuleId?: string } = {}) {
+export function SchoolManagementSuite({ initialModuleId, focused = false }: { initialModuleId?: string; focused?: boolean } = {}) {
   const { userData } = useAuth();
   const { toast } = useToast();
   const role = resolveSchoolRole(userData as any);
@@ -318,7 +300,6 @@ export function SchoolManagementSuite({ initialModuleId }: { initialModuleId?: s
   const [showTrash, setShowTrash] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [capabilityOpen, setCapabilityOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<SchoolRecord | null>(null);
   const [initialCapability, setInitialCapability] = useState<string | null>(null);
@@ -354,9 +335,8 @@ export function SchoolManagementSuite({ initialModuleId }: { initialModuleId?: s
     return moduleRecords.filter((record) => {
       const trashMatches = showTrash ? Boolean(record.deletedAt) : !record.deletedAt;
       const statusMatches = statusFilter === "all" || record.status === statusFilter;
-      const recordCapability = record.capability || selectedModule?.capabilities[record.capabilityIndex] || selectedModule?.capabilities[0];
-      const capabilityMatches = capabilityFilter === "all" || recordCapability === capabilityFilter;
-      const searchMatches = !normalized || `${record.code} ${record.capabilityId || ""} ${recordCapability || ""} ${record.title} ${record.workflow} ${record.status} ${record.studentName || ""} ${record.className || ""} ${record.assigneeName || ""}`.toLocaleLowerCase("pt-BR").includes(normalized);
+      const capabilityMatches = capabilityFilter === "all" || record.capability === capabilityFilter;
+      const searchMatches = !normalized || `${record.code} ${record.title} ${record.capability || ""} ${record.workflow} ${record.status} ${record.studentName || ""} ${record.className || ""} ${record.assigneeName || ""}`.toLocaleLowerCase("pt-BR").includes(normalized);
       return trashMatches && statusMatches && capabilityMatches && searchMatches;
     }).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }, [moduleRecords, recordSearch, showTrash, statusFilter, capabilityFilter, selectedModule]);
@@ -387,65 +367,57 @@ export function SchoolManagementSuite({ initialModuleId }: { initialModuleId?: s
   const activeModuleRecords = moduleRecords.filter((record) => !record.deletedAt);
   const pendingCount = activeModuleRecords.filter((record) => isPendingStatus(record.status)).length;
   const completedCount = activeModuleRecords.filter((record) => isCompletedStatus(record.status)).length;
-  const capabilityCoverage = new Set(activeModuleRecords.map((record) => record.capability || selectedModule.capabilities[record.capabilityIndex] || selectedModule.capabilities[0])).size;
+  const createLabel = moduleCreateLabels[selectedModule.id] || "Novo cadastro";
+  const hasOperationalWorkspace = hasOperationalModuleWorkspace(selectedModule.id);
+  const hasSuiteWorkspace = ["relatorios", "continuidade", "integracoes"].includes(selectedModule.id);
+  const isDedicatedWorkspace = hasOperationalWorkspace || hasSuiteWorkspace;
 
   return (
     <div className="school-suite">
-      <div className="school-suite-banner">
-        <div><span className="school-suite-eyebrow"><LayoutDashboard className="h-4 w-4" />Sistema escolar completo</span><h2>Gestão 360° do Vestibulando</h2><p>30 módulos integrados, dados em tempo real, permissões por perfil e trilha de auditoria.</p></div>
-        <div className="school-suite-banner-stats"><div><strong>30/30</strong><span>Módulos</span></div><div><strong>{records.filter((record) => !record.deletedAt).length}</strong><span>Registros</span></div><div><strong>{schoolCapabilityCount(SCHOOL_MODULES)}</strong><span>Funções acionáveis</span></div></div>
-      </div>
-
-      <div className="school-suite-layout">
-        <ModuleNavigator modules={filteredModules} selectedId={selectedModule.id} search={moduleSearch} onSearch={setModuleSearch} onSelect={(id) => { setSelectedModuleId(id); setStatusFilter("all"); setCapabilityFilter("all"); setRecordSearch(""); setShowTrash(false); }} counts={counts} />
+      <div className={cn("school-suite-layout", focused && "is-focused")}>
+        {!focused && <ModuleNavigator modules={filteredModules} selectedId={selectedModule.id} search={moduleSearch} onSearch={setModuleSearch} onSelect={(id) => { setSelectedModuleId(id); setStatusFilter("all"); setCapabilityFilter("all"); setRecordSearch(""); setShowTrash(false); }} counts={counts} />}
 
         <main className="school-module-workspace">
           <div className="school-module-hero">
             <div className="school-module-title-row"><span className="school-module-hero-number">{String(selectedModule.number).padStart(2, "0")}</span><div><div className="school-module-label">{SCHOOL_CATEGORIES.find((category) => category.id === selectedModule.category)?.label}</div><h3>{selectedModule.title}</h3><p>{selectedModule.description}</p></div></div>
             <div className="school-module-actions">
-              <Button variant="outline" onClick={() => setCapabilityOpen(true)}><BookOpenCheck className="mr-2 h-4 w-4" />Ver {selectedModule.capabilities.length} funções</Button>
               {selectedModule.id === "acessos" && isPrivileged && <Button variant="outline" onClick={() => setAccountOpen(true)}><UserPlus className="mr-2 h-4 w-4" />Criar conta</Button>}
-              {canWrite && <Button onClick={() => openNewRecord()}><Plus className="mr-2 h-4 w-4" />Nova operação</Button>}
+              {canWrite && !isDedicatedWorkspace && <Button onClick={() => openNewRecord()}><Plus className="mr-2 h-4 w-4" />{createLabel}</Button>}
             </div>
           </div>
 
-          {selectedModule.existingResources?.length ? <div className="school-integrations-strip"><Workflow className="h-4 w-4" /><span>Recursos existentes preservados e integrados:</span>{selectedModule.existingResources.map((resource) => <Badge key={resource} variant="outline">{resource}</Badge>)}</div> : null}
-
+          {hasOperationalWorkspace && <OperationalModuleWorkspace module={selectedModule} role={role} actor={actor} user={userData} users={users} classes={classes} records={moduleRecords} allRecords={records} canWrite={canWrite} onCreate={openNewRecord} onView={openDetails} />}
           {selectedModule.id === "relatorios" && <AnalyticsPanel records={records} />}
           {selectedModule.id === "continuidade" && <DataContinuityPanel records={records} auditLogs={auditLogs} backups={backups} backupTests={backupTests} actor={actor} canRestore={isPrivileged} />}
-          {selectedModule.id === "acessos" && isPrivileged && <AccessControlPanel users={users} actor={actor} />}
           {selectedModule.id === "integracoes" && <IntegrationOperationsPanel modules={writableModules} records={records} actor={actor} canImport={canWrite} />}
-          {selectedModule.id === "lgpd-seguranca" && <PrivacyOperationsPanel user={userData} records={records} />}
-          {["portal-aluno", "portal-professor", "portal-responsaveis", "comunicacao"].includes(selectedModule.id) && <NotificationPreferencesPanel user={userData} actor={actor} />}
+          {hasSuiteWorkspace && <CapabilityWorkspace module={selectedModule} records={moduleRecords} canWrite={canWrite} onCreate={openNewRecord} onView={openDetails} compact />}
 
-          <div className="school-module-kpis">
-            <div><span>Total ativo</span><strong>{activeModuleRecords.length}</strong><PackageOpen className="h-5 w-5" /></div>
-            <div><span>Funções em uso</span><strong>{capabilityCoverage}/{selectedModule.capabilities.length}</strong><BookOpenCheck className="h-5 w-5" /></div>
+          {!isDedicatedWorkspace && <><div className="school-module-kpis">
+            <div><span>Cadastros ativos</span><strong>{activeModuleRecords.length}</strong><PackageOpen className="h-5 w-5" /></div>
             <div><span>Pendentes/em curso</span><strong>{pendingCount}</strong><Activity className="h-5 w-5" /></div>
             <div><span>Concluídos</span><strong>{completedCount}</strong><CheckCircle2 className="h-5 w-5" /></div>
-            <div><span>Na lixeira</span><strong>{moduleRecords.filter((record) => record.deletedAt).length}</strong><Archive className="h-5 w-5" /></div>
+            <div><span>Arquivados</span><strong>{moduleRecords.filter((record) => record.deletedAt).length}</strong><Archive className="h-5 w-5" /></div>
           </div>
 
           <Card className="school-records-card">
             <CardContent className="p-0">
               <div className="school-record-toolbar">
                 <div className="school-record-search"><Search className="h-4 w-4" /><Input value={recordSearch} onChange={(event) => setRecordSearch(event.target.value)} placeholder="Pesquisar código, título, aluno, turma..." aria-label="Pesquisar registros" /></div>
-                <div className="school-record-filters"><Select value={capabilityFilter} onValueChange={setCapabilityFilter}><SelectTrigger className="school-capability-filter" aria-label="Filtrar por funcionalidade"><BookOpenCheck className="mr-2 h-4 w-4" /><SelectValue /></SelectTrigger><SelectContent className="max-h-80"><SelectItem value="all">Todas as funcionalidades</SelectItem>{selectedModule.capabilities.map((capability, index) => <SelectItem key={capability} value={capability}>{String(index + 1).padStart(2, "0")} · {capability}</SelectItem>)}</SelectContent></Select><Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger aria-label="Filtrar por status"><Filter className="mr-2 h-4 w-4" /><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos os status</SelectItem>{selectedModule.statuses.map((status) => <SelectItem key={status} value={status}>{status}</SelectItem>)}</SelectContent></Select><label className="school-trash-toggle"><Switch checked={showTrash} onCheckedChange={setShowTrash} /><span>Lixeira</span></label><DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="icon" aria-label="Exportar"><Download className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={downloadCsv}><FileDown className="mr-2 h-4 w-4" />CSV</DropdownMenuItem><DropdownMenuItem onClick={() => exportExcel(filteredRecords)}><FileSpreadsheet className="mr-2 h-4 w-4" />Excel</DropdownMenuItem><DropdownMenuItem onClick={() => exportPdf(filteredRecords, selectedModule)}><FileJson className="mr-2 h-4 w-4" />PDF</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div>
+                <div className="school-record-filters"><Select value={capabilityFilter} onValueChange={setCapabilityFilter}><SelectTrigger className="school-capability-filter" aria-label="Filtrar por tipo"><BookOpenCheck className="mr-2 h-4 w-4" /><SelectValue /></SelectTrigger><SelectContent className="max-h-80"><SelectItem value="all">Todos os tipos</SelectItem>{selectedModule.capabilities.map((capability) => <SelectItem key={capability} value={capability}>{capability}</SelectItem>)}</SelectContent></Select><Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger aria-label="Filtrar por status"><Filter className="mr-2 h-4 w-4" /><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos os status</SelectItem>{selectedModule.statuses.map((status) => <SelectItem key={status} value={status}>{status}</SelectItem>)}</SelectContent></Select><label className="school-trash-toggle"><Switch checked={showTrash} onCheckedChange={setShowTrash} /><span>Arquivados</span></label><DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="icon" aria-label="Exportar"><Download className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={downloadCsv}><FileDown className="mr-2 h-4 w-4" />CSV</DropdownMenuItem><DropdownMenuItem onClick={() => exportExcel(filteredRecords)}><FileSpreadsheet className="mr-2 h-4 w-4" />Excel</DropdownMenuItem><DropdownMenuItem onClick={() => exportPdf(filteredRecords, selectedModule)}><FileJson className="mr-2 h-4 w-4" />PDF</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div>
               </div>
 
               {loading ? <div className="school-record-loading">{Array.from({ length: 5 }).map((_, index) => <Skeleton key={index} className="h-14 w-full" />)}</div> : filteredRecords.length ? (
-                <div className="school-record-table-wrap"><Table><TableHeader><TableRow><TableHead>Requisito / registro</TableHead><TableHead>Aluno ou turma</TableHead><TableHead>Responsável</TableHead><TableHead>Status</TableHead><TableHead>Atualização</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader><TableBody>{filteredRecords.map((record) => { const recordCapability = record.capability || selectedModule.capabilities[record.capabilityIndex] || selectedModule.capabilities[0]; return <TableRow key={record.id} className="school-record-row" onDoubleClick={() => openDetails(record)}><TableCell><div className="school-record-primary"><span>{record.capabilityId || capabilityIdentifier(selectedModule, record.capabilityIndex || 0)} · {record.code}</span><strong>{record.title}</strong><small>{recordCapability} · {record.workflow}</small></div></TableCell><TableCell><div className="school-record-related"><strong>{record.studentName || record.className || "—"}</strong>{record.studentName && record.className && <span>{record.className}</span>}</div></TableCell><TableCell>{record.assigneeName || "Não atribuído"}</TableCell><TableCell><span className={`school-table-status tone-${statusTone(record.status)}`}>{record.deletedAt ? "na lixeira" : record.status}</span></TableCell><TableCell><div className="school-record-date"><strong>{formatDate(record.updatedAt)}</strong><span>{record.updatedByName}</span></div></TableCell><TableCell><div className="school-row-actions"><Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" onClick={() => openDetails(record)}><Eye className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent>Ver detalhes e histórico</TooltipContent></Tooltip>{canWrite && <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end">{record.deletedAt ? <DropdownMenuItem onClick={() => handleRestore(record)}><RotateCcw className="mr-2 h-4 w-4" />Restaurar</DropdownMenuItem> : <><DropdownMenuItem onClick={() => openEdit(record)}><Settings2 className="mr-2 h-4 w-4" />Editar</DropdownMenuItem><DropdownMenuItem className="text-destructive" onClick={() => setDeleteRecord(record)}><Trash2 className="mr-2 h-4 w-4" />Mover para lixeira</DropdownMenuItem></>}</DropdownMenuContent></DropdownMenu>}</div></TableCell></TableRow>; })}</TableBody></Table></div>
-              ) : <div className="school-empty-state"><PackageOpen className="h-10 w-10" /><h3>{showTrash ? "Lixeira vazia" : "Nenhum registro encontrado"}</h3><p>{recordSearch || statusFilter !== "all" || capabilityFilter !== "all" ? "Ajuste os filtros para ampliar a busca." : canWrite ? "Escolha uma funcionalidade e crie a primeira operação deste módulo." : "Ainda não há registros compartilhados com seu perfil."}</p>{canWrite && !showTrash && !recordSearch && <Button onClick={() => openNewRecord(capabilityFilter === "all" ? undefined : capabilityFilter)}><Plus className="mr-2 h-4 w-4" />Criar primeira operação</Button>}</div>}
+                <div className="school-record-table-wrap"><Table><TableHeader><TableRow><TableHead>Cadastro</TableHead><TableHead>Aluno ou turma</TableHead><TableHead>Responsável</TableHead><TableHead>Status</TableHead><TableHead>Atualização</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader><TableBody>{filteredRecords.map((record) => <TableRow key={record.id} className="school-record-row" onDoubleClick={() => openDetails(record)}><TableCell><div className="school-record-primary"><span>{record.code}</span><strong>{record.title}</strong><small>{record.capability || record.workflow}</small></div></TableCell><TableCell><div className="school-record-related"><strong>{record.studentName || record.className || "—"}</strong>{record.studentName && record.className && <span>{record.className}</span>}</div></TableCell><TableCell>{record.assigneeName || "Não atribuído"}</TableCell><TableCell><span className={`school-table-status tone-${statusTone(record.status)}`}>{record.deletedAt ? "arquivado" : record.status}</span></TableCell><TableCell><div className="school-record-date"><strong>{formatDate(record.updatedAt)}</strong><span>{record.updatedByName}</span></div></TableCell><TableCell><div className="school-row-actions"><Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" onClick={() => openDetails(record)}><Eye className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent>Ver detalhes e histórico</TooltipContent></Tooltip>{canWrite && <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end">{record.deletedAt ? <DropdownMenuItem onClick={() => handleRestore(record)}><RotateCcw className="mr-2 h-4 w-4" />Restaurar</DropdownMenuItem> : <><DropdownMenuItem onClick={() => openEdit(record)}><Settings2 className="mr-2 h-4 w-4" />Editar</DropdownMenuItem><DropdownMenuItem className="text-destructive" onClick={() => setDeleteRecord(record)}><Trash2 className="mr-2 h-4 w-4" />Arquivar</DropdownMenuItem></>}</DropdownMenuContent></DropdownMenu>}</div></TableCell></TableRow>)}</TableBody></Table></div>
+              ) : <div className="school-empty-state"><PackageOpen className="h-10 w-10" /><h3>{showTrash ? "Nenhum item arquivado" : "Nenhum cadastro encontrado"}</h3><p>{recordSearch || statusFilter !== "all" || capabilityFilter !== "all" ? "Ajuste os filtros para ampliar a busca." : canWrite ? `Use o botão “${createLabel}” para começar.` : "Ainda não há dados compartilhados com seu perfil."}</p>{canWrite && !showTrash && !recordSearch && <Button onClick={() => openNewRecord()}><Plus className="mr-2 h-4 w-4" />{createLabel}</Button>}</div>}
             </CardContent>
-          </Card>
+          </Card></>}
         </main>
       </div>
 
-      <CapabilityDialog module={selectedModule} records={moduleRecords} canWrite={canWrite} open={capabilityOpen} onOpenChange={setCapabilityOpen} onExecute={(capability) => { setCapabilityOpen(false); openNewRecord(capability); }} onFilter={(capability) => { setCapabilityFilter(capability); setCapabilityOpen(false); }} />
-      <SchoolRecordDialog open={formOpen} module={selectedModule} record={editingRecord} initialCapability={initialCapability} actor={actor} users={users} classes={classes} onOpenChange={(open) => { setFormOpen(open); if (!open) setInitialCapability(null); }} onSaved={(record) => { setSelectedRecord(record); setDetailsOpen(true); }} />
+      <SchoolRecordDialog open={formOpen} module={selectedModule} record={editingRecord} initialCapability={initialCapability} lockedCapability={Boolean(initialCapability) && !editingRecord && isDedicatedWorkspace} actor={actor} users={users} classes={classes} onOpenChange={(open) => { setFormOpen(open); if (!open) setInitialCapability(null); }} onSaved={(record) => { setSelectedRecord(record); setDetailsOpen(true); }} />
       <SchoolRecordDetails open={detailsOpen} record={selectedRecord} module={selectedRecord ? SCHOOL_MODULE_BY_ID[selectedRecord.moduleId] || selectedModule : selectedModule} actor={actor} canWrite={selectedRecord ? canWriteModule(role, selectedRecord.moduleId, explicitPermissions) : canWrite} isStaff={canUsePrivateNotes} onOpenChange={setDetailsOpen} onEdit={openEdit} onDelete={(record) => setDeleteRecord(record)} onRestore={handleRestore} />
       <SchoolAccountDialog open={accountOpen} actor={actor} students={users.filter((user: any) => user.tipo === "aluno")} onOpenChange={setAccountOpen} />
-      <AlertDialog open={Boolean(deleteRecord)} onOpenChange={(open) => !open && setDeleteRecord(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Mover este registro para a lixeira?</AlertDialogTitle><AlertDialogDescription>O registro não será apagado imediatamente. Ele ficará retido por 90 dias, com auditoria, e poderá ser restaurado.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction className="bg-destructive text-destructive-foreground" onClick={handleDelete} disabled={deleting}>{deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Mover para lixeira</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+      <AlertDialog open={Boolean(deleteRecord)} onOpenChange={(open) => !open && setDeleteRecord(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Arquivar este cadastro?</AlertDialogTitle><AlertDialogDescription>Ele sairá da lista principal, ficará guardado por 90 dias e poderá ser restaurado.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction className="bg-destructive text-destructive-foreground" onClick={handleDelete} disabled={deleting}>{deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Arquivar</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
     </div>
   );
 }

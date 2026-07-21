@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Bot, CheckCircle2, Loader2, Paperclip, Save, Trash2, Upload } from "lucide-react";
+import { Loader2, Paperclip, Save, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -43,6 +43,7 @@ interface SchoolRecordDialogProps {
   module: SchoolModuleDefinition;
   record?: SchoolRecord | null;
   initialCapability?: string | null;
+  lockedCapability?: boolean;
   actor: SchoolActor;
   users?: DirectoryUser[];
   classes?: DirectoryClass[];
@@ -174,6 +175,7 @@ export function SchoolRecordDialog({
   module,
   record,
   initialCapability,
+  lockedCapability = false,
   actor,
   users = [],
   classes = [],
@@ -280,7 +282,7 @@ export function SchoolRecordDialog({
       localStorage.removeItem(draftKey);
       onSaved(saved);
       onOpenChange(false);
-      toast({ title: record ? "Registro atualizado" : "Registro criado", description: `${saved.code} foi salvo com histórico de auditoria.` });
+      toast({ title: record ? "Cadastro atualizado" : "Cadastro criado", description: "Os dados foram salvos com sucesso." });
     } catch (error: any) {
       toast({ title: "Revise os dados", description: error.message, variant: "destructive" });
     } finally {
@@ -292,36 +294,28 @@ export function SchoolRecordDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="school-record-dialog max-w-5xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{record ? "Editar" : "Novo registro"} · {module.title}</DialogTitle>
-          <DialogDescription>Campos obrigatórios estão marcados com *. O rascunho é salvo automaticamente neste dispositivo.</DialogDescription>
+          <DialogTitle>{record ? "Editar" : "Executar"} · {lockedCapability ? blueprint.title : module.title}</DialogTitle>
+          <DialogDescription>{lockedCapability ? `${blueprint.workflow}. Preencha somente os dados necessários para concluir esta tarefa.` : "Preencha os dados abaixo. Campos obrigatórios estão marcados com *."}</DialogDescription>
         </DialogHeader>
 
+        {lockedCapability && <div className="school-operation-dialog-context"><div><strong>{blueprint.title}</strong><span>{blueprint.workflow}</span></div><ul>{blueprint.automations.slice(0, 3).map((automation) => <li key={automation}>{automation}</li>)}</ul></div>}
+
+        <div className="school-form-section-title">Informações principais</div>
         <div className="school-form-grid">
-          <div className="school-form-field school-form-field-wide">
-            <Label htmlFor="school-capability">Funcionalidade/requisito executado *</Label>
-            <Select
-              value={form.capability}
-              onValueChange={(capability) => setForm((current) => {
-                const nextBlueprint = capabilityBlueprint(module, capability);
-                const replaceTitle = !current.title.trim() || current.title === current.capability;
-                return { ...current, capability, workflow: nextBlueprint.workflow, title: replaceTitle ? capability : current.title };
-              })}
-            >
+          {!lockedCapability && <div className="school-form-field">
+            <Label htmlFor="school-capability">O que deseja registrar? *</Label>
+            <Select value={form.capability} onValueChange={(capability) => setForm((current) => {
+              const selectedBlueprint = capabilityBlueprint(module, capability);
+              const replaceTitle = !current.title.trim() || current.title === current.workflow || current.title === current.capability;
+              const acceptedFields = new Set([...module.fields, ...selectedBlueprint.fields].map((field) => field.key));
+              const customData = Object.fromEntries(Object.entries(current.customData).filter(([key]) => acceptedFields.has(key)));
+              return { ...current, workflow: selectedBlueprint.workflow, capability, title: replaceTitle ? capability : current.title, customData };
+            })}>
               <SelectTrigger id="school-capability"><SelectValue /></SelectTrigger>
-              <SelectContent className="max-h-80">{module.capabilities.map((capability, index) => <SelectItem key={capability} value={capability}>{String(index + 1).padStart(2, "0")} · {capability}</SelectItem>)}</SelectContent>
+              <SelectContent className="max-h-80">{module.capabilities.map((capability) => <SelectItem key={capability} value={capability}>{capability}</SelectItem>)}</SelectContent>
             </Select>
-          </div>
-          <div className="school-capability-context school-form-field-wide" role="status" aria-live="polite">
-            <div><Bot className="h-5 w-5" /><span><strong>{blueprint.id}</strong><small>Motor operacional ativo para esta funcionalidade</small></span></div>
-            <ul>{blueprint.automations.map((automation) => <li key={automation}><CheckCircle2 className="h-3.5 w-3.5" />{automation}</li>)}</ul>
-          </div>
-          <div className="school-form-field">
-            <Label htmlFor="school-workflow">Processo *</Label>
-            <Select value={form.workflow} onValueChange={(workflow) => setForm((current) => ({ ...current, workflow }))}>
-              <SelectTrigger id="school-workflow"><SelectValue /></SelectTrigger>
-              <SelectContent>{module.workflows.map((workflow) => <SelectItem key={workflow} value={workflow}>{workflow}</SelectItem>)}</SelectContent>
-            </Select>
-          </div>
+            <p className="school-form-help">Etapa: {form.workflow}</p>
+          </div>}
           <div className="school-form-field">
             <Label htmlFor="school-status">Status *</Label>
             <Select value={form.status} onValueChange={(status) => setForm((current) => ({ ...current, status }))}>
@@ -330,8 +324,8 @@ export function SchoolRecordDialog({
             </Select>
           </div>
           <div className="school-form-field school-form-field-wide">
-            <Label htmlFor="school-title">Título *</Label>
-            <Input id="school-title" value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} placeholder={`Ex.: ${form.workflow}`} autoFocus />
+            <Label htmlFor="school-title">Nome ou identificação *</Label>
+            <Input id="school-title" value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} placeholder={`Ex.: ${form.capability}`} autoFocus />
           </div>
           <div className="school-form-field">
             <Label htmlFor="school-code">Código/protocolo</Label>
@@ -369,31 +363,26 @@ export function SchoolRecordDialog({
             </div>
           )}
           <div className="school-form-field">
-            <Label htmlFor="school-audience-role">Compartilhar com perfil</Label>
+            <Label htmlFor="school-audience-role">Quem poderá acompanhar</Label>
             <Select value={form.audienceRole} onValueChange={(audienceRole) => setForm((current) => ({ ...current, audienceRole }))}>
               <SelectTrigger id="school-audience-role"><SelectValue /></SelectTrigger>
               <SelectContent><SelectItem value="none">Somente envolvidos</SelectItem>{Object.entries(SCHOOL_ROLE_LABELS).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="school-form-field school-form-field-wide">
-            <Label htmlFor="school-description">Descrição e observações</Label>
+            <Label htmlFor="school-description">Observações</Label>
             <Textarea id="school-description" rows={4} value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} />
           </div>
         </div>
 
-        <div className="school-form-section-title">Dados específicos do processo</div>
+        <div className="school-form-section-title">Dados do cadastro</div>
         <div className="school-form-grid">
           {module.fields.map((definition) => (
             <DynamicField key={definition.key} definition={definition} value={form.customData[definition.key]} onChange={(value) => setCustomValue(definition.key, value)} />
           ))}
         </div>
 
-        <div className="school-form-section-title">Campos da funcionalidade · {blueprint.id}</div>
-        <div className="school-form-grid">
-          {capabilityFields.map((definition) => (
-            <DynamicField key={definition.key} definition={definition} value={form.customData[definition.key]} onChange={(value) => setCustomValue(definition.key, value)} />
-          ))}
-        </div>
+        {capabilityFields.length > 0 && <><div className="school-form-section-title">Informações complementares</div><div className="school-form-grid">{capabilityFields.map((definition) => <DynamicField key={definition.key} definition={definition} value={form.customData[definition.key]} onChange={(value) => setCustomValue(definition.key, value)} />)}</div></>}
 
         <div className="school-form-section-title">Anexos</div>
         <div className="school-attachment-zone">
@@ -421,7 +410,7 @@ export function SchoolRecordDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button onClick={handleSave} disabled={saving || uploading || !form.title.trim() || !form.capability}>
             {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            Salvar com auditoria
+            Salvar cadastro
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -21,6 +21,7 @@ set "npm_config_engine_strict=false"
 set "FIRESTORE_WARNING=0"
 set "GITHUB_WARNING=0"
 set "SITE_WARNING=0"
+set "SOURCE_RELEASE=R10-TELAS-OPERACIONAIS-REAIS"
 
 for /f %%I in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmmss"') do set "DEPLOY_ID=%%I"
 if not defined DEPLOY_ID set "DEPLOY_ID=manual-%RANDOM%"
@@ -31,13 +32,20 @@ if not defined DEPLOY_ID set "DEPLOY_ID=manual-%RANDOM%"
 
 cls
 echo ============================================================
-echo  VESTIBULANDO - PUBLICAR ATUALIZACAO REAL
+echo  VESTIBULANDO - PUBLICAR R10 TELAS OPERACIONAIS
 echo ============================================================
+echo Pacote conferido: %SOURCE_RELEASE%
 echo Versao desta tentativa: %DEPLOY_ID%
 echo O site sera publicado diretamente no Cloudflare Pages.
 echo.
 
 if not exist "package.json" goto ERRO_PASTA
+if not exist "client\src\features\school\SchoolOperationsHome.tsx" goto ERRO_PACOTE_ANTIGO
+findstr /I /C:"PAINEL DA DIRETORIA" "client\src\features\school\SchoolOperationsHome.tsx" >nul
+if errorlevel 1 goto ERRO_PACOTE_ANTIGO
+if not exist "client\src\features\school\OperationalModuleWorkspace.tsx" goto ERRO_PACOTE_ANTIGO
+findstr /I /C:"CENTRAL OPERACIONAL" "client\src\features\school\OperationalModuleWorkspace.tsx" >nul
+if errorlevel 1 goto ERRO_PACOTE_ANTIGO
 where node >nul 2>&1
 if errorlevel 1 goto ERRO_NODE
 where npm >nul 2>&1
@@ -236,6 +244,17 @@ echo Se ele ja estava aberto, pressione CTRL + F5 uma vez.
 start "" "%SITE%/?v=%DEPLOY_ID%"
 pause
 exit /b 0
+
+:ERRO_PACOTE_ANTIGO
+echo.
+echo ============================================================
+echo  ESTA PASTA NAO CONTEM A ATUALIZACAO R10
+echo ============================================================
+echo Extraia novamente o ZIP R10 completo em uma PASTA NOVA.
+echo Nao execute o publicador de uma pasta usada anteriormente.
+echo Nenhum arquivo foi publicado.
+pause
+exit /b 1
 
 :VALIDAR_PROJETO_CLOUDFLARE
 del /q "!CF_PROJECTS!" "!CF_PROJECTS_ERR!" "!CF_DEPLOYMENTS!" "!CF_DEPLOYMENTS_ERR!" >nul 2>&1

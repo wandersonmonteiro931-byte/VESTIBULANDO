@@ -58,9 +58,9 @@ interface DashboardSidebarProps {
 const diretorCategories: MenuCategory[] = [
   {
     id: "gestao-integrada",
-    label: "Gestão 360",
+    label: "Gestão escolar",
     icon: LayoutDashboard,
-    items: [{ id: "gestao-escolar-360", label: "30 módulos e 483 funções", icon: LayoutDashboard }],
+    items: [{ id: "gestao-escolar-360", label: "Painel da escola", icon: LayoutDashboard }],
   },
   {
     id: "gestao-usuarios",
@@ -140,7 +140,7 @@ const diretorCategories: MenuCategory[] = [
 const professorCategories: MenuCategory[] = [
   {
     id: "gestao-integrada",
-    label: "Gestão 360",
+    label: "Gestão escolar",
     icon: LayoutDashboard,
     items: [{ id: "gestao-escolar-360", label: "Central docente completa", icon: LayoutDashboard }],
   },
@@ -188,7 +188,7 @@ const professorCategories: MenuCategory[] = [
 const alunoCategories: MenuCategory[] = [
   {
     id: "gestao-integrada",
-    label: "Gestão 360",
+    label: "Gestão escolar",
     icon: LayoutDashboard,
     items: [{ id: "gestao-escolar-360", label: "Minha central escolar", icon: LayoutDashboard }],
   },

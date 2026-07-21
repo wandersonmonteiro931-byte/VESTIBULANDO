@@ -630,8 +630,8 @@ function csvCell(value: unknown): string {
 }
 
 export function exportRecordsCsv(records: SchoolRecord[]): string {
-  const headers = ["Módulo", "Requisito", "Funcionalidade", "Processo", "Código", "Título", "Status", "Aluno", "Turma", "Unidade", "Responsável", "Criado em", "Atualizado em", "Dados adicionais", "Automação"];
-  const rows = records.map((record) => [record.moduleId, record.capabilityId, record.capability, record.workflow, record.code, record.title, record.status, record.studentName, record.className, record.unitName, record.assigneeName, record.createdAt, record.updatedAt, record.customData, record.automation]);
+  const headers = ["Setor", "Tipo de cadastro", "Código", "Nome ou identificação", "Status", "Aluno", "Turma", "Unidade", "Responsável", "Criado em", "Atualizado em", "Informações complementares"];
+  const rows = records.map((record) => [record.moduleId, record.capability || record.workflow, record.code, record.title, record.status, record.studentName, record.className, record.unitName, record.assigneeName, record.createdAt, record.updatedAt, record.customData]);
   return `\uFEFF${[headers, ...rows].map((row) => row.map(csvCell).join(";")).join("\n")}`;
 }
 

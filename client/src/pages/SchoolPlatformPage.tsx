@@ -12,6 +12,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { AccessibilityControls } from "@/components/AccessibilityControls";
 import { useAuth } from "@/contexts/AuthContext";
 import { SchoolManagementSuite } from "@/features/school/SchoolManagementSuite";
+import { SchoolOperationsHome } from "@/features/school/SchoolOperationsHome";
 import { GuardianFamilyPanel } from "@/features/school/GuardianFamilyPanel";
 import { SCHOOL_ROLE_LABELS, resolveSchoolRole } from "@/features/school/schoolCatalog";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
@@ -32,6 +33,8 @@ function portalRole(tipo?: string): "aluno" | "professor" | "diretor" | "respons
 export default function SchoolPlatformPage() {
   const { userData, signOut } = useAuth();
   const role = resolveSchoolRole(userData as any);
+  const requestedModule = new URLSearchParams(window.location.search).get("modulo") || undefined;
+  const isManagement = role === "diretor" || role === "administrador";
   const { data: notifications = [] } = useRealtimeQuery<any>({
     collectionName: "schoolNotifications",
     queryKey: ["/school/notifications", userData?.uid],
@@ -50,7 +53,7 @@ export default function SchoolPlatformPage() {
     <div className="dashboard-modern min-h-screen bg-background">
       <header className="dashboard-topbar elegant-topbar">
         <div className="dashboard-topbar-inner elegant-header">
-          <div className="dashboard-header-left"><PortalBrand compactLabel="Escola 360" /></div>
+          <div className="dashboard-header-left"><PortalBrand compactLabel="Gestão Escolar" /></div>
           <div className="dashboard-header-right">
             {backPath !== "/escola" && <Link href={backPath}><Button variant="ghost" size="sm" className="header-icon-btn school-back-button"><ArrowLeft className="h-4 w-4" /><span>Meu painel</span></Button></Link>}
             <DropdownMenu>
@@ -72,7 +75,9 @@ export default function SchoolPlatformPage() {
       <main className="dashboard-main school-platform-main px-3 py-5 sm:px-6 sm:py-7">
         <PortalProfileHeader user={userData} role={portalRole(userData?.tipo)} contextLabel={SCHOOL_ROLE_LABELS[role]} showSuiteAction={false} />
         {role === "responsavel" && <GuardianFamilyPanel />}
-        <SchoolManagementSuite />
+        {isManagement && !requestedModule && <SchoolOperationsHome />}
+        {isManagement && requestedModule && <div className="school-module-page"><div className="school-module-page-back"><Button variant="outline" onClick={() => window.location.assign("/escola")}><ArrowLeft className="mr-2 h-4 w-4" />Voltar ao painel da escola</Button></div><SchoolManagementSuite initialModuleId={requestedModule} focused /></div>}
+        {!isManagement && <SchoolManagementSuite />}
       </main>
       <footer className="school-platform-footer"><span>Vestibulando · Gestão escolar</span><nav aria-label="Documentos legais"><a href="/privacy.html" target="_blank" rel="noreferrer">Privacidade</a><a href="/terms.html" target="_blank" rel="noreferrer">Termos</a><a href="/cookies.html" target="_blank" rel="noreferrer">Cookies</a><a href="/validar">Validar documento</a></nav></footer>
     </div>
