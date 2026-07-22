@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   DIAS_SEMANA, 
   HORARIOS_AULAS,
@@ -92,7 +91,6 @@ export function TeacherScheduleGrid({
   const [showStartDialog, setShowStartDialog] = useState(false);
 
   const horarios = horariosCustom && horariosCustom.length > 0 ? horariosCustom : HORARIOS_AULAS;
-  const isMobile = useIsMobile();
 
   const today = new Date();
   const todayStr = format(today, "yyyy-MM-dd");
@@ -311,147 +309,15 @@ export function TeacherScheduleGrid({
     return null;
   };
 
-  if (isMobile) {
-    return (
-      <TooltipProvider>
-        <div className="space-y-4">
-          {diasExibidos.map((dia) => {
-            const aulasDoDia = horarios
-              .filter((horario) => horario.tipo !== "intervalo")
-              .map((horario) => ({ horario, aula: getSlotInfo(dia, horario.id) }))
-              .filter((item) => item.aula);
-
-            return (
-              <Card key={dia} className="overflow-hidden border-border/70 shadow-sm">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Clock className="h-4 w-4 text-primary" />
-                    {DIAS_LABELS[dia]}
-                    {dia === diaHoje && <Badge variant="outline" className="ml-1">Hoje</Badge>}
-                  </CardTitle>
-                  <CardDescription>Agenda do professor no dia selecionado.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {aulasDoDia.length ? (
-                    aulasDoDia.map(({ horario, aula }) => {
-                      if (!aula) return null;
-                      const canStart = canStartClass(aula);
-                      return (
-                        <div key={`${dia}-${horario.id}`} className="rounded-2xl border bg-card p-4 shadow-sm">
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <div className="font-semibold leading-tight">{aula.turmaNome}</div>
-                              <div className="mt-1 text-sm text-muted-foreground">{aula.materia}</div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              {getStatusIcon(aula, dia === diaHoje)}
-                              <Badge variant="outline">{horario.nome}</Badge>
-                            </div>
-                          </div>
-                          <div className="mt-3 flex items-center gap-1 text-xs text-muted-foreground">
-                            <Clock className="h-3.5 w-3.5" />
-                            <span>{horario.inicio} - {horario.fim}</span>
-                          </div>
-                          {aula.status === "em_andamento" && (
-                            <Badge className="mt-3 bg-green-500">Em andamento</Badge>
-                          )}
-                          {canStart && (
-                            <Button
-                              size="sm"
-                              className="mt-3 w-full"
-                              onClick={() => {
-                                setSelectedAula(aula);
-                                setShowStartDialog(true);
-                              }}
-                            >
-                              <Play className="mr-2 h-4 w-4" />
-                              Iniciar aula
-                            </Button>
-                          )}
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="rounded-2xl border border-dashed bg-muted/25 px-4 py-6 text-center text-sm text-muted-foreground">
-                      Nenhuma aula programada para este dia.
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
-
-          <div className="flex flex-wrap gap-3 rounded-2xl border bg-card p-4 text-sm text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <CheckCircle className="h-4 w-4 text-green-500" />
-              <span>Aula concluída</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <XCircle className="h-4 w-4 text-destructive" />
-              <span>Professor faltou</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="relative flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-              </span>
-              <span className="ml-1">Em andamento</span>
-            </div>
-          </div>
-
-          <Dialog open={showStartDialog} onOpenChange={setShowStartDialog}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <BookOpen className="h-5 w-5" />
-                  Iniciar Aula
-                </DialogTitle>
-                <DialogDescription>
-                  Você está prestes a iniciar uma aula. Os alunos poderão entrar na sala assim que a aula começar.
-                </DialogDescription>
-              </DialogHeader>
-              {selectedAula && (
-                <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Turma:</span>
-                    <span className="font-medium">{selectedAula.turmaNome}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Matéria:</span>
-                    <span className="font-medium">{selectedAula.materia}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Horário:</span>
-                    <span className="font-medium">{selectedAula.horarioInicio} - {selectedAula.horarioFim}</span>
-                  </div>
-                </div>
-              )}
-              <DialogFooter className="gap-2 sm:gap-0">
-                <Button variant="outline" onClick={() => setShowStartDialog(false)}>Cancelar</Button>
-                <Button onClick={handleStartClass} disabled={isStartingClass}>
-                  {isStartingClass ? (<>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />Iniciando...
-                  </>) : (<>
-                    <Play className="h-4 w-4 mr-2" />Iniciar Aula
-                  </>)}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </TooltipProvider>
-    );
-  }
-
   return (
     <TooltipProvider>
       <div className="space-y-4">
-        <div className="overflow-x-auto schedule-grid-scroll">
-          <table className="w-full border-collapse min-w-[760px] md:min-w-[600px]">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse min-w-[600px]">
             <thead>
               <tr>
                 <th className={cn(
-                  "border border-border bg-muted/50 font-medium text-muted-foreground sticky left-0 z-20",
+                  "border border-border bg-muted/50 font-medium text-muted-foreground",
                   compact ? "p-1 text-xs" : "p-2 text-sm"
                 )}>
                   <div className="flex items-center justify-center gap-1">
@@ -485,7 +351,7 @@ export function TeacherScheduleGrid({
                 return (
                   <tr key={horario.id} className={cn(isIntervalo && "bg-muted/40")}>
                     <td className={cn(
-                      "border border-border bg-muted/30 text-center font-medium sticky left-0 z-10",
+                      "border border-border bg-muted/30 text-center font-medium",
                       compact ? "p-1 text-xs" : "p-2 text-sm",
                       isIntervalo && "bg-muted/50"
                     )}>

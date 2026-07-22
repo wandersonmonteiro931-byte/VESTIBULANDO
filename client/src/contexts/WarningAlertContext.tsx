@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useEffect, type Context } from "react";
+import { createContext, useContext, useState, useCallback, useEffect } from "react";
 
 export interface WarningAlertData {
   id: string;
@@ -16,11 +16,11 @@ interface WarningAlertContextType {
   dismissAlert: () => void;
 }
 
-const getAlertContext = (): Context<WarningAlertContextType | undefined> => {
+const getAlertContext = () => {
   if (!(globalThis as any).__warningAlertContext) {
     (globalThis as any).__warningAlertContext = createContext<WarningAlertContextType | undefined>(undefined);
   }
-  return (globalThis as any).__warningAlertContext as Context<WarningAlertContextType | undefined>;
+  return (globalThis as any).__warningAlertContext;
 };
 
 const WarningAlertContext = getAlertContext();

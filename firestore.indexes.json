@@ -33,47 +33,15 @@
       ]
     },
     {
-      "collectionGroup": "guardianLinks",
+      "collectionGroup": "userBlocks",
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "guardianId",
+          "fieldPath": "bloqueadorId",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "active",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "guardianLinks",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "studentId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "active",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "schoolRecords",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "moduleId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "audienceRoles",
-          "arrayConfig": "CONTAINS"
-        },
-        {
-          "fieldPath": "__name__",
+          "fieldPath": "ativo",
           "order": "ASCENDING"
         }
       ]
@@ -82,16 +50,14 @@
       "collectionGroup": "userBlocks",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "bloqueadorId", "order": "ASCENDING" },
-        { "fieldPath": "ativo", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "userBlocks",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "bloqueadoId", "order": "ASCENDING" },
-        { "fieldPath": "ativo", "order": "ASCENDING" }
+        {
+          "fieldPath": "bloqueadoId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "ativo",
+          "order": "ASCENDING"
+        }
       ]
     }
   ],

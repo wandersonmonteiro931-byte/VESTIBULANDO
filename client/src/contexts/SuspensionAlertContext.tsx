@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useEffect, type Context } from "react";
+import { createContext, useContext, useState, useCallback, useEffect } from "react";
 
 export interface SuspensionAlertData {
   alunoNome: string;
@@ -16,11 +16,11 @@ interface SuspensionAlertContextType {
   dismissAlert: () => void;
 }
 
-const getAlertContext = (): Context<SuspensionAlertContextType | undefined> => {
+const getAlertContext = () => {
   if (!(globalThis as any).__suspensionAlertContext) {
     (globalThis as any).__suspensionAlertContext = createContext<SuspensionAlertContextType | undefined>(undefined);
   }
-  return (globalThis as any).__suspensionAlertContext as Context<SuspensionAlertContextType | undefined>;
+  return (globalThis as any).__suspensionAlertContext;
 };
 
 const SuspensionAlertContext = getAlertContext();

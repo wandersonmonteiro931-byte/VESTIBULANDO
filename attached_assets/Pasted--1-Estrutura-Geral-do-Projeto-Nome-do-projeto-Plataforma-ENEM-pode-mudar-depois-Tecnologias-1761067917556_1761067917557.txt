@@ -1,0 +1,199 @@
+🧱 1. Estrutura Geral do Projeto
+
+Nome do projeto: Plataforma ENEM+ (pode mudar depois)
+
+Tecnologias recomendadas (gratuitas e simples de usar):
+
+Frontend (site): React.js + TailwindCSS
+
+Backend (servidor): Node.js + Express
+
+Banco de dados: Firebase (ou Supabase, ou MongoDB Atlas — todos têm plano grátis)
+
+Autenticação: Firebase Auth (login de aluno, professor e admin)
+
+Hospedagem gratuita:
+
+Frontend → Vercel / Netlify
+
+Backend → Render / Railway
+
+Banco → Firebase / Supabase
+
+📁 2. Estrutura de Pastas
+enemplus/
+│
+├── frontend/                # Parte visual do site
+│   ├── public/
+│   ├── src/
+│   │   ├── components/      # Botões, cards, cabeçalhos, etc.
+│   │   ├── pages/           # Páginas principais
+│   │   │   ├── Login.jsx
+│   │   │   ├── HomeAluno.jsx
+│   │   │   ├── HomeProfessor.jsx
+│   │   │   ├── PainelAdmin.jsx
+│   │   │   ├── Tarefas.jsx
+│   │   │   └── Notas.jsx
+│   │   ├── context/         # Contexto de autenticação
+│   │   ├── services/        # Conexão com backend ou Firebase
+│   │   └── App.jsx
+│   └── package.json
+│
+├── backend/                 # Servidor e API
+│   ├── src/
+│   │   ├── routes/          # Rotas (tarefas, usuários, etc.)
+│   │   ├── controllers/     # Lógica de cada rota
+│   │   ├── models/          # Estrutura dos dados (MongoDB)
+│   │   └── app.js
+│   ├── .env
+│   └── package.json
+│
+└── README.md
+
+👩‍🏫 3. Tipos de Usuário e Permissões
+Tipo de Usuário	Permissões principais
+Aluno	- Fazer login
+- Visualizar tarefas
+- Enviar respostas/arquivos
+- Ver notas e feedback
+Professor	- Criar tarefas e prazos
+- Corrigir e avaliar
+- Deixar comentários
+- Ver desempenho dos alunos
+Administrador/Diretor	- Criar e gerenciar contas
+- Acompanhar estatísticas
+- Cadastrar novas turmas
+- Bloquear/ativar usuários
+🧠 4. Funcionalidades do Sistema
+🔐 Autenticação
+
+Login e cadastro de Aluno, Professor, e Admin.
+
+Controle de sessão e logout.
+
+Proteção de rotas (ex: aluno não pode acessar painel do professor).
+
+📚 Área do Aluno
+
+Ver lista de matérias e tarefas pendentes.
+
+Baixar arquivos ou ler instruções.
+
+Enviar arquivo de resposta (PDF, imagem, etc.).
+
+Acompanhar notas e status da entrega.
+
+👨‍🏫 Área do Professor
+
+Criar novas tarefas (nome, descrição, prazo, anexo opcional).
+
+Ver quem entregou ou não.
+
+Baixar respostas e dar notas.
+
+Publicar notas e feedback.
+
+🧍‍♂️ Área do Administrador
+
+Criar contas (aluno/professor).
+
+Gerenciar turmas e disciplinas.
+
+Monitorar progresso geral.
+
+Configurar mensagens e avisos globais.
+
+💾 5. Estrutura do Banco de Dados (Exemplo Firebase ou MongoDB)
+
+Coleção usuarios:
+
+{
+  "uid": "abc123",
+  "nome": "Maria Silva",
+  "email": "maria@enem.com",
+  "tipo": "aluno", // ou "professor", "admin"
+  "turma": "3A"
+}
+
+
+Coleção tarefas:
+
+{
+  "id": "tarefa123",
+  "titulo": "Redação sobre Meio Ambiente",
+  "descricao": "Faça uma redação de até 30 linhas...",
+  "professorId": "uid_prof123",
+  "turma": "3A",
+  "prazo": "2025-11-15T23:59:00",
+  "arquivoAnexo": "link.pdf"
+}
+
+
+Coleção entregas:
+
+{
+  "id": "entrega123",
+  "tarefaId": "tarefa123",
+  "alunoId": "uid_aluno456",
+  "dataEnvio": "2025-11-10T14:00:00",
+  "arquivo": "link_resposta.pdf",
+  "nota": 9.0,
+  "feedback": "Boa redação, mas revise a gramática."
+}
+
+🌐 6. Telas Principais (Resumo visual)
+
+Login
+
+Campos: email, senha, tipo de usuário
+
+Botão “Entrar”
+
+Redireciona para o painel correto
+
+Painel do Aluno
+
+Lista de tarefas pendentes
+
+Botão “Entregar” (envio de arquivo)
+
+Histórico de notas
+
+Painel do Professor
+
+Criar nova tarefa
+
+Ver lista de alunos e status
+
+Atribuir nota / feedback
+
+Painel do Admin
+
+Listar usuários
+
+Adicionar / editar / excluir usuários
+
+Estatísticas (gráficos de desempenho)
+
+⚙️ 7. Extras (melhorias opcionais)
+
+💬 Chat interno entre aluno e professor (usando Firebase Realtime Database)
+
+📊 Gráficos de progresso com notas médias
+
+📅 Calendário de prazos
+
+🔔 Notificações automáticas (quando a tarefa está próxima do prazo)
+
+📱 Modo PWA → o site pode ser instalado no celular como app
+
+🚀 8. Implantação (gratuita)
+Parte	Serviço	Descrição
+Frontend	Vercel
+	Hospedar o site React
+Backend	Render
+	Hospedar o servidor Node.js
+Banco de dados	Firebase
+	Armazenar dados e autenticação
+Arquivos	Firebase Storage
+	Guardar anexos das tarefas

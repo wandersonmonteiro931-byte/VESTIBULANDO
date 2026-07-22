@@ -1,0 +1,201 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>
+  :root {
+    --app-height: 100vh;
+    --header-h: 56px;
+    --input-h: 64px;
+  }
+  html,body { height:100%; margin:0; -webkit-text-size-adjust:100%; }
+  /* evita que body role quando teclado aparece em alguns browsers */
+  body { overscroll-behavior: none; touch-action: manipulation; }
+
+  .chat-container {
+    height: var(--app-height);
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    background:#f5f5f5;
+  }
+
+  .chat-header{
+    position:fixed;
+    top:0; left:0; right:0;
+    height:var(--header-h);
+    background:#fff;
+    border-bottom:1px solid #e6e6e6;
+    display:flex; align-items:center; padding:0 12px;
+    z-index:50;
+  }
+
+  .chat-messages{
+    box-sizing:border-box;
+    margin-top:var(--header-h);
+    margin-bottom:calc(var(--input-h) + env(safe-area-inset-bottom));
+    overflow-y:auto;
+    -webkit-overflow-scrolling: touch;
+    padding:12px;
+    flex:1 1 auto;
+  }
+
+  .message{ background:#fff; padding:8px 10px; border-radius:8px; margin:8px 0; max-width:80%; }
+
+  .chat-input-wrapper{
+    position:fixed;
+    left:0; right:0;
+    bottom:env(safe-area-inset-bottom);
+    height:var(--input-h);
+    display:flex; gap:8px; align-items:center;
+    padding:8px 12px; background:#fff; border-top:1px solid #ddd;
+    z-index:60;
+    transition: transform 160ms ease;
+    will-change: transform;
+  }
+  .chat-input-wrapper input{
+    flex:1; padding:12px; border-radius:24px; border:1px solid #cfcfcf;
+    outline:none; font-size:16px;
+  }
+  .btn-send{ padding:10px 14px; background:#2c9; color:#fff; border:none; border-radius:20px; }
+
+  /* evita que fixed quebre no iOS antigo */
+  @supports (-webkit-overflow-scrolling: touch) {
+    .chat-input-wrapper { position: fixed; }
+  }
+</style>
+</head>
+<body>
+
+<div class="chat-container" id="chatContainer">
+  <div class="chat-header" id="chatHeader">Contato — Diretoria</div>
+
+  <div class="chat-messages" id="messages">
+    <!-- Exemplo -->
+    <div class="message">Mensagem antiga 1</div>
+    <div class="message">Mensagem antiga 2</div>
+    <div style="height:700px"></div>
+  </div>
+
+  <div class="chat-input-wrapper" id="inputWrapper">
+    <input id="chatInput" type="text" autocomplete="off" inputmode="text" placeholder="Mensagem...">
+    <button id="sendBtn" class="btn-send">Enviar</button>
+  </div>
+</div>
+
+<script>
+/*
+Robusto: atualiza --app-height com visualViewport quando disponível,
+aplica transform no inputWrapper para "levantar" sobre o teclado e
+faz scroll automático para o final quando o input foca.
+*/
+
+const root = document.documentElement;
+const chatContainer = document.getElementById('chatContainer');
+const messages = document.getElementById('messages');
+const chatInput = document.getElementById('chatInput');
+const inputWrapper = document.getElementById('inputWrapper');
+
+function setAppHeight(px) {
+  root.style.setProperty('--app-height', (px) + 'px');
+}
+
+/* fallback inicial */
+setAppHeight(window.innerHeight);
+
+/* função que rola para baixo */
+function scrollToBottom(immediate = false) {
+  const last = messages.lastElementChild;
+  if (last) {
+    // scrollIntoView é mais confiável que scrollTop para mobile
+    last.scrollIntoView({ behavior: immediate ? 'auto' : 'smooth', block: 'end' });
+  } else {
+    messages.scrollTop = messages.scrollHeight;
+  }
+}
+
+/* quando usar visualViewport (melhor no mobile) */
+if (window.visualViewport) {
+  const vv = window.visualViewport;
+
+  function onViewportChange() {
+    // vv.height é a área visível - exclui teclado
+    const visibleH = Math.round(vv.height);
+    // atualiza altura do app para visualizar corretamente
+    setAppHeight(visibleH);
+
+    // calcular teclado aproximado
+    const keyboardH = Math.round(window.innerHeight - visibleH);
+
+    // se teclado aberto (keyboardH > 0), levante o inputWrapper
+    if (keyboardH > 0) {
+      // desloca o input para cima pelo valor do teclado (suave)
+      inputWrapper.style.transform = `translateY(-${keyboardH}px)`;
+      // garante padding bottom nas mensagens para não ficar escondido
+      messages.style.paddingBottom = (keyboardH + inputWrapper.offsetHeight + 12) + 'px';
+      // rola para o final
+      scrollToBottom();
+    } else {
+      // teclado fechado
+      inputWrapper.style.transform = '';
+      messages.style.paddingBottom = '';
+    }
+  }
+
+  vv.addEventListener('resize', onViewportChange);
+  vv.addEventListener('scroll', onViewportChange);
+  window.addEventListener('orientationchange', ()=> setTimeout(()=> setAppHeight(window.innerHeight), 300));
+  // inicial
+  onViewportChange();
+} else {
+  // fallback: resize e focusin/out
+  window.addEventListener('resize', () => {
+    setTimeout(()=> setAppHeight(window.innerHeight), 50);
+  });
+}
+
+/* focus handlers: rolar e ajustar (fallback útil) */
+chatInput.addEventListener('focus', () => {
+  // Em muitos devices, foco ativa teclado e resize/visualViewport cuida do resto.
+  // Forçar pequeno delay e scroll
+  setTimeout(()=> {
+    scrollToBottom();
+    // também tenta definir a altura real caso resize não ocorra
+    setAppHeight(window.innerHeight);
+  }, 300);
+});
+
+chatInput.addEventListener('blur', () => {
+  // remove transform depois do teclado fechar
+  setTimeout(()=> {
+    inputWrapper.style.transform = '';
+    messages.style.paddingBottom = '';
+    setAppHeight(window.innerHeight);
+  }, 300);
+});
+
+/* Enviar mensagem (exemplo) */
+document.getElementById('sendBtn').addEventListener('click', () => {
+  const v = chatInput.value.trim();
+  if (!v) return;
+  const div = document.createElement('div');
+  div.className = 'message';
+  div.textContent = v;
+  messages.appendChild(div);
+  chatInput.value = '';
+  scrollToBottom();
+});
+
+/* Ao carregar, garanta scroll para o fim */
+window.addEventListener('load', () => {
+  setTimeout(()=>{ setAppHeight(window.innerHeight); scrollToBottom(true); }, 200);
+});
+
+/* Se estiver em iframe (preview do Replit), mostre console warning para o dev */
+if (window.self !== window.top) {
+  console.warn('Aviso: você está em iframe (preview do Replit). Abra o link público em nova aba para testes reais em mobile.');
+}
+</script>
+
+</body>
+</html>

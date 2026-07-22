@@ -116,11 +116,11 @@ Core collections include `Usuarios` (users with roles, CPF, matricula, address),
 
 ### System Design Choices
 - **Real-time Synchronization**: Achieved via Firebase Firestore `onSnapshot` listeners and `useRealtimeQuery` hook, ensuring instant data reflection across dashboards. TanStack Query is configured for automatic refetching.
-- **Security Hardening**: Implemented with strict Firestore security rules for user accounts, assignments, submissions, classes and chunked file attachments. Null guards enhance data integrity.
+- **Security Hardening**: Implemented with strict Firestore security rules for user accounts, assignments, submissions, and classes, preventing privilege escalation and unauthorized access. Firebase Storage rules protect file attachments based on user roles. Null guards enhance data integrity.
 - **Brazilian Localization**: Includes CPF, phone, and CEP formatting, ViaCEP API integration for address lookup, and full Portuguese UI text.
 
 ## External Dependencies
-- **Firebase**: Authentication and Firestore. Firebase Storage is intentionally unused.
+- **Firebase**: Authentication, Firestore (database), Storage (file storage).
 - **ViaCEP API**: Automatic address lookup by postal code (CEP).
 
 ## Required Secrets (Environment Variables)

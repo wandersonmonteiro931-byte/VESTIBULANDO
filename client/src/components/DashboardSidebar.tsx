@@ -1,48 +1,62 @@
-import { useEffect, useMemo, useState } from "react";
-import type { ElementType } from "react";
+import { useState } from "react";
 import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarGroupContent,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarHeader,
+  SidebarFooter,
+} from "@/components/ui/sidebar";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { PendingIndicator } from "@/components/PendingIndicator";
+import {
+  Users,
+  GraduationCap,
   Activity,
-  AlertTriangle,
-  Award,
+  Shield,
+  FileText,
   Bell,
+  Settings,
+  ClipboardList,
   BookOpen,
-  Calendar,
   CheckSquare,
   ChevronDown,
-  ClipboardList,
-  Clock,
-  Eye,
-  FileCheck,
-  FileText,
-  Flag,
-  GraduationCap,
-  Home,
-  Key,
-  LayoutDashboard,
-  MessageSquare,
-  School,
-  Settings,
-  Shield,
+  ChevronRight,
   UserCheck,
-  Users,
-  Video,
-  WalletCards,
+  School,
+  Key,
+  AlertTriangle,
+  MessageSquare,
+  Eye,
+  Flag,
   Wrench,
+  Calendar,
+  FileCheck,
+  Award,
+  Home,
+  Clock,
+  Video,
 } from "lucide-react";
-import { PendingIndicator } from "@/components/PendingIndicator";
-import { cn } from "@/lib/utils";
 
 export interface MenuItem {
   id: string;
   label: string;
-  icon?: ElementType;
+  icon?: React.ElementType;
   pendingCount?: number;
 }
 
 export interface MenuCategory {
   id: string;
   label: string;
-  icon: ElementType;
+  icon: React.ElementType;
   items: MenuItem[];
 }
 
@@ -57,18 +71,12 @@ interface DashboardSidebarProps {
 
 const diretorCategories: MenuCategory[] = [
   {
-    id: "gestao-integrada",
-    label: "Gestão escolar",
-    icon: LayoutDashboard,
-    items: [{ id: "gestao-escolar-360", label: "Painel da escola", icon: LayoutDashboard }],
-  },
-  {
     id: "gestao-usuarios",
-    label: "Usuários",
+    label: "Gestão de Usuários",
     icon: Users,
     items: [
       { id: "aprovacoes", label: "Aprovações", icon: UserCheck },
-      { id: "lista-espera", label: "Lista de espera", icon: Clock },
+      { id: "lista-espera", label: "Lista de Espera", icon: Clock },
       { id: "usuarios", label: "Alunos", icon: Users },
       { id: "professores", label: "Professores", icon: School },
       { id: "senhas-logins", label: "Senhas", icon: Key },
@@ -80,10 +88,10 @@ const diretorCategories: MenuCategory[] = [
     label: "Acadêmico",
     icon: GraduationCap,
     items: [
-      { id: "horarios", label: "Grade horária", icon: Clock },
+      { id: "horarios", label: "Grade Horária", icon: Clock },
       { id: "calendario", label: "Calendário", icon: Calendar },
-      { id: "config-horarios", label: "Configurar horários", icon: Settings },
-      { id: "presencas", label: "Registro de presenças", icon: UserCheck },
+      { id: "config-horarios", label: "Configurar Horários", icon: Settings },
+      { id: "presencas", label: "Registro de Presenças", icon: UserCheck },
       { id: "bimestres", label: "Bimestres", icon: Calendar },
       { id: "boletins", label: "Boletins", icon: FileCheck },
       { id: "autorizacoes-notas", label: "Autorizações", icon: CheckSquare },
@@ -104,7 +112,7 @@ const diretorCategories: MenuCategory[] = [
     icon: Shield,
     items: [
       { id: "disciplinares", label: "Advertências", icon: AlertTriangle },
-      { id: "pedidos-disciplinares", label: "Pedidos de professores", icon: Flag },
+      { id: "pedidos-disciplinares", label: "Pedidos Professores", icon: Flag },
       { id: "denuncias", label: "Denúncias", icon: Flag },
     ],
   },
@@ -113,67 +121,61 @@ const diretorCategories: MenuCategory[] = [
     label: "Documentos",
     icon: FileText,
     items: [
-      { id: "documentos-internos", label: "Documentos internos", icon: FileText },
+      { id: "documentos-internos", label: "Docs Internos", icon: FileText },
       { id: "documentacao", label: "Documentação", icon: FileText },
     ],
-  },
-  {
-    id: "financeiro",
-    label: "Financeiro",
-    icon: WalletCards,
-    items: [{ id: "financeiro", label: "Faturas e bolsas", icon: WalletCards }],
   },
   {
     id: "avisos",
     label: "Avisos",
     icon: Bell,
-    items: [{ id: "avisos", label: "Gerenciar avisos", icon: Bell }],
+    items: [
+      { id: "avisos", label: "Gerenciar Avisos", icon: Bell },
+    ],
   },
   {
     id: "sistema",
     label: "Sistema",
     icon: Settings,
-    items: [{ id: "manutencao", label: "Manutenção", icon: Wrench }],
+    items: [
+      { id: "manutencao", label: "Manutenção", icon: Wrench },
+    ],
   },
 ];
 
 const professorCategories: MenuCategory[] = [
   {
-    id: "gestao-integrada",
-    label: "Gestão escolar",
-    icon: LayoutDashboard,
-    items: [{ id: "gestao-escolar-360", label: "Central docente completa", icon: LayoutDashboard }],
-  },
-  {
     id: "academico",
     label: "Acadêmico",
     icon: GraduationCap,
     items: [
-      { id: "horarios", label: "Meus horários", icon: Clock },
-      { id: "presencas", label: "Registro de presenças", icon: UserCheck },
+      { id: "horarios", label: "Meus Horários", icon: Clock },
+      { id: "presencas", label: "Registro de Presenças", icon: UserCheck },
     ],
   },
   {
     id: "aula-ao-vivo",
-    label: "Aulas",
+    label: "Aula ao Vivo",
     icon: Video,
-    items: [{ id: "aulaAoVivo", label: "Gerenciar aula ao vivo", icon: Video }],
+    items: [
+      { id: "aulaAoVivo", label: "Gerenciar Aula", icon: Video },
+    ],
   },
   {
     id: "atividades",
     label: "Atividades",
     icon: ClipboardList,
     items: [
-      { id: "avaliacoes", label: "Atividades e avaliações", icon: ClipboardList },
-      { id: "correcoes", label: "Correções pendentes", icon: CheckSquare },
+      { id: "avaliacoes", label: "Atividades e Avaliações", icon: ClipboardList },
+      { id: "correcoes", label: "Correções Pendentes", icon: CheckSquare },
     ],
   },
   {
     id: "notas-boletins",
-    label: "Notas e boletins",
+    label: "Notas e Boletins",
     icon: GraduationCap,
     items: [
-      { id: "bimestres", label: "Notas do bimestre", icon: Calendar },
+      { id: "bimestres", label: "Notas Bimestre", icon: Calendar },
       { id: "boletins", label: "Boletins", icon: FileCheck },
     ],
   },
@@ -181,38 +183,36 @@ const professorCategories: MenuCategory[] = [
     id: "disciplinar",
     label: "Disciplinar",
     icon: Shield,
-    items: [{ id: "disciplinar", label: "Ações disciplinares", icon: AlertTriangle }],
+    items: [
+      { id: "disciplinar", label: "Ações Disciplinares", icon: AlertTriangle },
+    ],
   },
 ];
 
 const alunoCategories: MenuCategory[] = [
   {
-    id: "gestao-integrada",
-    label: "Gestão escolar",
-    icon: LayoutDashboard,
-    items: [{ id: "gestao-escolar-360", label: "Minha central escolar", icon: LayoutDashboard }],
-  },
-  {
     id: "academico",
-    label: "Horários",
+    label: "Acadêmico",
     icon: GraduationCap,
     items: [
-      { id: "horarios", label: "Meu horário", icon: Clock },
-      { id: "presencas", label: "Minhas presenças", icon: UserCheck },
+      { id: "horarios", label: "Meu Horário", icon: Clock },
+      { id: "presencas", label: "Minhas Presenças", icon: UserCheck },
     ],
   },
   {
     id: "aulas-ao-vivo",
-    label: "Aulas",
+    label: "Aulas ao Vivo",
     icon: Video,
-    items: [{ id: "aulas", label: "Minhas aulas", icon: Video }],
+    items: [
+      { id: "aulas", label: "Minhas Aulas", icon: Video },
+    ],
   },
   {
     id: "tarefas",
-    label: "Atividades",
+    label: "Tarefas",
     icon: ClipboardList,
     items: [
-      { id: "todas", label: "Todas as tarefas", icon: ClipboardList },
+      { id: "todas", label: "Todas as Tarefas", icon: ClipboardList },
       { id: "pendentes", label: "Pendentes", icon: CheckSquare },
       { id: "entregues", label: "Entregues", icon: Award },
     ],
@@ -221,11 +221,13 @@ const alunoCategories: MenuCategory[] = [
     id: "avaliacoes",
     label: "Avaliações",
     icon: FileText,
-    items: [{ id: "avaliacoes", label: "Minhas avaliações", icon: FileText }],
+    items: [
+      { id: "avaliacoes", label: "Minhas Avaliações", icon: FileText },
+    ],
   },
   {
     id: "notas-boletins",
-    label: "Desempenho escolar",
+    label: "Notas e Boletins",
     icon: GraduationCap,
     items: [
       { id: "notas", label: "Notas", icon: Award },
@@ -233,114 +235,158 @@ const alunoCategories: MenuCategory[] = [
     ],
   },
   {
-    id: "financeiro",
-    label: "Financeiro",
-    icon: WalletCards,
-    items: [{ id: "financeiro", label: "Faturas e bolsas", icon: WalletCards }],
-  },
-  {
     id: "disciplinar",
-    label: "Acompanhamentos",
+    label: "Disciplinar",
     icon: Shield,
-    items: [{ id: "advertencias", label: "Advertências", icon: AlertTriangle }],
+    items: [
+      { id: "advertencias", label: "Advertências", icon: AlertTriangle },
+    ],
   },
 ];
 
-const homeCategory: MenuCategory = {
-  id: "inicio",
-  label: "Conteúdos",
-  icon: Home,
-  items: [{ id: "inicio", label: "Visão geral", icon: Home }],
-};
+interface HomeItem {
+  id: string;
+  label: string;
+  icon: React.ElementType;
+}
 
 export function DashboardSidebar({
   role,
   selectedItem,
   onSelectItem,
   pendingCounts = {},
+  userName,
+  userRole,
 }: DashboardSidebarProps) {
-  const categories = useMemo(() => {
-    const roleCategories = role === "diretor"
-      ? diretorCategories
-      : role === "professor"
-        ? professorCategories
-        : alunoCategories;
+  const categories = role === "diretor" 
+    ? diretorCategories 
+    : role === "professor" 
+      ? professorCategories 
+      : alunoCategories;
 
-    return role === "diretor" ? roleCategories : [homeCategory, ...roleCategories];
-  }, [role]);
+  const showHomeItem = role === "professor" || role === "aluno";
 
-  const selectedCategory = useMemo(
-    () => categories.find((category) => category.items.some((item) => item.id === selectedItem)),
-    [categories, selectedItem],
-  );
+  const [openCategory, setOpenCategory] = useState<string | null>(() => {
+    const found = categories.find(cat => 
+      cat.items.some(item => item.id === selectedItem)
+    );
+    return found?.id || null;
+  });
 
-  const [openCategoryId, setOpenCategoryId] = useState(
-    selectedCategory?.id ?? categories[0]?.id ?? "",
-  );
+  const toggleCategory = (categoryId: string) => {
+    setOpenCategory(prev => prev === categoryId ? null : categoryId);
+  };
 
-  useEffect(() => {
-    if (selectedCategory) setOpenCategoryId(selectedCategory.id);
-  }, [selectedCategory]);
-
-  const openCategory = categories.find((category) => category.id === openCategoryId) ?? categories[0];
-
-  const handleCategoryClick = (category: MenuCategory) => {
-    setOpenCategoryId(category.id);
-    const selectedItemBelongsToCategory = category.items.some((item) => item.id === selectedItem);
-    if (!selectedItemBelongsToCategory) onSelectItem(category.items[0].id);
+  const handleSelectItem = (itemId: string) => {
+    const parentCategory = categories.find(cat => 
+      cat.items.some(item => item.id === itemId)
+    );
+    if (parentCategory) {
+      setOpenCategory(parentCategory.id);
+    }
+    onSelectItem(itemId);
   };
 
   return (
-    <nav className="portal-navigation" aria-label="Módulos do portal">
-      <div className="portal-primary-tabs" role="tablist" aria-label="Áreas do portal">
-        {categories.map((category) => {
-          const isCurrent = category.id === openCategory?.id;
-          const hasPending = category.items.some((item) => (pendingCounts[item.id] || 0) > 0);
-
-          return (
-            <button
-              key={category.id}
-              type="button"
-              role="tab"
-              aria-selected={isCurrent}
-              className={cn("portal-primary-tab", isCurrent && "is-active")}
-              onClick={() => handleCategoryClick(category)}
-              data-testid={`portal-category-${category.id}`}
-            >
-              <span>{category.label}</span>
-              {hasPending && <PendingIndicator size="sm" />}
-              {category.items.length > 1 && <ChevronDown className="portal-tab-chevron" aria-hidden="true" />}
-            </button>
-          );
-        })}
-      </div>
-
-      {openCategory && (
-        <div className="portal-secondary-nav" aria-label={`Opções de ${openCategory.label}`}>
-          <span className="portal-secondary-label">ACESSAR</span>
-          <div className="portal-secondary-items">
-            {openCategory.items.map((item) => {
-              const Icon = item.icon;
-              const isActive = item.id === selectedItem;
-              const pendingCount = pendingCounts[item.id] || 0;
-
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={cn("portal-secondary-button", isActive && "is-active")}
-                  onClick={() => onSelectItem(item.id)}
-                  data-testid={item.id === "inicio" ? "sidebar-item-inicio" : `sidebar-item-${item.id}`}
-                >
-                  {Icon && <Icon className="portal-secondary-icon" aria-hidden="true" />}
-                  <span>{item.label}</span>
-                  {pendingCount > 0 && <PendingIndicator size="sm" />}
-                </button>
-              );
-            })}
+    <Sidebar>
+      <SidebarHeader className="border-b border-sidebar-border p-3">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <GraduationCap className="h-5 w-5" />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-sm font-semibold">Vestibulando</span>
+            <span className="text-xs text-muted-foreground capitalize">
+              {userRole || role}
+            </span>
           </div>
         </div>
+      </SidebarHeader>
+
+      <SidebarContent className="py-1">
+        {showHomeItem && (
+          <SidebarGroup className="py-0.5">
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={selectedItem === "inicio"}
+                  onClick={() => onSelectItem("inicio")}
+                  data-testid="sidebar-item-inicio"
+                  className="py-1.5"
+                >
+                  <Home className="h-4 w-4" />
+                  <span>Início</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroup>
+        )}
+
+        {categories.map((category) => {
+          const isOpen = openCategory === category.id;
+          const categoryHasPending = category.items.some(
+            item => (pendingCounts[item.id] || 0) > 0
+          );
+          const CategoryIcon = category.icon;
+
+          return (
+            <SidebarGroup key={category.id} className="py-0.5">
+              <Collapsible open={isOpen} onOpenChange={() => toggleCategory(category.id)}>
+                <CollapsibleTrigger asChild>
+                  <SidebarGroupLabel className="cursor-pointer hover:bg-sidebar-accent/50 rounded-md transition-colors py-1.5 px-2 flex items-center justify-between w-full text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <CategoryIcon className="h-3.5 w-3.5" />
+                      <span>{category.label}</span>
+                      {categoryHasPending && <PendingIndicator size="sm" />}
+                    </div>
+                    {isOpen ? (
+                      <ChevronDown className="h-3.5 w-3.5 transition-transform" />
+                    ) : (
+                      <ChevronRight className="h-3.5 w-3.5 transition-transform" />
+                    )}
+                  </SidebarGroupLabel>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarGroupContent className="py-0.5">
+                    <SidebarMenu>
+                      {category.items.map((item) => {
+                        const ItemIcon = item.icon;
+                        const pendingCount = pendingCounts[item.id] || 0;
+                        const isActive = selectedItem === item.id;
+
+                        return (
+                          <SidebarMenuItem key={item.id}>
+                            <SidebarMenuButton
+                              isActive={isActive}
+                              onClick={() => handleSelectItem(item.id)}
+                              className="pl-5 py-1"
+                              data-testid={`sidebar-item-${item.id}`}
+                            >
+                              {ItemIcon && <ItemIcon className="h-3.5 w-3.5" />}
+                              <span className="flex-1 text-sm">{item.label}</span>
+                              {pendingCount > 0 && (
+                                <PendingIndicator size="sm" />
+                              )}
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        );
+                      })}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </Collapsible>
+            </SidebarGroup>
+          );
+        })}
+      </SidebarContent>
+
+      {userName && (
+        <SidebarFooter className="border-t border-sidebar-border p-3">
+          <div className="text-xs text-muted-foreground truncate">
+            {userName}
+          </div>
+        </SidebarFooter>
       )}
-    </nav>
+    </Sidebar>
   );
 }

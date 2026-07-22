@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Settings, ShieldCheck, User as UserIcon } from "lucide-react";
+import { User as UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,17 +10,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import EditProfileDialog from "./EditProfileDialog";
-import { SecurityCenterDialog } from "./SecurityCenterDialog";
 
 interface UserAccountMenuProps {
   onClose?: () => void;
-  variant?: "avatar" | "settings";
 }
 
-export default function UserAccountMenu({ onClose, variant = "avatar" }: UserAccountMenuProps) {
+export default function UserAccountMenu({ onClose }: UserAccountMenuProps) {
   const { userData, refreshUserData } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [securityOpen, setSecurityOpen] = useState(false);
 
   const getInitials = (nome: string) => {
     const names = nome.split(" ");
@@ -43,36 +40,25 @@ export default function UserAccountMenu({ onClose, variant = "avatar" }: UserAcc
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           <Button
-            size={variant === "settings" ? "sm" : "icon"}
+            size="icon"
             variant="ghost"
-            className={variant === "settings" ? "portal-profile-action" : "rounded-full"}
+            className="rounded-full"
             data-testid="button-user-account"
           >
-            {variant === "settings" ? (
-              <>
-                <Settings aria-hidden="true" />
-                <span>CONFIGURAÇÕES</span>
-              </>
-            ) : (
-              <Avatar className="h-8 w-8">
-                {(userData?.fotoUrl || userData?.fotoBase64) && userData?.fotoPublica ? (
-                  <AvatarImage src={userData.fotoUrl || userData.fotoBase64} alt={userData.nome} />
-                ) : null}
-                <AvatarFallback className="text-xs">
-                  {getInitials(userData.nome)}
-                </AvatarFallback>
-              </Avatar>
-            )}
+            <Avatar className="h-8 w-8">
+              {(userData?.fotoUrl || userData?.fotoBase64) && userData?.fotoPublica ? (
+                <AvatarImage src={userData.fotoUrl || userData.fotoBase64} alt={userData.nome} />
+              ) : null}
+              <AvatarFallback className="text-xs">
+                {getInitials(userData.nome)}
+              </AvatarFallback>
+            </Avatar>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-[180px]" sideOffset={8}>
           <DropdownMenuItem onClick={() => setIsDialogOpen(true)} className="cursor-pointer">
             <UserIcon className="h-4 w-4 mr-2" />
             Editar Perfil
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setSecurityOpen(true)} className="cursor-pointer">
-            <ShieldCheck className="h-4 w-4 mr-2" />
-            Segurança e MFA
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -84,7 +70,6 @@ export default function UserAccountMenu({ onClose, variant = "avatar" }: UserAcc
           onUpdate={handleUpdate}
         />
       )}
-      <SecurityCenterDialog open={securityOpen} onOpenChange={setSecurityOpen} />
     </>
   );
 }

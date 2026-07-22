@@ -1,8 +1,8 @@
 import { useState, useMemo } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { collection, addDoc, updateDoc, doc, where } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { storeFileInFirestore } from "@/lib/firestoreFileStore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { db, storage, storageAvailable } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -113,16 +113,13 @@ export function AlunoAvaliacoesTab() {
         throw new Error("O prazo desta avaliação já expirou e não são permitidas entregas atrasadas.");
       }
 
-      const storedFile = await storeFileInFirestore(file, {
-        ownerId: userData.uid,
-        ownerRole: userData.tipo,
-        audienceUserIds: [avaliacao.professorId],
-        audienceRoles: ["diretor", "administrador"],
-        studentIds: [userData.uid],
-        purpose: "entrega-avaliacao",
-        sensitive: true,
-      });
-      const downloadURL = storedFile.url;
+      if (!storageAvailable || !storage) {
+        throw new Error("O envio de arquivos não está disponível no momento. Por favor, entre em contato com a escola.");
+      }
+
+      const storageRef = ref(storage, `avaliacaoEntregas/${userData.uid}/${avaliacaoId}/${file.name}`);
+      await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(storageRef);
 
       const status = isLate ? "atrasada" : "enviada";
 

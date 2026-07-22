@@ -1,83 +1,112 @@
-# Vestibulando · Sistema Escolar 360
+# Vestibulando Platform
 
-Sistema escolar completo em React, TypeScript, Firebase e Node, com 30 módulos funcionais, 483 requisitos catalogados, portais por perfil, API documentada, PWA, auditoria, backups e regras de segurança. O visual do portal **Pais e Alunos** foi recriado a partir da referência fornecida; os quatro arquivos protegidos do chat permanecem sem alterações.
+Plataforma educacional completa para preparação de vestibulares e ENEM com gerenciamento de tarefas, submissões e avaliações.
 
-## O que está pronto
+## 🚀 Configuração Rápida (Para Remix)
 
-- 30 módulos numerados e 483 funcionalidades realmente executáveis, com identificador rastreável, formulário contextual, fluxo e automações próprias.
-- CRUD operacional com processos, estados, campos específicos, anexos, comentários, atribuição, público e protocolos automáticos.
-- Permissões por papel e por usuário, MFA/TOTP, primeiro acesso, senha forte, delegação temporária, sessões e revogação remota.
-- Vínculos familiares de muitos-para-muitos, papel financeiro/pedagógico por filho e permissões individuais por responsável.
-- Justificativa de falta com atestado protegido, análise pela escola, auditoria e notificação.
-- Histórico imutável de versões, valor anterior/novo, lixeira de 90 dias, restauração e exportação completa.
-- Relatórios em PDF, Excel e CSV, painéis, importação em lote e pré-validação Educacenso.
-- Documentos escolares em PDF com marca, protocolo, QR Code e validação pública mínima.
-- Arquivos de até 8 MB e backups compactados em blocos protegidos no Firestore, com SHA-256 e teste automatizado de recuperação, sem Firebase Storage.
-- API OpenAPI 3.0.3, webhooks, fila assíncrona, health check e rate limiting.
-- Inscrição pública segura, matrícula atômica, bloqueio de duplicidade, consulta de status e correção com identidade confirmada.
-- PWA instalável, modo claro/escuro, contraste alto, ampliação de texto, fonte legível e redução de movimento.
-- Políticas de privacidade, termos e cookies, além de exportação dos dados do titular.
+### Secrets Obrigatórios
 
-As matrizes estão em [docs/IMPLEMENTACAO-30-MODULOS.md](docs/IMPLEMENTACAO-30-MODULOS.md) e [docs/MATRIZ-OPERACIONAL-483-REQUISITOS.md](docs/MATRIZ-OPERACIONAL-483-REQUISITOS.md).
+Antes de usar este sistema, você DEVE configurar os seguintes secrets no Replit:
 
-## Execução local
+1. **VITE_FIREBASE_API_KEY** - Chave de API do Firebase
+2. **VITE_FIREBASE_PROJECT_ID** - ID do projeto Firebase
+3. **VITE_FIREBASE_APP_ID** - ID da aplicação Firebase
 
-1. Copie `.env.example` para `.env` e preencha as credenciais.
-2. Instale e valide:
+### Como Obter os Secrets do Firebase
+
+1. Acesse [Firebase Console](https://console.firebase.google.com/)
+2. Selecione seu projeto ou crie um novo
+3. Clique no ícone ⚙️ > **Project Settings**
+4. Em "Your apps", selecione o app Web (ou crie um novo clicando em `</>`)
+5. Em "SDK setup and configuration", copie os valores:
+   - `apiKey` → **VITE_FIREBASE_API_KEY**
+   - `projectId` → **VITE_FIREBASE_PROJECT_ID**
+   - `appId` → **VITE_FIREBASE_APP_ID**
+
+### Como Adicionar Secrets no Replit
+
+1. No Replit, clique em **Tools** (no menu lateral)
+2. Selecione **Secrets**
+3. Adicione cada secret com o nome exato e o valor correspondente
+4. Reinicie o servidor após adicionar todos os secrets
+
+## 📋 Configuração Completa do Firebase
+
+Para configuração completa do Firebase (Authentication, Firestore, Storage, Security Rules), consulte o arquivo `FIREBASE_SETUP.md`.
+
+## 🎯 Funcionalidades
+
+### Para Alunos
+- 📚 Visualizar tarefas da turma
+- 📤 Enviar arquivos de submissões
+- 📊 Acompanhar notas e feedback
+- 📅 Monitorar prazos
+
+### Para Professores
+- ✏️ Criar tarefas com anexos
+- 👀 Visualizar submissões dos alunos
+- ✅ Avaliar com notas (0-10) e feedback
+- 📈 Acompanhar progresso da turma
+
+### Para Administradores
+- 👥 Gerenciar usuários (criar, ativar/desativar)
+- 🏫 Gerenciar turmas e vagas
+- 📢 Criar anúncios direcionados
+- 📊 Visualizar estatísticas da plataforma
+
+## 🛠️ Stack Tecnológica
+
+- **Frontend**: React + TypeScript + Vite
+- **Backend**: Firebase (Auth, Firestore, Storage)
+- **Estilo**: TailwindCSS + Shadcn UI
+- **Formulários**: React Hook Form + Zod
+- **Estado**: TanStack Query + React Context
+- **Roteamento**: Wouter
+
+## 📝 Notas Importantes
+
+- ❌ **DATABASE_URL não é necessário** - Este projeto usa Firebase Firestore, não PostgreSQL
+- ⚠️ Novos cadastros criam apenas contas de "Aluno" por segurança
+- 🔒 Contas de Professor e Admin devem ser criadas pelo painel administrativo
+- 🇧🇷 Sistema totalmente em português com formatação brasileira (CPF, CEP, telefone)
+
+## 🔐 Primeiro Acesso Admin
+
+Veja instruções detalhadas em `FIREBASE_SETUP.md` sobre como criar o primeiro usuário administrador.
+
+## 📖 Documentação
+
+- `FIREBASE_SETUP.md` - Guia completo de configuração do Firebase
+- `replit.md` - Arquitetura e decisões do projeto
+- `.env.example` - Template de secrets necessários
+
+## 🐛 Solução de Problemas
+
+### "Firebase não inicializado"
+- Verifique se todos os 3 secrets estão configurados corretamente
+- Certifique-se de usar os nomes exatos: `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID`
+- Reinicie o servidor após adicionar os secrets
+
+### "Permission denied" no Firestore
+- Deploy das security rules: `firebase deploy --only firestore:rules`
+- Verifique se o usuário tem os campos `tipo` e `ativo` corretos
+
+### Falha no upload de arquivos
+- Verifique se o Storage está habilitado no Firebase
+- Deploy das storage rules: `firebase deploy --only storage:rules`
+- Limite de 10MB por arquivo
+
+## 🚀 Como Executar
+
+Após configurar os secrets:
 
 ```bash
 npm install
-npm run check
-npm run verify:school
 npm run dev
 ```
 
-O servidor completo inicia em `http://localhost:5000`.
+A aplicação estará disponível em `http://localhost:5000`
 
-## Build e validação
+## 📄 Licença
 
-```bash
-npm run check
-npm run verify:school
-npm run build
-```
-
-- `npm run build`: frontend e API Node.
-- `npm run build:pages`: somente frontend estático; os caminhos `/api/*` precisam ser encaminhados a um serviço Node.
-- `npm run verify:school`: valida 30 módulos, cobertura mínima dos requisitos, JSONs, artefatos de PWA, regras públicas indevidas e integridade do chat protegido.
-
-## Implantação obrigatória
-
-No Windows, execute `ATUALIZAR_GITHUB_E_CLOUDFLARE.bat` na raiz do projeto. A versão corrigida publica `dist/public` diretamente no Cloudflare Pages, registra um identificador de deploy, atualiza o cache da PWA e só depois sincroniza Firebase e GitHub. Consulte [docs/ATUALIZACAO-CLOUDFLARE.md](docs/ATUALIZACAO-CLOUDFLARE.md).
-
-Publique as regras e índices incluídos no projeto:
-
-```bash
-npx firebase-tools deploy --only firestore:rules,firestore:indexes
-```
-
-Depois publique a aplicação Node ou configure um proxy `/api/*` para ela. A inscrição, login por CPF/matrícula, recuperação protegida, histórico de IP, webhooks, backups e revogação real de tokens dependem dessa API.
-
-Veja o passo a passo em [docs/IMPLANTACAO-PRODUCAO.md](docs/IMPLANTACAO-PRODUCAO.md) e os controles em [docs/SEGURANCA-E-OPERACAO.md](docs/SEGURANCA-E-OPERACAO.md).
-
-## Credenciais externas
-
-Firebase, e-mail/WhatsApp, Google ou Microsoft Calendar, banco/Pix, nota fiscal, assinatura e videoconferência exigem contas e chaves do respectivo fornecedor. O módulo de integrações fornece cadastro, ambiente de teste, webhooks, fila, auditoria e monitoramento; nenhum segredo é salvo no navegador.
-
-## Stack
-
-- React 18, TypeScript, Vite, Wouter e TanStack Query.
-- Tailwind CSS, shadcn/ui, jsPDF e PWA.
-- Firebase Authentication e Firestore; o Firebase Storage não é usado.
-- Express, Firebase Admin, OpenAPI, filas e tarefas agendadas.
-
-## Chat protegido
-
-O verificador impede alterações acidentais em:
-
-- `client/src/pages/ChatPage.tsx`
-- `client/src/pages/ChatConversationPage.tsx`
-- `client/src/components/ChatWindow.tsx`
-- `client/src/components/ConversationItem.tsx`
-
-As regras de acesso do chat foram reforçadas sem modificar esses arquivos.
+Este projeto foi desenvolvido para uso educacional.

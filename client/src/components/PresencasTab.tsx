@@ -156,7 +156,6 @@ export function PresencasTab({ userType, professorId }: PresencasTabProps) {
       professorId: string;
       professorNome: string;
       presencaMarcada: boolean;
-      isLiveClass: boolean;
     }> = [];
     
     gradesFiltradas.forEach(grade => {

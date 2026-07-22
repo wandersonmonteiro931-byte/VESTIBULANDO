@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { collection, where, addDoc, updateDoc, doc, query, onSnapshot } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { storeFileInFirestore } from "@/lib/firestoreFileStore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { db, storage, storageAvailable } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,13 +15,12 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { AccessibilityControls } from "@/components/AccessibilityControls";
 import { BrasiliaClock } from "@/components/BrasiliaClock";
 import { StatusBadge } from "@/components/StatusBadge";
 import { FileUploadZone } from "@/components/FileUploadZone";
 import { AnnouncementsCarousel } from "@/components/AnnouncementsCarousel";
 import { ChatNotificationBubble } from "@/components/ChatNotificationBubble";
-import { LogOut, Plus, FileText, Users, Download, Edit, Calendar, Award, MessageCircle, ClipboardList, GraduationCap, CalendarClock, AlertTriangle, ShieldAlert, CheckCircle, Sparkles, Clock, Video } from "lucide-react";
+import { LogOut, Plus, FileText, Users, Download, Edit, Calendar, Award, MessageCircle, ClipboardList, GraduationCap, CalendarClock, AlertTriangle, ShieldAlert, CheckCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AvaliacoesTab } from "@/components/AvaliacoesTab";
 import { BoletimTab } from "@/components/BoletimTab";
@@ -31,11 +30,9 @@ import { HorarioViewer } from "@/components/HorarioViewer";
 import { PresencasTab } from "@/components/PresencasTab";
 import { PendingIndicator } from "@/components/PendingIndicator";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
-import { PortalBrand } from "@/components/PortalBrand";
-import { PortalProfileHeader } from "@/components/PortalProfileHeader";
 import { AttendanceConfirmationModal } from "@/components/AttendanceConfirmationModal";
 import { TeacherClassControl } from "@/components/TeacherClassControl";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Link } from "wouter";
 import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
@@ -49,8 +46,6 @@ import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { getNowBrasiliaISO } from "@/lib/brasiliaTime";
 import { cn } from "@/lib/utils";
-import { MobileBottomNav } from "@/components/MobileBottomNav";
-import { SchoolManagementSuite } from "@/features/school/SchoolManagementSuite";
 
 const tarefaFormSchema = z.object({
   titulo: z.string().min(1, "Título é obrigatório"),
@@ -132,15 +127,12 @@ export default function TeacherDashboard() {
       let arquivoNome = undefined;
       
       if (attachmentFile) {
-        const storedFile = await storeFileInFirestore(attachmentFile, {
-          ownerId: userData.uid,
-          ownerRole: userData.tipo,
-          audienceUserIds: [userData.uid],
-          audienceRoles: ["diretor", "administrador", "responsavel"],
-          classIds: [data.turma],
-          purpose: "material-tarefa",
-        });
-        arquivoAnexo = storedFile.url;
+        if (!storageAvailable || !storage) {
+          throw new Error("O upload de arquivos não está disponível no plano gratuito. Crie tarefas sem anexos ou solicite que os alunos respondam diretamente.");
+        }
+        const storageRef = ref(storage, `tarefas/${userData.uid}/${Date.now()}_${attachmentFile.name}`);
+        await uploadBytes(storageRef, attachmentFile);
+        arquivoAnexo = await getDownloadURL(storageRef);
         arquivoNome = attachmentFile.name;
       }
       
@@ -243,16 +235,36 @@ export default function TeacherDashboard() {
 
   return (
     <SidebarProvider style={{ "--sidebar-width": "280px" } as React.CSSProperties}>
-      <div className="dashboard-modern dashboard-teacher school-os-role-portal flex min-h-screen w-full">
-        <div className="min-w-0 flex-1 flex flex-col">
-          <header className="dashboard-topbar elegant-topbar sticky top-0 z-50 w-full">
-            <div className="dashboard-topbar-inner elegant-header flex items-center justify-between px-4 sm:px-6 gap-4">
-              <div className="dashboard-header-left flex items-center gap-3">
-                <PortalBrand compactLabel="Professor" />
+      <div className="flex min-h-screen w-full">
+        <DashboardSidebar
+          role="professor"
+          selectedItem={selectedSection}
+          onSelectItem={setSelectedSection}
+          pendingCounts={{ correcoes: pendingCount }}
+          userName={userData?.nome}
+          userRole="Professor"
+        />
+        <div className="flex-1 flex flex-col">
+          <header className="sticky top-0 z-50 w-full border-b bg-gradient-to-r from-card via-card to-card/95 backdrop-blur-xl shadow-sm">
+            <div className="flex h-16 items-center justify-between px-4 gap-4">
+              <div className="flex items-center gap-3">
+                <SidebarTrigger data-testid="button-sidebar-toggle" />
+                <div className="hidden sm:flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-br from-primary to-primary/80 rounded-xl shadow-md shadow-primary/20">
+                    <FileText className="h-5 w-5 text-primary-foreground" />
+                  </div>
+                  <div>
+                    <h1 className="text-lg font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">Vestibulando</h1>
+                    <p className="text-xs text-muted-foreground font-medium">Área do Professor</p>
+                  </div>
+                </div>
               </div>
               
-              <div className="dashboard-header-right flex items-center gap-3">
-                <AccessibilityControls />
+              <div className="flex items-center gap-3">
+                <div className="text-right mr-2 hidden md:block">
+                  <p className="text-sm font-semibold">{userData?.nome}</p>
+                  <p className="text-xs text-muted-foreground">Professor</p>
+                </div>
                 <ThemeToggle />
                 <BrasiliaClock />
                 <Link href="/chat">
@@ -260,7 +272,7 @@ export default function TeacherDashboard() {
                     variant="outline" 
                     size="icon"
                     className={cn(
-                      "header-chat-btn flex flex-col h-auto py-2 px-3 gap-1 relative",
+                      "flex flex-col h-auto py-2 px-3 gap-1 relative",
                       hasUnread && "animate-pulse border-primary"
                     )}
                     data-testid="button-chat-header"
@@ -275,7 +287,7 @@ export default function TeacherDashboard() {
                     )}
                   </Button>
                 </Link>
-                <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout" className="header-icon-btn">
+                <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout">
                   <LogOut className="h-5 w-5" />
                 </Button>
               </div>
@@ -292,67 +304,16 @@ export default function TeacherDashboard() {
             />
           )}
 
-          <main className="dashboard-main flex-1 overflow-auto px-4 sm:px-6 pt-6 pb-28 md:pb-8">
-            <PortalProfileHeader
-              user={userData}
-              role="professor"
-              contextLabel={userData?.materias?.length ? userData.materias.join(" • ") : "Corpo docente"}
-            />
-            <DashboardSidebar
-              role="professor"
-              selectedItem={selectedSection}
-              onSelectItem={setSelectedSection}
-              pendingCounts={{ correcoes: pendingCount }}
-              userName={userData?.nome}
-              userRole="Professor"
-            />
-
+          <main className="flex-1 overflow-auto p-6">
             <div className="max-w-7xl mx-auto">
               {selectedSection === "inicio" && (
                 <>
-                  <div className="mb-6 md:hidden">
-                    <Card className="dashboard-school-panel dashboard-school-intro-card overflow-hidden border-primary/15 bg-gradient-to-br from-primary/10 via-background to-violet-50 shadow-sm dark:to-slate-900">
-                      <CardContent className="p-5">
-                        <div className="flex items-start justify-between gap-4">
-                          <div>
-                            <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
-                              <Sparkles className="h-3.5 w-3.5" /> Painel escolar
-                            </div>
-                            <h2 className="text-2xl font-bold tracking-tight text-foreground">Olá, professor {userData?.nome?.split(' ')[0]}</h2>
-                            <p className="mt-2 text-sm text-muted-foreground">Organize suas aulas, correções e registros com rapidez.</p>
-                          </div>
-                          <Badge className="rounded-full bg-primary/15 px-3 py-1 text-primary">Professor</Badge>
-                        </div>
-                        <div className="mt-4 grid grid-cols-2 gap-2">
-                          <Button variant="outline" className="dashboard-quick-action h-auto justify-start rounded-2xl px-3 py-3" onClick={() => setSelectedSection('horarios')}>
-                            <Clock className="mr-2 h-4 w-4 text-primary" /> Horários
-                          </Button>
-                          <Button variant="outline" className="dashboard-quick-action h-auto justify-start rounded-2xl px-3 py-3" onClick={() => setSelectedSection('aulaAoVivo')}>
-                            <Video className="mr-2 h-4 w-4 text-primary" /> Aula ao vivo
-                          </Button>
-                          <Button variant="outline" className="dashboard-quick-action h-auto justify-start rounded-2xl px-3 py-3" onClick={() => setSelectedSection('avaliacoes')}>
-                            <FileText className="mr-2 h-4 w-4 text-primary" /> Avaliações
-                          </Button>
-                          <Button variant="outline" className="dashboard-quick-action h-auto justify-start rounded-2xl px-3 py-3" onClick={() => setSelectedSection('correcoes')}>
-                            <ClipboardList className="mr-2 h-4 w-4 text-primary" /> Correções
-                          </Button>
-                        </div>
-                        {activeSession && (
-                          <Link href={`/sala-professor/${activeSession.id}`}>
-                            <Button className="mt-4 w-full bg-green-600 hover:bg-green-700">
-                              <CheckCircle className="mr-2 h-4 w-4" /> Voltar para aula em andamento
-                            </Button>
-                          </Link>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  <div className="dashboard-hero flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 mb-8">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
                     <div>
-                      <span className="dashboard-eyebrow">Área docente</span>
-                      <h2 className="dashboard-hero-title">Painel do Professor</h2>
-                      <p className="dashboard-hero-subtitle">Organize aulas, atividades e avaliações em um só lugar.</p>
+                      <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                        Painel do Professor
+                      </h2>
+                      <p className="text-muted-foreground">Gerencie atividades e avalie entregas</p>
                     </div>
                     {activeSession && (
                       <Link href={`/sala-professor/${activeSession.id}`}>
@@ -380,7 +341,7 @@ export default function TeacherDashboard() {
                   )}
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <Card className="dashboard-stat-card dashboard-stat-violet">
+                    <Card className="border-primary/20 bg-gradient-to-br from-card to-primary/5 hover-elevate">
                       <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
                         <CardTitle className="text-sm font-semibold">Total de Tarefas</CardTitle>
                         <div className="p-2 bg-primary/10 rounded-lg">
@@ -393,7 +354,7 @@ export default function TeacherDashboard() {
                       </CardContent>
                     </Card>
 
-                    <Card className="dashboard-stat-card dashboard-stat-amber">
+                    <Card className="border-amber-200/50 dark:border-amber-900/50 bg-gradient-to-br from-card to-amber-50/30 dark:to-amber-950/10 hover-elevate">
                       <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
                         <CardTitle className="text-sm font-semibold">Pendentes</CardTitle>
                         <div className="p-2 bg-amber-100 dark:bg-amber-900/40 rounded-lg">
@@ -406,7 +367,7 @@ export default function TeacherDashboard() {
                       </CardContent>
                     </Card>
 
-                    <Card className="dashboard-stat-card dashboard-stat-green">
+                    <Card className="border-green-200/50 dark:border-green-900/50 bg-gradient-to-br from-card to-green-50/30 dark:to-green-950/10 hover-elevate">
                       <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
                         <CardTitle className="text-sm font-semibold">Avaliadas</CardTitle>
                         <div className="p-2 bg-green-100 dark:bg-green-900/40 rounded-lg">
@@ -423,9 +384,6 @@ export default function TeacherDashboard() {
               )}
 
               <div className="space-y-6">
-                {selectedSection === "gestao-escolar-360" && (
-                  <SchoolManagementSuite />
-                )}
                 {selectedSection === "avaliacoes" && (
                   <AvaliacoesTab userType="professor" />
                 )}

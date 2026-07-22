@@ -30,6 +30,7 @@ This document outlines the security measures implemented in the ENEM+ educationa
 
 **Code Location:**
 - `firestore.rules` - All helper functions
+- `storage.rules` - All helper functions
 
 ### 3. Professor Access Control
 
@@ -38,25 +39,26 @@ This document outlines the security measures implemented in the ENEM+ educationa
 **Solution Implemented:**
 - Added `professorOwnsTarefa()` helper function
 - Professors can only read/update entregas (submissions) for their own assignments
-- Cross-validated in Firestore rules and file metadata permissions
+- Cross-validated in both Firestore and Storage rules for consistency
 
 **Code Location:**
 - `firestore.rules` - Entregas collection rules
+- `storage.rules` - Entregas storage path rules
 
 ### 4. File Upload Security
 
 **Problem Addressed:** Prevent malicious file uploads and unauthorized file access.
 
 **Solution Implemented:**
-- 8MB file size limit enforced in Firestore rules
+- 10MB file size limit enforced in Storage rules
 - Client-side validation for file type and size
 - Proper error handling with user-friendly messages
-- Arquivos divididos em blocos de no máximo 400 KB, com SHA-256
-- Role/user/class-based access to uploaded files
-- Students remain owners of their submissions
+- Role-based access to uploaded files
+- Students can only upload to their own folders
+- Professors can only access submissions for their assignments
 
 **Code Location:**
-- `firestore.rules` - `schoolFiles` metadata/chunk restrictions
+- `storage.rules` - File size limits and path restrictions
 - `client/src/components/FileUploadZone.tsx` - Client validation
 
 ## Security Rules Architecture
@@ -93,14 +95,22 @@ This document outlines the security measures implemented in the ENEM+ educationa
 // Delete: Admins only
 ```
 
-### Firestore File Repository
+### Storage Rules
 
-#### `schoolFiles/{fileId}`
+#### tarefas/ Path
 ```
-- Read: owner, explicitly authorized users, class/target students, permitted roles or admin
-- Write: authenticated owner only
-- Limit: 8MB per file; 400KB raw per chunk
-- Integrity: SHA-256 checked before preview/download
+/tarefas/{professorId}/{fileName}
+- Read: All authenticated active users (educational materials)
+- Write: Only the owning professor
+- Limit: 10MB per file
+```
+
+#### entregas/ Path
+```
+/entregas/{alunoId}/{tarefaId}/{fileName}
+- Read: Student (owner), professor (if owns tarefa), or admin
+- Write: Only the student (owner)
+- Limit: 10MB per file
 ```
 
 ## User Account Lifecycle
@@ -136,7 +146,7 @@ This document outlines the security measures implemented in the ENEM+ educationa
 - [x] Professors cannot access other professors' assignments
 - [x] Professors cannot grade other professors' submissions
 - [x] Students cannot access other students' files
-- [x] File size limits enforced (8MB)
+- [x] File size limits enforced (10MB)
 - [x] Inactive users cannot access system
 - [x] All rules reviewed by architect agent
 
@@ -161,14 +171,15 @@ This document outlines the security measures implemented in the ENEM+ educationa
 Before deploying to production:
 
 1. [ ] Deploy latest `firestore.rules` to Firebase Console
-2. [ ] Confirm Firebase Storage remains disabled/unconfigured
+2. [ ] Deploy latest `storage.rules` to Firebase Console
 3. [ ] Enable only necessary Authentication providers
-4. [ ] Set up proper Firestore quota alerts and limits
-5. [ ] Review all Firestore indexes
-6. [ ] Test all user flows (student, teacher, admin)
-7. [ ] Verify file upload restrictions and SHA-256 checks
-8. [ ] Test inactive user blocking
-9. [ ] Monitor Firebase Console for security alerts
+4. [ ] Set up proper Firebase project quotas and limits
+5. [ ] Configure CORS for Storage if needed
+6. [ ] Review all Firestore indexes
+7. [ ] Test all user flows (student, teacher, admin)
+8. [ ] Verify file upload restrictions work
+9. [ ] Test inactive user blocking
+10. [ ] Monitor Firebase Console for security alerts
 
 ## Incident Response
 

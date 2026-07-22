@@ -213,11 +213,10 @@ export default function StudentClassroomPage() {
   useEffect(() => {
     const sessionToUse = session || currentSession;
     if (!sessionToUse?.dataInicio) return;
-    const sessionStart = sessionToUse.dataInicio;
 
     const calculateElapsed = () => {
       try {
-        const startStr = sessionStart;
+        const startStr = sessionToUse.dataInicio;
         let startTime: number;
 
         if (startStr.includes("/") && startStr.includes(":")) {

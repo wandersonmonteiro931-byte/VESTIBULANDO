@@ -9,7 +9,8 @@ import { Switch } from "@/components/ui/switch";
 import { X, Upload, Camera, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { doc, updateDoc, deleteField } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import { db, storage, storageAvailable } from "@/lib/firebase";
 import type { User } from "@shared/schema";
 import ImageEditor from "./ImageEditor";
 
@@ -199,16 +200,48 @@ export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfi
     setSaving(true);
 
     try {
+      let fotoUrl: string | null = user.fotoUrl || null;
       let fotoBase64: string | null = null;
 
+      // Se há uma nova foto para fazer upload
       if (photoFile) {
-        if (photoFile.size > 600 * 1024) throw new Error("A foto comprimida ultrapassou 600 KB. Escolha outra imagem.");
-        const reader = new FileReader();
-        fotoBase64 = await new Promise<string>((resolve, reject) => {
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(photoFile);
-        });
+        // Verificar se Firebase Storage está disponível
+        if (storageAvailable && storage) {
+          // Usar Firebase Storage
+          const timestamp = Date.now();
+          const fileName = `profile_${user.uid}_${timestamp}.jpg`;
+          const storageRef = ref(storage, `usuarios/fotos/${fileName}`);
+
+          // Fazer upload da imagem
+          await uploadBytes(storageRef, photoFile);
+
+          // Obter URL de download
+          fotoUrl = await getDownloadURL(storageRef);
+
+          // Se havia uma foto antiga com URL do Storage, tentar deletar
+          if (user.fotoUrl && user.fotoUrl.includes('firebasestorage.googleapis.com')) {
+            try {
+              const urlParts = user.fotoUrl.split('/o/')[1]?.split('?')[0];
+              if (urlParts) {
+                const filePath = decodeURIComponent(urlParts);
+                const oldPhotoRef = ref(storage, filePath);
+                await deleteObject(oldPhotoRef);
+              }
+            } catch (deleteError) {
+              console.warn("Não foi possível deletar foto antiga:", deleteError);
+            }
+          }
+        } else {
+          // Fallback: Usar base64 armazenado diretamente no Firestore
+          console.log("Firebase Storage não disponível, usando base64 no Firestore");
+          const reader = new FileReader();
+          fotoBase64 = await new Promise<string>((resolve, reject) => {
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(photoFile);
+          });
+          fotoUrl = null; // Limpar URL pois vamos usar base64
+        }
       }
 
       const userRef = doc(db, "usuarios", user.uid);
@@ -218,6 +251,20 @@ export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfi
       
       // Se o usuário removeu a foto (não há preview)
       if (!photoPreview && (user.fotoUrl || user.fotoBase64)) {
+        // Deletar foto do Storage se existir e storage estiver disponível
+        if (storageAvailable && storage && user.fotoUrl && user.fotoUrl.includes('firebasestorage.googleapis.com')) {
+          try {
+            const urlParts = user.fotoUrl.split('/o/')[1]?.split('?')[0];
+            if (urlParts) {
+              const filePath = decodeURIComponent(urlParts);
+              const oldPhotoRef = ref(storage, filePath);
+              await deleteObject(oldPhotoRef);
+            }
+          } catch (deleteError) {
+            console.warn("Não foi possível deletar foto antiga:", deleteError);
+          }
+        }
+        
         // Remover ambos os campos de foto
         updateData.fotoUrl = deleteField();
         updateData.fotoBase64 = deleteField();
@@ -225,8 +272,15 @@ export default function EditProfileDialog({ user, onClose, onUpdate }: EditProfi
       }
       // Se fez upload de nova foto
       else if (photoFile) {
-        updateData.fotoBase64 = fotoBase64;
-        updateData.fotoUrl = deleteField();
+        if (fotoBase64) {
+          // Salvando como base64 no Firestore
+          updateData.fotoBase64 = fotoBase64;
+          updateData.fotoUrl = deleteField();
+        } else {
+          // Salvando URL do Firebase Storage
+          updateData.fotoUrl = fotoUrl;
+          updateData.fotoBase64 = deleteField();
+        }
         updateData.fotoPublica = isPublic;
       }
       // Se apenas mudou a visibilidade da foto existente

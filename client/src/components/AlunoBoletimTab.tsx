@@ -438,7 +438,7 @@ export function AlunoBoletimTab() {
                     </TableHeader>
                     <TableBody>
                       {selectedBoletim.materias.map((m, idx) => {
-                        const abaixoMedia = m.mediaFinal != null && m.mediaFinal < (m.mediaEsperada || 7);
+                        const abaixoMedia = m.mediaFinal !== null && m.mediaFinal < (m.mediaEsperada || 7);
                         return (
                           <TableRow key={m.materia} className={idx % 2 === 0 ? "bg-muted/30" : ""}>
                             <TableCell className="font-medium">{m.materia}</TableCell>
@@ -465,7 +465,7 @@ export function AlunoBoletimTab() {
                   <div className="p-4 bg-primary/5 rounded-lg text-center border border-primary/10">
                     <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Média Anual</p>
                     <p className={`text-3xl font-bold ${
-                      selectedBoletim.mediaGeral != null && 
+                      selectedBoletim.mediaGeral !== null && 
                       selectedBoletim.mediaGeral < (selectedBoletim.mediaGeralEsperada || 7) 
                         ? "text-red-600" : "text-green-600"
                     }`}>
@@ -479,7 +479,7 @@ export function AlunoBoletimTab() {
                   <div className="p-4 bg-muted rounded-lg text-center">
                     <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Frequência</p>
                     <p className={`text-3xl font-bold ${
-                      selectedBoletim.percentualPresenca != null && 
+                      selectedBoletim.percentualPresenca !== null && 
                       selectedBoletim.percentualPresenca < 75 
                         ? "text-red-600" : "text-green-600"
                     }`}>

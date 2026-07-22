@@ -1,8 +1,8 @@
 import { useState, useMemo } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { collection, addDoc, updateDoc, doc, where, deleteDoc, getDocs, query, writeBatch } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { storeFileInFirestore } from "@/lib/firestoreFileStore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { db, storage, storageAvailable } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -81,7 +81,6 @@ const correcaoFormSchema = z.object({
 
 interface AvaliacoesTabProps {
   userType: "professor" | "diretor";
-  scope?: "all" | "atividades" | "avaliacoes";
 }
 
 // Interface para opções de questão
@@ -108,7 +107,7 @@ interface QuestaoTemp {
   instrucoesEspecificas?: string;
 }
 
-export function AvaliacoesTab({ userType, scope = "all" }: AvaliacoesTabProps) {
+export function AvaliacoesTab({ userType }: AvaliacoesTabProps) {
   const { userData } = useAuth();
   const { toast } = useToast();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -149,7 +148,7 @@ export function AvaliacoesTab({ userType, scope = "all" }: AvaliacoesTabProps) {
     defaultValues: {
       titulo: "",
       descricao: "",
-      tipo: scope === "avaliacoes" ? "prova" : "atividade",
+      tipo: "atividade",
       materia: "",
       destinatarioTipo: "turma",
       turmaId: "",
@@ -221,14 +220,6 @@ export function AvaliacoesTab({ userType, scope = "all" }: AvaliacoesTabProps) {
     transform: (docs) => docs as User[],
   });
 
-  const scopedAvaliacoes = useMemo(() => (avaliacoes || []).filter((avaliacao) => {
-    if (scope === "atividades") return avaliacao.tipo === "atividade" || avaliacao.tipo === "trabalho";
-    if (scope === "avaliacoes") return avaliacao.tipo === "prova" || avaliacao.tipo === "simulado";
-    return true;
-  }), [avaliacoes, scope]);
-  const scopedIds = useMemo(() => new Set(scopedAvaliacoes.map((avaliacao) => avaliacao.id)), [scopedAvaliacoes]);
-  const scopedEntregas = useMemo(() => (entregas || []).filter((entrega) => scopedIds.has(entrega.avaliacaoId)), [entregas, scopedIds]);
-
   // Filtrar turmas disponíveis: diretor vê todas, professor vê apenas suas turmas cadastradas
   const turmasDisponiveis = useMemo(() => {
     if (!turmas || !userData) return [];
@@ -287,16 +278,12 @@ export function AvaliacoesTab({ userType, scope = "all" }: AvaliacoesTabProps) {
       let arquivoNome: string | null = null;
 
       if (attachmentFile) {
-        const storedFile = await storeFileInFirestore(attachmentFile, {
-          ownerId: userData.uid,
-          ownerRole: userData.tipo,
-          audienceUserIds: [userData.uid],
-          audienceRoles: ["diretor", "administrador", "responsavel"],
-          studentIds: [],
-          classIds: data.turmaId ? [data.turmaId] : [],
-          purpose: "modelo-avaliacao",
-        });
-        arquivoUrl = storedFile.url;
+        if (!storageAvailable || !storage) {
+          throw new Error("O upload de arquivos não está disponível no plano gratuito. Use o modelo 'Questões Online' para criar avaliações sem precisar anexar arquivos.");
+        }
+        const storageRef = ref(storage, `avaliacoes/${userData.uid}/${Date.now()}_${attachmentFile.name}`);
+        await uploadBytes(storageRef, attachmentFile);
+        arquivoUrl = await getDownloadURL(storageRef);
         arquivoNome = attachmentFile.name;
       }
 
@@ -478,16 +465,12 @@ export function AvaliacoesTab({ userType, scope = "all" }: AvaliacoesTabProps) {
       let arquivoNome = editingAvaliacao.arquivoNome;
 
       if (attachmentFile) {
-        const storedFile = await storeFileInFirestore(attachmentFile, {
-          ownerId: userData.uid,
-          ownerRole: userData.tipo,
-          audienceUserIds: [userData.uid],
-          audienceRoles: ["diretor", "administrador", "responsavel"],
-          studentIds: [],
-          classIds: data.turmaId ? [data.turmaId] : [],
-          purpose: "modelo-avaliacao",
-        });
-        arquivoUrl = storedFile.url;
+        if (!storageAvailable || !storage) {
+          throw new Error("O upload de arquivos não está disponível no plano gratuito. Use o modelo 'Questões Online' para criar avaliações sem precisar anexar arquivos.");
+        }
+        const storageRef = ref(storage, `avaliacoes/${data.id}/${attachmentFile.name}`);
+        await uploadBytes(storageRef, attachmentFile);
+        arquivoUrl = await getDownloadURL(storageRef);
         arquivoNome = attachmentFile.name;
       }
 
@@ -918,8 +901,8 @@ export function AvaliacoesTab({ userType, scope = "all" }: AvaliacoesTabProps) {
     return entregas?.filter(e => e.avaliacaoId === avaliacaoId) || [];
   };
 
-  const pendingCorrections = scopedEntregas.filter(e => e.status === "enviada" || e.status === "atrasada").length;
-  const deliveredCorrections = scopedEntregas.filter(e => e.status === "corrigida").length;
+  const pendingCorrections = entregas?.filter(e => e.status === "enviada" || e.status === "atrasada").length || 0;
+  const deliveredCorrections = entregas?.filter(e => e.status === "corrigida").length || 0;
 
   // Verificar se a correção pode ser editada (dentro de 24 horas)
   const canEditCorrection = (entrega: AvaliacaoEntrega) => {
@@ -1598,22 +1581,22 @@ export function AvaliacoesTab({ userType, scope = "all" }: AvaliacoesTabProps) {
   };
 
   const filterAvaliacoes = (tab: string) => {
-    if (!scopedAvaliacoes.length) return [];
+    if (!avaliacoes) return [];
     const now = new Date();
     
     switch (tab) {
       case "agendadas":
-        return scopedAvaliacoes.filter(a => isFuture(new Date(a.dataInicio)) && a.status !== "cancelada");
+        return avaliacoes.filter(a => isFuture(new Date(a.dataInicio)) && a.status !== "cancelada");
       case "andamento":
-        return scopedAvaliacoes.filter(a => {
+        return avaliacoes.filter(a => {
           const inicio = new Date(a.dataInicio);
           const fim = new Date(a.dataFim);
           return isWithinInterval(now, { start: inicio, end: fim }) && a.status !== "cancelada";
         });
       case "encerradas":
-        return scopedAvaliacoes.filter(a => isPast(new Date(a.dataFim)) || a.status === "cancelada");
+        return avaliacoes.filter(a => isPast(new Date(a.dataFim)) || a.status === "cancelada");
       default:
-        return scopedAvaliacoes;
+        return avaliacoes;
     }
   };
 
@@ -1621,12 +1604,12 @@ export function AvaliacoesTab({ userType, scope = "all" }: AvaliacoesTabProps) {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h3 className="text-2xl font-bold">{scope === "atividades" ? "Atividades e trabalhos" : scope === "avaliacoes" ? "Avaliações e provas" : "Atividades e avaliações"}</h3>
-          <p className="text-muted-foreground">{scope === "atividades" ? "Crie tarefas, acompanhe entregas, corrija e envie feedback" : scope === "avaliacoes" ? "Monte provas e simulados, aplique, corrija e publique resultados" : "Gerencie provas, simulados, atividades e trabalhos"}</p>
+          <h3 className="text-2xl font-bold">Atividades e Avaliações</h3>
+          <p className="text-muted-foreground">Gerencie provas, simulados, atividades e trabalhos</p>
         </div>
         <Button onClick={() => setCreateDialogOpen(true)} data-testid="button-create-avaliacao">
           <Plus className="h-4 w-4 mr-2" />
-          {scope === "atividades" ? "Nova atividade" : scope === "avaliacoes" ? "Nova avaliação" : "Nova demanda"}
+          Nova Demanda
         </Button>
       </div>
 
@@ -1637,7 +1620,7 @@ export function AvaliacoesTab({ userType, scope = "all" }: AvaliacoesTabProps) {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{scopedAvaliacoes.length}</div>
+            <div className="text-2xl font-bold">{avaliacoes?.length || 0}</div>
           </CardContent>
         </Card>
 
@@ -1770,7 +1753,7 @@ export function AvaliacoesTab({ userType, scope = "all" }: AvaliacoesTabProps) {
         </TabsContent>
 
         <TabsContent value="correcoes" className="space-y-4">
-          {scopedEntregas.filter(e => e.status === "enviada" || e.status === "atrasada").length === 0 ? (
+          {entregas?.filter(e => e.status === "enviada" || e.status === "atrasada").length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                 <CheckCircle className="h-16 w-16 text-green-500 mb-4" />
@@ -1779,7 +1762,7 @@ export function AvaliacoesTab({ userType, scope = "all" }: AvaliacoesTabProps) {
               </CardContent>
             </Card>
           ) : (
-            scopedEntregas.filter(e => e.status === "enviada" || e.status === "atrasada").map(entrega => (
+            entregas?.filter(e => e.status === "enviada" || e.status === "atrasada").map(entrega => (
               <Card key={entrega.id} className="hover-elevate">
                 <CardHeader>
                   <div className="flex items-start justify-between gap-2">
@@ -1848,7 +1831,7 @@ export function AvaliacoesTab({ userType, scope = "all" }: AvaliacoesTabProps) {
         </TabsContent>
 
         <TabsContent value="entregues" className="space-y-4">
-          {scopedEntregas.filter(e => e.status === "corrigida").length === 0 ? (
+          {entregas?.filter(e => e.status === "corrigida").length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                 <FileCheck className="h-16 w-16 text-muted-foreground mb-4" />
@@ -1857,7 +1840,7 @@ export function AvaliacoesTab({ userType, scope = "all" }: AvaliacoesTabProps) {
               </CardContent>
             </Card>
           ) : (
-            scopedEntregas.filter(e => e.status === "corrigida").map(entrega => {
+            entregas?.filter(e => e.status === "corrigida").map(entrega => {
               const canEdit = canEditCorrection(entrega);
               const horasRestantes = entrega.dataCorrecao 
                 ? Math.max(0, 24 - differenceInHours(new Date(), new Date(entrega.dataCorrecao)))
@@ -1971,9 +1954,9 @@ export function AvaliacoesTab({ userType, scope = "all" }: AvaliacoesTabProps) {
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-create-avaliacao">
           <DialogHeader>
-            <DialogTitle>{scope === "atividades" ? "Nova atividade ou trabalho" : scope === "avaliacoes" ? "Nova avaliação ou simulado" : "Nova avaliação"}</DialogTitle>
+            <DialogTitle>Nova Avaliação</DialogTitle>
             <DialogDescription>
-              {scope === "atividades" ? "Crie uma atividade com prazo, anexos, entrega, correção e feedback." : scope === "avaliacoes" ? "Crie uma prova ou simulado com aplicação, questões, gabarito e resultado." : "Crie uma prova, simulado ou atividade para seus alunos"}
+              Crie uma prova, simulado ou atividade para seus alunos
             </DialogDescription>
           </DialogHeader>
 
@@ -1993,10 +1976,10 @@ export function AvaliacoesTab({ userType, scope = "all" }: AvaliacoesTabProps) {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {scope !== "atividades" && <SelectItem value="prova">Prova</SelectItem>}
-                          {scope !== "atividades" && <SelectItem value="simulado">Simulado</SelectItem>}
-                          {scope !== "avaliacoes" && <SelectItem value="atividade">Atividade</SelectItem>}
-                          {scope !== "avaliacoes" && <SelectItem value="trabalho">Trabalho</SelectItem>}
+                          <SelectItem value="prova">Prova</SelectItem>
+                          <SelectItem value="simulado">Simulado</SelectItem>
+                          <SelectItem value="atividade">Atividade</SelectItem>
+                          <SelectItem value="trabalho">Trabalho</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -2530,10 +2513,10 @@ export function AvaliacoesTab({ userType, scope = "all" }: AvaliacoesTabProps) {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {scope !== "atividades" && <SelectItem value="prova">Prova</SelectItem>}
-                          {scope !== "atividades" && <SelectItem value="simulado">Simulado</SelectItem>}
-                          {scope !== "avaliacoes" && <SelectItem value="atividade">Atividade</SelectItem>}
-                          {scope !== "avaliacoes" && <SelectItem value="trabalho">Trabalho</SelectItem>}
+                          <SelectItem value="prova">Prova</SelectItem>
+                          <SelectItem value="simulado">Simulado</SelectItem>
+                          <SelectItem value="atividade">Atividade</SelectItem>
+                          <SelectItem value="trabalho">Trabalho</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />

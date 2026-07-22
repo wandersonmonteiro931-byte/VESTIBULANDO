@@ -1,13 +1,15 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth, createUserWithEmailAndPassword } from "firebase/auth";
 import { getFirestore, type Firestore, initializeFirestore, memoryLocalCache } from "firebase/firestore";
+import { getStorage, type FirebaseStorage } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyAKPmqetUP_w8SGqr3ooLXAbASpFlRNWBY",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "plataforma-enem-f3682.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "plataforma-enem-f3682",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "1086290785401",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:1086290785401:web:123ba3c7d224b6497710a8",
+  apiKey: "AIzaSyAKPmqetUP_w8SGqr3ooLXAbASpFlRNWBY",
+  authDomain: "plataforma-enem-f3682.firebaseapp.com",
+  projectId: "plataforma-enem-f3682",
+  storageBucket: "plataforma-enem-f3682.firebasestorage.app",
+  messagingSenderId: "1086290785401",
+  appId: "1:1086290785401:web:123ba3c7d224b6497710a8",
 };
 
 let app: FirebaseApp;
@@ -15,6 +17,8 @@ let secondaryApp: FirebaseApp;
 let auth: Auth;
 let secondaryAuth: Auth;
 let db: Firestore;
+let storage: FirebaseStorage | null = null;
+let storageAvailable = false;
 let firebaseError: Error | null = null;
 
 try {
@@ -31,6 +35,15 @@ try {
     });
   }
 
+  try {
+    storage = getStorage(app);
+    storageAvailable = true;
+  } catch (storageError) {
+    console.warn("Firebase Storage indisponível. Os uploads permanecerão desativados.", storageError);
+    storage = null;
+    storageAvailable = false;
+  }
+
   const existingSecondaryApp = existingApps.find((firebaseApp) => firebaseApp.name === "secondary");
   secondaryApp = existingSecondaryApp ?? initializeApp(firebaseConfig, "secondary");
   secondaryAuth = getAuth(secondaryApp);
@@ -45,4 +58,8 @@ export async function createUserWithoutSignIn(email: string, password: string) {
   return userCredential;
 }
 
-export { auth, db, firebaseError };
+export function isStorageAvailable(): boolean {
+  return storageAvailable && storage !== null;
+}
+
+export { auth, db, storage, storageAvailable, firebaseError };

@@ -1,9 +1,6 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
-import "./portal-reference.css";
-import "./features/school/school-suite.css";
-import "./features/school-v2/school-os.css";
 
 const isFirestoreError = (message: string | undefined) => {
   if (!message) return false;
@@ -44,9 +41,3 @@ console.error = (...args: any[]) => {
 };
 
 createRoot(document.getElementById("root")!).render(<App />);
-
-if ("serviceWorker" in navigator && import.meta.env.PROD) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch((error) => console.warn("PWA indisponível:", error));
-  });
-}

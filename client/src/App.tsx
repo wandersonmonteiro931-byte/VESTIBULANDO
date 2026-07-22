@@ -1,5 +1,4 @@
-import { useEffect, useRef } from "react";
-import { Switch, Route } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -13,8 +12,6 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { FirebaseErrorScreen } from "@/components/FirebaseErrorScreen";
 import { SuspensionAlertOverlay } from "@/components/SuspensionAlertOverlay";
 import { WarningAlertOverlay } from "@/components/WarningAlertOverlay";
-import { MfaRequiredOverlay } from "@/components/MfaRequiredOverlay";
-import { AccessibilityPreferencesLoader } from "@/components/AccessibilityControls";
 import Login from "@/pages/Login";
 import StudentDashboard from "@/pages/StudentDashboard";
 import TeacherDashboard from "@/pages/TeacherDashboard";
@@ -24,23 +21,8 @@ import ChatConversationPage from "@/pages/ChatConversationPage";
 import LiveClassPage from "@/pages/LiveClassPage";
 import TeacherClassroomPage from "@/pages/TeacherClassroomPage";
 import StudentClassroomPage from "@/pages/StudentClassroomPage";
-import SchoolPlatformPage from "@/pages/SchoolPlatformPage";
-import DocumentValidationPage from "@/pages/DocumentValidationPage";
-import FirestoreFilePage from "@/pages/FirestoreFilePage";
 import NotFound from "@/pages/not-found";
 import type { User } from "@shared/schema";
-
-function BrowserRedirect({ to }: { to: string }) {
-  const startedRef = useRef(false);
-
-  useEffect(() => {
-    if (startedRef.current || window.location.pathname === to) return;
-    startedRef.current = true;
-    window.location.replace(to);
-  }, [to]);
-
-  return null;
-}
 
 function RootRedirect() {
   const auth = useAuth();
@@ -52,21 +34,18 @@ function RootRedirect() {
   }
 
   if (!userData) {
-    return <BrowserRedirect to="/login" />;
+    return <Redirect to="/login" />;
   }
 
   switch (userData.tipo) {
     case "aluno":
-      return <BrowserRedirect to="/aluno" />;
+      return <Redirect to="/aluno" />;
     case "professor":
-      return <BrowserRedirect to="/professor" />;
+      return <Redirect to="/professor" />;
     case "diretor":
-      return <BrowserRedirect to="/diretor" />;
-    case "responsavel":
-    case "funcionario":
-      return <BrowserRedirect to="/escola" />;
+      return <Redirect to="/diretor" />;
     default:
-      return <BrowserRedirect to="/login" />;
+      return <Redirect to="/login" />;
   }
 }
 
@@ -82,14 +61,6 @@ function Router() {
     <Switch>
       <Route path="/" component={RootRedirect} />
       <Route path="/login" component={Login} />
-      <Route path="/validar" component={DocumentValidationPage} />
-      <Route path="/validar/:code" component={DocumentValidationPage} />
-
-      <Route path="/arquivo/:fileId">
-        <ProtectedRoute allowedTypes={["aluno", "professor", "diretor", "responsavel", "funcionario"]}>
-          <FirestoreFilePage />
-        </ProtectedRoute>
-      </Route>
       
       <Route path="/aluno">
         <ProtectedRoute allowedTypes={["aluno"]}>
@@ -105,30 +76,18 @@ function Router() {
       
       <Route path="/diretor">
         <ProtectedRoute allowedTypes={["diretor"]}>
-          <SchoolPlatformPage />
-        </ProtectedRoute>
-      </Route>
-
-      <Route path="/diretor-operacional">
-        <ProtectedRoute allowedTypes={["diretor"]}>
           <AdminDashboard />
-        </ProtectedRoute>
-      </Route>
-
-      <Route path="/escola">
-        <ProtectedRoute allowedTypes={["aluno", "professor", "diretor", "responsavel", "funcionario"]}>
-          <SchoolPlatformPage />
         </ProtectedRoute>
       </Route>
       
       <Route path="/chat">
-        <ProtectedRoute allowedTypes={["aluno", "professor", "diretor", "responsavel", "funcionario"]}>
+        <ProtectedRoute allowedTypes={["aluno", "professor", "diretor"]}>
           <ChatPage />
         </ProtectedRoute>
       </Route>
       
       <Route path="/chat/:conversationId">
-        <ProtectedRoute allowedTypes={["aluno", "professor", "diretor", "responsavel", "funcionario"]}>
+        <ProtectedRoute allowedTypes={["aluno", "professor", "diretor"]}>
           <ChatConversationPage />
         </ProtectedRoute>
       </Route>
@@ -159,7 +118,6 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AccessibilityPreferencesLoader />
       <ThemeProvider>
         <SuspensionAlertProvider>
           <WarningAlertProvider>
@@ -169,7 +127,6 @@ function App() {
                   <Toaster />
                   <SuspensionAlertOverlay />
                   <WarningAlertOverlay />
-                  <MfaRequiredOverlay />
                   <Router />
                 </TooltipProvider>
               </LiveClassProvider>
