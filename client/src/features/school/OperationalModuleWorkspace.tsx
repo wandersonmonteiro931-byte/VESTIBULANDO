@@ -64,7 +64,7 @@ interface OperationalModuleWorkspaceProps {
   records: SchoolRecord[];
   allRecords: SchoolRecord[];
   canWrite: boolean;
-  onCreate: (capability: string) => void;
+  onOpenTask: (capability: string) => void;
   onView: (record: SchoolRecord) => void;
 }
 
@@ -220,7 +220,7 @@ export function CapabilityWorkspace({
   module,
   records,
   canWrite,
-  onCreate,
+  onOpenTask,
   onView,
   title,
   description,
@@ -229,7 +229,7 @@ export function CapabilityWorkspace({
   module: SchoolModuleDefinition;
   records: SchoolRecord[];
   canWrite: boolean;
-  onCreate: (capability: string) => void;
+  onOpenTask: (capability: string) => void;
   onView: (record: SchoolRecord) => void;
   title?: string;
   description?: string;
@@ -249,12 +249,16 @@ export function CapabilityWorkspace({
   });
   const selectedBlueprint = visibleBlueprints.find((blueprint) => blueprint.id === selectedTaskId) || visibleBlueprints[0];
   const selectedRecords = selectedBlueprint ? activeRecords.filter((record) => record.capability === selectedBlueprint.title).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)) : [];
+  const openTask = (blueprint: ReturnType<typeof capabilityBlueprint>) => {
+    setSelectedTaskId(blueprint.id);
+    if (canWrite) onOpenTask(blueprint.title);
+  };
 
   return (
     <section className={`school-capability-workspace${compact ? " is-compact" : ""}`}>
       <div className="school-capability-heading">
         <div className="school-capability-heading-icon"><Icon className="h-6 w-6" /></div>
-        <div><span>CENTRAL OPERACIONAL</span><h4>{title || `Operações de ${module.shortTitle.toLocaleLowerCase("pt-BR")}`}</h4><p>{description || "Escolha a tarefa que deseja executar. Cada opção abre somente os campos e validações necessários para essa tarefa."}</p></div>
+        <div><span>CENTRAL OPERACIONAL</span><h4>{title || `Operações de ${module.shortTitle.toLocaleLowerCase("pt-BR")}`}</h4><p>{description || "Clique na tarefa desejada. Ela abrirá em uma página própria, com endereço, campos, salvamento e histórico exclusivos."}</p></div>
         <div className="school-capability-summary"><strong>{activeRecords.length}</strong><small>em acompanhamento</small></div>
       </div>
 
@@ -266,11 +270,11 @@ export function CapabilityWorkspace({
       {visibleBlueprints.length > 0 ? (
         <div className="school-task-workbench">
           <div className="school-task-list" role="list" aria-label="Tarefas disponíveis">
-            <div className="school-task-list-heading"><strong>{visibleBlueprints.length} tarefas</strong><span>Selecione para ver os campos</span></div>
+            <div className="school-task-list-heading"><strong>{visibleBlueprints.length} tarefas</strong><span>Clique para abrir a página</span></div>
             {visibleBlueprints.map((blueprint) => {
               const related = activeRecords.filter((record) => record.capability === blueprint.title).length;
               const active = selectedBlueprint?.id === blueprint.id;
-              return <button type="button" key={blueprint.id} className={active ? "is-active" : ""} onClick={() => setSelectedTaskId(blueprint.id)}><span><small>{blueprint.id}</small><strong>{blueprint.title}</strong><em>{blueprint.workflow}</em></span>{related > 0 && <b>{related}</b>}<ArrowRight className="h-4 w-4" /></button>;
+              return <button type="button" key={blueprint.id} className={active ? "is-active" : ""} onClick={() => openTask(blueprint)} aria-label={canWrite ? `Abrir formulário: ${blueprint.title}` : `Consultar tarefa: ${blueprint.title}`}><span><small>{blueprint.id}</small><strong>{blueprint.title}</strong><em>{blueprint.workflow}</em></span>{related > 0 && <b>{related}</b>}<ArrowRight className="h-4 w-4" /></button>;
             })}
           </div>
 
@@ -278,7 +282,7 @@ export function CapabilityWorkspace({
             <article className="school-task-detail">
               <div className="school-task-detail-top"><span>{selectedBlueprint.id}</span><Badge variant="outline">{selectedBlueprint.workflow}</Badge></div>
               <h5>{selectedBlueprint.title}</h5>
-              <p>Esta tela foi preparada para executar esta tarefa específica, com validações, responsáveis, prazos, anexos e histórico.</p>
+              <p>Ao selecionar esta tarefa, o sistema abre sua página exclusiva com validações, responsáveis, prazos, anexos e histórico.</p>
 
               <div className="school-task-rules">
                 <strong>O sistema fará automaticamente</strong>
@@ -291,14 +295,14 @@ export function CapabilityWorkspace({
               </div>
 
               <div className="school-task-primary-action">
-                {canWrite ? <Button onClick={() => onCreate(selectedBlueprint.title)}><PlayCircle className="mr-2 h-4 w-4" />Iniciar esta tarefa</Button> : <span className="school-capability-readonly"><ShieldCheck className="h-4 w-4" />Seu perfil possui acesso somente para consulta</span>}
+                {canWrite ? <span className="school-task-auto-open"><CheckCircle2 className="h-4 w-4" />Cada tarefa abre em uma página separada</span> : <span className="school-capability-readonly"><ShieldCheck className="h-4 w-4" />Seu perfil possui acesso somente para consulta</span>}
                 {selectedRecords[0] && <Button variant="outline" onClick={() => onView(selectedRecords[0])}>Abrir registro mais recente</Button>}
               </div>
 
               <div className="school-task-history">
                 <div><strong>Registros desta tarefa</strong><span>{selectedRecords.length} encontrado{selectedRecords.length === 1 ? "" : "s"}</span></div>
                 {selectedRecords.slice(0, 5).map((record) => <button type="button" key={record.id} onClick={() => onView(record)}><span className={`school-operation-state ${capabilityStatusTone(record.status)}`}><CheckCircle2 className="h-4 w-4" /></span><span><strong>{record.title}</strong><small>{record.studentName || record.className || record.assigneeName || "Registro geral"}</small></span><Badge variant="outline">{record.status}</Badge><ArrowRight className="h-4 w-4" /></button>)}
-                {!selectedRecords.length && <p>Ainda não há registros. Clique em “Iniciar esta tarefa” para criar o primeiro.</p>}
+                {!selectedRecords.length && <p>Ainda não há registros. Clique na tarefa da lista para abrir sua página e criar o primeiro.</p>}
               </div>
             </article>
           )}
@@ -310,7 +314,7 @@ export function CapabilityWorkspace({
 
 function RouteAndCapabilityWorkspace(props: OperationalModuleWorkspaceProps) {
   const shortcuts = shortcutSets[props.module.id] || [];
-  return <div className="school-real-workspace"><ShortcutGrid shortcuts={shortcuts} /><CapabilityWorkspace module={props.module} records={props.records} canWrite={props.canWrite} onCreate={props.onCreate} onView={props.onView} compact={shortcuts.length > 0} /></div>;
+  return <div className="school-real-workspace"><ShortcutGrid shortcuts={shortcuts} /><CapabilityWorkspace module={props.module} records={props.records} canWrite={props.canWrite} onOpenTask={props.onOpenTask} onView={props.onView} compact={shortcuts.length > 0} /></div>;
 }
 
 function AccessibilityWorkspace(props: OperationalModuleWorkspaceProps) {
@@ -323,51 +327,51 @@ function AccessibilityWorkspace(props: OperationalModuleWorkspaceProps) {
       <div className="school-accessibility-checks">
         {["Navegação completa por teclado", "Rótulos para leitores de tela", "Contraste e foco visível", "Redução de movimento", "Texto ampliável sem perda de conteúdo", "Registro de barreiras e adaptações"].map((item) => <div key={item}><CheckCircle2 className="h-4 w-4" /><span>{item}</span></div>)}
       </div>
-      <CapabilityWorkspace module={props.module} records={props.records} canWrite={props.canWrite} onCreate={props.onCreate} onView={props.onView} title="Auditorias, barreiras e adaptações" compact />
+      <CapabilityWorkspace module={props.module} records={props.records} canWrite={props.canWrite} onOpenTask={props.onOpenTask} onView={props.onView} title="Auditorias, barreiras e adaptações" compact />
     </div>
   );
 }
 
 export function OperationalModuleWorkspace(props: OperationalModuleWorkspaceProps) {
-  const { module, role, actor, user, users, classes, records, allRecords, canWrite, onCreate, onView } = props;
+  const { module, role, actor, user, users, classes, records, allRecords, canWrite, onOpenTask, onView } = props;
   const managementRole = role === "diretor" || role === "administrador";
   const educatorRole = role === "professor" || role === "professor_substituto";
   const professors = users.filter((entry) => entry.tipo === "professor");
 
   switch (module.id) {
     case "acessos":
-      return <div className="school-real-workspace"><ShortcutGrid shortcuts={managementRole ? shortcutSets.acessos : []} />{managementRole ? <AccessControlPanel users={users} actor={actor} /> : null}<CapabilityWorkspace module={module} records={records} canWrite={canWrite} onCreate={onCreate} onView={onView} title="Tarefas de acesso e segurança" compact={managementRole} /></div>;
+      return <div className="school-real-workspace"><ShortcutGrid shortcuts={managementRole ? shortcutSets.acessos : []} />{managementRole ? <AccessControlPanel users={users} actor={actor} /> : null}<CapabilityWorkspace module={module} records={records} canWrite={canWrite} onOpenTask={onOpenTask} onView={onView} title="Tarefas de acesso e segurança" compact={managementRole} /></div>;
     case "calendario-horarios":
       return (
         <OperationalTabs defaultValue="calendario" tabs={[{ value: "calendario", label: "Calendário", icon: CalendarDays }, { value: "grades", label: "Grades horárias", icon: GraduationCap }, { value: "configuracao", label: "Tempos e disciplinas", icon: Settings2 }, { value: "tarefas", label: "Todas as tarefas", icon: ListChecks }]}> 
           <TabsContent value="calendario"><CalendarioProgramacaoTab turmas={classes} /></TabsContent>
           <TabsContent value="grades"><HorariosTab turmas={classes} professores={professors} /></TabsContent>
           <TabsContent value="configuracao"><ConfiguracaoHorariosTab /></TabsContent>
-          <TabsContent value="tarefas"><CapabilityWorkspace module={module} records={records} canWrite={canWrite} onCreate={onCreate} onView={onView} /></TabsContent>
+          <TabsContent value="tarefas"><CapabilityWorkspace module={module} records={records} canWrite={canWrite} onOpenTask={onOpenTask} onView={onView} /></TabsContent>
         </OperationalTabs>
       );
     case "frequencia":
-      return <OperationalTabs defaultValue="chamada" tabs={[{ value: "chamada", label: "Chamada e frequência", icon: ClipboardCheck }, { value: "tarefas", label: "Todas as tarefas", icon: ListChecks }]}><TabsContent value="chamada"><PresencasTab userType={educatorRole ? "professor" : "diretor"} professorId={educatorRole ? user?.uid : undefined} /></TabsContent><TabsContent value="tarefas"><CapabilityWorkspace module={module} records={records} canWrite={canWrite} onCreate={onCreate} onView={onView} /></TabsContent></OperationalTabs>;
+      return <OperationalTabs defaultValue="chamada" tabs={[{ value: "chamada", label: "Chamada e frequência", icon: ClipboardCheck }, { value: "tarefas", label: "Todas as tarefas", icon: ListChecks }]}><TabsContent value="chamada"><PresencasTab userType={educatorRole ? "professor" : "diretor"} professorId={educatorRole ? user?.uid : undefined} /></TabsContent><TabsContent value="tarefas"><CapabilityWorkspace module={module} records={records} canWrite={canWrite} onOpenTask={onOpenTask} onView={onView} /></TabsContent></OperationalTabs>;
     case "atividades":
     case "avaliacoes":
-      return <OperationalTabs defaultValue="principal" tabs={[{ value: "principal", label: module.id === "atividades" ? "Atividades e entregas" : "Avaliações e provas", icon: FileCheck2 }, { value: "tarefas", label: "Todas as tarefas", icon: ListChecks }]}><TabsContent value="principal"><AvaliacoesTab userType={educatorRole ? "professor" : "diretor"} scope={module.id === "atividades" ? "atividades" : "avaliacoes"} /></TabsContent><TabsContent value="tarefas"><CapabilityWorkspace module={module} records={records} canWrite={canWrite} onCreate={onCreate} onView={onView} /></TabsContent></OperationalTabs>;
+      return <OperationalTabs defaultValue="principal" tabs={[{ value: "principal", label: module.id === "atividades" ? "Atividades e entregas" : "Avaliações e provas", icon: FileCheck2 }, { value: "tarefas", label: "Todas as tarefas", icon: ListChecks }]}><TabsContent value="principal"><AvaliacoesTab userType={educatorRole ? "professor" : "diretor"} scope={module.id === "atividades" ? "atividades" : "avaliacoes"} /></TabsContent><TabsContent value="tarefas"><CapabilityWorkspace module={module} records={records} canWrite={canWrite} onOpenTask={onOpenTask} onView={onView} /></TabsContent></OperationalTabs>;
     case "notas-boletim":
       return (
         <OperationalTabs defaultValue="periodos" tabs={[{ value: "periodos", label: "Bimestres e notas", icon: GraduationCap }, { value: "boletins", label: "Boletins", icon: FileText }, { value: "autorizacoes", label: "Reaberturas", icon: FileCheck2 }, { value: "tarefas", label: "Todas as tarefas", icon: ListChecks }]}> 
           <TabsContent value="periodos"><BimestresTab userType={educatorRole ? "professor" : "diretor"} /></TabsContent>
           <TabsContent value="boletins"><BoletimTab /></TabsContent>
           <TabsContent value="autorizacoes"><AutorizacaoNotasTab /></TabsContent>
-          <TabsContent value="tarefas"><CapabilityWorkspace module={module} records={records} canWrite={canWrite} onCreate={onCreate} onView={onView} /></TabsContent>
+          <TabsContent value="tarefas"><CapabilityWorkspace module={module} records={records} canWrite={canWrite} onOpenTask={onOpenTask} onView={onView} /></TabsContent>
         </OperationalTabs>
       );
     case "aulas-ao-vivo":
-      return educatorRole ? <OperationalTabs defaultValue="aulas" tabs={[{ value: "aulas", label: "Gerenciar aulas", icon: Video }, { value: "tarefas", label: "Todas as tarefas", icon: ListChecks }]}><TabsContent value="aulas"><TeacherClassControl /></TabsContent><TabsContent value="tarefas"><CapabilityWorkspace module={module} records={records} canWrite={canWrite} onCreate={onCreate} onView={onView} /></TabsContent></OperationalTabs> : <RouteAndCapabilityWorkspace {...props} />;
+      return educatorRole ? <OperationalTabs defaultValue="aulas" tabs={[{ value: "aulas", label: "Gerenciar aulas", icon: Video }, { value: "tarefas", label: "Todas as tarefas", icon: ListChecks }]}><TabsContent value="aulas"><TeacherClassControl /></TabsContent><TabsContent value="tarefas"><CapabilityWorkspace module={module} records={records} canWrite={canWrite} onOpenTask={onOpenTask} onView={onView} /></TabsContent></OperationalTabs> : <RouteAndCapabilityWorkspace {...props} />;
     case "documentos-escolares":
       return (
         <OperationalTabs defaultValue="emitir" tabs={[{ value: "emitir", label: "Emitir documentos", icon: FileText }, { value: "aceites", label: "Aceites e termos", icon: ShieldCheck }, { value: "tarefas", label: "Todas as tarefas", icon: ListChecks }]}> 
           <TabsContent value="emitir"><DocumentationTab /></TabsContent>
           <TabsContent value="aceites"><InternalDocumentsTab /></TabsContent>
-          <TabsContent value="tarefas"><CapabilityWorkspace module={module} records={records} canWrite={canWrite} onCreate={onCreate} onView={onView} /></TabsContent>
+          <TabsContent value="tarefas"><CapabilityWorkspace module={module} records={records} canWrite={canWrite} onOpenTask={onOpenTask} onView={onView} /></TabsContent>
         </OperationalTabs>
       );
     case "comunicacao":
@@ -375,31 +379,31 @@ export function OperationalModuleWorkspace(props: OperationalModuleWorkspaceProp
         <OperationalTabs defaultValue="avisos" tabs={[{ value: "avisos", label: "Avisos", icon: MessageSquareText }, { value: "preferencias", label: "Canais e notificações", icon: Settings2 }, { value: "outros", label: "Outras comunicações", icon: PlayCircle }]}> 
           <TabsContent value="avisos"><AnnouncementsTab /></TabsContent>
           <TabsContent value="preferencias"><NotificationPreferencesPanel user={user} actor={actor} /></TabsContent>
-          <TabsContent value="outros"><div className="school-chat-callout"><MessageSquareText className="h-6 w-6" /><div><h4>Conversas individuais e em tempo real</h4><p>O chat permanece separado e preservado, com moderação, bloqueios e histórico próprios.</p></div><Button onClick={() => navigate("/chat")}>Abrir chat<ArrowRight className="ml-2 h-4 w-4" /></Button></div><CapabilityWorkspace module={module} records={records} canWrite={canWrite} onCreate={onCreate} onView={onView} compact /></TabsContent>
+          <TabsContent value="outros"><div className="school-chat-callout"><MessageSquareText className="h-6 w-6" /><div><h4>Conversas individuais e em tempo real</h4><p>O chat permanece separado e preservado, com moderação, bloqueios e histórico próprios.</p></div><Button onClick={() => navigate("/chat")}>Abrir chat<ArrowRight className="ml-2 h-4 w-4" /></Button></div><CapabilityWorkspace module={module} records={records} canWrite={canWrite} onOpenTask={onOpenTask} onView={onView} compact /></TabsContent>
         </OperationalTabs>
       );
     case "bem-estar":
       return (
         <OperationalTabs defaultValue="pedidos" tabs={[{ value: "pedidos", label: "Pedidos disciplinares", icon: ClipboardCheck }, { value: "atendimentos", label: "Atendimentos e ocorrências", icon: HeartHandshake }]}> 
           <TabsContent value="pedidos"><DisciplinaryRequestsAdminTab /></TabsContent>
-          <TabsContent value="atendimentos"><CapabilityWorkspace module={module} records={records} canWrite={canWrite} onCreate={onCreate} onView={onView} /></TabsContent>
+          <TabsContent value="atendimentos"><CapabilityWorkspace module={module} records={records} canWrite={canWrite} onOpenTask={onOpenTask} onView={onView} /></TabsContent>
         </OperationalTabs>
       );
     case "financeiro":
-      return <OperationalTabs defaultValue="financeiro" tabs={[{ value: "financeiro", label: "Faturas e pagamentos", icon: WalletCards }, { value: "tarefas", label: "Todas as tarefas", icon: ListChecks }]}><TabsContent value="financeiro"><AdminFinanceTab /></TabsContent><TabsContent value="tarefas"><CapabilityWorkspace module={module} records={records} canWrite={canWrite} onCreate={onCreate} onView={onView} /></TabsContent></OperationalTabs>;
+      return <OperationalTabs defaultValue="financeiro" tabs={[{ value: "financeiro", label: "Faturas e pagamentos", icon: WalletCards }, { value: "tarefas", label: "Todas as tarefas", icon: ListChecks }]}><TabsContent value="financeiro"><AdminFinanceTab /></TabsContent><TabsContent value="tarefas"><CapabilityWorkspace module={module} records={records} canWrite={canWrite} onOpenTask={onOpenTask} onView={onView} /></TabsContent></OperationalTabs>;
     case "portal-aluno":
     case "portal-professor":
     case "portal-responsaveis":
-      return <div className="school-real-workspace"><NotificationPreferencesPanel user={user} actor={actor} /><CapabilityWorkspace module={module} records={records} canWrite={canWrite} onCreate={onCreate} onView={onView} title={`Configuração do ${module.shortTitle.toLocaleLowerCase("pt-BR")}`} compact /></div>;
+      return <div className="school-real-workspace"><NotificationPreferencesPanel user={user} actor={actor} /><CapabilityWorkspace module={module} records={records} canWrite={canWrite} onOpenTask={onOpenTask} onView={onView} title={`Configuração do ${module.shortTitle.toLocaleLowerCase("pt-BR")}`} compact /></div>;
     case "acessibilidade":
       return <AccessibilityWorkspace {...props} />;
     case "lgpd-seguranca":
-      return <div className="school-real-workspace"><PrivacyOperationsPanel user={user} records={allRecords} /><CapabilityWorkspace module={module} records={records} canWrite={canWrite} onCreate={onCreate} onView={onView} title="Solicitações, consentimentos e incidentes de privacidade" compact /></div>;
+      return <div className="school-real-workspace"><PrivacyOperationsPanel user={user} records={allRecords} /><CapabilityWorkspace module={module} records={records} canWrite={canWrite} onOpenTask={onOpenTask} onView={onView} title="Solicitações, consentimentos e incidentes de privacidade" compact /></div>;
     case "instituicao":
     case "alunos":
     case "matriculas":
     case "estrutura-academica":
-      return managementRole ? <RouteAndCapabilityWorkspace {...props} /> : <CapabilityWorkspace module={module} records={records} canWrite={canWrite} onCreate={onCreate} onView={onView} />;
+      return managementRole ? <RouteAndCapabilityWorkspace {...props} /> : <CapabilityWorkspace module={module} records={records} canWrite={canWrite} onOpenTask={onOpenTask} onView={onView} />;
     case "responsaveis":
     case "diario-planejamento":
     case "acompanhamento":
@@ -407,7 +411,7 @@ export function OperationalModuleWorkspace(props: OperationalModuleWorkspaceProp
     case "inclusao":
     case "secretaria":
     case "operacoes":
-      return <CapabilityWorkspace module={module} records={records} canWrite={canWrite} onCreate={onCreate} onView={onView} />;
+      return <CapabilityWorkspace module={module} records={records} canWrite={canWrite} onOpenTask={onOpenTask} onView={onView} />;
     default:
       return <div className="school-capability-empty"><PackageOpen className="h-8 w-8" /><h5>Área operacional indisponível</h5><p>Volte ao painel e escolha outro setor.</p></div>;
   }

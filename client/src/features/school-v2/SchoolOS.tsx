@@ -176,12 +176,12 @@ function SchoolOSHome({ modules, records, users, classes, requests, search, onSe
   const recent = [...activeRecords].sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt))).slice(0, 6);
 
   return (
-    <div className="school-os-home" data-release="R11-NOVO-APP">
+    <div className="school-os-home" data-release="R13-PAGINAS-SEPARADAS">
       <section className="school-os-welcome">
         <div className="school-os-welcome-copy">
           <span className="school-os-eyebrow"><Sparkles className="h-4 w-4" /> Central da escola</span>
           <h1>Olá, {firstName}. Sua escola em um só lugar.</h1>
-          <p>Encontre uma área, acompanhe o que está pendente ou inicie uma tarefa sem navegar por menus escondidos.</p>
+          <p>Encontre uma área, acompanhe o que está pendente ou abra a página exclusiva de qualquer tarefa.</p>
           <div className="school-os-home-search">
             <Search className="h-5 w-5" />
             <input value={search} onChange={(event) => onSearch(event.target.value)} placeholder="O que você precisa fazer hoje?" aria-label="Buscar seção ou tarefa" />
@@ -304,6 +304,8 @@ export function SchoolOS() {
     const url = new URL(window.location.href);
     if (moduleId) url.searchParams.set("modulo", moduleId);
     else url.searchParams.delete("modulo");
+    url.searchParams.delete("tarefa");
+    url.searchParams.delete("registro");
     window.history.pushState({}, "", `${url.pathname}${url.search}${url.hash}`);
     setActiveModuleId(moduleId || "");
     setSearch("");

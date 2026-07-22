@@ -21,7 +21,7 @@ set "npm_config_engine_strict=false"
 set "FIRESTORE_WARNING=0"
 set "GITHUB_WARNING=0"
 set "SITE_WARNING=0"
-set "SOURCE_RELEASE=R11-NOVO-APP-30-SECOES"
+set "SOURCE_RELEASE=R13-PAGINAS-SEPARADAS-483-ACOES"
 
 for /f %%I in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmmss"') do set "DEPLOY_ID=%%I"
 if not defined DEPLOY_ID set "DEPLOY_ID=manual-%RANDOM%"
@@ -32,7 +32,7 @@ if not defined DEPLOY_ID set "DEPLOY_ID=manual-%RANDOM%"
 
 cls
 echo ============================================================
-echo  VESTIBULANDO - PUBLICAR R11 NOVO APP
+echo  VESTIBULANDO - PUBLICAR R13 PAGINAS SEPARADAS
 echo ============================================================
 echo Pacote conferido: %SOURCE_RELEASE%
 echo Versao desta tentativa: %DEPLOY_ID%
@@ -41,10 +41,16 @@ echo.
 
 if not exist "package.json" goto ERRO_PASTA
 if not exist "client\src\features\school-v2\SchoolOS.tsx" goto ERRO_PACOTE_ANTIGO
-findstr /I /C:"R11-NOVO-APP" "client\src\features\school-v2\SchoolOS.tsx" >nul
+findstr /I /C:"R13-PAGINAS-SEPARADAS" "client\src\features\school-v2\SchoolOS.tsx" >nul
 if errorlevel 1 goto ERRO_PACOTE_ANTIGO
 if not exist "client\src\features\school-v2\school-os.css" goto ERRO_PACOTE_ANTIGO
 findstr /I /C:"school-task-workbench" "client\src\features\school-v2\school-os.css" >nul
+if errorlevel 1 goto ERRO_PACOTE_ANTIGO
+if not exist "client\src\features\school\OperationalModuleWorkspace.tsx" goto ERRO_PACOTE_ANTIGO
+findstr /I /C:"openTask(blueprint)" "client\src\features\school\OperationalModuleWorkspace.tsx" >nul
+if errorlevel 1 goto ERRO_PACOTE_ANTIGO
+if not exist "client\src\features\school\SchoolTaskPage.tsx" goto ERRO_PACOTE_ANTIGO
+findstr /I /C:"data-task-id" "client\src\features\school\SchoolTaskPage.tsx" >nul
 if errorlevel 1 goto ERRO_PACOTE_ANTIGO
 where node >nul 2>&1
 if errorlevel 1 goto ERRO_NODE
@@ -248,9 +254,9 @@ exit /b 0
 :ERRO_PACOTE_ANTIGO
 echo.
 echo ============================================================
-echo  ESTA PASTA NAO CONTEM O NOVO APP R11
+echo  ESTA PASTA NAO CONTEM A ATUALIZACAO R13
 echo ============================================================
-echo Extraia novamente o ZIP R11 completo em uma PASTA NOVA.
+echo Extraia novamente o ZIP R13 completo em uma PASTA NOVA.
 echo Nao execute o publicador de uma pasta usada anteriormente.
 echo Nenhum arquivo foi publicado.
 pause

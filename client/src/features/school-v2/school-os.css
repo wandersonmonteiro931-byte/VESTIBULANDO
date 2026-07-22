@@ -455,7 +455,8 @@
 .school-os .school-task-fields span { padding: 7px 9px; border: 1px solid var(--os-line); border-radius: 9px; color: var(--os-muted); background: var(--os-canvas); font-size: 8px; }
 .school-os .school-task-primary-action { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 21px; padding-bottom: 20px; border-bottom: 1px solid var(--os-line); }
 .school-os .school-task-primary-action button { min-height: 40px; border-radius: 10px; }
-.school-os .school-task-primary-action button:first-child { background: var(--os-accent); }
+.school-os .school-task-auto-open { display: inline-flex; min-height: 40px; align-items: center; gap: 8px; padding: 0 13px; border: 1px solid color-mix(in srgb, var(--os-success) 30%, var(--os-line)); border-radius: 10px; background: color-mix(in srgb, var(--os-success) 8%, var(--os-panel)); color: var(--os-ink); font-size: 9px; font-weight: 700; }
+.school-os .school-task-auto-open svg { flex: 0 0 auto; color: var(--os-success); }
 .school-os .school-task-history { margin-top: 19px; }
 .school-os .school-task-history > div:first-child { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .school-os .school-task-history > div:first-child strong { color: var(--os-ink); font-size: 10px; }
@@ -621,6 +622,90 @@
 .school-os-record-dialog > .flex.flex-col-reverse button { min-height: 40px; border-radius: 10px; }
 .school-os-record-dialog > .flex.flex-col-reverse button:last-child { background: var(--os-form-accent); }
 
+/* R13: cada tarefa ocupa uma página própria, sem janela flutuante. */
+.school-os .school-task-page {
+  --os-form-accent: #175cd3;
+  --os-form-line: #dfe5ee;
+  --os-form-muted: #667085;
+  --os-form-panel: #ffffff;
+  width: 100%; max-width: 1320px; margin: 0 auto; color: var(--os-ink);
+}
+.dark .school-os .school-task-page { --os-form-line: #30394a; --os-form-muted: #98a2b3; --os-form-panel: #151d2b; }
+.school-os .school-task-page-back { display: inline-flex; align-items: center; gap: 7px; margin: 0 0 12px; padding: 7px 10px; border: 0; border-radius: 9px; color: var(--os-muted); background: transparent; font-size: 9px; font-weight: 750; cursor: pointer; }
+.school-os .school-task-page-back:hover { color: var(--os-accent); background: var(--os-accent-soft); }
+.school-os .school-task-page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 22px; padding: 25px 27px; overflow: hidden; border: 1px solid #d7e3f5; border-radius: 18px; background: linear-gradient(135deg, #f8fbff 0%, #eef5ff 58%, #f5f0ff 100%); box-shadow: 0 12px 35px rgb(23 92 211 / .08); }
+.dark .school-os .school-task-page-header { border-color: #2e4770; background: linear-gradient(135deg, #172238, #18253c 58%, #241f3d); }
+.school-os .school-task-page-heading { display: grid; min-width: 0; grid-template-columns: auto minmax(0, 1fr); align-items: flex-start; gap: 18px; }
+.school-os .school-task-page-id { display: flex; align-items: center; gap: 10px; }
+.school-os .school-task-page-id > span { display: grid; width: 48px; height: 48px; place-items: center; border-radius: 14px; color: #fff; background: linear-gradient(145deg, #175cd3, #0b4dbb); font: 850 13px/1 ui-monospace, monospace; box-shadow: 0 9px 22px rgb(23 92 211 / .25); }
+.school-os .school-task-page-id > div { display: none; }
+.school-os .school-task-page-eyebrow { display: inline-flex; align-items: center; gap: 6px; color: #175cd3; font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.dark .school-os .school-task-page-eyebrow { color: #84adff; }
+.school-os .school-task-page-heading h1 { margin: 7px 0 6px; color: var(--os-ink); font-size: clamp(22px, 2.3vw, 32px); line-height: 1.15; letter-spacing: -.035em; }
+.school-os .school-task-page-heading p { max-width: 760px; margin: 0; color: var(--os-muted); font-size: 10px; line-height: 1.65; }
+.school-os .school-task-page-header-status { display: flex; min-width: 145px; flex-direction: column; align-items: flex-end; gap: 5px; padding: 10px 12px; border: 1px solid rgb(23 92 211 / .14); border-radius: 12px; background: rgb(255 255 255 / .68); }
+.dark .school-os .school-task-page-header-status { background: rgb(15 23 42 / .5); }
+.school-os .school-task-page-header-status span { color: var(--os-muted); font-size: 8px; font-weight: 750; text-transform: uppercase; }
+.school-os .school-task-page-header-status strong { color: #175cd3; font-size: 10px; text-transform: capitalize; }
+.dark .school-os .school-task-page-header-status strong { color: #84adff; }
+.school-os .school-task-page-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; align-items: start; gap: 18px; margin-top: 18px; }
+.school-os .school-task-page-form { min-width: 0; padding: 24px 26px 28px; border: 1px solid var(--os-form-line); border-radius: 18px; background: var(--os-form-panel); box-shadow: 0 9px 30px rgb(16 24 40 / .055); }
+.school-os .school-task-page-form .school-os-form-steps { margin: 0 0 20px; }
+.school-os .school-task-page-form .school-operation-dialog-context { grid-template-columns: minmax(180px, .72fr) minmax(0, 1.28fr); gap: 14px; margin: 0 0 22px; padding: 14px; border-color: #c6d7f2; border-radius: 13px; background: #f3f7fd; }
+.dark .school-os .school-task-page-form .school-operation-dialog-context { border-color: #2e4770; background: #192840; }
+.school-os .school-task-page-form .school-operation-dialog-context > div { display: grid; grid-template-columns: 28px minmax(0, 1fr); align-items: center; gap: 9px; }
+.school-os .school-task-page-form .school-operation-dialog-context > div > svg { grid-row: 1 / span 2; color: #039855; }
+.school-os .school-task-page-form .school-operation-dialog-context > div > span { display: flex; flex-direction: column; margin: 0; }
+.school-os .school-task-page-form .school-operation-dialog-context strong { color: #175cd3; font-size: 9px; }
+.school-os .school-task-page-form .school-operation-dialog-context small,
+.school-os .school-task-page-form .school-operation-dialog-context li { color: var(--os-form-muted); font-size: 8.5px; line-height: 1.45; }
+.school-os .school-task-page-form .school-form-section-title { margin: 25px 0 13px; padding: 0 0 9px; border-color: var(--os-form-line); color: #175cd3; font-size: 9px; letter-spacing: .12em; }
+.school-os .school-task-page-form .school-form-section-title:first-of-type { margin-top: 0; }
+.school-os .school-task-page-form .school-form-grid { gap: 15px; }
+.school-os .school-task-page-form .school-form-field > label,
+.school-os .school-task-page-form .school-form-checkbox label { color: var(--os-ink); font-size: 9px; font-weight: 740; }
+.school-os .school-task-page-form :is(input, textarea, button[role="combobox"]) { border-color: var(--os-form-line); border-radius: 10px; background: var(--os-form-panel); }
+.school-os .school-task-page-form :is(input, button[role="combobox"]) { min-height: 43px; }
+.school-os .school-task-page-form textarea { min-height: 96px; }
+.school-os .school-task-page-form .school-form-checkbox { min-height: 56px; padding: 13px; border-color: var(--os-form-line); border-radius: 11px; }
+.school-os .school-task-page-form .school-attachment-zone { padding: 15px; border: 1px solid var(--os-form-line); border-radius: 13px; background: color-mix(in srgb, var(--os-form-panel) 86%, #eef4fb); }
+.school-os .school-task-page-form .school-upload-button { border-color: #b7cbea; border-radius: 11px; color: #175cd3; background: #f2f7ff; }
+.dark .school-os .school-task-page-form .school-upload-button { border-color: #365680; background: #192840; }
+.school-os .school-task-page-aside { position: sticky; top: 82px; display: grid; gap: 12px; }
+.school-os .school-task-page-aside-card,
+.school-os .school-task-page-summary,
+.school-os .school-task-page-history,
+.school-os .school-task-page-actions { border: 1px solid var(--os-form-line); border-radius: 16px; background: var(--os-form-panel); box-shadow: 0 8px 26px rgb(16 24 40 / .05); }
+.school-os .school-task-page-aside-card { padding: 18px; }
+.school-os .school-task-page-aside-icon { display: grid; width: 36px; height: 36px; place-items: center; border-radius: 11px; color: #039855; background: #ecfdf3; }
+.dark .school-os .school-task-page-aside-icon { background: rgb(3 152 85 / .14); }
+.school-os .school-task-page-aside-card h2 { margin: 12px 0 10px; font-size: 13px; }
+.school-os .school-task-page-aside-card ul { display: grid; gap: 9px; margin: 0; padding: 0; list-style: none; }
+.school-os .school-task-page-aside-card li { display: grid; grid-template-columns: 16px minmax(0, 1fr); align-items: start; gap: 7px; color: var(--os-muted); font-size: 8.5px; line-height: 1.45; }
+.school-os .school-task-page-aside-card li svg { margin-top: 1px; color: #039855; }
+.school-os .school-task-page-summary { overflow: hidden; }
+.school-os .school-task-page-summary > div { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 14px; border-bottom: 1px solid var(--os-form-line); }
+.school-os .school-task-page-summary > div:last-child { border-bottom: 0; }
+.school-os .school-task-page-summary span { color: var(--os-muted); font-size: 8px; }
+.school-os .school-task-page-summary strong { overflow: hidden; color: var(--os-ink); font-size: 9px; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
+.school-os .school-task-page-history { display: grid; gap: 0; overflow: hidden; }
+.school-os .school-task-page-history h2 { margin: 0; padding: 13px 14px; border-bottom: 1px solid var(--os-form-line); font-size: 10px; }
+.school-os .school-task-page-history > div { display: flex; flex-direction: column; gap: 3px; padding: 10px 14px; border-bottom: 1px solid var(--os-form-line); }
+.school-os .school-task-page-history > div:last-child { border-bottom: 0; }
+.school-os .school-task-page-history span { color: var(--os-ink); font-size: 8.5px; font-weight: 700; }
+.school-os .school-task-page-history small,
+.school-os .school-task-page-history strong { color: var(--os-muted); font-size: 7.5px; font-weight: 550; }
+.school-os .school-task-page-history-current { background: color-mix(in srgb, var(--os-form-panel) 84%, #eef4fb); }
+.school-os .school-task-page-actions { display: grid; gap: 8px; padding: 12px; }
+.school-os .school-task-page-actions button { width: 100%; min-height: 42px; border-radius: 10px; }
+.school-os .school-task-page-actions button:first-child { background: #175cd3; }
+
+@media (max-width: 980px) {
+  .school-os .school-task-page-layout { grid-template-columns: 1fr; }
+  .school-os .school-task-page-aside { position: static; grid-template-columns: 1fr 1fr; }
+  .school-os .school-task-page-actions { grid-column: 1 / -1; grid-template-columns: 1fr 1fr; }
+}
+
 @media (max-width: 720px) {
   .school-os-record-dialog { width: calc(100vw - 14px) !important; max-height: calc(100dvh - 14px) !important; padding: 18px !important; border-radius: 17px !important; }
   .school-os-form-header { margin: -18px -18px 0 !important; padding: 19px 50px 20px 18px !important; }
@@ -634,6 +719,16 @@
   .school-os-record-dialog .school-attachment-zone { grid-template-columns: 1fr; }
   .school-os-record-dialog [class*="DialogFooter"],
   .school-os-record-dialog > .flex.flex-col-reverse { bottom: -18px; margin: 18px -18px -18px; padding: 12px 18px; }
+  .school-os .school-task-page-header { flex-direction: column; padding: 19px; }
+  .school-os .school-task-page-heading { grid-template-columns: 40px minmax(0, 1fr); gap: 12px; }
+  .school-os .school-task-page-id > span { width: 40px; height: 40px; border-radius: 11px; }
+  .school-os .school-task-page-header-status { width: 100%; align-items: flex-start; }
+  .school-os .school-task-page-form { padding: 17px; border-radius: 15px; }
+  .school-os .school-task-page-form .school-operation-dialog-context,
+  .school-os .school-task-page-form .school-form-grid,
+  .school-os .school-task-page-form .school-attachment-zone { grid-template-columns: 1fr; }
+  .school-os .school-task-page-aside { grid-template-columns: 1fr; }
+  .school-os .school-task-page-actions { grid-column: auto; grid-template-columns: 1fr; }
 }
 
 @media (max-width: 430px) {

@@ -1,4 +1,4 @@
-# Vestibulando R11 — novo aplicativo escolar
+# Vestibulando R13 — uma página para cada ação
 
 ## Resultado
 
@@ -16,13 +16,16 @@ A interface escolar foi reconstruída sobre uma nova estrutura visual, mantendo 
 
 ## Operações
 
-Os 483 requisitos do catálogo continuam ligados ao motor operacional. Cada tarefa mostra antes da execução:
+Os 483 requisitos do catálogo continuam ligados ao motor operacional. Agora, clicar em qualquer tarefa navega para uma página completa e exclusiva, sem janela flutuante e sem confirmação intermediária. Cada ação mantém:
 
 - etapa do processo;
 - dados que serão solicitados;
 - validações e cálculos automáticos;
 - registros anteriores relacionados;
-- ação específica para iniciar o formulário contextual.
+- URL individual com o identificador permanente da tarefa;
+- página específica pronta para preenchimento e edição;
+- cabeçalho, regras automáticas, resumo, anexos, salvamento e histórico;
+- rascunho independente por tarefa, sem mistura de dados entre ações.
 
 Setores que possuem telas operacionais maduras — chamada, avaliações, notas, calendário, documentos, financeiro, horários, avisos e outros — preservam essas telas e também oferecem a aba **Todas as tarefas**, evitando que requisitos complementares fiquem escondidos.
 
@@ -41,6 +44,6 @@ Antes da entrega são executados:
 1. `npm run check`
 2. `npm run verify:school`
 3. `npm run smoke:api`
-4. `npm run build`
+4. `npm run build:pages`
 
 O verificador exige 30 módulos, 483 identificadores únicos, formulários contextuais, componentes reais, ausência de Firebase Storage, integridade do chat, scripts Windows em CRLF e publicação protegida no projeto Cloudflare existente.

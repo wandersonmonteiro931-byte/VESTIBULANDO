@@ -1,5 +1,5 @@
-VESTIBULANDO R11 - NOVO APP ESCOLAR
-===================================
+VESTIBULANDO R13 - PAGINAS SEPARADAS
+=====================================
 
 O que mudou
 -----------
@@ -7,7 +7,11 @@ O que mudou
 - As 30 secoes aparecem no menu e no mapa da tela inicial.
 - Busca global por secao e tarefa.
 - Cada setor abre em uma pagina propria.
-- Tarefas agora mostram campos e validacoes antes da execucao.
+- Ao clicar em qualquer tarefa, uma pagina completa e exclusiva e aberta.
+- Cada uma das 483 acoes possui um endereco proprio identificado por ?tarefa=VE-RQ-MM-II.
+- Nao existe janela flutuante para executar ou editar as tarefas.
+- A pagina possui cabecalho, campos, regras, anexos, salvamento e historico.
+- Rascunhos de tarefas diferentes ficam separados e nao misturam informacoes.
 - Cadastros, anexos, auditoria, notificacoes e dados em tempo real foram mantidos.
 - Arquivos continuam no Firestore; Firebase Storage nao e usado.
 - O chat foi preservado sem alteracoes.
@@ -16,7 +20,7 @@ Como publicar
 -------------
 1. Extraia o ZIP inteiro em uma pasta nova.
 2. Abra a pasta VESTIBULANDO-SISTEMA-ESCOLAR-COMPLETO.
-3. Clique duas vezes em PUBLICAR_R11_AGORA.bat.
+3. Clique duas vezes em PUBLICAR_R13_AGORA.bat.
 4. Quando o Cloudflare pedir login, use somente:
    yasminpereiragabrielly88@gmail.com
 5. Aguarde aparecer SITE ATUALIZADO COM SUCESSO.

@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Loader2, Paperclip, Save, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ClipboardList, Loader2, Paperclip, Save, ShieldCheck, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -38,8 +37,7 @@ interface DirectoryClass {
   nome: string;
 }
 
-interface SchoolRecordDialogProps {
-  open: boolean;
+interface SchoolTaskPageProps {
   module: SchoolModuleDefinition;
   record?: SchoolRecord | null;
   initialCapability?: string | null;
@@ -47,7 +45,7 @@ interface SchoolRecordDialogProps {
   actor: SchoolActor;
   users?: DirectoryUser[];
   classes?: DirectoryClass[];
-  onOpenChange: (open: boolean) => void;
+  onBack: () => void;
   onSaved: (record: SchoolRecord) => void;
 }
 
@@ -107,6 +105,12 @@ function defaultState(module: SchoolModuleDefinition, record?: SchoolRecord | nu
 
 function inputValue(value: string | number | boolean | undefined): string | number {
   return typeof value === "boolean" || value === undefined ? "" : value;
+}
+
+function formatPageDate(value?: string) {
+  if (!value) return "Agora";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString("pt-BR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 function DynamicField({
@@ -170,8 +174,7 @@ function DynamicField({
   );
 }
 
-export function SchoolRecordDialog({
-  open,
+export function SchoolTaskPage({
   module,
   record,
   initialCapability,
@@ -179,9 +182,9 @@ export function SchoolRecordDialog({
   actor,
   users = [],
   classes = [],
-  onOpenChange,
+  onBack,
   onSaved,
-}: SchoolRecordDialogProps) {
+}: SchoolTaskPageProps) {
   const { toast } = useToast();
   const [form, setForm] = useState<FormState>(() => defaultState(module, record, initialCapability));
   const [saving, setSaving] = useState(false);
@@ -199,7 +202,6 @@ export function SchoolRecordDialog({
   const capabilityFields = useMemo(() => blueprint.fields.filter((item) => !moduleFieldKeys.has(item.key)), [blueprint, moduleFieldKeys]);
 
   useEffect(() => {
-    if (!open) return;
     const initial = defaultState(module, record, initialCapability);
     if (!record) {
       try {
@@ -221,15 +223,15 @@ export function SchoolRecordDialog({
       }
     }
     setForm(initial);
-  }, [open, module.id, record?.id, initialCapability]);
+  }, [module.id, record?.id, initialCapability]);
 
   useEffect(() => {
-    if (!open || record) return;
+    if (record) return;
     const timeout = window.setTimeout(() => {
       localStorage.setItem(draftKey, JSON.stringify({ ...form, attachments: [] }));
     }, 450);
     return () => window.clearTimeout(timeout);
-  }, [open, record?.id, form, draftKey]);
+  }, [record?.id, form, draftKey]);
 
   const setCustomValue = (key: string, value: string | number | boolean) => {
     setForm((current) => ({ ...current, customData: { ...current.customData, [key]: value } }));
@@ -282,7 +284,6 @@ export function SchoolRecordDialog({
       const saved = await saveSchoolRecord(payload, actor);
       localStorage.removeItem(draftKey);
       onSaved(saved);
-      onOpenChange(false);
       toast({ title: record ? "Ação atualizada" : "Ação registrada", description: "Os dados foram salvos com sucesso." });
     } catch (error: any) {
       toast({ title: "Revise os dados", description: error.message, variant: "destructive" });
@@ -292,13 +293,19 @@ export function SchoolRecordDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="school-record-dialog school-os-record-dialog max-w-5xl max-h-[92vh] overflow-y-auto" data-school-module={module.id}>
-        <DialogHeader className="school-os-form-header">
-          <div className="school-os-form-module"><span>{String(module.number).padStart(2, "0")}</span><div><small>{module.shortTitle}</small><strong>{blueprint.workflow}</strong></div></div>
-          <DialogTitle>{record ? "Editar ação" : blueprint.title}<span>{record ? blueprint.title : "Formulário aberto automaticamente"}</span></DialogTitle>
-          <DialogDescription>{lockedCapability ? "Preencha os dados desta ação e salve. Os campos, regras e validações corretos já foram selecionados automaticamente." : "Preencha os dados abaixo. Campos obrigatórios estão marcados com *."}</DialogDescription>
-        </DialogHeader>
+    <section className="school-task-page" data-school-module={module.id} data-task-id={blueprint.id}>
+      <button type="button" className="school-task-page-back" onClick={onBack}><ArrowLeft className="h-4 w-4" />Voltar para {module.shortTitle}</button>
+
+      <header className="school-task-page-header">
+        <div className="school-task-page-heading">
+          <div className="school-task-page-id"><span>{String(module.number).padStart(2, "0")}</span><div><small>{module.shortTitle}</small><strong>{blueprint.id}</strong></div></div>
+          <div><span className="school-task-page-eyebrow"><ClipboardList className="h-4 w-4" />{blueprint.workflow}</span><h1>{record ? `Editar: ${blueprint.title}` : blueprint.title}</h1><p>Esta é a página exclusiva desta ação. Preencha os dados abaixo; regras, protocolo, histórico e auditoria serão aplicados ao salvar.</p></div>
+        </div>
+        <div className="school-task-page-header-status"><span>{record ? "Registro existente" : "Nova ação"}</span><strong>{form.status}</strong></div>
+      </header>
+
+      <div className="school-task-page-layout">
+        <main className="school-task-page-form">
 
         <div className="school-os-form-steps" aria-label="Etapas do preenchimento"><span className="is-active"><b>1</b>Identificação</span><i /><span><b>2</b>Dados da tarefa</span><i /><span><b>3</b>Anexos e conclusão</span></div>
 
@@ -410,14 +417,29 @@ export function SchoolRecordDialog({
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSave} disabled={saving || uploading || !form.title.trim() || !form.capability}>
-            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            {record ? "Salvar alterações" : "Salvar ação"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </main>
+
+        <aside className="school-task-page-aside">
+          <div className="school-task-page-aside-card">
+            <span className="school-task-page-aside-icon"><ShieldCheck className="h-5 w-5" /></span>
+            <h2>O sistema cuidará disso</h2>
+            <ul>{blueprint.automations.slice(0, 6).map((automation) => <li key={automation}><CheckCircle2 className="h-4 w-4" />{automation}</li>)}</ul>
+          </div>
+          <div className="school-task-page-summary">
+            <div><span>Campos desta página</span><strong>{module.fields.length + capabilityFields.length}</strong></div>
+            <div><span>Código/protocolo</span><strong>{form.code}</strong></div>
+            <div><span>Anexos</span><strong>{form.attachments.length}</strong></div>
+          </div>
+          {record && <div className="school-task-page-history"><h2>Histórico do registro</h2><div className="school-task-page-history-current"><span>Atualizado por {record.updatedByName}</span><strong>{formatPageDate(record.updatedAt)}</strong></div>{[...(record.versions || [])].reverse().slice(0, 4).map((version, index) => <div key={`${version.at}-${index}`}><span>{version.action || "Alteração registrada"}</span><small>{version.byName} · {formatPageDate(version.at)}</small></div>)}</div>}
+          <div className="school-task-page-actions">
+            <Button onClick={handleSave} disabled={saving || uploading || !form.title.trim() || !form.capability}>
+              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              {record ? "Salvar alterações" : "Salvar ação"}
+            </Button>
+            <Button variant="outline" onClick={onBack}>Voltar sem salvar</Button>
+          </div>
+        </aside>
+      </div>
+    </section>
   );
 }

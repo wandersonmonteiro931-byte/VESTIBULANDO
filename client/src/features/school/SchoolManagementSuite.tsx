@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { where } from "firebase/firestore";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -77,9 +77,10 @@ import {
 } from "./schoolData";
 import { SchoolAccountDialog } from "./SchoolAccountDialog";
 import { SchoolRecordDetails } from "./SchoolRecordDetails";
-import { SchoolRecordDialog } from "./SchoolRecordDialog";
+import { SchoolTaskPage } from "./SchoolTaskPage";
 import { IntegrationOperationsPanel } from "./GovernancePanels";
 import { CapabilityWorkspace, OperationalModuleWorkspace, hasOperationalModuleWorkspace } from "./OperationalModuleWorkspace";
+import { capabilityBlueprint } from "./schoolCapabilityEngine";
 
 const categoryIcons: Record<ModuleCategory, ElementType> = {
   fundacao: FolderCog,
@@ -277,6 +278,11 @@ function DataContinuityPanel({ records, auditLogs, backups, backupTests, actor, 
   );
 }
 
+function capabilityFromTaskId(module: SchoolModuleDefinition | undefined, taskId: string | null) {
+  if (!module || !taskId) return null;
+  return module.capabilities.find((capability) => capabilityBlueprint(module, capability).id === taskId) || null;
+}
+
 export function SchoolManagementSuite({ initialModuleId, focused = false }: { initialModuleId?: string; focused?: boolean } = {}) {
   const { userData } = useAuth();
   const { toast } = useToast();
@@ -298,11 +304,10 @@ export function SchoolManagementSuite({ initialModuleId, focused = false }: { in
   const [statusFilter, setStatusFilter] = useState("all");
   const [capabilityFilter, setCapabilityFilter] = useState("all");
   const [showTrash, setShowTrash] = useState(false);
-  const [formOpen, setFormOpen] = useState(false);
+  const [taskPageCapability, setTaskPageCapability] = useState<string | null>(() => capabilityFromTaskId(initialModuleId ? SCHOOL_MODULE_BY_ID[initialModuleId] : undefined, new URLSearchParams(window.location.search).get("tarefa")));
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<SchoolRecord | null>(null);
-  const [initialCapability, setInitialCapability] = useState<string | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<SchoolRecord | null>(null);
   const [deleteRecord, setDeleteRecord] = useState<SchoolRecord | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -341,10 +346,58 @@ export function SchoolManagementSuite({ initialModuleId, focused = false }: { in
     }).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }, [moduleRecords, recordSearch, showTrash, statusFilter, capabilityFilter, selectedModule]);
 
+  useEffect(() => {
+    const syncTaskPage = () => {
+      if (!selectedModule) return;
+      const params = new URLSearchParams(window.location.search);
+      const capability = capabilityFromTaskId(selectedModule, params.get("tarefa"));
+      setTaskPageCapability(capability);
+      const recordId = params.get("registro");
+      setEditingRecord(capability && recordId ? moduleRecords.find((record) => record.id === recordId) || null : null);
+    };
+    window.addEventListener("popstate", syncTaskPage);
+    syncTaskPage();
+    return () => window.removeEventListener("popstate", syncTaskPage);
+  }, [selectedModule?.id, moduleRecords]);
+
   if (!selectedModule) return <div className="school-empty-state"><LockKeyhole className="h-10 w-10" /><h3>Nenhum módulo liberado</h3><p>Solicite à direção uma permissão individual de acesso.</p></div>;
 
-  const openNewRecord = (capability?: string) => { setEditingRecord(null); setInitialCapability(capability || selectedModule.capabilities[0]); setFormOpen(true); };
-  const openEdit = (record: SchoolRecord) => { setDetailsOpen(false); setEditingRecord(record); setInitialCapability(record.capability || selectedModule.capabilities[record.capabilityIndex] || selectedModule.capabilities[0]); setFormOpen(true); };
+  const updateTaskLocation = (capability?: string | null, recordId?: string, replace = false) => {
+    const url = new URL(window.location.href);
+    if (capability) url.searchParams.set("tarefa", capabilityBlueprint(selectedModule, capability).id);
+    else url.searchParams.delete("tarefa");
+    if (recordId) url.searchParams.set("registro", recordId);
+    else url.searchParams.delete("registro");
+    window.history[replace ? "replaceState" : "pushState"]({}, "", `${url.pathname}${url.search}${url.hash}`);
+  };
+  const openNewRecord = (capability?: string) => {
+    const taskCapability = capability || selectedModule.capabilities[0];
+    setEditingRecord(null);
+    setTaskPageCapability(taskCapability);
+    updateTaskLocation(taskCapability);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const openEdit = (record: SchoolRecord) => {
+    const taskCapability = record.capability || selectedModule.capabilities[record.capabilityIndex] || selectedModule.capabilities[0];
+    setDetailsOpen(false);
+    setEditingRecord(record);
+    setTaskPageCapability(taskCapability);
+    updateTaskLocation(taskCapability, record.id);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const closeTaskPage = () => {
+    setTaskPageCapability(null);
+    setEditingRecord(null);
+    updateTaskLocation(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const handleTaskSaved = (record: SchoolRecord) => {
+    const taskCapability = record.capability || taskPageCapability || selectedModule.capabilities[0];
+    setEditingRecord(record);
+    setTaskPageCapability(taskCapability);
+    setSelectedRecord(record);
+    updateTaskLocation(taskCapability, record.id, true);
+  };
   const openDetails = (record: SchoolRecord) => { setSelectedRecord(record); setDetailsOpen(true); };
   const handleDelete = async () => {
     if (!deleteRecord) return;
@@ -375,9 +428,12 @@ export function SchoolManagementSuite({ initialModuleId, focused = false }: { in
   return (
     <div className="school-suite">
       <div className={cn("school-suite-layout", focused && "is-focused")}>
-        {!focused && <ModuleNavigator modules={filteredModules} selectedId={selectedModule.id} search={moduleSearch} onSearch={setModuleSearch} onSelect={(id) => { setSelectedModuleId(id); setStatusFilter("all"); setCapabilityFilter("all"); setRecordSearch(""); setShowTrash(false); }} counts={counts} />}
+        {!focused && <ModuleNavigator modules={filteredModules} selectedId={selectedModule.id} search={moduleSearch} onSearch={setModuleSearch} onSelect={(id) => { setSelectedModuleId(id); setTaskPageCapability(null); setEditingRecord(null); setStatusFilter("all"); setCapabilityFilter("all"); setRecordSearch(""); setShowTrash(false); const url = new URL(window.location.href); url.searchParams.delete("tarefa"); url.searchParams.delete("registro"); window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`); }} counts={counts} />}
 
         <main className="school-module-workspace">
+          {taskPageCapability ? (
+            <SchoolTaskPage key={`${selectedModule.id}:${taskPageCapability}:${editingRecord?.id || "novo"}`} module={selectedModule} record={editingRecord} initialCapability={taskPageCapability} lockedCapability actor={actor} users={users} classes={classes} onBack={closeTaskPage} onSaved={handleTaskSaved} />
+          ) : <>
           <div className="school-module-hero">
             <div className="school-module-title-row"><span className="school-module-hero-number">{String(selectedModule.number).padStart(2, "0")}</span><div><div className="school-module-label">{SCHOOL_CATEGORIES.find((category) => category.id === selectedModule.category)?.label}</div><h3>{selectedModule.title}</h3><p>{selectedModule.description}</p></div></div>
             <div className="school-module-actions">
@@ -386,11 +442,11 @@ export function SchoolManagementSuite({ initialModuleId, focused = false }: { in
             </div>
           </div>
 
-          {hasOperationalWorkspace && <OperationalModuleWorkspace module={selectedModule} role={role} actor={actor} user={userData} users={users} classes={classes} records={moduleRecords} allRecords={records} canWrite={canWrite} onCreate={openNewRecord} onView={openDetails} />}
+          {hasOperationalWorkspace && <OperationalModuleWorkspace module={selectedModule} role={role} actor={actor} user={userData} users={users} classes={classes} records={moduleRecords} allRecords={records} canWrite={canWrite} onOpenTask={openNewRecord} onView={openDetails} />}
           {selectedModule.id === "relatorios" && <AnalyticsPanel records={records} />}
           {selectedModule.id === "continuidade" && <DataContinuityPanel records={records} auditLogs={auditLogs} backups={backups} backupTests={backupTests} actor={actor} canRestore={isPrivileged} />}
           {selectedModule.id === "integracoes" && <IntegrationOperationsPanel modules={writableModules} records={records} actor={actor} canImport={canWrite} />}
-          {hasSuiteWorkspace && <CapabilityWorkspace module={selectedModule} records={moduleRecords} canWrite={canWrite} onCreate={openNewRecord} onView={openDetails} compact />}
+          {hasSuiteWorkspace && <CapabilityWorkspace module={selectedModule} records={moduleRecords} canWrite={canWrite} onOpenTask={openNewRecord} onView={openDetails} compact />}
 
           {!isDedicatedWorkspace && <><div className="school-module-kpis">
             <div><span>Cadastros ativos</span><strong>{activeModuleRecords.length}</strong><PackageOpen className="h-5 w-5" /></div>
@@ -411,10 +467,10 @@ export function SchoolManagementSuite({ initialModuleId, focused = false }: { in
               ) : <div className="school-empty-state"><PackageOpen className="h-10 w-10" /><h3>{showTrash ? "Nenhum item arquivado" : "Nenhum cadastro encontrado"}</h3><p>{recordSearch || statusFilter !== "all" || capabilityFilter !== "all" ? "Ajuste os filtros para ampliar a busca." : canWrite ? `Use o botão “${createLabel}” para começar.` : "Ainda não há dados compartilhados com seu perfil."}</p>{canWrite && !showTrash && !recordSearch && <Button onClick={() => openNewRecord()}><Plus className="mr-2 h-4 w-4" />{createLabel}</Button>}</div>}
             </CardContent>
           </Card></>}
+          </>}
         </main>
       </div>
 
-      <SchoolRecordDialog open={formOpen} module={selectedModule} record={editingRecord} initialCapability={initialCapability} lockedCapability={Boolean(initialCapability) && !editingRecord && isDedicatedWorkspace} actor={actor} users={users} classes={classes} onOpenChange={(open) => { setFormOpen(open); if (!open) setInitialCapability(null); }} onSaved={(record) => { setSelectedRecord(record); setDetailsOpen(true); }} />
       <SchoolRecordDetails open={detailsOpen} record={selectedRecord} module={selectedRecord ? SCHOOL_MODULE_BY_ID[selectedRecord.moduleId] || selectedModule : selectedModule} actor={actor} canWrite={selectedRecord ? canWriteModule(role, selectedRecord.moduleId, explicitPermissions) : canWrite} isStaff={canUsePrivateNotes} onOpenChange={setDetailsOpen} onEdit={openEdit} onDelete={(record) => setDeleteRecord(record)} onRestore={handleRestore} />
       <SchoolAccountDialog open={accountOpen} actor={actor} students={users.filter((user: any) => user.tipo === "aluno")} onOpenChange={setAccountOpen} />
       <AlertDialog open={Boolean(deleteRecord)} onOpenChange={(open) => !open && setDeleteRecord(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Arquivar este cadastro?</AlertDialogTitle><AlertDialogDescription>Ele sairá da lista principal, ficará guardado por 90 dias e poderá ser restaurado.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction className="bg-destructive text-destructive-foreground" onClick={handleDelete} disabled={deleting}>{deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Arquivar</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>

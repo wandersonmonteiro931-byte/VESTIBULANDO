@@ -98,11 +98,12 @@ const requiredArtifacts = [
   "client/public/terms.html", "client/public/cookies.html", "client/public/school-icon-192.png",
   "client/public/school-icon-512.png", "client/src/features/school/SchoolManagementSuite.tsx",
   "client/src/features/school/SchoolOperationsHome.tsx",
-  "client/src/features/school/OperationalModuleWorkspace.tsx",
+  "client/src/features/school/OperationalModuleWorkspace.tsx", "client/src/features/school/SchoolTaskPage.tsx",
   "client/src/features/school-v2/SchoolOS.tsx", "client/src/features/school-v2/school-os.css",
   "client/src/features/school/GuardianFamilyPanel.tsx", "client/src/features/school/AccessControlPanel.tsx",
   "client/src/features/school/schoolCapabilityEngine.ts", "docs/MATRIZ-OPERACIONAL-483-REQUISITOS.md",
-  "ATUALIZAR_GITHUB_E_CLOUDFLARE.bat", "PUBLICAR_R11_AGORA.bat", "LEIA-ME-PRIMEIRO-R11.txt", "docs/ATUALIZACAO-CLOUDFLARE.md",
+  "ATUALIZAR_GITHUB_E_CLOUDFLARE.bat", "PUBLICAR_R13_AGORA.bat", "LEIA-ME-PRIMEIRO-R13.txt", "RELATORIO-DE-VALIDACAO-R13.txt",
+  "docs/NOVO-APP-R13.md", "docs/ATUALIZACAO-CLOUDFLARE.md",
   "scripts/confirm-cloudflare-version.ps1",
   "client/src/lib/firestoreFileStore.ts", "client/src/pages/FirestoreFilePage.tsx",
 ];
@@ -111,13 +112,13 @@ for (const artifact of requiredArtifacts) check(existsSync(resolve(root, artifac
 const firestoreRules = readFileSync(resolve(root, "firestore.rules"), "utf8");
 const windowsPublisher = readFileSync(resolve(root, "ATUALIZAR_GITHUB_E_CLOUDFLARE.bat"), "utf8");
 const windowsPublisherBytes = readFileSync(resolve(root, "ATUALIZAR_GITHUB_E_CLOUDFLARE.bat"));
-const windowsLauncherBytes = readFileSync(resolve(root, "PUBLICAR_R11_AGORA.bat"));
+const windowsLauncherBytes = readFileSync(resolve(root, "PUBLICAR_R13_AGORA.bat"));
 const cloudflareVersionChecker = readFileSync(resolve(root, "scripts/confirm-cloudflare-version.ps1"), "utf8");
 const firebaseConfiguration = readFileSync(resolve(root, "firebase.json"), "utf8");
 const schoolHome = readFileSync(resolve(root, "client/src/features/school/SchoolOperationsHome.tsx"), "utf8");
 const schoolSuite = readFileSync(resolve(root, "client/src/features/school/SchoolManagementSuite.tsx"), "utf8");
 const operationalWorkspace = readFileSync(resolve(root, "client/src/features/school/OperationalModuleWorkspace.tsx"), "utf8");
-const recordDialog = readFileSync(resolve(root, "client/src/features/school/SchoolRecordDialog.tsx"), "utf8");
+const taskPage = readFileSync(resolve(root, "client/src/features/school/SchoolTaskPage.tsx"), "utf8");
 const assessmentsTab = readFileSync(resolve(root, "client/src/components/AvaliacoesTab.tsx"), "utf8");
 const schoolDetails = readFileSync(resolve(root, "client/src/features/school/SchoolRecordDetails.tsx"), "utf8");
 const schoolPlatform = readFileSync(resolve(root, "client/src/pages/SchoolPlatformPage.tsx"), "utf8");
@@ -141,12 +142,12 @@ check(schoolHomeItems >= 28, `O painel operacional expõe somente ${schoolHomeIt
 const adminSections = new Set([...adminDashboard.matchAll(/selectedSection === "([^"]+)"/g)].map((match) => match[1]));
 const linkedSections = [...schoolHome.matchAll(/href: "\/diretor\?secao=([^&"]+)/g)].map((match) => match[1]);
 check(linkedSections.every((section) => adminSections.has(section)), "Há atalhos no painel escolar sem uma tela funcional correspondente na diretoria.");
-check(schoolPlatform.includes("<SchoolOS />"), "A rota escolar não abre o novo aplicativo R11.");
-check(schoolOS.includes('data-release="R11-NOVO-APP"'), "O novo aplicativo não possui o marcador de versão R11.");
+check(schoolPlatform.includes("<SchoolOS />"), "A rota escolar não abre o aplicativo atualizado.");
+check(schoolOS.includes('data-release="R13-PAGINAS-SEPARADAS"'), "O aplicativo não possui o marcador de versão R13.");
 check(schoolOS.includes("SCHOOL_CATEGORIES.map") && schoolOS.includes("SCHOOL_MODULES.filter"), "O mapa do novo aplicativo não deriva as 30 seções do catálogo oficial.");
 check(schoolOS.includes("SchoolManagementSuite key={activeModule.id}") && schoolOS.includes("focused"), "As seções não abrem em uma área de trabalho focada.");
 check(schoolOS.includes("Todas as seções") && schoolOS.includes("Buscar seção ou tarefa"), "A navegação completa ou a busca global está ausente.");
-check(schoolOSStyles.includes(".school-os-sidebar") && schoolOSStyles.includes(".school-os-module-grid") && schoolOSStyles.includes(".school-task-workbench"), "O design integral R11 está incompleto.");
+check(schoolOSStyles.includes(".school-os-sidebar") && schoolOSStyles.includes(".school-os-module-grid") && schoolOSStyles.includes(".school-task-workbench") && schoolOSStyles.includes(".school-task-page-layout"), "O design integral R13 está incompleto.");
 check(appRouter.includes('<Route path="/diretor">') && appRouter.indexOf("<SchoolPlatformPage />", appRouter.indexOf('<Route path="/diretor">')) > -1, "A diretoria ainda inicia no painel antigo.");
 check(!schoolSuite.includes("Nova operação") && !schoolSuite.includes("30/30") && !schoolSuite.includes("Funções acionáveis"), "A interface voltou a exibir contadores ou termos técnicos no lugar das tarefas escolares.");
 check(schoolSuite.includes("!isDedicatedWorkspace") && schoolSuite.includes("hasOperationalModuleWorkspace"), "As telas operacionais voltaram a cair na tabela genérica de cadastros.");
@@ -155,14 +156,17 @@ check(realComponents.every((component) => operationalWorkspace.includes(`<${comp
 const operationalIds = new Set([...operationalWorkspace.matchAll(/^\s+"([a-z-]+)",$/gm)].map((match) => match[1]).filter((id) => validModuleIds.has(id)));
 const suiteWorkspaceIds = new Set(["relatorios", "integracoes", "continuidade"]);
 check(modules.every((module) => operationalIds.has(module.id) || suiteWorkspaceIds.has(module.id)), `A navegação operacional cobre somente ${operationalIds.size + suiteWorkspaceIds.size}/30 módulos.`);
-check(operationalWorkspace.includes("school-task-workbench") && operationalWorkspace.includes("Informações solicitadas") && operationalWorkspace.includes("Iniciar esta tarefa"), "As tarefas complementares voltaram ao catálogo repetitivo sem contexto operacional.");
-check(recordDialog.includes("lockedCapability") && recordDialog.includes("contém somente os dados necessários"), "As tarefas complementares voltaram a abrir no seletor padronizado de funcionalidades.");
+check(operationalWorkspace.includes("school-task-workbench") && operationalWorkspace.includes("Informações solicitadas"), "As tarefas complementares voltaram ao catálogo repetitivo sem contexto operacional.");
+check(operationalWorkspace.includes("openTask(blueprint)") && operationalWorkspace.includes("if (canWrite) onOpenTask(blueprint.title)") && !operationalWorkspace.includes("Iniciar esta tarefa"), "Nem todas as tarefas navegam para a página selecionada.");
+check(schoolSuite.includes("<SchoolTaskPage") && !schoolSuite.includes("<SchoolRecordDialog") && schoolSuite.includes('url.searchParams.set("tarefa"') && schoolSuite.includes("capabilityFromTaskId"), "As tarefas ainda não usam páginas próprias com URL individual.");
+check(schoolOS.includes('url.searchParams.delete("tarefa")') && schoolSuite.includes('window.addEventListener("popstate"'), "A navegação voltar/avançar das páginas de tarefa está incompleta.");
+check(taskPage.includes('data-task-id={blueprint.id}') && taskPage.includes("saveSchoolRecord") && taskPage.includes("uploadSchoolAttachment") && taskPage.includes("Histórico do registro") && taskPage.includes(":${draftCapability}"), "A página exclusiva não contém formulário, anexos, histórico ou rascunho por tarefa.");
 check(assessmentsTab.includes('scope?: "all" | "atividades" | "avaliacoes"') && operationalWorkspace.includes('scope={module.id === "atividades"'), "A separação entre atividades e avaliações foi removida.");
 check(!schoolDetails.includes("Automação verificada") && !schoolDetails.includes("Funcionalidade/requisito"), "Os detalhes do cadastro ainda expõem o motor técnico ao usuário.");
 check(windowsPublisher.includes('findstr /I /C:"%SITE_HOST%"'), "O publicador não valida a conta proprietária do domínio principal.");
 check(windowsPublisher.includes("yasminpereiragabrielly88@gmail.com") && windowsPublisher.includes("vestibulando-yasmin"), "O publicador não fixa a conta e o perfil exclusivos do projeto original.");
-check(windowsPublisher.includes("R11-NOVO-APP-30-SECOES") && windowsPublisher.includes("school-v2\\SchoolOS.tsx"), "O publicador não rejeita uma pasta anterior ao novo aplicativo R11.");
-check(windowsPublisher.includes('findstr /I /C:"R11-NOVO-APP"') && windowsPublisher.includes('findstr /I /C:"school-task-workbench"'), "A validação do pacote R11 no Windows está incompleta.");
+check(windowsPublisher.includes("R13-PAGINAS-SEPARADAS-483-ACOES") && windowsPublisher.includes("school-v2\\SchoolOS.tsx"), "O publicador não rejeita uma pasta anterior à atualização R13.");
+check(windowsPublisher.includes('findstr /I /C:"R13-PAGINAS-SEPARADAS"') && windowsPublisher.includes('findstr /I /C:"data-task-id"'), "A validação do pacote R13 no Windows está incompleta.");
 check(!windowsPublisherBytes.toString("binary").replaceAll("\r\n", "").includes("\n") && !windowsLauncherBytes.toString("binary").replaceAll("\r\n", "").includes("\n"), "Os arquivos .bat precisam usar CRLF para não perder a primeira letra dos comandos no Windows.");
 check(windowsPublisher.includes("wrangler pages project list --json") && windowsPublisher.includes("wrangler pages deployment list"), "O publicador não confirma o projeto existente antes do envio.");
 check(!windowsPublisher.includes("wrangler pages project create") && windowsPublisher.includes('set "CI=true"'), "O publicador pode tentar criar um projeto Cloudflare novo.");
