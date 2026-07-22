@@ -1,7 +1,0 @@
-ATUALIZAÇÃO R9 SUBSTITUÍDA
-==========================
-
-Este pacote já contém a R10, que substitui a R9 e corrige as telas padronizadas.
-
-Leia LEIA-ME-ATUALIZACAO-R10.txt e execute PUBLICAR_R10_AGORA.bat.
-O atalho PUBLICAR_R9_AGORA.bat também encaminha automaticamente para a R10.

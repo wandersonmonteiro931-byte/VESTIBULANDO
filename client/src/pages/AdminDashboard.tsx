@@ -38,7 +38,7 @@ import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { PortalBrand } from "@/components/PortalBrand";
 import { PortalProfileHeader } from "@/components/PortalProfileHeader";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, ArrowRightLeft, Clock, Search, Eye, AlertTriangle, Settings, Power, PowerOff, Archive, Download, ChevronDown, ChevronUp, MessageCircle, Camera, Upload, X, Copy, Shield, RotateCcw, UserCheck, School, LayoutDashboard } from "lucide-react";
+import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, ArrowLeft, ArrowRightLeft, Clock, Search, Eye, AlertTriangle, Settings, Power, PowerOff, Archive, Download, ChevronDown, ChevronUp, MessageCircle, Camera, Upload, X, Copy, Shield, RotateCcw, UserCheck, School, LayoutDashboard } from "lucide-react";
 import { Link } from "wouter";
 import { Checkbox } from "@/components/ui/checkbox";
 import { queryClient } from "@/lib/queryClient";
@@ -2563,12 +2563,17 @@ export default function AdminDashboard() {
   return (
     <SidebarProvider style={{ "--sidebar-width": "280px" } as React.CSSProperties}>
       <>
-      <div className="dashboard-modern dashboard-admin flex min-h-screen w-full">
+      <div className="dashboard-modern dashboard-admin school-os-operations flex min-h-screen w-full">
         <div className="min-w-0 flex-1 flex flex-col">
           <header className="dashboard-topbar elegant-topbar sticky top-0 z-50 w-full">
             <div className="dashboard-topbar-inner elegant-header flex items-center justify-between px-4 sm:px-6 gap-4">
               <div className="dashboard-header-left flex items-center gap-3">
                 <PortalBrand compactLabel="Diretoria" />
+                <Link href="/diretor">
+                  <Button variant="outline" size="sm" className="school-os-return-button">
+                    <ArrowLeft className="mr-2 h-4 w-4" />Novo painel
+                  </Button>
+                </Link>
                 {maintenanceData && maintenanceData.some(m => m.ativa) && (
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-red-600 dark:bg-red-700 rounded-full text-sm blink-red" data-testid="maintenance-warning-badge">
                     <AlertTriangle className="h-4 w-4 text-white animate-pulse" />

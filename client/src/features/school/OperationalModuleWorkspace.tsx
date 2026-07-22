@@ -141,33 +141,33 @@ const moduleIcons: Record<string, ElementType> = {
 
 const shortcutSets: Record<string, Shortcut[]> = {
   instituicao: [
-    { label: "Turmas e períodos", description: "Organizar ano, turno, vagas e situação das turmas.", href: "/diretor?secao=turmas", icon: UsersRound },
-    { label: "Calendário letivo", description: "Definir eventos, recessos, provas e dias escolares.", href: "/diretor?secao=calendario", icon: CalendarDays },
-    { label: "Configuração de horários", description: "Definir dias, aulas, intervalos e duração.", href: "/diretor?secao=config-horarios", icon: Settings2 },
+    { label: "Turmas e períodos", description: "Organizar ano, turno, vagas e situação das turmas.", href: "/diretor-operacional?secao=turmas", icon: UsersRound },
+    { label: "Calendário letivo", description: "Definir eventos, recessos, provas e dias escolares.", href: "/diretor-operacional?secao=calendario", icon: CalendarDays },
+    { label: "Configuração de horários", description: "Definir dias, aulas, intervalos e duração.", href: "/diretor-operacional?secao=config-horarios", icon: Settings2 },
   ],
   acessos: [
-    { label: "Alunos e contas", description: "Criar, editar, bloquear e consultar contas de alunos.", href: "/diretor?secao=usuarios", icon: Users },
-    { label: "Professores", description: "Gerenciar contas, turmas e disciplinas docentes.", href: "/diretor?secao=professores", icon: GraduationCap },
-    { label: "Senhas e logins", description: "Redefinições, primeiro acesso e segurança.", href: "/diretor?secao=senhas-logins", icon: KeyRound },
+    { label: "Alunos e contas", description: "Criar, editar, bloquear e consultar contas de alunos.", href: "/diretor-operacional?secao=usuarios", icon: Users },
+    { label: "Professores", description: "Gerenciar contas, turmas e disciplinas docentes.", href: "/diretor-operacional?secao=professores", icon: GraduationCap },
+    { label: "Senhas e logins", description: "Redefinições, primeiro acesso e segurança.", href: "/diretor-operacional?secao=senhas-logins", icon: KeyRound },
   ],
   alunos: [
-    { label: "Cadastro de alunos", description: "Prontuário, dados pessoais, matrícula, turma e situação.", href: "/diretor?secao=usuarios", icon: Users },
-    { label: "Cadastrar aluno", description: "Abrir diretamente o cadastro completo de um novo aluno.", href: "/diretor?secao=usuarios&acao=novo-aluno", icon: UserCheck },
-    { label: "Turmas", description: "Consultar a distribuição de alunos e movimentações.", href: "/diretor?secao=turmas", icon: UsersRound },
+    { label: "Cadastro de alunos", description: "Prontuário, dados pessoais, matrícula, turma e situação.", href: "/diretor-operacional?secao=usuarios", icon: Users },
+    { label: "Cadastrar aluno", description: "Abrir diretamente o cadastro completo de um novo aluno.", href: "/diretor-operacional?secao=usuarios&acao=novo-aluno", icon: UserCheck },
+    { label: "Turmas", description: "Consultar a distribuição de alunos e movimentações.", href: "/diretor-operacional?secao=turmas", icon: UsersRound },
   ],
   matriculas: [
-    { label: "Aprovações", description: "Analisar inscrições, documentos e disponibilidade de vaga.", href: "/diretor?secao=aprovacoes", icon: UserCheck },
-    { label: "Lista de espera", description: "Priorizar candidatos e convocar quando surgir vaga.", href: "/diretor?secao=lista-espera", icon: ListChecks },
-    { label: "Alunos matriculados", description: "Transferir turma, editar matrícula ou encerrar vínculo.", href: "/diretor?secao=usuarios", icon: Users },
+    { label: "Aprovações", description: "Analisar inscrições, documentos e disponibilidade de vaga.", href: "/diretor-operacional?secao=aprovacoes", icon: UserCheck },
+    { label: "Lista de espera", description: "Priorizar candidatos e convocar quando surgir vaga.", href: "/diretor-operacional?secao=lista-espera", icon: ListChecks },
+    { label: "Alunos matriculados", description: "Transferir turma, editar matrícula ou encerrar vínculo.", href: "/diretor-operacional?secao=usuarios", icon: Users },
   ],
   "estrutura-academica": [
-    { label: "Turmas e cursos", description: "Criar turmas, vagas, séries, turnos e períodos.", href: "/diretor?secao=turmas", icon: UsersRound },
-    { label: "Grade horária", description: "Vincular disciplinas e professores sem conflitos.", href: "/diretor?secao=horarios", icon: CalendarDays },
-    { label: "Disciplinas e tempos", description: "Configurar matérias, dias letivos, aulas e intervalos.", href: "/diretor?secao=config-horarios", icon: GraduationCap },
+    { label: "Turmas e cursos", description: "Criar turmas, vagas, séries, turnos e períodos.", href: "/diretor-operacional?secao=turmas", icon: UsersRound },
+    { label: "Grade horária", description: "Vincular disciplinas e professores sem conflitos.", href: "/diretor-operacional?secao=horarios", icon: CalendarDays },
+    { label: "Disciplinas e tempos", description: "Configurar matérias, dias letivos, aulas e intervalos.", href: "/diretor-operacional?secao=config-horarios", icon: GraduationCap },
   ],
   "aulas-ao-vivo": [
-    { label: "Grade horária", description: "Conferir turma, professor, matéria e horário antes da aula.", href: "/diretor?secao=horarios", icon: CalendarDays },
-    { label: "Calendário", description: "Programar encontros, reposições e eventos on-line.", href: "/diretor?secao=calendario", icon: Video },
+    { label: "Grade horária", description: "Conferir turma, professor, matéria e horário antes da aula.", href: "/diretor-operacional?secao=horarios", icon: CalendarDays },
+    { label: "Calendário", description: "Programar encontros, reposições e eventos on-line.", href: "/diretor-operacional?secao=calendario", icon: Video },
   ],
 };
 
@@ -237,6 +237,7 @@ export function CapabilityWorkspace({
 }) {
   const [search, setSearch] = useState("");
   const [workflow, setWorkflow] = useState("all");
+  const [selectedTaskId, setSelectedTaskId] = useState("");
   const Icon = moduleIcons[module.id] || Settings2;
   const activeRecords = records.filter((record) => !record.deletedAt);
   const normalized = search.trim().toLocaleLowerCase("pt-BR");
@@ -246,6 +247,8 @@ export function CapabilityWorkspace({
     if (workflow !== "all" && blueprint.workflow !== workflow) return false;
     return !normalized || `${blueprint.title} ${blueprint.workflow} ${blueprint.automations.join(" ")}`.toLocaleLowerCase("pt-BR").includes(normalized);
   });
+  const selectedBlueprint = visibleBlueprints.find((blueprint) => blueprint.id === selectedTaskId) || visibleBlueprints[0];
+  const selectedRecords = selectedBlueprint ? activeRecords.filter((record) => record.capability === selectedBlueprint.title).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)) : [];
 
   return (
     <section className={`school-capability-workspace${compact ? " is-compact" : ""}`}>
@@ -260,40 +263,47 @@ export function CapabilityWorkspace({
         <Select value={workflow} onValueChange={setWorkflow}><SelectTrigger aria-label="Filtrar etapa"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todas as etapas</SelectItem>{workflows.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent></Select>
       </div>
 
-      <div className="school-capability-grid">
-        {visibleBlueprints.map((blueprint) => {
-          const related = activeRecords.filter((record) => record.capability === blueprint.title);
-          return (
-            <article key={blueprint.id} className="school-capability-card">
-              <div className="school-capability-card-top"><span>{blueprint.workflow}</span>{related.length > 0 && <Badge variant="outline">{related.length} registro(s)</Badge>}</div>
-              <h5>{blueprint.title}</h5>
-              <p>{blueprint.automations[0] || "Processo com histórico, responsável, prazo e situação."}</p>
-              <div className="school-capability-card-actions">
-                {canWrite ? <Button size="sm" onClick={() => onCreate(blueprint.title)}><PlayCircle className="mr-2 h-4 w-4" />Executar</Button> : <span className="school-capability-readonly"><ShieldCheck className="h-3.5 w-3.5" />Somente consulta</span>}
-                {related[0] && <Button size="sm" variant="ghost" onClick={() => onView(related[0])}>Ver último</Button>}
+      {visibleBlueprints.length > 0 ? (
+        <div className="school-task-workbench">
+          <div className="school-task-list" role="list" aria-label="Tarefas disponíveis">
+            <div className="school-task-list-heading"><strong>{visibleBlueprints.length} tarefas</strong><span>Selecione para ver os campos</span></div>
+            {visibleBlueprints.map((blueprint) => {
+              const related = activeRecords.filter((record) => record.capability === blueprint.title).length;
+              const active = selectedBlueprint?.id === blueprint.id;
+              return <button type="button" key={blueprint.id} className={active ? "is-active" : ""} onClick={() => setSelectedTaskId(blueprint.id)}><span><small>{blueprint.id}</small><strong>{blueprint.title}</strong><em>{blueprint.workflow}</em></span>{related > 0 && <b>{related}</b>}<ArrowRight className="h-4 w-4" /></button>;
+            })}
+          </div>
+
+          {selectedBlueprint && (
+            <article className="school-task-detail">
+              <div className="school-task-detail-top"><span>{selectedBlueprint.id}</span><Badge variant="outline">{selectedBlueprint.workflow}</Badge></div>
+              <h5>{selectedBlueprint.title}</h5>
+              <p>Esta tela foi preparada para executar esta tarefa específica, com validações, responsáveis, prazos, anexos e histórico.</p>
+
+              <div className="school-task-rules">
+                <strong>O sistema fará automaticamente</strong>
+                <ul>{selectedBlueprint.automations.slice(0, 4).map((automation) => <li key={automation}><CheckCircle2 className="h-4 w-4" />{automation}</li>)}</ul>
+              </div>
+
+              <div className="school-task-fields">
+                <strong>Informações solicitadas</strong>
+                <div>{selectedBlueprint.fields.slice(0, 8).map((definition) => <span key={definition.key}>{definition.label}{definition.required ? " *" : ""}</span>)}</div>
+              </div>
+
+              <div className="school-task-primary-action">
+                {canWrite ? <Button onClick={() => onCreate(selectedBlueprint.title)}><PlayCircle className="mr-2 h-4 w-4" />Iniciar esta tarefa</Button> : <span className="school-capability-readonly"><ShieldCheck className="h-4 w-4" />Seu perfil possui acesso somente para consulta</span>}
+                {selectedRecords[0] && <Button variant="outline" onClick={() => onView(selectedRecords[0])}>Abrir registro mais recente</Button>}
+              </div>
+
+              <div className="school-task-history">
+                <div><strong>Registros desta tarefa</strong><span>{selectedRecords.length} encontrado{selectedRecords.length === 1 ? "" : "s"}</span></div>
+                {selectedRecords.slice(0, 5).map((record) => <button type="button" key={record.id} onClick={() => onView(record)}><span className={`school-operation-state ${capabilityStatusTone(record.status)}`}><CheckCircle2 className="h-4 w-4" /></span><span><strong>{record.title}</strong><small>{record.studentName || record.className || record.assigneeName || "Registro geral"}</small></span><Badge variant="outline">{record.status}</Badge><ArrowRight className="h-4 w-4" /></button>)}
+                {!selectedRecords.length && <p>Ainda não há registros. Clique em “Iniciar esta tarefa” para criar o primeiro.</p>}
               </div>
             </article>
-          );
-        })}
-      </div>
-
-      {!visibleBlueprints.length && <div className="school-capability-empty"><Search className="h-8 w-8" /><h5>Nenhuma tarefa encontrada</h5><p>Altere a busca ou selecione outra etapa.</p></div>}
-
-      {activeRecords.length > 0 && (
-        <div className="school-operation-recent">
-          <div className="school-real-section-heading"><div><span>ACOMPANHAMENTO</span><h4>Trabalhos recentes deste setor</h4></div></div>
-          <div className="school-operation-recent-list">
-            {[...activeRecords].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 8).map((record) => (
-              <button type="button" key={record.id} onClick={() => onView(record)}>
-                <span className={`school-operation-state ${capabilityStatusTone(record.status)}`}><CheckCircle2 className="h-4 w-4" /></span>
-                <span><strong>{record.title}</strong><small>{record.capability} · {record.studentName || record.className || record.assigneeName || "geral"}</small></span>
-                <Badge variant="outline">{record.status}</Badge>
-                <ArrowRight className="h-4 w-4" />
-              </button>
-            ))}
-          </div>
+          )}
         </div>
-      )}
+      ) : <div className="school-capability-empty"><Search className="h-8 w-8" /><h5>Nenhuma tarefa encontrada</h5><p>Altere a busca ou selecione outra etapa.</p></div>}
     </section>
   );
 }
@@ -326,35 +336,38 @@ export function OperationalModuleWorkspace(props: OperationalModuleWorkspaceProp
 
   switch (module.id) {
     case "acessos":
-      return <div className="school-real-workspace"><ShortcutGrid shortcuts={managementRole ? shortcutSets.acessos : []} />{managementRole ? <AccessControlPanel users={users} actor={actor} /> : <CapabilityWorkspace module={module} records={records} canWrite={canWrite} onCreate={onCreate} onView={onView} />}</div>;
+      return <div className="school-real-workspace"><ShortcutGrid shortcuts={managementRole ? shortcutSets.acessos : []} />{managementRole ? <AccessControlPanel users={users} actor={actor} /> : null}<CapabilityWorkspace module={module} records={records} canWrite={canWrite} onCreate={onCreate} onView={onView} title="Tarefas de acesso e segurança" compact={managementRole} /></div>;
     case "calendario-horarios":
       return (
-        <OperationalTabs defaultValue="calendario" tabs={[{ value: "calendario", label: "Calendário", icon: CalendarDays }, { value: "grades", label: "Grades horárias", icon: GraduationCap }, { value: "configuracao", label: "Tempos e disciplinas", icon: Settings2 }]}> 
+        <OperationalTabs defaultValue="calendario" tabs={[{ value: "calendario", label: "Calendário", icon: CalendarDays }, { value: "grades", label: "Grades horárias", icon: GraduationCap }, { value: "configuracao", label: "Tempos e disciplinas", icon: Settings2 }, { value: "tarefas", label: "Todas as tarefas", icon: ListChecks }]}> 
           <TabsContent value="calendario"><CalendarioProgramacaoTab turmas={classes} /></TabsContent>
           <TabsContent value="grades"><HorariosTab turmas={classes} professores={professors} /></TabsContent>
           <TabsContent value="configuracao"><ConfiguracaoHorariosTab /></TabsContent>
+          <TabsContent value="tarefas"><CapabilityWorkspace module={module} records={records} canWrite={canWrite} onCreate={onCreate} onView={onView} /></TabsContent>
         </OperationalTabs>
       );
     case "frequencia":
-      return <PresencasTab userType={educatorRole ? "professor" : "diretor"} professorId={educatorRole ? user?.uid : undefined} />;
+      return <OperationalTabs defaultValue="chamada" tabs={[{ value: "chamada", label: "Chamada e frequência", icon: ClipboardCheck }, { value: "tarefas", label: "Todas as tarefas", icon: ListChecks }]}><TabsContent value="chamada"><PresencasTab userType={educatorRole ? "professor" : "diretor"} professorId={educatorRole ? user?.uid : undefined} /></TabsContent><TabsContent value="tarefas"><CapabilityWorkspace module={module} records={records} canWrite={canWrite} onCreate={onCreate} onView={onView} /></TabsContent></OperationalTabs>;
     case "atividades":
     case "avaliacoes":
-      return <AvaliacoesTab userType={educatorRole ? "professor" : "diretor"} scope={module.id === "atividades" ? "atividades" : "avaliacoes"} />;
+      return <OperationalTabs defaultValue="principal" tabs={[{ value: "principal", label: module.id === "atividades" ? "Atividades e entregas" : "Avaliações e provas", icon: FileCheck2 }, { value: "tarefas", label: "Todas as tarefas", icon: ListChecks }]}><TabsContent value="principal"><AvaliacoesTab userType={educatorRole ? "professor" : "diretor"} scope={module.id === "atividades" ? "atividades" : "avaliacoes"} /></TabsContent><TabsContent value="tarefas"><CapabilityWorkspace module={module} records={records} canWrite={canWrite} onCreate={onCreate} onView={onView} /></TabsContent></OperationalTabs>;
     case "notas-boletim":
       return (
-        <OperationalTabs defaultValue="periodos" tabs={[{ value: "periodos", label: "Bimestres e notas", icon: GraduationCap }, { value: "boletins", label: "Boletins", icon: FileText }, { value: "autorizacoes", label: "Reaberturas", icon: FileCheck2 }]}> 
+        <OperationalTabs defaultValue="periodos" tabs={[{ value: "periodos", label: "Bimestres e notas", icon: GraduationCap }, { value: "boletins", label: "Boletins", icon: FileText }, { value: "autorizacoes", label: "Reaberturas", icon: FileCheck2 }, { value: "tarefas", label: "Todas as tarefas", icon: ListChecks }]}> 
           <TabsContent value="periodos"><BimestresTab userType={educatorRole ? "professor" : "diretor"} /></TabsContent>
           <TabsContent value="boletins"><BoletimTab /></TabsContent>
           <TabsContent value="autorizacoes"><AutorizacaoNotasTab /></TabsContent>
+          <TabsContent value="tarefas"><CapabilityWorkspace module={module} records={records} canWrite={canWrite} onCreate={onCreate} onView={onView} /></TabsContent>
         </OperationalTabs>
       );
     case "aulas-ao-vivo":
-      return educatorRole ? <TeacherClassControl /> : <RouteAndCapabilityWorkspace {...props} />;
+      return educatorRole ? <OperationalTabs defaultValue="aulas" tabs={[{ value: "aulas", label: "Gerenciar aulas", icon: Video }, { value: "tarefas", label: "Todas as tarefas", icon: ListChecks }]}><TabsContent value="aulas"><TeacherClassControl /></TabsContent><TabsContent value="tarefas"><CapabilityWorkspace module={module} records={records} canWrite={canWrite} onCreate={onCreate} onView={onView} /></TabsContent></OperationalTabs> : <RouteAndCapabilityWorkspace {...props} />;
     case "documentos-escolares":
       return (
-        <OperationalTabs defaultValue="emitir" tabs={[{ value: "emitir", label: "Emitir documentos", icon: FileText }, { value: "aceites", label: "Aceites e termos", icon: ShieldCheck }]}> 
+        <OperationalTabs defaultValue="emitir" tabs={[{ value: "emitir", label: "Emitir documentos", icon: FileText }, { value: "aceites", label: "Aceites e termos", icon: ShieldCheck }, { value: "tarefas", label: "Todas as tarefas", icon: ListChecks }]}> 
           <TabsContent value="emitir"><DocumentationTab /></TabsContent>
           <TabsContent value="aceites"><InternalDocumentsTab /></TabsContent>
+          <TabsContent value="tarefas"><CapabilityWorkspace module={module} records={records} canWrite={canWrite} onCreate={onCreate} onView={onView} /></TabsContent>
         </OperationalTabs>
       );
     case "comunicacao":
@@ -373,7 +386,7 @@ export function OperationalModuleWorkspace(props: OperationalModuleWorkspaceProp
         </OperationalTabs>
       );
     case "financeiro":
-      return <AdminFinanceTab />;
+      return <OperationalTabs defaultValue="financeiro" tabs={[{ value: "financeiro", label: "Faturas e pagamentos", icon: WalletCards }, { value: "tarefas", label: "Todas as tarefas", icon: ListChecks }]}><TabsContent value="financeiro"><AdminFinanceTab /></TabsContent><TabsContent value="tarefas"><CapabilityWorkspace module={module} records={records} canWrite={canWrite} onCreate={onCreate} onView={onView} /></TabsContent></OperationalTabs>;
     case "portal-aluno":
     case "portal-professor":
     case "portal-responsaveis":

@@ -1,0 +1,25 @@
+VESTIBULANDO R11 - NOVO APP ESCOLAR
+===================================
+
+O que mudou
+-----------
+- Aplicativo escolar reconstruido com visual totalmente novo.
+- As 30 secoes aparecem no menu e no mapa da tela inicial.
+- Busca global por secao e tarefa.
+- Cada setor abre em uma pagina propria.
+- Tarefas agora mostram campos e validacoes antes da execucao.
+- Cadastros, anexos, auditoria, notificacoes e dados em tempo real foram mantidos.
+- Arquivos continuam no Firestore; Firebase Storage nao e usado.
+- O chat foi preservado sem alteracoes.
+
+Como publicar
+-------------
+1. Extraia o ZIP inteiro em uma pasta nova.
+2. Abra a pasta VESTIBULANDO-SISTEMA-ESCOLAR-COMPLETO.
+3. Clique duas vezes em PUBLICAR_R11_AGORA.bat.
+4. Quando o Cloudflare pedir login, use somente:
+   yasminpereiragabrielly88@gmail.com
+5. Aguarde aparecer SITE ATUALIZADO COM SUCESSO.
+
+O publicador valida o projeto existente vestibulando antes do envio.
+Ele nao possui comando para criar outro projeto Cloudflare.

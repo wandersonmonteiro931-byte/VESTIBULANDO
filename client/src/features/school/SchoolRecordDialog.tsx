@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Paperclip, Save, Trash2, Upload } from "lucide-react";
+import { CheckCircle2, Loader2, Paperclip, Save, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -292,13 +292,16 @@ export function SchoolRecordDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="school-record-dialog max-w-5xl max-h-[92vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{record ? "Editar" : "Executar"} · {lockedCapability ? blueprint.title : module.title}</DialogTitle>
-          <DialogDescription>{lockedCapability ? `${blueprint.workflow}. Preencha somente os dados necessários para concluir esta tarefa.` : "Preencha os dados abaixo. Campos obrigatórios estão marcados com *."}</DialogDescription>
+      <DialogContent className="school-record-dialog school-os-record-dialog max-w-5xl max-h-[92vh] overflow-y-auto" data-school-module={module.id}>
+        <DialogHeader className="school-os-form-header">
+          <div className="school-os-form-module"><span>{String(module.number).padStart(2, "0")}</span><div><small>{module.shortTitle}</small><strong>{blueprint.workflow}</strong></div></div>
+          <DialogTitle>{record ? "Editar registro" : "Iniciar tarefa"}<span>{lockedCapability ? blueprint.title : module.title}</span></DialogTitle>
+          <DialogDescription>{lockedCapability ? "Este formulário contém somente os dados necessários para concluir esta tarefa." : "Preencha os dados abaixo. Campos obrigatórios estão marcados com *."}</DialogDescription>
         </DialogHeader>
 
-        {lockedCapability && <div className="school-operation-dialog-context"><div><strong>{blueprint.title}</strong><span>{blueprint.workflow}</span></div><ul>{blueprint.automations.slice(0, 3).map((automation) => <li key={automation}>{automation}</li>)}</ul></div>}
+        <div className="school-os-form-steps" aria-label="Etapas do preenchimento"><span className="is-active"><b>1</b>Identificação</span><i /><span><b>2</b>Dados da tarefa</span><i /><span><b>3</b>Anexos e conclusão</span></div>
+
+        {lockedCapability && <div className="school-operation-dialog-context"><div><CheckCircle2 className="h-5 w-5" /><span><strong>Validações desta tarefa</strong><small>Aplicadas ao salvar</small></span></div><ul>{blueprint.automations.slice(0, 4).map((automation) => <li key={automation}>{automation}</li>)}</ul></div>}
 
         <div className="school-form-section-title">Informações principais</div>
         <div className="school-form-grid">

@@ -105,6 +105,12 @@ function Router() {
       
       <Route path="/diretor">
         <ProtectedRoute allowedTypes={["diretor"]}>
+          <SchoolPlatformPage />
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/diretor-operacional">
+        <ProtectedRoute allowedTypes={["diretor"]}>
           <AdminDashboard />
         </ProtectedRoute>
       </Route>

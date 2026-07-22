@@ -3,6 +3,7 @@ import App from "./App";
 import "./index.css";
 import "./portal-reference.css";
 import "./features/school/school-suite.css";
+import "./features/school-v2/school-os.css";
 
 const isFirestoreError = (message: string | undefined) => {
   if (!message) return false;

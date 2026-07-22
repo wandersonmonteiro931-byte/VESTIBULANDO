@@ -99,9 +99,10 @@ const requiredArtifacts = [
   "client/public/school-icon-512.png", "client/src/features/school/SchoolManagementSuite.tsx",
   "client/src/features/school/SchoolOperationsHome.tsx",
   "client/src/features/school/OperationalModuleWorkspace.tsx",
+  "client/src/features/school-v2/SchoolOS.tsx", "client/src/features/school-v2/school-os.css",
   "client/src/features/school/GuardianFamilyPanel.tsx", "client/src/features/school/AccessControlPanel.tsx",
   "client/src/features/school/schoolCapabilityEngine.ts", "docs/MATRIZ-OPERACIONAL-483-REQUISITOS.md",
-  "ATUALIZAR_GITHUB_E_CLOUDFLARE.bat", "PUBLICAR_R10_AGORA.bat", "LEIA-ME-ATUALIZACAO-R10.txt", "docs/ATUALIZACAO-CLOUDFLARE.md",
+  "ATUALIZAR_GITHUB_E_CLOUDFLARE.bat", "PUBLICAR_R11_AGORA.bat", "LEIA-ME-PRIMEIRO-R11.txt", "docs/ATUALIZACAO-CLOUDFLARE.md",
   "scripts/confirm-cloudflare-version.ps1",
   "client/src/lib/firestoreFileStore.ts", "client/src/pages/FirestoreFilePage.tsx",
 ];
@@ -110,7 +111,7 @@ for (const artifact of requiredArtifacts) check(existsSync(resolve(root, artifac
 const firestoreRules = readFileSync(resolve(root, "firestore.rules"), "utf8");
 const windowsPublisher = readFileSync(resolve(root, "ATUALIZAR_GITHUB_E_CLOUDFLARE.bat"), "utf8");
 const windowsPublisherBytes = readFileSync(resolve(root, "ATUALIZAR_GITHUB_E_CLOUDFLARE.bat"));
-const windowsLauncherBytes = readFileSync(resolve(root, "PUBLICAR_R10_AGORA.bat"));
+const windowsLauncherBytes = readFileSync(resolve(root, "PUBLICAR_R11_AGORA.bat"));
 const cloudflareVersionChecker = readFileSync(resolve(root, "scripts/confirm-cloudflare-version.ps1"), "utf8");
 const firebaseConfiguration = readFileSync(resolve(root, "firebase.json"), "utf8");
 const schoolHome = readFileSync(resolve(root, "client/src/features/school/SchoolOperationsHome.tsx"), "utf8");
@@ -120,6 +121,9 @@ const recordDialog = readFileSync(resolve(root, "client/src/features/school/Scho
 const assessmentsTab = readFileSync(resolve(root, "client/src/components/AvaliacoesTab.tsx"), "utf8");
 const schoolDetails = readFileSync(resolve(root, "client/src/features/school/SchoolRecordDetails.tsx"), "utf8");
 const schoolPlatform = readFileSync(resolve(root, "client/src/pages/SchoolPlatformPage.tsx"), "utf8");
+const schoolOS = readFileSync(resolve(root, "client/src/features/school-v2/SchoolOS.tsx"), "utf8");
+const schoolOSStyles = readFileSync(resolve(root, "client/src/features/school-v2/school-os.css"), "utf8");
+const appRouter = readFileSync(resolve(root, "client/src/App.tsx"), "utf8");
 const adminDashboard = readFileSync(resolve(root, "client/src/pages/AdminDashboard.tsx"), "utf8");
 const noStorageSources = [
   "client/src/lib/firebase.ts", "client/src/features/school/schoolData.ts", "client/src/pages/StudentDashboard.tsx",
@@ -137,7 +141,13 @@ check(schoolHomeItems >= 28, `O painel operacional expõe somente ${schoolHomeIt
 const adminSections = new Set([...adminDashboard.matchAll(/selectedSection === "([^"]+)"/g)].map((match) => match[1]));
 const linkedSections = [...schoolHome.matchAll(/href: "\/diretor\?secao=([^&"]+)/g)].map((match) => match[1]);
 check(linkedSections.every((section) => adminSections.has(section)), "Há atalhos no painel escolar sem uma tela funcional correspondente na diretoria.");
-check(schoolPlatform.includes("SchoolManagementSuite initialModuleId={requestedModule} focused"), "Os setores complementares não abrem em uma tela focada.");
+check(schoolPlatform.includes("<SchoolOS />"), "A rota escolar não abre o novo aplicativo R11.");
+check(schoolOS.includes('data-release="R11-NOVO-APP"'), "O novo aplicativo não possui o marcador de versão R11.");
+check(schoolOS.includes("SCHOOL_CATEGORIES.map") && schoolOS.includes("SCHOOL_MODULES.filter"), "O mapa do novo aplicativo não deriva as 30 seções do catálogo oficial.");
+check(schoolOS.includes("SchoolManagementSuite key={activeModule.id}") && schoolOS.includes("focused"), "As seções não abrem em uma área de trabalho focada.");
+check(schoolOS.includes("Todas as seções") && schoolOS.includes("Buscar seção ou tarefa"), "A navegação completa ou a busca global está ausente.");
+check(schoolOSStyles.includes(".school-os-sidebar") && schoolOSStyles.includes(".school-os-module-grid") && schoolOSStyles.includes(".school-task-workbench"), "O design integral R11 está incompleto.");
+check(appRouter.includes('<Route path="/diretor">') && appRouter.indexOf("<SchoolPlatformPage />", appRouter.indexOf('<Route path="/diretor">')) > -1, "A diretoria ainda inicia no painel antigo.");
 check(!schoolSuite.includes("Nova operação") && !schoolSuite.includes("30/30") && !schoolSuite.includes("Funções acionáveis"), "A interface voltou a exibir contadores ou termos técnicos no lugar das tarefas escolares.");
 check(schoolSuite.includes("!isDedicatedWorkspace") && schoolSuite.includes("hasOperationalModuleWorkspace"), "As telas operacionais voltaram a cair na tabela genérica de cadastros.");
 const realComponents = ["PresencasTab", "AvaliacoesTab", "CalendarioProgramacaoTab", "HorariosTab", "BimestresTab", "BoletimTab", "DocumentationTab", "AnnouncementsTab", "AdminFinanceTab", "AccessControlPanel"];
@@ -145,13 +155,14 @@ check(realComponents.every((component) => operationalWorkspace.includes(`<${comp
 const operationalIds = new Set([...operationalWorkspace.matchAll(/^\s+"([a-z-]+)",$/gm)].map((match) => match[1]).filter((id) => validModuleIds.has(id)));
 const suiteWorkspaceIds = new Set(["relatorios", "integracoes", "continuidade"]);
 check(modules.every((module) => operationalIds.has(module.id) || suiteWorkspaceIds.has(module.id)), `A navegação operacional cobre somente ${operationalIds.size + suiteWorkspaceIds.size}/30 módulos.`);
-check(recordDialog.includes("lockedCapability") && recordDialog.includes("Preencha somente os dados necessários"), "As tarefas complementares voltaram a abrir no seletor padronizado de funcionalidades.");
+check(operationalWorkspace.includes("school-task-workbench") && operationalWorkspace.includes("Informações solicitadas") && operationalWorkspace.includes("Iniciar esta tarefa"), "As tarefas complementares voltaram ao catálogo repetitivo sem contexto operacional.");
+check(recordDialog.includes("lockedCapability") && recordDialog.includes("contém somente os dados necessários"), "As tarefas complementares voltaram a abrir no seletor padronizado de funcionalidades.");
 check(assessmentsTab.includes('scope?: "all" | "atividades" | "avaliacoes"') && operationalWorkspace.includes('scope={module.id === "atividades"'), "A separação entre atividades e avaliações foi removida.");
 check(!schoolDetails.includes("Automação verificada") && !schoolDetails.includes("Funcionalidade/requisito"), "Os detalhes do cadastro ainda expõem o motor técnico ao usuário.");
 check(windowsPublisher.includes('findstr /I /C:"%SITE_HOST%"'), "O publicador não valida a conta proprietária do domínio principal.");
 check(windowsPublisher.includes("yasminpereiragabrielly88@gmail.com") && windowsPublisher.includes("vestibulando-yasmin"), "O publicador não fixa a conta e o perfil exclusivos do projeto original.");
-check(windowsPublisher.includes("R10-TELAS-OPERACIONAIS-REAIS") && windowsPublisher.includes("OperationalModuleWorkspace.tsx"), "O publicador não rejeita uma pasta anterior à atualização das telas operacionais.");
-check(windowsPublisher.includes('findstr /I /C:"PAINEL DA DIRETORIA"') && !windowsPublisher.includes('findstr /I /C:"O que você'), "A validação do pacote no Windows precisa usar somente um marcador ASCII.");
+check(windowsPublisher.includes("R11-NOVO-APP-30-SECOES") && windowsPublisher.includes("school-v2\\SchoolOS.tsx"), "O publicador não rejeita uma pasta anterior ao novo aplicativo R11.");
+check(windowsPublisher.includes('findstr /I /C:"R11-NOVO-APP"') && windowsPublisher.includes('findstr /I /C:"school-task-workbench"'), "A validação do pacote R11 no Windows está incompleta.");
 check(!windowsPublisherBytes.toString("binary").replaceAll("\r\n", "").includes("\n") && !windowsLauncherBytes.toString("binary").replaceAll("\r\n", "").includes("\n"), "Os arquivos .bat precisam usar CRLF para não perder a primeira letra dos comandos no Windows.");
 check(windowsPublisher.includes("wrangler pages project list --json") && windowsPublisher.includes("wrangler pages deployment list"), "O publicador não confirma o projeto existente antes do envio.");
 check(!windowsPublisher.includes("wrangler pages project create") && windowsPublisher.includes('set "CI=true"'), "O publicador pode tentar criar um projeto Cloudflare novo.");

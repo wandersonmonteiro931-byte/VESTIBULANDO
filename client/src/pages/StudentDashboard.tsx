@@ -301,7 +301,7 @@ export default function StudentDashboard() {
 
   return (
     <SidebarProvider style={{ "--sidebar-width": "280px" } as React.CSSProperties}>
-      <div className="dashboard-modern dashboard-student flex min-h-screen w-full">
+      <div className="dashboard-modern dashboard-student school-os-role-portal flex min-h-screen w-full">
         <div className="min-w-0 flex-1 flex flex-col">
           <header className="dashboard-topbar elegant-topbar sticky top-0 z-50 w-full">
             <div className="dashboard-topbar-inner elegant-header container flex items-center justify-between px-4 sm:px-6">

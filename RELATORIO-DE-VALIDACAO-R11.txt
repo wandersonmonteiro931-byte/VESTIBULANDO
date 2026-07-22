@@ -1,0 +1,40 @@
+VESTIBULANDO R11 - RELATORIO DE VALIDACAO
+==========================================
+
+Versao: R11-NOVO-APP-30-SECOES
+Data: 21/07/2026
+
+VALIDACOES APROVADAS
+--------------------
+[OK] TypeScript sem erros
+[OK] Build de producao concluido
+[OK] 30 modulos numerados e acessiveis
+[OK] 483 tarefas com identificadores unicos
+[OK] Formularios contextuais e validacoes automaticas
+[OK] Componentes operacionais reais preservados
+[OK] 21 rotas documentadas na API
+[OK] Smoke test do servidor e PWA
+[OK] Anexos no Firestore, sem Firebase Storage
+[OK] Publicador restrito ao projeto Cloudflare existente vestibulando
+[OK] Scripts do Windows em formato CRLF
+[OK] Chat protegido e integro
+
+HASHES DOS ARQUIVOS PROTEGIDOS DO CHAT
+--------------------------------------
+ChatPage.tsx
+6f3c287a96137cd4805960e6fa6f9a09b7dc7228f1be1dff30348505b22f0e2d
+
+ChatConversationPage.tsx
+6ff0dc76d9964e5f037841b7b512cf87ecc7955c89871dab9270d283e2690b66
+
+ChatWindow.tsx
+366866188eb9d08374a8c1afd17a2a920e2f625e01602ba774d2b6ce3bf8437c
+
+ConversationItem.tsx
+cdee1860db894cbb16c8b27a53c056c28befd0991bc2fdff59a83b7cbbf50298
+
+PUBLICACAO
+----------
+Execute somente PUBLICAR_R11_AGORA.bat.
+O publicador valida a conta yasminpereiragabrielly88@gmail.com e o projeto
+vestibulando antes de enviar qualquer arquivo. Ele nao cria projeto novo.
