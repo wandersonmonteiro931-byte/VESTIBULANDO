@@ -126,17 +126,17 @@ export function AnnouncementsCarousel({ userType, userTurma }: AnnouncementsCaro
   const currentTextSlide = textSlides[currentTextIndex];
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4" data-testid="announcements-carousel">
+    <div className="announcements-modern flex flex-col gap-5 w-full" data-testid="announcements-carousel">
       {/* Avisos de imagem - Desktop: esquerda, Mobile: primeiro */}
       {imageSlides.length > 0 && currentImageSlide && (
-        <Card>
+        <Card className="announcement-modern-card announcement-modern-fullbleed">
           <CardContent className="p-0">
             <div className="relative">
-              <div className="w-full h-64 bg-muted/30 overflow-hidden rounded-lg">
+              <div className="announcement-modern-media announcement-modern-image w-full overflow-hidden">
                 <img
                   src={currentImageSlide.announcement.slides[currentImageSlide.slideIndex].conteudo}
                   alt={currentImageSlide.announcement.titulo || "Aviso"}
-                  className="w-full h-full object-cover"
+                  className="block w-full h-auto object-contain"
                   data-testid="announcement-image"
                 />
               </div>
@@ -185,13 +185,13 @@ export function AnnouncementsCarousel({ userType, userTurma }: AnnouncementsCaro
 
       {/* Avisos de texto - Desktop: direita, Mobile: segundo */}
       {textSlides.length > 0 && currentTextSlide && (
-        <Card>
+        <Card className="announcement-modern-card announcement-modern-fullbleed">
           <CardContent className="p-0">
             <div className="relative">
-              <div className="w-full h-64 bg-muted/30 overflow-hidden rounded-lg flex items-center justify-center p-6">
+              <div className="announcement-modern-media announcement-modern-text w-full h-64 overflow-hidden flex items-center justify-center p-8">
                 <div className="max-w-full mx-auto text-center space-y-3">
                   <div className="flex justify-center mb-2">
-                    <div className="p-2 bg-primary/10 rounded-full">
+                    <div className="announcement-modern-icon">
                       <Megaphone className="h-6 w-6 text-primary" />
                     </div>
                   </div>

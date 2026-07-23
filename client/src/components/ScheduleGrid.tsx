@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   DIAS_SEMANA, 
   HORARIOS_AULAS,
@@ -104,20 +105,91 @@ export function ScheduleGrid({
     ? baseHorarios.filter(h => horariosExibidos.includes(h.id))
     : baseHorarios;
 
+  const isMobile = useIsMobile();
+
   const getSlot = (dia: DiaSemana, horarioId: string): SlotAula | undefined => {
     return slots.find(s => s.diaSemana === dia && s.horarioId === horarioId);
   };
 
   const materiasUsadas = Array.from(new Set(slots.map(s => s.materia)));
 
+  if (isMobile && !editable) {
+    return (
+      <div className="space-y-4">
+        {diasExibidos.map((dia) => {
+          const daySlots = horarios
+            .filter((horario) => horario.tipo !== "intervalo")
+            .map((horario) => ({ horario, slot: getSlot(dia, horario.id) }))
+            .filter((item) => item.slot);
+
+          return (
+            <Card key={dia} className="overflow-hidden border-border/70 shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Calendar className="h-4 w-4 text-primary" />
+                  {DIAS_LABELS[dia]}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {daySlots.length ? (
+                  daySlots.map(({ horario, slot }) => (
+                    <div
+                      key={`${dia}-${horario.id}`}
+                      className={cn(
+                        "rounded-2xl border p-3 shadow-sm",
+                        slot ? getMateriaColor(slot.materia) : "bg-muted/40"
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="font-semibold leading-tight">{slot?.materia}</div>
+                          <div className="mt-1 flex items-center gap-1 text-xs opacity-80">
+                            <Clock className="h-3 w-3" />
+                            <span>{horario.inicio} - {horario.fim}</span>
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="bg-background/70">{horario.nome}</Badge>
+                      </div>
+                      {slot?.professorNome && (
+                        <div className="mt-2 flex items-center gap-1 text-sm opacity-90">
+                          <User className="h-3.5 w-3.5" />
+                          <span>Prof. {slot.professorNome}</span>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-2xl border border-dashed bg-muted/25 px-4 py-6 text-center text-sm text-muted-foreground">
+                    Nenhuma aula cadastrada para este dia.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
+
+        {showLegend && materiasUsadas.length > 0 && (
+          <div className="flex flex-wrap gap-2 rounded-2xl border bg-card p-4">
+            <span className="w-full text-sm font-semibold text-foreground">Legenda das matérias</span>
+            {materiasUsadas.map((materia) => (
+              <Badge key={materia} variant="outline" className={cn("text-xs", getMateriaColor(materia))}>
+                {materia}
+              </Badge>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse min-w-[600px]">
+      <div className="overflow-x-auto schedule-grid-scroll">
+        <table className="w-full border-collapse min-w-[760px] md:min-w-[600px]">
           <thead>
             <tr>
               <th className={cn(
-                "border border-border bg-muted/50 font-medium text-muted-foreground",
+                "border border-border bg-muted/50 font-medium text-muted-foreground sticky left-0 z-20",
                 compact ? "p-1 text-xs" : "p-2 text-sm"
               )}>
                 <div className="flex items-center justify-center gap-1">
@@ -145,7 +217,7 @@ export function ScheduleGrid({
               return (
                 <tr key={horario.id} className={cn(isIntervalo && "bg-muted/40")}>
                   <td className={cn(
-                    "border border-border bg-muted/30 text-center font-medium",
+                    "border border-border bg-muted/30 text-center font-medium sticky left-0 z-10",
                     compact ? "p-1 text-xs" : "p-2 text-sm",
                     isIntervalo && "bg-muted/50"
                   )}>

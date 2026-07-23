@@ -18,6 +18,7 @@ import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 import type { Announcement, Turma, AnnouncementSlide } from "@shared/schema";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { getNowBrasiliaISO, formatBrasiliaDateTime, getNowBrasilia } from "@/lib/brasiliaTime";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import jsPDF from "jspdf";
@@ -47,6 +48,7 @@ const cleanFirestoreData = (obj: any): any => {
 export function AnnouncementsTab() {
   const { userData } = useAuth();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   
   // Estados para diálogos
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -639,9 +641,9 @@ export function AnnouncementsTab() {
   };
 
   const renderAnnouncementCard = (announcement: Announcement, isArchived: boolean = false) => (
-    <Card key={announcement.id} className="hover-elevate">
+    <Card key={announcement.id} className="hover-elevate announcement-admin-card mobile-fade-in">
       <CardHeader>
-        <div className="flex items-start justify-between gap-4">
+        <div className={`flex gap-4 ${isMobile ? 'flex-col' : 'items-start justify-between'}`}>
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/10 rounded-lg">
               <Megaphone className="h-5 w-5 text-primary" />
@@ -692,7 +694,7 @@ export function AnnouncementsTab() {
         </div>
 
         {!isArchived && (
-          <div className="flex flex-wrap gap-2">
+          <div className={isMobile ? "grid grid-cols-2 gap-2" : "flex flex-wrap gap-2"}>
             {announcement.ativo ? (
               <Button
                 variant="outline"
@@ -769,9 +771,12 @@ export function AnnouncementsTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-xl font-semibold">Quadro de Avisos</h3>
-        <Button onClick={() => {
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h3 className="text-xl font-semibold">Quadro de Avisos</h3>
+          <p className="text-sm text-muted-foreground">Crie, acompanhe e organize comunicados da escola com um visual mais limpo no celular.</p>
+        </div>
+        <Button className="sm:w-auto w-full" onClick={() => {
           resetForm();
           const now = getNowBrasilia();
           setStartDate(now.dateString);
@@ -790,6 +795,11 @@ export function AnnouncementsTab() {
         </>
       ) : (
         <Tabs defaultValue="active" className="space-y-4">
+          <div className="school-kpi-grid school-kpi-grid-3">
+            <div className="school-kpi-card tone-violet"><div className="school-kpi-value">{activeAnnouncements.length}</div><div className="school-kpi-label">Ativos</div></div>
+            <div className="school-kpi-card tone-amber"><div className="school-kpi-value">{inactiveAnnouncements.length}</div><div className="school-kpi-label">Inativos</div></div>
+            <div className="school-kpi-card tone-cyan"><div className="school-kpi-value">{archivedAnnouncements.length}</div><div className="school-kpi-label">Arquivados</div></div>
+          </div>
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="active" data-testid="tab-active">
               Ativos ({activeAnnouncements.length})
@@ -804,7 +814,7 @@ export function AnnouncementsTab() {
 
           <TabsContent value="active" className="space-y-4">
             {activeAnnouncements.length > 0 ? (
-              <div className="grid gap-4">
+              <div className="grid gap-4 mobile-stagger">
                 {activeAnnouncements
                   .sort((a, b) => new Date(b.dataCriacao).getTime() - new Date(a.dataCriacao).getTime())
                   .map((announcement) => renderAnnouncementCard(announcement))}
@@ -822,7 +832,7 @@ export function AnnouncementsTab() {
 
           <TabsContent value="inactive" className="space-y-4">
             {inactiveAnnouncements.length > 0 ? (
-              <div className="grid gap-4">
+              <div className="grid gap-4 mobile-stagger">
                 {inactiveAnnouncements
                   .sort((a, b) => new Date(b.dataCriacao).getTime() - new Date(a.dataCriacao).getTime())
                   .map((announcement) => renderAnnouncementCard(announcement))}
@@ -847,7 +857,7 @@ export function AnnouncementsTab() {
                     Baixar Histórico (PDF)
                   </Button>
                 </div>
-                <div className="grid gap-4">
+                <div className="grid gap-4 mobile-stagger">
                   {archivedAnnouncements
                     .sort((a, b) => new Date(b.dataCriacao).getTime() - new Date(a.dataCriacao).getTime())
                     .map((announcement) => renderAnnouncementCard(announcement, true))}

@@ -1,0 +1,38 @@
+VESTIBULANDO — PORTAL CLÁSSICO COM CHAT ATUAL
+=============================================
+
+Esta é a versão correta baseada em:
+
+VESTIBULANDO-PORTAL-PAIS-E-ALUNOS-FINAL.zip
+
+O visual possui:
+
+- Cabeçalho escuro e identificação amarela do sistema.
+- Cartão de perfil do usuário em destaque.
+- Cartões de perfil de acesso e situação do sistema.
+- Categorias em navegação horizontal, sem menu lateral.
+- Barra secundária horizontal com as funções de cada categoria.
+- Páginas e funcionalidades da base clássica preservadas.
+- Chat mantido na versão mais recente.
+
+COMO PUBLICAR
+-------------
+
+1. Extraia este ZIP em uma pasta nova.
+2. Abra a pasta VESTIBULANDO-PORTAL-CLASSICO-COM-CHAT-ATUAL.
+3. Execute somente PUBLICAR_PORTAL_CLASSICO_AGORA.bat.
+4. Conclua qualquer login solicitado.
+5. Aguarde a mensagem de atualização enviada com sucesso.
+
+O publicador utiliza o projeto existente "vestibulando" e o repositório
+GitHub já conectado ao Cloudflare Pages. Nenhum projeto novo é criado.
+
+VALIDAÇÕES
+----------
+
+- Navegação horizontal confirmada no código final.
+- Menu lateral moderno ausente.
+- Componentes visuais comparados com a base clássica recuperada.
+- Arquivos do chat comparados com a última versão.
+- Build de produção testado.
+- ZIP extraído e recompilado antes da entrega.

@@ -110,5 +110,8 @@
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"
+  },
+  "overrides": {
+    "@radix-ui/react-presence": "1.1.7"
   }
 }

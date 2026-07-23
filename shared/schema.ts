@@ -1787,3 +1787,79 @@ export const insertWebrtcSignalSchema = webrtcSignalSchema.omit({ id: true });
 
 export type WebrtcSignal = z.infer<typeof webrtcSignalSchema>;
 export type InsertWebrtcSignal = z.infer<typeof insertWebrtcSignalSchema>;
+
+// ==================== FINANCEIRO ====================
+
+export const financialInvoiceSchema = z.object({
+  id: z.string(),
+  alunoId: z.string(),
+  alunoNome: z.string(),
+  alunoMatricula: z.string().optional(),
+  turma: z.string().optional(),
+  referencia: z.string(),
+  descricao: z.string().optional(),
+  vencimento: z.string(),
+  valorOriginal: z.number(),
+  descontoBolsa: z.number().default(0),
+  descontoManual: z.number().default(0),
+  multa: z.number().default(0),
+  juros: z.number().default(0),
+  valorFinal: z.number(),
+  bolsaId: z.string().optional(),
+  bolsaDescricao: z.string().optional(),
+  status: z.enum(["pendente", "em_analise", "pago", "cancelado"]),
+  pixCopiaCola: z.string().optional(),
+  linkPagamento: z.string().optional(),
+  comprovanteUrl: z.string().optional(),
+  comprovanteNome: z.string().optional(),
+  comprovanteEnviadoEm: z.string().optional(),
+  pagamentoInformadoEm: z.string().optional(),
+  pagoEm: z.string().optional(),
+  observacaoPagamento: z.string().optional(),
+  confirmadoPor: z.string().optional(),
+  criadoEm: z.string(),
+  atualizadoEm: z.string(),
+  criadoPor: z.string(),
+  criadoPorNome: z.string().optional(),
+  atualizadoPor: z.string().optional(),
+});
+
+export const insertFinancialInvoiceSchema = financialInvoiceSchema.omit({ id: true });
+export type FinancialInvoice = z.infer<typeof financialInvoiceSchema>;
+export type InsertFinancialInvoice = z.infer<typeof insertFinancialInvoiceSchema>;
+
+export const scholarshipSchema = z.object({
+  id: z.string(),
+  alunoId: z.string(),
+  alunoNome: z.string(),
+  alunoMatricula: z.string().optional(),
+  nome: z.string(),
+  tipo: z.enum(["percentual", "valor_fixo", "integral"]),
+  valor: z.number(),
+  motivo: z.string().optional(),
+  dataInicio: z.string(),
+  dataFim: z.string().optional(),
+  ativa: z.boolean(),
+  criadoEm: z.string(),
+  atualizadoEm: z.string(),
+  criadoPor: z.string(),
+  criadoPorNome: z.string().optional(),
+  atualizadoPor: z.string().optional(),
+});
+
+export const insertScholarshipSchema = scholarshipSchema.omit({ id: true });
+export type Scholarship = z.infer<typeof scholarshipSchema>;
+export type InsertScholarship = z.infer<typeof insertScholarshipSchema>;
+
+export const financialSettingsSchema = z.object({
+  id: z.string(),
+  beneficiario: z.string().optional(),
+  chavePix: z.string().optional(),
+  pixCopiaCola: z.string().optional(),
+  linkPagamento: z.string().optional(),
+  instrucoes: z.string().optional(),
+  atualizadoEm: z.string().optional(),
+  atualizadoPor: z.string().optional(),
+});
+
+export type FinancialSettings = z.infer<typeof financialSettingsSchema>;

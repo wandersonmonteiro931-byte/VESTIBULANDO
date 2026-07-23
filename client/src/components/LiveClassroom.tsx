@@ -272,13 +272,13 @@ export function LiveClassroom({ onExit }: LiveClassroomProps) {
   if (!currentSession) {
     return (
       <>
-        <Card className="max-w-md mx-auto mt-8">
-          <CardHeader className="text-center">
-            <div className="mx-auto p-3 rounded-full bg-muted w-fit mb-2">
-              <BookOpen className="h-8 w-8 text-muted-foreground" />
+        <Card className="max-w-md mx-auto mt-8 live-empty-card">
+          <CardHeader className="premium-empty-state text-center">
+            <div className="premium-empty-icon mx-auto">
+              <BookOpen className="h-7 w-7" />
             </div>
-            <CardTitle>Nenhuma Aula em Andamento</CardTitle>
-            <CardDescription>
+            <CardTitle className="premium-empty-title text-foreground">Nenhuma Aula em Andamento</CardTitle>
+            <CardDescription className="premium-empty-text">
               Não há nenhuma aula ao vivo no momento. Aguarde o professor iniciar a aula.
             </CardDescription>
           </CardHeader>
