@@ -1,7 +1,7 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 cd /d "%~dp0"
-title VESTIBULANDO - Publicar original MAIN2 com chat atual
+title VESTIBULANDO - Corrigir Firebase e publicar original MAIN2
 
 set "REPO=https://github.com/wandersonmonteiro931-byte/VESTIBULANDO.git"
 set "BRANCH=main"
@@ -24,7 +24,7 @@ if not defined DEPLOY_ID set "DEPLOY_ID=manual-%RANDOM%"
 
 cls
 echo ============================================================
-echo  VESTIBULANDO - ORIGINAL MAIN2 COM CHAT ATUAL
+echo  VESTIBULANDO - CORRECAO FIREBASE + ORIGINAL MAIN2
 echo ============================================================
 echo.
 echo Este publicador atualiza o projeto EXISTENTE vestibulando.pages.dev.
@@ -33,8 +33,15 @@ echo.
 
 if not exist "package.json" goto ERRO_PASTA
 if not exist "BASE-OFICIAL-MAIN2-COM-CHAT-ATUAL.txt" goto ERRO_PACOTE
-findstr /I /C:"BASE-OFICIAL-VESTIBULANDO-MAIN2-CHAT-ATUAL" "BASE-OFICIAL-MAIN2-COM-CHAT-ATUAL.txt" >nul
+findstr /I /C:"BASE-OFICIAL-VESTIBULANDO-MAIN2-CHAT-ATUAL-FIREBASE-OK" "BASE-OFICIAL-MAIN2-COM-CHAT-ATUAL.txt" >nul
 if errorlevel 1 goto ERRO_PACOTE
+if not exist "client\.env.production" goto ERRO_FIREBASE_CONFIG
+findstr /I /C:"VITE_FIREBASE_PROJECT_ID=plataforma-enem-f3682" "client\.env.production" >nul
+if errorlevel 1 goto ERRO_FIREBASE_CONFIG
+findstr /I /C:"VITE_FIREBASE_API_KEY=AIzaSyAKPmqetUP_w8SGqr3ooLXAbASpFlRNWBY" "client\.env.production" >nul
+if errorlevel 1 goto ERRO_FIREBASE_CONFIG
+findstr /I /C:"VITE_FIREBASE_APP_ID=1:1086290785401:web:123ba3c7d224b6497710a8" "client\.env.production" >nul
+if errorlevel 1 goto ERRO_FIREBASE_CONFIG
 if not exist "client\src\pages\AdminDashboard.tsx" goto ERRO_PACOTE
 if not exist "client\src\pages\StudentDashboard.tsx" goto ERRO_PACOTE
 if not exist "client\src\pages\TeacherDashboard.tsx" goto ERRO_PACOTE
@@ -69,7 +76,7 @@ if exist "node_modules\vite\package.json" (
 echo.
 echo [2/6] Gerando a versao e o build de producao...
 if not exist "client\public" mkdir "client\public"
-> "client\public\deploy-version.json" echo {"version":"%DEPLOY_ID%","source":"MAIN2-ORIGINAL-CHAT-ATUAL"}
+> "client\public\deploy-version.json" echo {"version":"%DEPLOY_ID%","source":"MAIN2-ORIGINAL-CHAT-ATUAL-FIREBASE-OK"}
 call npm run build:pages
 if errorlevel 1 goto ERRO_BUILD
 if not exist "%BUILD_DIR%\index.html" goto ERRO_BUILD
@@ -109,7 +116,9 @@ git reset --mixed origin/%BRANCH%
 if errorlevel 1 goto ERRO_GITHUB
 git add -A
 if errorlevel 1 goto ERRO_GITHUB
-git commit -m "Restaurar original MAIN2 com chat atual %DEPLOY_ID%"
+git add -f "client\.env.production"
+if errorlevel 1 goto ERRO_GITHUB
+git commit -m "Corrigir Firebase no original MAIN2 %DEPLOY_ID%"
 if errorlevel 1 goto ERRO_GITHUB
 git push -u origin %BRANCH%
 if errorlevel 1 goto ERRO_GITHUB
@@ -160,6 +169,11 @@ goto FIM_ERRO
 :ERRO_PACOTE
 echo ERRO: esta nao e a pasta MAIN2 original com o chat atual.
 echo Extraia novamente o ZIP em uma PASTA NOVA e execute este arquivo nela.
+goto FIM_ERRO
+
+:ERRO_FIREBASE_CONFIG
+echo ERRO: a configuracao publica do Firebase nao esta completa nesta pasta.
+echo Baixe e extraia novamente o pacote FIREBASE CORRIGIDO em uma pasta nova.
 goto FIM_ERRO
 
 :ERRO_NODE

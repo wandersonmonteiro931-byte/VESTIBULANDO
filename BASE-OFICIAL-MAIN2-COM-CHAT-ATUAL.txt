@@ -1,4 +1,4 @@
-BASE-OFICIAL-VESTIBULANDO-MAIN2-CHAT-ATUAL
+BASE-OFICIAL-VESTIBULANDO-MAIN2-CHAT-ATUAL-FIREBASE-OK
 
 Este pacote usa VESTIBULANDO-main(2).zip como base oficial.
 
@@ -9,11 +9,15 @@ Somente o chat foi atualizado para a ultima versao, incluindo presenca on-line,
 digitando, mensagens nao lidas, exclusao, bloqueio e denuncia. As regras e os
 indices do Firestore necessarios ao chat tambem acompanham o pacote.
 
+A configuracao publica do Firebase do projeto plataforma-enem-f3682 fica em
+client/.env.production. Assim, o Cloudflare encontra automaticamente as
+variaveis VITE_FIREBASE durante o build e nao exibe a tela de erro.
+
 Para publicar no projeto ja existente:
 
 1. Extraia este ZIP em uma pasta nova.
 2. Abra VESTIBULANDO-MAIN2-ORIGINAL-COM-CHAT-ATUAL.
-3. Execute apenas PUBLICAR_ORIGINAL_MAIN2_COM_CHAT_ATUAL.bat.
+3. Execute apenas PUBLICAR_CORRECAO_FIREBASE_AGORA.bat.
 4. Aguarde a mensagem SITE ATUALIZADO E CONFIRMADO.
 
 O publicador envia o codigo ao repositorio GitHub ja ligado ao projeto
