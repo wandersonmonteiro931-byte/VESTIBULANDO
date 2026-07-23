@@ -17,12 +17,11 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { FileUploadZone } from "@/components/FileUploadZone";
 import { AnnouncementsCarousel } from "@/components/AnnouncementsCarousel";
 import { ChatNotificationBubble } from "@/components/ChatNotificationBubble";
-import { LogOut, FileText, Upload, Download, Calendar, Award, CheckCircle2, Clock, AlertTriangle, MessageCircle, WalletCards, Video, ClipboardList, Sparkles } from "lucide-react";
+import { LogOut, FileText, Upload, Download, Calendar, Award, CheckCircle2, Clock, AlertTriangle, MessageCircle } from "lucide-react";
 import { AlunoAvaliacoesTab } from "@/components/AlunoAvaliacoesTab";
 import { AlunoBoletimTab } from "@/components/AlunoBoletimTab";
 import { AlunoPresencasTab } from "@/components/AlunoPresencasTab";
 import { AlunoAulasTab } from "@/components/AlunoAulasTab";
-import { StudentFinanceTab } from "@/components/StudentFinanceTab";
 import { HorarioViewer } from "@/components/HorarioViewer";
 import { Link } from "wouter";
 import { queryClient } from "@/lib/queryClient";
@@ -34,13 +33,10 @@ import { ptBR } from "date-fns/locale";
 import jsPDF from "jspdf";
 import assinaturaDeclaracaoUrl from "@assets/Captura de tela 2025-10-23 011843_1761193443162.png";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
-import { PortalBrand } from "@/components/PortalBrand";
-import { PortalProfileHeader } from "@/components/PortalProfileHeader";
 import { AttendanceConfirmationModal } from "@/components/AttendanceConfirmationModal";
 import { LiveClassNotification } from "@/components/LiveClassNotification";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-import { MobileBottomNav } from "@/components/MobileBottomNav";
 
 export default function StudentDashboard() {
   const { userData, signOut } = useAuth();
@@ -296,15 +292,44 @@ export default function StudentDashboard() {
 
   return (
     <SidebarProvider style={{ "--sidebar-width": "280px" } as React.CSSProperties}>
-      <div className="dashboard-modern dashboard-student flex min-h-screen w-full">
-        <div className="min-w-0 flex-1 flex flex-col">
-          <header className="dashboard-topbar elegant-topbar sticky top-0 z-50 w-full">
-            <div className="dashboard-topbar-inner elegant-header container flex items-center justify-between px-4 sm:px-6">
-              <div className="dashboard-header-left flex items-center gap-3">
-                <PortalBrand compactLabel="Aluno" />
+      <div className="flex min-h-screen w-full">
+        <DashboardSidebar
+          role="aluno"
+          selectedItem={selectedSection}
+          onSelectItem={setSelectedSection}
+          pendingCounts={{ pendentes: pendingCount, advertencias: warningsCount }}
+          userName={userData?.nome}
+          userRole="Aluno"
+        />
+        <div className="flex-1 flex flex-col">
+          <header className="sticky top-0 z-50 w-full border-b bg-gradient-to-r from-card via-card to-card/95 backdrop-blur-xl shadow-sm">
+            <div className="container flex h-20 items-center justify-between px-6">
+              <div className="flex items-center gap-3">
+                <SidebarTrigger data-testid="button-sidebar-toggle" />
+                <div className="p-2.5 bg-gradient-to-br from-primary to-primary/80 rounded-xl shadow-md shadow-primary/20">
+                  <FileText className="h-6 w-6 text-primary-foreground" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">Vestibulando</h1>
+                  <p className="text-xs text-muted-foreground font-medium">Área do Aluno</p>
+                </div>
               </div>
               
-              <div className="dashboard-header-right flex items-center gap-3">
+              <div className="flex items-center gap-3">
+                <div className="text-right mr-2 hidden sm:block">
+                  <p className="text-sm font-semibold">{userData?.nome}</p>
+                  <p className="text-xs text-muted-foreground">Turma {nomeTurma}</p>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={generateDeclaracaoMatricula}
+                  data-testid="button-declaracao-matricula"
+                  className="hidden sm:flex"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Declaração
+                </Button>
                 <ThemeToggle />
                 <BrasiliaClock />
                 <Link href="/chat">
@@ -312,7 +337,7 @@ export default function StudentDashboard() {
                     variant="outline" 
                     size="icon"
                     className={cn(
-                      "header-chat-btn flex flex-col h-auto py-2 px-3 gap-1 relative",
+                      "flex flex-col h-auto py-2 px-3 gap-1 relative",
                       hasUnread && "animate-pulse border-primary"
                     )}
                     data-testid="button-chat-header"
@@ -327,7 +352,7 @@ export default function StudentDashboard() {
                     )}
                   </Button>
                 </Link>
-                <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout" className="header-icon-btn">
+                <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout">
                   <LogOut className="h-5 w-5" />
                 </Button>
               </div>
@@ -344,58 +369,11 @@ export default function StudentDashboard() {
             />
           )}
 
-          <main className="dashboard-main container px-4 sm:px-6 pt-6 pb-28 md:pb-8 max-w-7xl mx-auto flex-1">
-            <PortalProfileHeader
-              user={userData}
-              role="aluno"
-              contextLabel={`Turma ${nomeTurma || "não definida"}`}
-              documentAction={{ label: "DECLARAÇÃO", onClick: generateDeclaracaoMatricula }}
-            />
-            <DashboardSidebar
-              role="aluno"
-              selectedItem={selectedSection}
-              onSelectItem={setSelectedSection}
-              pendingCounts={{ pendentes: pendingCount, advertencias: warningsCount }}
-              userName={userData?.nome}
-              userRole="Aluno"
-            />
-
+          <main className="container px-6 py-10 max-w-7xl mx-auto flex-1">
             {selectedSection === "inicio" && (
               <>
-                <div className="mb-6 md:hidden">
-                  <Card className="dashboard-school-panel dashboard-school-intro-card overflow-hidden border-primary/15 bg-gradient-to-br from-primary/10 via-background to-sky-50 shadow-sm dark:to-slate-900">
-                    <CardContent className="p-5">
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
-                            <Sparkles className="h-3.5 w-3.5" /> Espaço do aluno
-                          </div>
-                          <h2 className="text-2xl font-bold tracking-tight text-foreground">Sua jornada escolar começa aqui</h2>
-                          <p className="mt-2 text-sm text-muted-foreground">Turma {nomeTurma} • {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}</p>
-                        </div>
-                        <Badge className="rounded-full bg-primary/15 px-3 py-1 text-primary">Aluno</Badge>
-                      </div>
-                      <div className="mt-4 grid grid-cols-2 gap-2">
-                        <Button variant="outline" className="dashboard-quick-action h-auto justify-start rounded-2xl px-3 py-3" onClick={() => setSelectedSection('horarios')}>
-                          <Clock className="mr-2 h-4 w-4 text-primary" /> Meu horário
-                        </Button>
-                        <Button variant="outline" className="dashboard-quick-action h-auto justify-start rounded-2xl px-3 py-3" onClick={() => setSelectedSection('aulas')}>
-                          <Video className="mr-2 h-4 w-4 text-primary" /> Aulas ao vivo
-                        </Button>
-                        <Button variant="outline" className="dashboard-quick-action h-auto justify-start rounded-2xl px-3 py-3" onClick={() => setSelectedSection('todas')}>
-                          <ClipboardList className="mr-2 h-4 w-4 text-primary" /> Tarefas
-                        </Button>
-                        <Button variant="outline" className="dashboard-quick-action h-auto justify-start rounded-2xl px-3 py-3" onClick={() => setSelectedSection('financeiro')}>
-                          <WalletCards className="mr-2 h-4 w-4 text-primary" /> Financeiro
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                <div className="dashboard-hero mb-8">
-                  <span className="dashboard-eyebrow">Visão geral</span>
-                  <h2 className="dashboard-hero-title">
+                <div className="mb-10">
+                  <h2 className="text-4xl font-bold mb-3 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
                     {(() => {
                       const now = new Date();
                       const brasiliaOffset = -3;
@@ -415,7 +393,7 @@ export default function StudentDashboard() {
                       return `${greeting}, ${userData?.nome?.split(' ')[0]}!`;
                     })()}
                   </h2>
-                  <p className="dashboard-hero-subtitle">Acompanhe suas tarefas, entregas e evolução acadêmica.</p>
+                  <p className="text-muted-foreground text-lg">Acompanhe suas tarefas e progresso</p>
                 </div>
 
                 <div className="mb-10">
@@ -423,7 +401,7 @@ export default function StudentDashboard() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-                  <Card className="dashboard-stat-card dashboard-stat-amber">
+                  <Card className="border-amber-200/50 dark:border-amber-900/50 bg-gradient-to-br from-card to-amber-50/30 dark:to-amber-950/10 hover-elevate">
                     <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
                       <CardTitle className="text-sm font-semibold">Pendentes</CardTitle>
                       <div className="p-2 bg-amber-100 dark:bg-amber-900/40 rounded-lg">
@@ -436,7 +414,7 @@ export default function StudentDashboard() {
                     </CardContent>
                   </Card>
 
-                  <Card className="dashboard-stat-card dashboard-stat-blue">
+                  <Card className="border-blue-200/50 dark:border-blue-900/50 bg-gradient-to-br from-card to-blue-50/30 dark:to-blue-950/10 hover-elevate">
                     <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
                       <CardTitle className="text-sm font-semibold">Entregues</CardTitle>
                       <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg">
@@ -449,7 +427,7 @@ export default function StudentDashboard() {
                     </CardContent>
                   </Card>
 
-                  <Card className="dashboard-stat-card dashboard-stat-green">
+                  <Card className="border-green-200/50 dark:border-green-900/50 bg-gradient-to-br from-card to-green-50/30 dark:to-green-950/10 hover-elevate">
                     <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
                       <CardTitle className="text-sm font-semibold">Avaliadas</CardTitle>
                       <div className="p-2 bg-green-100 dark:bg-green-900/40 rounded-lg">
@@ -836,10 +814,6 @@ export default function StudentDashboard() {
                     </>
                   )}
                 </div>
-              )}
-
-              {selectedSection === "financeiro" && (
-                <StudentFinanceTab />
               )}
 
               {selectedSection === "boletim" && (

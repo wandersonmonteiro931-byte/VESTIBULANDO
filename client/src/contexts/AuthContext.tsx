@@ -1,26 +1,10 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, signOut as firebaseSignOut, User as FirebaseUser } from "firebase/auth";
-import { doc, getDoc, onSnapshot, collection, query, where, updateDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, collection, query, where } from "firebase/firestore";
 import { auth, db, firebaseError } from "@/lib/firebase";
 import type { User } from "@shared/schema";
 import { useUserPresence } from "@/hooks/useUserPresence";
 import { triggerGlobalSuspensionAlert } from "@/contexts/SuspensionAlertContext";
-
-async function markUserOfflineBeforeSignOut(uid: string | null | undefined) {
-  if (!uid) return;
-
-  try {
-    await updateDoc(doc(db, "usuarios", uid), {
-      isOnline: false,
-      lastSeen: serverTimestamp(),
-      lastActivity: serverTimestamp(),
-      statusPresenca: "offline",
-    });
-  } catch (error) {
-    // O hook de presença e a expiração por lastActivity continuam como fallback.
-    console.warn("Não foi possível registrar o status offline antes de sair:", error);
-  }
-}
 
 interface AuthContextType {
   currentUser: FirebaseUser | null;
@@ -58,7 +42,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const data = userDoc.data() as User;
         
         if (data.status === "reprovado" || data.status === "pendente") {
-          await markUserOfflineBeforeSignOut(uid);
           await firebaseSignOut(auth);
           setUserData(null);
           setCurrentUser(null);
@@ -67,7 +50,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         // Verificar se usuário está bloqueado ou desativado (exceto diretores)
         if (data.tipo !== "diretor" && (data.bloqueado === true || data.ativo === false)) {
-          await markUserOfflineBeforeSignOut(uid);
           await firebaseSignOut(auth);
           setUserData(null);
           setCurrentUser(null);
@@ -102,12 +84,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const refreshUserData = async () => {
-    // Durante o login, o estado React pode ainda não ter recebido o novo usuário.
-    // auth.currentUser já aponta para a conta autenticada e evita reutilizar dados
-    // da conta anterior ao alternar entre aluno, professor e diretor.
-    const uid = auth?.currentUser?.uid ?? currentUser?.uid;
-    if (!uid) return false;
-    return await fetchUserData(uid);
+    if (currentUser) {
+      return await fetchUserData(currentUser.uid);
+    }
+    return false;
   };
 
   useEffect(() => {
@@ -118,14 +98,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const unsubscribe = onAuthStateChanged(auth, async (user) => {
-        setLoading(true);
-
         if (user) {
-          // Atualiza primeiro a identidade autenticada. Assim, qualquer atualização
-          // posterior sempre pertence ao mesmo UID e não à conta anterior.
-          setCurrentUser(user);
           const isApproved = await fetchUserData(user.uid);
-          if (!isApproved) {
+          if (isApproved) {
+            setCurrentUser(user);
+          } else {
             setCurrentUser(null);
             setUserData(null);
           }
@@ -133,7 +110,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setCurrentUser(null);
           setUserData(null);
         }
-
         setLoading(false);
       });
 
@@ -155,7 +131,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUserData(data);
           
           if (data.status === "reprovado" || data.status === "pendente") {
-            await markUserOfflineBeforeSignOut(currentUser.uid);
             await firebaseSignOut(auth);
             setUserData(null);
             setCurrentUser(null);
@@ -163,7 +138,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           // Verificar se usuário foi bloqueado ou desativado (exceto diretores)
           if (data.tipo !== "diretor" && (data.bloqueado === true || data.ativo === false)) {
-            await markUserOfflineBeforeSignOut(currentUser.uid);
             await firebaseSignOut(auth);
             setUserData(null);
             setCurrentUser(null);
@@ -176,7 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 
     return unsubscribe;
-  }, [currentUser?.uid]);
+  }, [currentUser]);
 
   // Listener em tempo real para suspensões disciplinares (apenas alunos)
   useEffect(() => {
@@ -226,11 +200,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 
     return unsubscribe;
-  }, [currentUser?.uid, userData?.tipo, userData?.nome]);
+  }, [currentUser, userData]);
 
   const signOut = async () => {
     if (!auth) return;
-    await markUserOfflineBeforeSignOut(auth.currentUser?.uid ?? currentUser?.uid);
     await firebaseSignOut(auth);
     setUserData(null);
   };

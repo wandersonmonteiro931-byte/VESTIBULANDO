@@ -15,24 +15,6 @@
       ]
     },
     {
-      "collectionGroup": "webrtcSignals",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "processado",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "sessaoId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "timestamp",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
       "collectionGroup": "userBlocks",
       "queryScope": "COLLECTION",
       "fields": [
@@ -56,6 +38,24 @@
         },
         {
           "fieldPath": "ativo",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "webrtcSignals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "processado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "sessaoId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
           "order": "ASCENDING"
         }
       ]

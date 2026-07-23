@@ -118,26 +118,5 @@ service firebase.storage {
                       fileName.matches('profile_' + request.auth.uid + '_.*')
                    );
     }
-
-
-    // Comprovantes financeiros
-    match /finance/comprovantes/{alunoId}/{invoiceId}/{fileName} {
-      allow read: if isAuthenticated() && isUserActive() && (
-        isAdmin() ||
-        (isAluno() && request.auth.uid == alunoId)
-      );
-
-      allow create, update: if isAluno() && isUserActive() &&
-        request.auth.uid == alunoId &&
-        request.resource.size < 10 * 1024 * 1024 &&
-        request.resource.contentType in [
-          'application/pdf',
-          'image/jpeg',
-          'image/png',
-          'image/webp'
-        ];
-
-      allow delete: if isAdmin() && isUserActive();
-    }
   }
 }

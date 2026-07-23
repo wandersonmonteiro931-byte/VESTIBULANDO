@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
@@ -19,8 +20,6 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { formatBrasiliaDateTime, getNowBrasiliaISO, brasiliaToUTC } from "@/lib/brasiliaTime";
 import { HORARIOS_DISPONIVEIS } from "@shared/schema";
-import logoUrl from "@assets/Blue and White Online School Logo (1)_1761189954480.png";
-import { PortalBrand } from "@/components/PortalBrand";
 
 // Verifica se uma matrícula já existe no banco de dados
 async function matriculaJaExiste(db: any, matricula: string): Promise<boolean> {
@@ -161,6 +160,7 @@ async function buscarCEP(cep: string) {
 }
 
 export default function Login() {
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { userData, refreshUserData } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -241,7 +241,6 @@ export default function Login() {
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [passwordChangeLoading, setPasswordChangeLoading] = useState(false);
   const [passwordChangeError, setPasswordChangeError] = useState("");
-  const redirectingAfterLoginRef = useRef(false);
 
   // Validar CPF em tempo real quando usuário digitar 11 números
   useEffect(() => {
@@ -257,59 +256,28 @@ export default function Login() {
   }, [formData.cpf, mode]);
 
   useEffect(() => {
-    if (!userData) {
-      redirectingAfterLoginRef.current = false;
-      return;
+    if (userData && !showCodeDialog && !showSuspensionOverlay && !showMaintenanceOverlay && !showBlockedOverlay && !showDeactivatedOverlay && !showPasswordChangeDialog) {
+      // Verificar se é primeiro acesso (aluno ou professor)
+      if ((userData.tipo === "aluno" || userData.tipo === "professor") && userData.primeiroAcesso !== false) {
+        console.log("🔒 Primeiro acesso detectado - exigindo troca de senha");
+        setShowPasswordChangeDialog(true);
+        return;
+      }
+      
+      // Redirecionar para o dashboard apropriado
+      switch (userData.tipo) {
+        case "aluno":
+          setLocation("/aluno");
+          break;
+        case "professor":
+          setLocation("/professor");
+          break;
+        case "diretor":
+          setLocation("/diretor");
+          break;
+      }
     }
-
-    if (
-      showCodeDialog ||
-      showSuspensionOverlay ||
-      showMaintenanceOverlay ||
-      showBlockedOverlay ||
-      showDeactivatedOverlay ||
-      showPasswordChangeDialog
-    ) {
-      return;
-    }
-
-    // Verificar se é primeiro acesso (aluno ou professor).
-    if (
-      (userData.tipo === "aluno" || userData.tipo === "professor") &&
-      userData.primeiroAcesso !== false
-    ) {
-      setShowPasswordChangeDialog(true);
-      return;
-    }
-
-    const targetPath =
-      userData.tipo === "aluno"
-        ? "/aluno"
-        : userData.tipo === "professor"
-          ? "/professor"
-          : userData.tipo === "diretor"
-            ? "/diretor"
-            : "/login";
-
-    if (window.location.pathname === targetPath || redirectingAfterLoginRef.current) {
-      return;
-    }
-
-    // Usa uma única navegação completa depois do login. Isso evita a disputa
-    // entre efeitos do Login e das rotas protegidas que provocava React #185.
-    redirectingAfterLoginRef.current = true;
-    window.location.replace(targetPath);
-  }, [
-    userData?.uid,
-    userData?.tipo,
-    userData?.primeiroAcesso,
-    showCodeDialog,
-    showSuspensionOverlay,
-    showMaintenanceOverlay,
-    showBlockedOverlay,
-    showDeactivatedOverlay,
-    showPasswordChangeDialog,
-  ]);
+  }, [userData, showCodeDialog, showSuspensionOverlay, showMaintenanceOverlay, showPasswordChangeDialog, setLocation]);
 
   // Carregar turmas disponíveis
   useEffect(() => {
@@ -433,6 +401,18 @@ export default function Login() {
       buscar();
     }
   }, [formData.cep, mode]);
+
+  // Log quando overlay de suspensão é ativado
+  useEffect(() => {
+    console.log("🔔 Estado do overlay mudou:", {
+      showSuspensionOverlay,
+      hasSuspensionData: !!suspensionData
+    });
+    
+    if (showSuspensionOverlay && suspensionData) {
+      console.log("🚨 OVERLAY DE SUSPENSÃO ATIVADO - DEVE APARECER NA TELA AGORA!");
+    }
+  }, [showSuspensionOverlay, suspensionData]);
 
   // Atualizar contador de suspensão em tempo real
   useEffect(() => {
@@ -751,16 +731,12 @@ export default function Login() {
           console.error("Erro ao limpar manutenções expiradas:", cleanupError);
         }
         
-        const refreshed = await refreshUserData();
-        if (!refreshed) {
-          throw new Error("Não foi possível carregar os dados da conta da diretoria.");
-        }
-
+        await refreshUserData();
+        
         toast({
           title: "Login realizado com sucesso!",
           description: "Bem-vindo à Diretoria!",
         });
-
       } else {
         // Login usando CPF ou Matrícula
         const loginIdentifier = formData.loginId.replace(/\D/g, '');
@@ -1436,33 +1412,24 @@ export default function Login() {
   };
 
   return (
-    <div className="login-modern min-h-screen flex items-center justify-center p-4 sm:p-6 relative overflow-hidden">
-      <div className="portal-login-topbar">
-        <PortalBrand compactLabel="Acesso" />
-      </div>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-accent/10 p-4 relative overflow-hidden">
       <div className="absolute inset-0 bg-grid-pattern opacity-[0.02]"></div>
       <div className="absolute top-4 right-4 z-10">
         <ThemeToggle />
       </div>
       
-      <Card className="login-modern-card w-full max-w-2xl relative z-10">
+      <Card className="w-full max-w-2xl shadow-xl border-primary/10 relative z-10 backdrop-blur-sm bg-card/95">
         <CardHeader className="space-y-6 text-center pb-8">
           <div className="flex justify-center">
-            <div className="login-brand-mark login-brand-mark-premium">
-              <img src={logoUrl} alt="Vestibulando" className="login-brand-image" />
+            <div className="p-4 bg-gradient-to-br from-primary to-primary/80 rounded-2xl shadow-lg shadow-primary/20">
+              <GraduationCap className="h-14 w-14 text-primary-foreground" />
             </div>
           </div>
-          <div className="space-y-3">
-            <div className="login-eyebrow">Plataforma educacional</div>
-            <CardTitle className="login-title">Vestibulando</CardTitle>
-            <CardDescription className="text-base login-subtitle">
+          <div className="space-y-2">
+            <CardTitle className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">Vestibulando</CardTitle>
+            <CardDescription className="text-base">
               {mode === "register" ? "Formulário de Solicitação de Matrícula" : mode === "forgotPassword" ? "Recuperar Senha" : mode === "diretorLogin" ? "Login da Diretoria" : "Seja Bem-Vindo! Faça Login com sua Matrícula ou CPF"}
             </CardDescription>
-            <div className="login-feature-grid">
-              <div className="login-feature-chip"><CheckCircle className="h-4 w-4" /><span>Ambiente escolar</span></div>
-              <div className="login-feature-chip"><Users className="h-4 w-4" /><span>Área do aluno e professor</span></div>
-              <div className="login-feature-chip"><Shield className="h-4 w-4" /><span>Acesso protegido</span></div>
-            </div>
           </div>
         </CardHeader>
         
@@ -1549,7 +1516,7 @@ export default function Login() {
               <div className="text-center">
                 <button
                   type="button"
-                  className="login-text-link text-sm"
+                  className="text-primary hover:underline text-sm"
                   onClick={() => {
                     setMode("login");
                     setForgotPasswordStep(1);
@@ -1987,7 +1954,7 @@ export default function Login() {
                   <div className="flex justify-between items-center">
                     <button
                       type="button"
-                      className="login-text-link text-sm"
+                      className="text-primary hover:underline text-sm"
                       onClick={() => setMode("forgotPassword")}
                       data-testid="button-forgot-password"
                     >
@@ -1995,7 +1962,7 @@ export default function Login() {
                     </button>
                     <button
                       type="button"
-                      className="login-text-link text-sm flex items-center gap-1"
+                      className="text-primary hover:underline text-sm flex items-center gap-1"
                       onClick={() => setMode("diretorLogin")}
                       data-testid="button-diretor-login"
                     >
@@ -2038,7 +2005,7 @@ export default function Login() {
                   <div className="text-center">
                     <button
                       type="button"
-                      className="login-text-link text-sm"
+                      className="text-primary hover:underline text-sm"
                       onClick={() => setMode("login")}
                       data-testid="button-back-to-login"
                     >
@@ -2048,7 +2015,7 @@ export default function Login() {
                 </>
               )}
               
-              <Button type="submit" className="w-full login-primary-button" disabled={loading} data-testid="button-submit">
+              <Button type="submit" className="w-full" disabled={loading} data-testid="button-submit">
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {mode === "register" ? "Solicitar Matrícula" : "Entrar"}
               </Button>
@@ -2059,7 +2026,7 @@ export default function Login() {
             <Button
               type="button"
               variant="outline"
-              className="w-full login-secondary-button"
+              className="w-full"
               onClick={() => {
                 setShowStatusDialog(true);
                 setStatusError("");
@@ -2077,7 +2044,7 @@ export default function Login() {
             <div className="text-center text-sm">
               <button
                 type="button"
-                className="login-toggle-link"
+                className="text-primary hover:underline"
                 onClick={() => setMode(mode === "login" || mode === "diretorLogin" ? "register" : "login")}
                 data-testid="button-toggle-mode"
               >

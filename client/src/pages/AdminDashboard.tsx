@@ -29,13 +29,10 @@ import { HorariosTab } from "@/components/HorariosTab";
 import { ConfiguracaoHorariosTab } from "@/components/ConfiguracaoHorariosTab";
 import { CalendarioProgramacaoTab } from "@/components/CalendarioProgramacaoTab";
 import { PresencasTab } from "@/components/PresencasTab";
-import { AdminFinanceTab } from "@/components/AdminFinanceTab";
 import { ChatNotificationBubble } from "@/components/ChatNotificationBubble";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
-import { PortalBrand } from "@/components/PortalBrand";
-import { PortalProfileHeader } from "@/components/PortalProfileHeader";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, ArrowRightLeft, Clock, Search, Eye, AlertTriangle, Settings, Power, PowerOff, Archive, Download, ChevronDown, ChevronUp, MessageCircle, Camera, Upload, X, Copy, Shield, RotateCcw, UserCheck, School } from "lucide-react";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, ArrowRightLeft, Clock, Search, Eye, AlertTriangle, Settings, Power, PowerOff, Archive, Download, ChevronDown, ChevronUp, MessageCircle, Camera, Upload, X, Copy, Shield, RotateCcw } from "lucide-react";
 import { Link } from "wouter";
 import { Checkbox } from "@/components/ui/checkbox";
 import { queryClient } from "@/lib/queryClient";
@@ -51,7 +48,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { brasiliaToUTC, utcToBrasilia, formatBrasiliaDateTime, getNowBrasilia, getNowBrasiliaISO } from "@/lib/brasiliaTime";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 const turmaFormSchema = z.object({
   nome: z.string().min(1, "Nome da turma é obrigatório"),
@@ -173,7 +169,6 @@ export default function AdminDashboard() {
   const [selectedSection, setSelectedSection] = useState("aprovacoes");
   
   const { hasUnread, latestMessage, showNotification, dismissNotification } = useUnreadMessages();
-  const isMobile = useIsMobile();
   const [createTurmaDialogOpen, setCreateTurmaDialogOpen] = useState(false);
   const [createAlunoDialogOpen, setCreateAlunoDialogOpen] = useState(false);
   const [createProfessorDiretorDialogOpen, setCreateProfessorDiretorDialogOpen] = useState(false);
@@ -2532,12 +2527,21 @@ export default function AdminDashboard() {
   return (
     <SidebarProvider style={{ "--sidebar-width": "280px" } as React.CSSProperties}>
       <>
-      <div className="dashboard-modern dashboard-admin flex min-h-screen w-full">
-        <div className="min-w-0 flex-1 flex flex-col">
-          <header className="dashboard-topbar elegant-topbar sticky top-0 z-50 w-full">
-            <div className="dashboard-topbar-inner elegant-header flex items-center justify-between px-4 sm:px-6 gap-4">
-              <div className="dashboard-header-left flex items-center gap-3">
-                <PortalBrand compactLabel="Diretoria" />
+      <div className="flex min-h-screen w-full">
+        <DashboardSidebar
+          role="diretor"
+          selectedItem={selectedSection}
+          onSelectItem={setSelectedSection}
+          pendingCounts={pendingCounts}
+          userName={userData?.nome}
+          userRole="Diretoria"
+        />
+        
+        <div className="flex-1 flex flex-col">
+          <header className="sticky top-0 z-50 w-full border-b bg-gradient-to-r from-card via-card to-card/95 backdrop-blur-xl shadow-sm">
+            <div className="flex h-16 items-center justify-between px-4 gap-4">
+              <div className="flex items-center gap-3">
+                <SidebarTrigger data-testid="button-sidebar-toggle" />
                 {maintenanceData && maintenanceData.some(m => m.ativa) && (
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-red-600 dark:bg-red-700 rounded-full text-sm blink-red" data-testid="maintenance-warning-badge">
                     <AlertTriangle className="h-4 w-4 text-white animate-pulse" />
@@ -2546,7 +2550,11 @@ export default function AdminDashboard() {
                 )}
               </div>
               
-              <div className="dashboard-header-right flex items-center gap-3">
+              <div className="flex items-center gap-3">
+                <div className="text-right mr-2 hidden sm:block">
+                  <p className="text-sm font-semibold">{userData?.nome}</p>
+                  <p className="text-xs text-muted-foreground">Diretoria</p>
+                </div>
                 <ThemeToggle />
                 <BrasiliaClock />
                 <Link href="/chat">
@@ -2554,7 +2562,7 @@ export default function AdminDashboard() {
                     variant="outline" 
                     size="icon"
                     className={cn(
-                      "header-chat-btn flex flex-col h-auto py-2 px-3 gap-1 relative",
+                      "flex flex-col h-auto py-2 px-3 gap-1 relative",
                       hasUnread && "animate-pulse border-primary"
                     )}
                     data-testid="button-chat-header"
@@ -2569,7 +2577,7 @@ export default function AdminDashboard() {
                     )}
                   </Button>
                 </Link>
-                <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout" className="header-icon-btn">
+                <Button variant="ghost" size="icon" onClick={signOut} data-testid="button-logout">
                   <LogOut className="h-5 w-5" />
                 </Button>
               </div>
@@ -2586,80 +2594,8 @@ export default function AdminDashboard() {
             />
           )}
 
-          <main className="dashboard-main flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-6 py-6 sm:py-8">
-            <PortalProfileHeader
-              user={userData}
-              role="diretor"
-              contextLabel="Gestão escolar"
-            />
-            <DashboardSidebar
-              role="diretor"
-              selectedItem={selectedSection}
-              onSelectItem={setSelectedSection}
-              pendingCounts={pendingCounts}
-              userName={userData?.nome}
-              userRole="Diretoria"
-            />
-
+          <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-6">
             <div className="w-full">
-              <div className="mb-6 space-y-4">
-                <Card className="dashboard-school-panel school-admin-hero overflow-hidden border-primary/15 bg-gradient-to-br from-primary/10 via-background to-slate-50 shadow-sm dark:to-slate-900">
-                  <CardContent className="p-4 sm:p-5">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                      <div>
-                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">Atalhos da diretoria</div>
-                        <h2 className="mt-1 text-xl font-bold tracking-tight text-foreground">Acesso rápido aos setores principais</h2>
-                        <p className="mt-1 text-sm text-muted-foreground">Gerencie aprovações, alunos, professores, disciplina e financeiro com mais agilidade.</p>
-                      </div>
-                      <div className="school-kpi-grid lg:min-w-[420px]">
-                        {[
-                          { label: "Aprovações", value: pendingUsers?.length || 0, icon: UserCheck, tone: "violet" },
-                          { label: "Alunos", value: (users || []).filter((u: User) => u.tipo === "aluno").length, icon: Users, tone: "blue" },
-                          { label: "Professores", value: (users || []).filter((u: User) => u.tipo === "professor").length, icon: School, tone: "green" },
-                          { label: "Pedidos", value: pendingDisciplinaryRequests, icon: AlertTriangle, tone: "amber" },
-                          { label: "Autorizações", value: pendingGradeAuthorizations, icon: CheckCircle, tone: "rose" },
-                          { label: "Turmas", value: (turmas || []).length, icon: BookOpen, tone: "cyan" },
-                        ].map((item) => {
-                          const Icon = item.icon;
-                          return (
-                            <div key={item.label} className={`school-kpi-card tone-${item.tone}`}>
-                              <div className="school-kpi-icon"><Icon className="h-4 w-4" /></div>
-                              <div className="school-kpi-value">{item.value}</div>
-                              <div className="school-kpi-label">{item.label}</div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    <div className="mt-4 flex gap-2 overflow-x-auto pb-1 school-quick-pills school-quick-pills-premium">
-                      {[
-                        { id: "aprovacoes", label: "Aprovações", icon: UserCheck },
-                        { id: "usuarios", label: "Alunos", icon: Users },
-                        { id: "professores", label: "Professores", icon: School },
-                        { id: "disciplinares", label: "Disciplina", icon: AlertTriangle },
-                        { id: "financeiro", label: "Financeiro", icon: FileText },
-                        { id: "horarios", label: "Horários", icon: Clock },
-                        { id: "avisos", label: "Avisos", icon: MessageCircle },
-                      ].map((shortcut) => {
-                        const Icon = shortcut.icon;
-                        const active = selectedSection === shortcut.id;
-                        return (
-                          <Button
-                            key={shortcut.id}
-                            type="button"
-                            variant={active ? "default" : "outline"}
-                            className="shrink-0 rounded-full school-quick-pill school-quick-pill-premium"
-                            onClick={() => setSelectedSection(shortcut.id)}
-                          >
-                            <Icon className="mr-2 h-4 w-4" />
-                            {shortcut.label}
-                          </Button>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
               {selectedSection === "aprovacoes" && (
                 <div className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
@@ -2703,37 +2639,6 @@ export default function AdminDashboard() {
                     <Skeleton className="h-12 w-full" />
                   </div>
                 ) : pendingUsers && pendingUsers.length > 0 ? (
-                  isMobile ? (
-                    <div className="space-y-3 p-4">
-                      {pendingUsers.map((user) => (
-                        <Card key={user.uid} className="overflow-hidden border-border/70 shadow-sm">
-                          <CardContent className="space-y-4 p-4">
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <div className="font-semibold leading-tight">{user.nome}</div>
-                                <div className="mt-1 text-xs text-muted-foreground">{user.email}</div>
-                              </div>
-                              <Badge variant="outline" className="text-xs">{user.tipo}</Badge>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                              <div className="rounded-xl bg-muted/50 p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Matrícula</p><p className="mt-1 font-semibold">{user.matricula || "-"}</p></div>
-                              <div className="rounded-xl bg-muted/50 p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Turma</p><p className="mt-1 font-semibold">{getTurmaNome(user.turma)}</p></div>
-                            </div>
-                            <div className="text-xs text-muted-foreground">Solicitado em {user.dataSolicitacao ? new Date(user.dataSolicitacao).toLocaleDateString('pt-BR') : '-'}</div>
-                            <div className="grid grid-cols-3 gap-2">
-                              <Button variant="outline" size="sm" onClick={() => { setSelectedSolicitacao(user); setViewDetailsDialogOpen(true); }}><Eye className="mr-1 h-4 w-4" /> Ver</Button>
-                              <Button variant="outline" size="sm" onClick={() => { setSolicitacaoToEdit(user); setEditSolicitacaoDialogOpen(true); }}><Edit className="mr-1 h-4 w-4" /> Editar</Button>
-                              <Button size="sm" onClick={() => { setSolicitacaoToApprove(user); setApproveDialogOpen(true); }} disabled={approveUserMutation.isPending || rejectUserMutation.isPending || returnUserMutation.isPending}><CheckCircle className="mr-1 h-4 w-4" /> Aprovar</Button>
-                              <Button variant="outline" size="sm" onClick={() => { setUserToReturn(user); setReturnDialogOpen(true); }} disabled={approveUserMutation.isPending || rejectUserMutation.isPending || returnUserMutation.isPending}><RefreshCw className="mr-1 h-4 w-4" /> Devolver</Button>
-                              <Button variant="secondary" size="sm" onClick={() => { setUserToStandby(user); setStandbyDialogOpen(true); }} disabled={approveUserMutation.isPending || rejectUserMutation.isPending || returnUserMutation.isPending}><Clock className="mr-1 h-4 w-4" /> Stand by</Button>
-                              <Button variant="destructive" size="sm" onClick={() => { setUserToReject(user); setRejectDialogOpen(true); }} disabled={approveUserMutation.isPending || rejectUserMutation.isPending || returnUserMutation.isPending}><XCircle className="mr-1 h-4 w-4" /> Reprovar</Button>
-                            </div>
-                            <Button variant="ghost" className="w-full" onClick={() => { setUserToDelete(user); setDeleteDialogOpen(true); }} disabled={approveUserMutation.isPending || rejectUserMutation.isPending}><Trash2 className="mr-2 h-4 w-4" /> Excluir cadastro</Button>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  ) : (
                   <div className="w-full">
                     <Table>
                       <TableHeader>
@@ -2879,7 +2784,6 @@ export default function AdminDashboard() {
                       </TableBody>
                     </Table>
                   </div>
-                  )
                 ) : (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <CheckCircle className="h-16 w-16 text-green-600 mb-4" />
@@ -2932,43 +2836,6 @@ export default function AdminDashboard() {
                       <Skeleton className="h-12 w-full" />
                     </div>
                   ) : standbyUsers && standbyUsers.length > 0 ? (
-                    isMobile ? (
-                      <div className="space-y-3 p-4 mobile-stagger">
-                        {standbyUsers.map((user) => (
-                          <Card key={user.uid || user.docId} className="admin-mobile-entity-card">
-                            <CardContent className="space-y-4 p-4">
-                              <div className="flex items-start justify-between gap-3">
-                                <div>
-                                  <div className="font-semibold leading-tight">{user.nome}</div>
-                                  <div className="mt-1 text-xs text-muted-foreground">{user.email}</div>
-                                </div>
-                                <Badge variant="secondary" className="text-xs">{user.tipo}</Badge>
-                              </div>
-                              <div className="grid grid-cols-2 gap-2">
-                                <div className="school-mini-panel">
-                                  <p className="school-mini-label">Turma</p>
-                                  <p className="school-mini-value">{user.tipo === "diretor" ? "Diretoria" : user.turma ? getTurmaNome(user.turma) : "-"}</p>
-                                </div>
-                                <div className="school-mini-panel">
-                                  <p className="school-mini-label">Stand by</p>
-                                  <p className="school-mini-value">{user.dataStandby ? new Date(user.dataStandby).toLocaleDateString('pt-BR') : '-'}</p>
-                                </div>
-                              </div>
-                              {user.comentarioStandby && (
-                                <div className="rounded-2xl border border-amber-200 bg-amber-50/90 p-3 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
-                                  {user.comentarioStandby}
-                                </div>
-                              )}
-                              <div className="grid grid-cols-3 gap-2">
-                                <Button variant="outline" size="sm" onClick={() => { setSelectedSolicitacao(user); setViewDetailsDialogOpen(true); }}><Eye className="mr-1 h-4 w-4" /> Ver</Button>
-                                <Button size="sm" onClick={() => { removeFromWaitingListMutation.mutate({ solicitacaoId: user.docId || user.id }); }} disabled={removeFromWaitingListMutation.isPending}><RotateCcw className="mr-1 h-4 w-4" /> Voltar</Button>
-                                <Button variant="destructive" size="sm" onClick={() => { setUserToDelete(user); setDeleteDialogOpen(true); }}><Trash2 className="mr-1 h-4 w-4" /> Excluir</Button>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    ) : (
                     <div className="w-full">
                       <Table>
                         <TableHeader>
@@ -3067,7 +2934,6 @@ export default function AdminDashboard() {
                         </TableBody>
                       </Table>
                     </div>
-                    )
                   ) : (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                       <Clock className="h-16 w-16 text-muted-foreground mb-4" />
@@ -3123,40 +2989,6 @@ export default function AdminDashboard() {
                     .sort((a, b) => a.nome.localeCompare(b.nome)); // Ordenação alfabética
                   
                   return filteredAlunos.length > 0 ? (
-                  isMobile ? (
-                    <div className="space-y-3">
-                      {filteredAlunos.map((user) => (
-                        <Card key={user.uid} className="overflow-hidden border-border/70 shadow-sm">
-                          <CardContent className="space-y-4 p-4">
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <div className="font-semibold leading-tight">{user.nome}</div>
-                                <div className="mt-1 text-xs text-muted-foreground">{user.email}</div>
-                              </div>
-                              {user.bloqueado ? (
-                                <Badge variant="outline" className="bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400 text-xs">Bloqueado</Badge>
-                              ) : user.ativo ? (
-                                <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-xs">Ativo</Badge>
-                              ) : (
-                                <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 text-xs">Inativo</Badge>
-                              )}
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                              <div className="rounded-xl bg-muted/50 p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Turma</p><p className="mt-1 font-semibold">{getTurmaNome(user.turma)}</p></div>
-                              <div className="rounded-xl bg-muted/50 p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Matrícula</p><p className="mt-1 font-semibold">{user.matricula || '-'}</p></div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                              <Button variant="outline" size="sm" onClick={() => { setSelectedStudentDetails(user); setIsEditingStudent(false); editStudentForm.reset({ nome: user.nome || "", email: user.email || "", matricula: user.matricula || "", dataNascimento: user.dataNascimento || "", cpf: user.cpf || "", telefone: user.telefone || "", escolaridade: user.escolaridade || "", cep: user.cep || "", rua: user.rua || "", bairro: user.bairro || "", cidade: user.cidade || "", estado: user.estado || "", turma: user.turma || "", disponibilidade: user.disponibilidade || [], }); setEditStudentDisponibilidade(user.disponibilidade || []); setStudentDetailsDialogOpen(true); }}><Eye className="mr-1 h-4 w-4" /> Detalhes</Button>
-                              <Button variant="outline" size="sm" onClick={() => toggleUserStatusMutation.mutate({ userId: user.uid, ativo: !user.ativo })}>{user.ativo ? <XCircle className="mr-1 h-4 w-4" /> : <CheckCircle className="mr-1 h-4 w-4" />}{user.ativo ? 'Desativar' : 'Ativar'}</Button>
-                              <Button variant={user.bloqueado ? "outline" : "destructive"} size="sm" onClick={() => toggleUserBlockMutation.mutate({ userId: user.uid, bloqueado: !user.bloqueado })}><Shield className="mr-1 h-4 w-4" /> {user.bloqueado ? 'Desbloquear' : 'Bloquear'}</Button>
-                              {user.turma ? (<Button variant="outline" size="sm" onClick={() => { setUserToTransfer(user); setTransferDialogOpen(true); }}><ArrowRightLeft className="mr-1 h-4 w-4" /> Transferir</Button>) : <div />}
-                            </div>
-                            <Button variant="ghost" className="w-full" onClick={() => { setUserToDelete(user); setDeleteDialogOpen(true); }}><Trash2 className="mr-2 h-4 w-4" /> Excluir aluno</Button>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  ) : (
                   <div className="w-full">
                     <Table>
                       <TableHeader>
@@ -3296,7 +3128,6 @@ export default function AdminDashboard() {
                       </TableBody>
                     </Table>
                   </div>
-                  )
                 ) : (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <Users className="h-16 w-16 text-muted-foreground mb-4" />
@@ -3351,39 +3182,6 @@ export default function AdminDashboard() {
                   });
                   
                   return filteredProfessores.length > 0 ? (
-                    isMobile ? (
-                      <div className="space-y-3">
-                        {filteredProfessores.map((user: User) => (
-                          <Card key={user.uid} className="overflow-hidden border-border/70 shadow-sm">
-                            <CardContent className="space-y-4 p-4">
-                              <div className="flex items-start justify-between gap-3">
-                                <div>
-                                  <div className="font-semibold leading-tight">{user.nome}</div>
-                                  <div className="mt-1 text-xs text-muted-foreground">{user.email}</div>
-                                </div>
-                                <Badge variant={user.tipo === "diretor" ? "default" : "secondary"}>{user.tipo}</Badge>
-                              </div>
-                              <div className="grid grid-cols-2 gap-2">
-                                <div className="rounded-xl bg-muted/50 p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Matrícula</p><p className="mt-1 font-semibold">{user.matricula || '-'}</p></div>
-                                <div className="rounded-xl bg-muted/50 p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Status</p><p className="mt-1 font-semibold">{user.bloqueado ? 'Bloqueado' : user.ativo ? 'Ativo' : 'Inativo'}</p></div>
-                              </div>
-                              <div className="rounded-xl bg-muted/50 p-3">
-                                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Turmas</p>
-                                <div className="mt-2 flex flex-wrap gap-1">
-                                  {user.turmas && user.turmas.length > 0 ? Array.from(new Set(user.turmas.map((turma: string) => getTurmaNome(turma)))).map((turmaNome: string) => (<Badge key={turmaNome} variant="outline" className="text-xs">{turmaNome}</Badge>)) : user.turma ? <Badge variant="outline" className="text-xs">{getTurmaNome(user.turma)}</Badge> : <span className="text-sm text-muted-foreground">Sem turma</span>}
-                                </div>
-                              </div>
-                              <div className="grid grid-cols-2 gap-2">
-                                <Button variant="outline" size="sm" onClick={() => { setSelectedProfessorDetails(user); setIsEditingProfessor(false); const turmasArray = user.turmas || (user.turma ? user.turma.split(',').filter(Boolean) : []); setEditProfessorTurmas(Array.from(new Set(turmasArray))); setProfessorDetailsDialogOpen(true); }}><Eye className="mr-1 h-4 w-4" /> Ver</Button>
-                                <Button variant="outline" size="sm" onClick={() => toggleUserStatusMutation.mutate({ userId: user.uid, ativo: !user.ativo })}>{user.ativo ? <XCircle className="mr-1 h-4 w-4" /> : <CheckCircle className="mr-1 h-4 w-4" />}{user.ativo ? 'Desativar' : 'Ativar'}</Button>
-                                {user.tipo !== "diretor" ? <Button variant={user.bloqueado ? "outline" : "destructive"} size="sm" onClick={() => toggleUserBlockMutation.mutate({ userId: user.uid, bloqueado: !user.bloqueado })}><Shield className="mr-1 h-4 w-4" /> {user.bloqueado ? 'Desbloquear' : 'Bloquear'}</Button> : <div />}
-                                {user.tipo !== "diretor" ? <Button variant="ghost" size="sm" onClick={() => { setUserToDelete(user); setDeleteDialogOpen(true); }}><Trash2 className="mr-1 h-4 w-4" /> Excluir</Button> : <div />}
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    ) : (
                     <div className="w-full">
                       <Table>
                         <TableHeader>
@@ -3548,7 +3346,6 @@ export default function AdminDashboard() {
                         </TableBody>
                       </Table>
                     </div>
-                    )
                   ) : (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                       <GraduationCap className="h-16 w-16 text-muted-foreground mb-4" />
@@ -3583,51 +3380,6 @@ export default function AdminDashboard() {
                 </div>
               </CardHeader>
               <CardContent className="p-0 sm:p-6">
-                {isMobile ? (
-                  <div className="space-y-3 mobile-stagger">
-                    {users
-                      ?.filter((user: User) => {
-                        if (!passwordSearchTerm) return true;
-                        const term = passwordSearchTerm.toLowerCase();
-                        return (
-                          user.nome?.toLowerCase().includes(term) ||
-                          user.email?.toLowerCase().includes(term) ||
-                          user.matricula?.toLowerCase().includes(term)
-                        );
-                      })
-                      .map((user: User) => (
-                        <Card key={user.uid} className="admin-mobile-entity-card">
-                          <CardContent className="space-y-4 p-4">
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <div className="font-semibold leading-tight">{user.nome}</div>
-                                <div className="mt-1 text-xs text-muted-foreground">{user.email}</div>
-                              </div>
-                              <Badge variant={user.tipo === "diretor" ? "default" : user.tipo === "professor" ? "secondary" : "outline"} className="text-xs">
-                                {user.tipo}
-                              </Badge>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                              <div className="school-mini-panel">
-                                <p className="school-mini-label">Matrícula</p>
-                                <p className="school-mini-value">{user.matricula || '-'}</p>
-                              </div>
-                              <div className="school-mini-panel">
-                                <p className="school-mini-label">CPF</p>
-                                <p className="school-mini-value">{user.cpf || '-'}</p>
-                              </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                              <Button variant="outline" size="sm" onClick={() => { setSelectedUserForPassword(user); setViewPasswordDialogOpen(true); }}><Eye className="mr-1 h-4 w-4" /> Ver</Button>
-                              <Button variant="outline" size="sm" onClick={() => { setSelectedUserForPassword(user); setResetPasswordDialogOpen(true); }}><RefreshCw className="mr-1 h-4 w-4" /> Reset</Button>
-                              <Button variant="outline" size="sm" onClick={() => { setSelectedUserForPassword(user); setChangePasswordDialogOpen(true); }}><Edit className="mr-1 h-4 w-4" /> Alterar</Button>
-                              <Button variant="outline" size="sm" onClick={() => { setSelectedUserForPassword(user); setFormatAccountDialogOpen(true); }}><Archive className="mr-1 h-4 w-4" /> Formatar</Button>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                  </div>
-                ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -3724,7 +3476,6 @@ export default function AdminDashboard() {
                       ))}
                   </TableBody>
                 </Table>
-                )}
               </CardContent>
             </Card>
             </div>
@@ -3777,7 +3528,7 @@ export default function AdminDashboard() {
                   return (
                     <Card 
                       key={turma.id} 
-                      className={`hover-elevate school-class-card mobile-fade-in ${foraDoPeríodo ? 'border-2 border-orange-500 dark:border-orange-400 bg-orange-50 dark:bg-orange-950/20' : ''}`}
+                      className={`hover-elevate ${foraDoPeríodo ? 'border-2 border-orange-500 dark:border-orange-400 bg-orange-50 dark:bg-orange-950/20' : ''}`}
                       data-testid={`card-turma-${turma.id}`}
                     >
                       <CardHeader>
@@ -3976,45 +3727,6 @@ export default function AdminDashboard() {
                     <Skeleton className="h-12 w-full" />
                   </div>
                 ) : users && users.length > 0 ? (
-                  isMobile ? (
-                    <div className="space-y-3 p-4">
-                      {users
-                        .filter((user) => user.tipo === "aluno")
-                        .filter((user) => {
-                          if (!disciplinarySearchTerm) return true;
-                          const searchLower = disciplinarySearchTerm.toLowerCase();
-                          return user.nome?.toLowerCase().includes(searchLower) || user.matricula?.toLowerCase().includes(searchLower);
-                        })
-                        .sort((a, b) => a.nome.localeCompare(b.nome))
-                        .map((student) => {
-                          const studentActions = disciplinaryActions?.filter((action: any) => action.alunoId === student.uid && action.ativo === true) || [];
-                          const warningsCount = studentActions.filter((action: any) => action.tipo === "advertencia").length;
-                          const suspensionsCount = studentActions.filter((action: any) => action.tipo === "suspensao").length;
-                          return (
-                            <Card key={student.uid} className="overflow-hidden border-border/70 shadow-sm">
-                              <CardContent className="space-y-4 p-4">
-                                <div className="flex items-start justify-between gap-3">
-                                  <div>
-                                    <div className="font-semibold leading-tight">{student.nome}</div>
-                                    <div className="mt-1 text-xs text-muted-foreground">Matrícula {student.matricula || '-'} • {getTurmaNome(student.turma)}</div>
-                                  </div>
-                                  <div className="flex flex-wrap justify-end gap-1">
-                                    {warningsCount > 0 && <Badge variant="outline" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 text-xs">{warningsCount} Adv.</Badge>}
-                                    {suspensionsCount > 0 && <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 text-xs">{suspensionsCount} Susp.</Badge>}
-                                    {warningsCount === 0 && suspensionsCount === 0 && <Badge variant="outline" className="text-xs">Sem registros</Badge>}
-                                  </div>
-                                </div>
-                                <div className="grid grid-cols-3 gap-2">
-                                  <Button variant="outline" size="sm" onClick={() => { setSelectedStudentForHistory(student); setHistoryDialogOpen(true); }}><Eye className="mr-1 h-4 w-4" /> Histórico</Button>
-                                  <Button variant="outline" size="sm" className="border-yellow-500 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20" onClick={() => { setSelectedStudentForDisciplinary(student); setWarningDialogOpen(true); }} disabled={warningsCount >= 3}><AlertTriangle className="mr-1 h-4 w-4" /> Advertir</Button>
-                                  <Button variant="destructive" size="sm" onClick={() => { setSelectedStudentForDisciplinary(student); setSuspensionDialogOpen(true); }}><XCircle className="mr-1 h-4 w-4" /> Suspender</Button>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          );
-                        })}
-                    </div>
-                  ) : (
                   <div className="w-full">
                     <Table>
                       <TableHeader>
@@ -4120,7 +3832,6 @@ export default function AdminDashboard() {
                       </TableBody>
                     </Table>
                   </div>
-                  )
                 ) : (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <Users className="h-16 w-16 text-muted-foreground mb-4" />
@@ -4169,9 +3880,6 @@ export default function AdminDashboard() {
 
           {selectedSection === "avisos" && (
             <AnnouncementsTab />
-          )}
-          {selectedSection === "financeiro" && (
-            <AdminFinanceTab />
           )}
 
           {selectedSection === "horarios" && (

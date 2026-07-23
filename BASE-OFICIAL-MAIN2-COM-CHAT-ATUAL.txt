@@ -1,0 +1,21 @@
+BASE-OFICIAL-VESTIBULANDO-MAIN2-CHAT-ATUAL
+
+Este pacote usa VESTIBULANDO-main(2).zip como base oficial.
+
+O sistema visual, as telas, os paineis e a navegacao sao os arquivos originais
+desse ZIP. Nenhum design classico, moderno ou R11/R12/R13 foi reaproveitado.
+
+Somente o chat foi atualizado para a ultima versao, incluindo presenca on-line,
+digitando, mensagens nao lidas, exclusao, bloqueio e denuncia. As regras e os
+indices do Firestore necessarios ao chat tambem acompanham o pacote.
+
+Para publicar no projeto ja existente:
+
+1. Extraia este ZIP em uma pasta nova.
+2. Abra VESTIBULANDO-MAIN2-ORIGINAL-COM-CHAT-ATUAL.
+3. Execute apenas PUBLICAR_ORIGINAL_MAIN2_COM_CHAT_ATUAL.bat.
+4. Aguarde a mensagem SITE ATUALIZADO E CONFIRMADO.
+
+O publicador envia o codigo ao repositorio GitHub ja ligado ao projeto
+vestibulando.pages.dev. Ele nao cria outro projeto Cloudflare e nao publica
+Firebase Storage.

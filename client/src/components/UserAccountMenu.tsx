@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Settings, User as UserIcon } from "lucide-react";
+import { User as UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,10 +13,9 @@ import EditProfileDialog from "./EditProfileDialog";
 
 interface UserAccountMenuProps {
   onClose?: () => void;
-  variant?: "avatar" | "settings";
 }
 
-export default function UserAccountMenu({ onClose, variant = "avatar" }: UserAccountMenuProps) {
+export default function UserAccountMenu({ onClose }: UserAccountMenuProps) {
   const { userData, refreshUserData } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -41,26 +40,19 @@ export default function UserAccountMenu({ onClose, variant = "avatar" }: UserAcc
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           <Button
-            size={variant === "settings" ? "sm" : "icon"}
+            size="icon"
             variant="ghost"
-            className={variant === "settings" ? "portal-profile-action" : "rounded-full"}
+            className="rounded-full"
             data-testid="button-user-account"
           >
-            {variant === "settings" ? (
-              <>
-                <Settings aria-hidden="true" />
-                <span>CONFIGURAÇÕES</span>
-              </>
-            ) : (
-              <Avatar className="h-8 w-8">
-                {(userData?.fotoUrl || userData?.fotoBase64) && userData?.fotoPublica ? (
-                  <AvatarImage src={userData.fotoUrl || userData.fotoBase64} alt={userData.nome} />
-                ) : null}
-                <AvatarFallback className="text-xs">
-                  {getInitials(userData.nome)}
-                </AvatarFallback>
-              </Avatar>
-            )}
+            <Avatar className="h-8 w-8">
+              {(userData?.fotoUrl || userData?.fotoBase64) && userData?.fotoPublica ? (
+                <AvatarImage src={userData.fotoUrl || userData.fotoBase64} alt={userData.nome} />
+              ) : null}
+              <AvatarFallback className="text-xs">
+                {getInitials(userData.nome)}
+              </AvatarFallback>
+            </Avatar>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-[180px]" sideOffset={8}>

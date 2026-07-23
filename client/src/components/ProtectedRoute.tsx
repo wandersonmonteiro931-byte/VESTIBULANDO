@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
+import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
 
@@ -7,40 +8,27 @@ interface ProtectedRouteProps {
   allowedTypes?: ("aluno" | "professor" | "diretor")[];
 }
 
-function getDashboardPath(tipo?: string): string {
-  switch (tipo) {
-    case "aluno":
-      return "/aluno";
-    case "professor":
-      return "/professor";
-    case "diretor":
-      return "/diretor";
-    default:
-      return "/login";
-  }
-}
-
-function FullPageRedirect({ to }: { to: string }) {
-  const startedRef = useRef(false);
-
-  useEffect(() => {
-    if (startedRef.current || window.location.pathname === to) return;
-    startedRef.current = true;
-    window.location.replace(to);
-  }, [to]);
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
-        <p className="text-muted-foreground">Redirecionando...</p>
-      </div>
-    </div>
-  );
-}
-
 export function ProtectedRoute({ children, allowedTypes }: ProtectedRouteProps) {
   const { currentUser, userData, loading } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (!loading && !currentUser) {
+      setLocation("/login");
+    } else if (!loading && userData && allowedTypes && !allowedTypes.includes(userData.tipo)) {
+      switch (userData.tipo) {
+        case "aluno":
+          setLocation("/aluno");
+          break;
+        case "professor":
+          setLocation("/professor");
+          break;
+        case "diretor":
+          setLocation("/diretor");
+          break;
+      }
+    }
+  }, [currentUser, userData, loading, allowedTypes, setLocation]);
 
   if (loading) {
     return (
@@ -53,12 +41,8 @@ export function ProtectedRoute({ children, allowedTypes }: ProtectedRouteProps) 
     );
   }
 
-  if (!currentUser || !userData) {
-    return <FullPageRedirect to="/login" />;
-  }
-
-  if (allowedTypes?.length && !allowedTypes.includes(userData.tipo)) {
-    return <FullPageRedirect to={getDashboardPath(userData.tipo)} />;
+  if (!currentUser || (allowedTypes && userData && !allowedTypes.includes(userData.tipo))) {
+    return null;
   }
 
   return <>{children}</>;
