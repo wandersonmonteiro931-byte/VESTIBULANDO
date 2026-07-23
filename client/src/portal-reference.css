@@ -67,12 +67,16 @@
   gap: 2px !important;
 }
 
+/* FIX-CABECALHO-MENU-20260723: não permitir que o perfil seja cortado */
 .portal-brand {
   display: inline-flex;
   align-items: center;
-  min-width: 156px;
+  width: max-content;
+  min-width: max-content;
+  max-width: none;
   height: 27px;
-  overflow: hidden;
+  flex: 0 0 auto;
+  overflow: visible;
   border-radius: 6px;
   color: #171218;
   background: var(--portal-yellow);
@@ -102,6 +106,7 @@
 .portal-brand-context {
   margin-left: auto;
   padding: 0 9px;
+  flex: 0 0 auto;
   border-left: 1px solid rgba(28, 23, 34, 0.18);
   font-size: 10px;
   font-weight: 700;
@@ -441,8 +446,15 @@
   width: 100%;
   min-height: 42px;
   overflow-x: auto;
+  overflow-y: hidden;
   border-bottom: 2px solid #e0e0e3;
   scrollbar-width: thin;
+  scrollbar-gutter: auto;
+}
+
+.portal-primary-tabs::-webkit-scrollbar {
+  width: 0;
+  height: 6px;
 }
 
 .portal-primary-tab {
@@ -509,7 +521,14 @@
   align-items: stretch;
   min-width: 0;
   overflow-x: auto;
+  overflow-y: hidden;
   scrollbar-width: thin;
+  scrollbar-gutter: auto;
+}
+
+.portal-secondary-items::-webkit-scrollbar {
+  width: 0;
+  height: 6px;
 }
 
 .portal-secondary-button {

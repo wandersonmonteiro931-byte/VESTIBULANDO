@@ -18,6 +18,8 @@ if not exist "client\src\pages\ChatConversationPage.tsx" goto PACOTE_ERRADO
 
 findstr /I /C:"portal-profile-card" "client\src\components\PortalProfileHeader.tsx" >nul
 if errorlevel 1 goto PACOTE_ERRADO
+findstr /I /C:"FIX-CABECALHO-MENU-20260723" "client\src\portal-reference.css" >nul
+if errorlevel 1 goto PACOTE_ERRADO
 findstr /I /C:"portal-navigation" "client\src\components\DashboardSidebar.tsx" >nul
 if errorlevel 1 goto PACOTE_ERRADO
 findstr /I /C:"portal-primary-tabs" "client\src\components\DashboardSidebar.tsx" >nul
