@@ -1,14 +1,12 @@
-import { initializeApp, getApps, getApp, deleteApp, type FirebaseApp } from "firebase/app";
+import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth, createUserWithEmailAndPassword } from "firebase/auth";
-import { getFirestore, type Firestore, enableIndexedDbPersistence, CACHE_SIZE_UNLIMITED, initializeFirestore, memoryLocalCache } from "firebase/firestore";
-import { getStorage, type FirebaseStorage } from "firebase/storage";
+import { getFirestore, type Firestore, enableIndexedDbPersistence, initializeFirestore, memoryLocalCache } from "firebase/firestore";
 
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: `${import.meta.env.VITE_FIREBASE_PROJECT_ID}.firebaseapp.com`,
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: `${import.meta.env.VITE_FIREBASE_PROJECT_ID}.firebasestorage.app`,
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
@@ -17,8 +15,6 @@ let secondaryApp: FirebaseApp;
 let auth: Auth;
 let secondaryAuth: Auth;
 let db: Firestore;
-let storage: FirebaseStorage | null = null;
-let storageAvailable = false;
 let firebaseError: Error | null = null;
 
 try {
@@ -63,15 +59,15 @@ try {
       experimentalForceLongPolling: true
     });
   }
-  
-  try {
-    storage = getStorage(app);
-    storageAvailable = true;
-    console.log("✅ Firebase Storage inicializado");
-  } catch (storageError) {
-    console.warn("⚠️ Firebase Storage não disponível (plano gratuito não suporta). Uploads de arquivos desabilitados.");
-    storage = null;
-    storageAvailable = false;
+
+  // Mantém dados já consultados e gravações pendentes disponíveis quando a
+  // conexão cai. Falhas por múltiplas abas são seguras e não interrompem o app.
+  if (typeof window !== "undefined") {
+    enableIndexedDbPersistence(db).catch((persistenceError: any) => {
+      if (persistenceError?.code !== "failed-precondition" && persistenceError?.code !== "unimplemented") {
+        console.warn("Cache offline do Firestore indisponível:", persistenceError);
+      }
+    });
   }
   
   const secondaryApps = existingApps.filter(a => a.name === "secondary");
@@ -94,8 +90,4 @@ export async function createUserWithoutSignIn(email: string, password: string) {
   return userCredential;
 }
 
-export function isStorageAvailable(): boolean {
-  return storageAvailable && storage !== null;
-}
-
-export { auth, db, storage, storageAvailable, firebaseError };
+export { auth, db, firebaseError };

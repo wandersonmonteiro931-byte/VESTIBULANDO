@@ -1,6 +1,7 @@
 BASE-OFICIAL-VESTIBULANDO-MAIN2-CHAT-ATUAL-FIREBASE-OK
 
-Este pacote usa VESTIBULANDO-main(2).zip como base oficial.
+Este pacote usa VESTIBULANDO-main(2).zip como base oficial e agora inclui o
+preparatorio EAD completo descrito em PREPARATORIO-EAD-COMPLETO-COM-CHAT-ATUAL.txt.
 
 O sistema visual, as telas, os paineis e a navegacao sao os arquivos originais
 desse ZIP. Nenhum design classico, moderno ou R11/R12/R13 foi reaproveitado.
@@ -16,10 +17,10 @@ variaveis VITE_FIREBASE durante o build e nao exibe a tela de erro.
 Para publicar no projeto ja existente:
 
 1. Extraia este ZIP em uma pasta nova.
-2. Abra VESTIBULANDO-MAIN2-ORIGINAL-COM-CHAT-ATUAL.
-3. Execute apenas PUBLICAR_CORRECAO_FIREBASE_AGORA.bat.
+2. Abra a pasta que contem package.json.
+3. Execute apenas PUBLICAR_PREPARATORIO_EAD_COMPLETO.bat.
 4. Aguarde a mensagem SITE ATUALIZADO E CONFIRMADO.
 
 O publicador envia o codigo ao repositorio GitHub ja ligado ao projeto
-vestibulando.pages.dev. Ele nao cria outro projeto Cloudflare e nao publica
-Firebase Storage.
+vestibulando.pages.dev. Ele nao cria outro projeto Cloudflare. Firebase Storage
+nao e inicializado nem publicado; anexos pequenos usam o Firestore.

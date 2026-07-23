@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { collection, where, addDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage, storageAvailable } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWarningAlert } from "@/contexts/WarningAlertContext";
 import { Button } from "@/components/ui/button";
@@ -17,7 +16,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { FileUploadZone } from "@/components/FileUploadZone";
 import { AnnouncementsCarousel } from "@/components/AnnouncementsCarousel";
 import { ChatNotificationBubble } from "@/components/ChatNotificationBubble";
-import { LogOut, FileText, Upload, Download, Calendar, Award, CheckCircle2, Clock, AlertTriangle, MessageCircle } from "lucide-react";
+import { LogOut, FileText, Upload, Download, Calendar, Award, CheckCircle2, Clock, AlertTriangle, MessageCircle, GraduationCap } from "lucide-react";
 import { AlunoAvaliacoesTab } from "@/components/AlunoAvaliacoesTab";
 import { AlunoBoletimTab } from "@/components/AlunoBoletimTab";
 import { AlunoPresencasTab } from "@/components/AlunoPresencasTab";
@@ -37,6 +36,7 @@ import { AttendanceConfirmationModal } from "@/components/AttendanceConfirmation
 import { LiveClassNotification } from "@/components/LiveClassNotification";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+import { fileToFirestoreDataUrl } from "@/lib/fileValidation";
 
 export default function StudentDashboard() {
   const { userData, signOut } = useAuth();
@@ -122,13 +122,7 @@ export default function StudentDashboard() {
       const tarefa = tarefas?.find(t => t.id === tarefaId);
       if (!tarefa) throw new Error("Tarefa não encontrada");
       
-      if (!storageAvailable || !storage) {
-        throw new Error("O envio de arquivos não está disponível no momento. Por favor, entre em contato com a escola.");
-      }
-      
-      const storageRef = ref(storage, `entregas/${userData.uid}/${tarefaId}/${file.name}`);
-      await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(storageRef);
+      const downloadURL = await fileToFirestoreDataUrl(file);
       
       const prazo = new Date(tarefa.prazo);
       const now = new Date();
@@ -330,6 +324,18 @@ export default function StudentDashboard() {
                   <Download className="h-4 w-4 mr-2" />
                   Declaração
                 </Button>
+                <Link href="/ead/inicio">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="gap-2"
+                    data-testid="button-preparatorio-ead"
+                  >
+                    <GraduationCap className="h-4 w-4" />
+                    <span className="hidden lg:inline">Preparatório EAD</span>
+                    <span className="lg:hidden">EAD</span>
+                  </Button>
+                </Link>
                 <ThemeToggle />
                 <BrasiliaClock />
                 <Link href="/chat">

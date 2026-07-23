@@ -41,3 +41,11 @@ console.error = (...args: any[]) => {
 };
 
 createRoot(document.getElementById("root")!).render(<App />);
+
+if ("serviceWorker" in navigator && import.meta.env.PROD) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/ead-sw.js").catch((error) => {
+      console.warn("Preparatório EAD: modo offline indisponível.", error);
+    });
+  });
+}

@@ -44,7 +44,7 @@ export const userSchema = z.object({
   chatTermsAccepted: z.boolean().optional().default(false), // true se aceitou os termos do chat
   chatTermsAcceptedDate: z.string().optional(), // data e hora da aceitação dos termos do chat
   // Campos de foto
-  fotoUrl: z.string().optional(), // URL da foto no Firebase Storage
+  fotoUrl: z.string().optional(), // URL legada da foto
   fotoBase64: z.string().optional(), // Foto 3x4 em Base64 (deprecated - usar fotoUrl)
   fotoPublica: z.boolean().optional().default(false), // se true, foto visível para todos; se false, apenas para diretor
   // Campos obrigatórios para alunos
@@ -325,7 +325,7 @@ export const chatMessageSchema = z.object({
   destinatarioTipo: z.enum(["aluno", "professor", "diretor"]), // Tipo de quem recebe
   tipo: z.enum(["texto", "audio", "imagem", "documento", "video"]).default("texto"), // Tipo de mensagem
   conteudo: z.string(), // Conteúdo da mensagem (texto ou legenda para arquivos)
-  arquivoUrl: z.string().optional(), // URL do arquivo no Firebase Storage
+  arquivoUrl: z.string().optional(), // Link externo ou data URL validada
   arquivoNome: z.string().optional(), // Nome original do arquivo
   arquivoTipo: z.string().optional(), // MIME type do arquivo
   arquivoTamanho: z.number().optional(), // Tamanho do arquivo em bytes

@@ -1,87 +1,79 @@
-# Firebase Setup Guide
+# Firebase — configuração do projeto existente
 
-## Configuração Inicial
+Este pacote está preparado para o projeto Firebase já existente:
 
-### 1. Criar Projeto Firebase
-1. Acesse o [Console do Firebase](https://console.firebase.google.com/)
-2. Clique em "Adicionar projeto"
-3. Siga o assistente para criar o projeto
+- **Project ID:** `plataforma-enem-f3682`
+- **Serviços usados:** Authentication e Firestore
+- **Firebase Storage:** desativado; não é necessário contratar ou habilitar
 
-### 2. Habilitar Autenticação
-1. No Console do Firebase, vá em **Authentication**
-2. Clique em "Começar"
-3. Habilite o método **Email/Senha**
+O publicador `PUBLICAR_PREPARATORIO_EAD_COMPLETO.bat` valida essa configuração
+antes de publicar e interrompe a operação se detectar outro projeto.
 
-### 3. Criar Banco de Dados Firestore
-1. Vá em **Firestore Database**
-2. Clique em "Criar banco de dados"
-3. Selecione **Modo de produção**
-4. Escolha a localização mais próxima dos seus usuários
+## 1. Authentication
 
-### 4. Habilitar Storage
-1. Vá em **Storage**
-2. Clique em "Começar"
-3. Use a mesma localização do Firestore
+No Console do Firebase:
 
-### 5. Configurar App Web
-1. Vá em **Configurações do Projeto** (ícone de engrenagem)
-2. Role até "Seus apps"
-3. Clique no ícone web (</>)
-4. Registre o app
-5. Copie as credenciais e adicione como Secrets no Replit:
-   - `VITE_FIREBASE_API_KEY`
-   - `VITE_FIREBASE_PROJECT_ID`
-   - `VITE_FIREBASE_APP_ID`
+1. Abra o projeto `plataforma-enem-f3682`.
+2. Entre em **Authentication > Sign-in method**.
+3. Mantenha **E-mail/senha** habilitado.
+4. Em **Settings > Authorized domains**, confirme o domínio
+   `vestibulando.pages.dev`.
 
-## Implantar Regras de Segurança
+## 2. Firestore
 
-### Regras do Firestore
+O sistema usa o Firestore para usuários, cursos, conteúdo, planos de estudo,
+questões, simulados, redações, aulas ao vivo, fóruns, financeiro, suporte e
+auditoria.
 
-As regras do Firestore estão definidas no arquivo `firestore.rules` na raiz do projeto.
+As regras e os índices ficam em:
 
-Para implantar:
+- `firestore.rules`
+- `firestore.indexes.json`
+
+O arquivo BAT publica ambos automaticamente. Para uma publicação manual:
+
 ```bash
-firebase deploy --only firestore:rules
+firebase use plataforma-enem-f3682
+firebase deploy --only firestore:rules,firestore:indexes --project plataforma-enem-f3682
 ```
 
-### Regras do Storage
+## 3. Arquivos sem Storage
 
-As regras do Storage estão definidas no arquivo `storage.rules` na raiz do projeto.
+O sistema não envia arquivos ao Firebase Storage:
 
-Para implantar:
-```bash
-firebase deploy --only storage:rules
-```
+- imagens pequenas são comprimidas e salvas como dados no Firestore;
+- anexos pequenos são validados e salvos no próprio registro;
+- aulas e materiais grandes usam links externos;
+- aulas podem ser marcadas para consulta offline pelo navegador.
 
-### Implantar Ambas
-```bash
-firebase deploy --only firestore:rules,storage:rules
-```
+Por segurança e para respeitar a opção de não usar um serviço pago, anexos
+salvos no Firestore têm limite de **600 KB**. Vídeos e PDFs grandes devem usar
+um link externo.
 
-## Criar Primeiro Usuário Admin
+## 4. Primeiro usuário de diretoria
 
-1. **Registre-se como aluno** através da interface
-2. **No Console do Firebase > Firestore Database**:
-   - Navegue até a coleção `usuarios`
-   - Encontre seu documento de usuário
-   - Altere o campo `tipo` de `"aluno"` para `"diretor"`
-   - Certifique-se de que `ativo` é `true`
-3. **Faça logout e login novamente**
+Se ainda não existir um usuário de diretoria:
 
-## Solução de Problemas
+1. Crie a conta pela tela de cadastro.
+2. Em **Firestore Database > usuarios**, abra o documento do usuário.
+3. Altere `tipo` para `diretor` e mantenha `ativo` como `true`.
+4. Saia e entre novamente.
 
-### Erro de Permissão
-- Verifique se as regras foram implantadas
-- Confirme os campos `tipo` e `ativo` do usuário no Firestore
+## Solução de problemas
 
-### Erro de CORS no Storage
-- Certifique-se de que as regras do Storage estão implantadas
-- Verifique se o Storage está habilitado no Firebase Console
+### Erro de permissão
 
-### Usuário Não Consegue Fazer Login
-- Verifique se o domínio está autorizado em Authentication > Settings > Authorized domains
+- execute o publicador para atualizar as regras;
+- confirme que o documento do usuário possui `tipo` e `ativo: true`;
+- saia e entre novamente após alterar o perfil.
 
-## Arquivos de Regras
+### Usuário não consegue entrar
 
-- **firestore.rules** - Regras de segurança do Firestore (ÚNICO local para editar)
-- **storage.rules** - Regras de segurança do Storage
+- confirme o provedor E-mail/senha;
+- confirme `vestibulando.pages.dev` nos domínios autorizados;
+- use a recuperação de senha na tela de acesso.
+
+### Arquivo recusado
+
+O arquivo excedeu o limite seguro do Firestore. Comprima-o ou publique-o em um
+serviço externo e cadastre o link no material.

@@ -1,30 +1,29 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 cd /d "%~dp0"
-title VESTIBULANDO - Corrigir Firebase e publicar original MAIN2
+title VESTIBULANDO - Publicar preparatorio EAD completo
 
 set "REPO=https://github.com/wandersonmonteiro931-byte/VESTIBULANDO.git"
 set "BRANCH=main"
 set "SITE=https://vestibulando.pages.dev"
 set "FIREBASE_PROJECT=plataforma-enem-f3682"
 set "BUILD_DIR=dist\public"
-set "LOG=ATUALIZACAO_ORIGINAL_MAIN2_LOG.txt"
+set "LOG=ATUALIZACAO_PREPARATORIO_EAD_LOG.txt"
 set "NPM_CONFIG_REGISTRY=https://registry.npmjs.org/"
 set "npm_config_registry=https://registry.npmjs.org/"
 set "NPM_CONFIG_ENGINE_STRICT=false"
 set "npm_config_engine_strict=false"
-set "FIRESTORE_WARNING=0"
 
 for /f %%I in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmmss"') do set "DEPLOY_ID=%%I"
 if not defined DEPLOY_ID set "DEPLOY_ID=manual-%RANDOM%"
 
-> "%LOG%" echo VESTIBULANDO MAIN2 COM CHAT ATUAL - %DEPLOY_ID%
+> "%LOG%" echo VESTIBULANDO PREPARATORIO EAD COMPLETO COM CHAT ATUAL - %DEPLOY_ID%
 >> "%LOG%" echo Pasta: %CD%
 >> "%LOG%" echo Inicio: %DATE% %TIME%
 
 cls
 echo ============================================================
-echo  VESTIBULANDO - CORRECAO FIREBASE + ORIGINAL MAIN2
+echo  VESTIBULANDO - PUBLICAR PREPARATORIO EAD COMPLETO
 echo ============================================================
 echo.
 echo Este publicador atualiza o projeto EXISTENTE vestibulando.pages.dev.
@@ -32,8 +31,8 @@ echo Ele NAO cria projeto Cloudflare e NAO usa Firebase Storage.
 echo.
 
 if not exist "package.json" goto ERRO_PASTA
-if not exist "BASE-OFICIAL-MAIN2-COM-CHAT-ATUAL.txt" goto ERRO_PACOTE
-findstr /I /C:"BASE-OFICIAL-VESTIBULANDO-MAIN2-CHAT-ATUAL-FIREBASE-OK" "BASE-OFICIAL-MAIN2-COM-CHAT-ATUAL.txt" >nul
+if not exist "PREPARATORIO-EAD-COMPLETO-COM-CHAT-ATUAL.txt" goto ERRO_PACOTE
+findstr /I /C:"VESTIBULANDO-PREPARATORIO-EAD-COMPLETO-CHAT-PRESERVADO" "PREPARATORIO-EAD-COMPLETO-COM-CHAT-ATUAL.txt" >nul
 if errorlevel 1 goto ERRO_PACOTE
 if not exist "client\.env.production" goto ERRO_FIREBASE_CONFIG
 findstr /I /C:"VITE_FIREBASE_PROJECT_ID=plataforma-enem-f3682" "client\.env.production" >nul
@@ -48,6 +47,10 @@ if not exist "client\src\pages\TeacherDashboard.tsx" goto ERRO_PACOTE
 if not exist "client\src\pages\ChatPage.tsx" goto ERRO_PACOTE
 if not exist "client\src\components\ChatWindow.tsx" goto ERRO_PACOTE
 if not exist "client\src\hooks\useTypingIndicator.ts" goto ERRO_PACOTE
+if not exist "client\src\features\ead\EadPortalPage.tsx" goto ERRO_PACOTE
+if not exist "client\src\features\ead\AdminAndFinancePages.tsx" goto ERRO_PACOTE
+if not exist "client\src\features\ead\TeacherPages.tsx" goto ERRO_PACOTE
+if not exist "client\public\ead-sw.js" goto ERRO_PACOTE
 findstr /I /C:"UserPresenceIndicator" "client\src\pages\ChatPage.tsx" >nul
 if errorlevel 1 goto ERRO_PACOTE
 findstr /I /C:"participante1UltimaDigitacao" "client\src\hooks\useTypingIndicator.ts" >nul
@@ -76,7 +79,7 @@ if exist "node_modules\vite\package.json" (
 echo.
 echo [2/6] Gerando a versao e o build de producao...
 if not exist "client\public" mkdir "client\public"
-> "client\public\deploy-version.json" echo {"version":"%DEPLOY_ID%","source":"MAIN2-ORIGINAL-CHAT-ATUAL-FIREBASE-OK"}
+> "client\public\deploy-version.json" echo {"version":"%DEPLOY_ID%","source":"PREPARATORIO-EAD-COMPLETO-CHAT-ATUAL"}
 call npm run build:pages
 if errorlevel 1 goto ERRO_BUILD
 if not exist "%BUILD_DIR%\index.html" goto ERRO_BUILD
@@ -84,19 +87,13 @@ if not exist "%BUILD_DIR%\deploy-version.json" goto ERRO_BUILD
 >> "%LOG%" echo [OK] Build %DEPLOY_ID% gerado.
 
 echo.
-echo [3/6] Publicando regras e indices do chat no Firestore...
+echo [3/6] Publicando regras e indices do sistema no Firestore...
 call npx firebase deploy --only firestore:rules,firestore:indexes --project %FIREBASE_PROJECT%
-if errorlevel 1 (
-  set "FIRESTORE_WARNING=1"
-  echo AVISO: as regras do chat nao foram publicadas nesta tentativa.
-  echo O site continuara sendo atualizado. O detalhe ficou salvo no log.
-  >> "%LOG%" echo [AVISO] Firestore nao foi publicado.
-) else (
-  >> "%LOG%" echo [OK] Regras e indices do Firestore publicados.
-)
+if errorlevel 1 goto ERRO_FIRESTORE
+>> "%LOG%" echo [OK] Regras e indices do Firestore publicados.
 
 echo.
-echo [4/6] Enviando o original MAIN2 ao GitHub conectado ao Cloudflare...
+echo [4/6] Enviando o sistema completo ao GitHub conectado ao Cloudflare...
 if not exist ".git" git init
 git config core.longpaths true
 git config core.quotepath false
@@ -118,7 +115,7 @@ git add -A
 if errorlevel 1 goto ERRO_GITHUB
 git add -f "client\.env.production"
 if errorlevel 1 goto ERRO_GITHUB
-git commit -m "Corrigir Firebase no original MAIN2 %DEPLOY_ID%"
+git commit -m "Preparatorio EAD completo %DEPLOY_ID%"
 if errorlevel 1 goto ERRO_GITHUB
 git push -u origin %BRANCH%
 if errorlevel 1 goto ERRO_GITHUB
@@ -141,7 +138,6 @@ echo  SITE ATUALIZADO E CONFIRMADO
 echo ============================================================
 echo Versao: %DEPLOY_ID%
 echo Endereco: %SITE%
-if "%FIRESTORE_WARNING%"=="1" echo ATENCAO: envie o arquivo %LOG% para corrigirmos a publicacao das regras do chat.
 echo.
 echo O navegador sera aberto com um codigo novo para evitar cache antigo.
 start "" "%SITE%/?v=%DEPLOY_ID%"
@@ -167,13 +163,13 @@ echo ERRO: este arquivo precisa ficar ao lado de package.json.
 goto FIM_ERRO
 
 :ERRO_PACOTE
-echo ERRO: esta nao e a pasta MAIN2 original com o chat atual.
+echo ERRO: esta nao e a pasta do preparatorio EAD completo com o chat atual.
 echo Extraia novamente o ZIP em uma PASTA NOVA e execute este arquivo nela.
 goto FIM_ERRO
 
 :ERRO_FIREBASE_CONFIG
 echo ERRO: a configuracao publica do Firebase nao esta completa nesta pasta.
-echo Baixe e extraia novamente o pacote FIREBASE CORRIGIDO em uma pasta nova.
+echo Baixe e extraia novamente o pacote PREPARATORIO EAD COMPLETO em uma pasta nova.
 goto FIM_ERRO
 
 :ERRO_NODE
@@ -191,6 +187,12 @@ goto FIM_ERRO
 
 :ERRO_BUILD
 echo ERRO: o sistema nao compilou. Nada foi enviado ao GitHub ou Cloudflare.
+goto FIM_ERRO
+
+:ERRO_FIRESTORE
+echo ERRO: nao foi possivel publicar as regras do Firestore.
+echo Nenhum codigo foi enviado ao GitHub ou Cloudflare.
+echo Entre na conta Google que possui o projeto plataforma-enem-f3682 e tente novamente.
 goto FIM_ERRO
 
 :ERRO_GITHUB

@@ -150,3 +150,53 @@ export function getFileTypeCategory(fileName: string): "imagem" | "video" | "aud
   if (extension.match(/\.(mp3|wav|ogg|m4a|flac|aac)$/)) return "audio";
   return "documento";
 }
+
+// Alternativa gratuita ao Firebase Storage para anexos pequenos. O limite
+// mantém o documento abaixo do máximo de 1 MiB do Firestore.
+export async function fileToFirestoreDataUrl(
+  file: File,
+  maxBytes: number = 600 * 1024,
+): Promise<string> {
+  if (file.size > maxBytes) {
+    throw new Error(
+      `Sem usar Storage, o anexo deve ter no máximo ${Math.floor(maxBytes / 1024)} KB. Comprima o arquivo ou envie um link.`,
+    );
+  }
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Não foi possível ler o arquivo."));
+    reader.readAsDataURL(file);
+  });
+}
+
+export async function imageToFirestoreDataUrl(
+  file: File,
+  maxDimension: number = 900,
+  quality: number = 0.72,
+): Promise<string> {
+  if (!file.type.startsWith("image/")) {
+    return fileToFirestoreDataUrl(file);
+  }
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const element = new Image();
+      element.onload = () => resolve(element);
+      element.onerror = () => reject(new Error("Não foi possível ler a imagem."));
+      element.src = objectUrl;
+    });
+    const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(image.width * scale));
+    canvas.height = Math.max(1, Math.round(image.height * scale));
+    canvas.getContext("2d")?.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const result = canvas.toDataURL("image/jpeg", quality);
+    if (result.length > 800_000) {
+      throw new Error("A imagem ainda ficou grande. Recorte ou escolha uma foto menor.");
+    }
+    return result;
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}

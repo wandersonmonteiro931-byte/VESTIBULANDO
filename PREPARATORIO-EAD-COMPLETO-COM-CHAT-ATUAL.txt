@@ -1,0 +1,22 @@
+VESTIBULANDO-PREPARATORIO-EAD-COMPLETO-CHAT-PRESERVADO
+
+Pacote baseado no portal original MAIN2 solicitado pelo usuário.
+
+Inclui:
+- Área do aluno, perfil de preparação e dashboard.
+- Plano de estudos diário, semanal e mensal com replanejamento.
+- Trilhas, módulos, videoaulas, materiais, favoritos, histórico e uso offline.
+- Banco de questões, filtros, correção, erros, anotações e estatísticas.
+- Simulados com cronômetro, autosalvamento, correção, estimativa pedagógica e revisão.
+- Redação digitada ou por foto, versões e correção por competências.
+- Aulas ao vivo, presença, perguntas, enquetes, gravações e materiais.
+- Fórum, plantões, comunicados e moderação.
+- Desempenho, metas e relatório para responsável.
+- Estúdio do professor, correções e relatórios de turma.
+- Gestão EAD, financeiro, acessibilidade, segurança, LGPD, backup e suporte.
+
+O chat protegido da versão anterior foi preservado.
+O publicador usa o projeto Firebase existente plataforma-enem-f3682.
+O publicador envia ao repositório existente ligado a vestibulando.pages.dev.
+Nenhum projeto Cloudflare novo é criado.
+Firebase Storage não é inicializado nem publicado.

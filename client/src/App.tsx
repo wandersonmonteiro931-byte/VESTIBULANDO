@@ -21,6 +21,7 @@ import ChatConversationPage from "@/pages/ChatConversationPage";
 import LiveClassPage from "@/pages/LiveClassPage";
 import TeacherClassroomPage from "@/pages/TeacherClassroomPage";
 import StudentClassroomPage from "@/pages/StudentClassroomPage";
+import EadPortalPage, { EadIndexRedirect } from "@/features/ead/EadPortalPage";
 import NotFound from "@/pages/not-found";
 import type { User } from "@shared/schema";
 
@@ -107,6 +108,18 @@ function Router() {
       <Route path="/sala-aluno">
         <ProtectedRoute allowedTypes={["aluno"]}>
           <StudentClassroomPage />
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/ead">
+        <ProtectedRoute allowedTypes={["aluno", "professor", "diretor"]}>
+          <EadIndexRedirect />
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/ead/:section">
+        <ProtectedRoute allowedTypes={["aluno", "professor", "diretor"]}>
+          <EadPortalPage />
         </ProtectedRoute>
       </Route>
       

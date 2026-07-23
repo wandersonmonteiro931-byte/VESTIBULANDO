@@ -18,6 +18,58 @@
   align-items: center;
 }
 
+/* Preparatório EAD: accessibility preferences are intentionally scoped so the
+   original school portal and protected chat keep their current appearance. */
+.ead-portal {
+  line-height: 1.5;
+}
+
+.ead-high-contrast .ead-portal {
+  --border: 220 20% 35%;
+  --muted-foreground: 220 25% 24%;
+}
+
+.dark.ead-high-contrast .ead-portal {
+  --border: 0 0% 78%;
+  --muted-foreground: 0 0% 90%;
+}
+
+.ead-high-contrast .ead-portal :focus-visible {
+  outline: 3px solid hsl(var(--primary));
+  outline-offset: 3px;
+}
+
+.ead-reduced-motion .ead-portal *,
+.ead-reduced-motion .ead-portal *::before,
+.ead-reduced-motion .ead-portal *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  transition-duration: 0.01ms !important;
+}
+
+.ead-low-data .ead-portal img:not([alt*="redação" i]) {
+  display: none;
+}
+
+@media print {
+  .ead-portal header,
+  .ead-portal aside,
+  .ead-portal button,
+  .ead-portal [role="tablist"] {
+    display: none !important;
+  }
+
+  .ead-portal main {
+    padding: 0 !important;
+  }
+
+  .ead-portal {
+    background: white !important;
+    color: black !important;
+  }
+}
+
 .reactEasyCrop_Image,
 .reactEasyCrop_Video {
   will-change: transform;

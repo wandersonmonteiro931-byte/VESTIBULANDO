@@ -2555,6 +2555,18 @@ export default function AdminDashboard() {
                   <p className="text-sm font-semibold">{userData?.nome}</p>
                   <p className="text-xs text-muted-foreground">Diretoria</p>
                 </div>
+                <Link href="/ead/gestao">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="gap-2"
+                    data-testid="button-preparatorio-ead"
+                  >
+                    <GraduationCap className="h-4 w-4" />
+                    <span className="hidden lg:inline">Preparatório EAD</span>
+                    <span className="lg:hidden">EAD</span>
+                  </Button>
+                </Link>
                 <ThemeToggle />
                 <BrasiliaClock />
                 <Link href="/chat">

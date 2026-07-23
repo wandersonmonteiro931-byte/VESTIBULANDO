@@ -11,7 +11,7 @@ I prefer simple language and clear explanations. I want iterative development wi
 ### Technology Stack
 - **Frontend**: React + TypeScript + Vite
 - **Styling**: TailwindCSS + Shadcn UI Components
-- **Backend**: Firebase (Auth, Firestore, Storage)
+- **Backend**: Firebase Authentication e Firestore; Storage desativado
 - **State Management**: TanStack Query + React Context
 - **Real-time Sync**: Firebase onSnapshot listeners with custom `useRealtimeQuery` hook
 - **Routing**: Wouter
@@ -116,11 +116,11 @@ Core collections include `Usuarios` (users with roles, CPF, matricula, address),
 
 ### System Design Choices
 - **Real-time Synchronization**: Achieved via Firebase Firestore `onSnapshot` listeners and `useRealtimeQuery` hook, ensuring instant data reflection across dashboards. TanStack Query is configured for automatic refetching.
-- **Security Hardening**: Implemented with strict Firestore security rules for user accounts, assignments, submissions, and classes, preventing privilege escalation and unauthorized access. Firebase Storage rules protect file attachments based on user roles. Null guards enhance data integrity.
+- **Security Hardening**: Implemented with strict Firestore security rules for user accounts, assignments, submissions, classes and EAD modules, preventing privilege escalation and unauthorized access. Small attachments are validated before being stored with their records; Firebase Storage is not used.
 - **Brazilian Localization**: Includes CPF, phone, and CEP formatting, ViaCEP API integration for address lookup, and full Portuguese UI text.
 
 ## External Dependencies
-- **Firebase**: Authentication, Firestore (database), Storage (file storage).
+- **Firebase**: Authentication and Firestore (database). Firebase Storage is disabled.
 - **ViaCEP API**: Automatic address lookup by postal code (CEP).
 
 ## Required Secrets (Environment Variables)

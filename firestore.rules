@@ -1024,5 +1024,280 @@ service cloud.firestore {
       // Apenas admins podem deletar sinais
       allow delete: if isAdmin() && isUserActive();
     }
+
+    // ================================================================
+    // PREPARATÓRIO EAD
+    // Conteúdo público para usuários autenticados; autoria pedagógica
+    // restrita a professores e direção.
+    // ================================================================
+    match /eadLessons/{recordId} {
+      allow read: if isAuthenticated() && isUserActive();
+      allow create: if isUserActive() && (isProfessor() || isAdmin()) &&
+        request.resource.data.createdBy == request.auth.uid;
+      allow update, delete: if isUserActive() && (
+        isAdmin() ||
+        (isProfessor() && resource.data.createdBy == request.auth.uid)
+      );
+    }
+
+    match /eadQuestions/{recordId} {
+      allow read: if isAuthenticated() && isUserActive();
+      allow create: if isUserActive() && (isProfessor() || isAdmin()) &&
+        request.resource.data.createdBy == request.auth.uid;
+      allow update, delete: if isUserActive() && (
+        isAdmin() ||
+        (isProfessor() && resource.data.createdBy == request.auth.uid)
+      );
+    }
+
+    match /eadExams/{recordId} {
+      allow read: if isAuthenticated() && isUserActive();
+      allow create: if isUserActive() && (isProfessor() || isAdmin()) &&
+        request.resource.data.createdBy == request.auth.uid;
+      allow update, delete: if isUserActive() && (
+        isAdmin() ||
+        (isProfessor() && resource.data.createdBy == request.auth.uid)
+      );
+    }
+
+    match /eadEssayThemes/{recordId} {
+      allow read: if isAuthenticated() && isUserActive();
+      allow create: if isUserActive() && (isProfessor() || isAdmin()) &&
+        request.resource.data.createdBy == request.auth.uid;
+      allow update, delete: if isUserActive() && (
+        isAdmin() ||
+        (isProfessor() && resource.data.createdBy == request.auth.uid)
+      );
+    }
+
+    match /eadLiveClasses/{recordId} {
+      allow read: if isAuthenticated() && isUserActive();
+      allow create: if isUserActive() && (isProfessor() || isAdmin()) &&
+        request.resource.data.teacherId == request.auth.uid;
+      allow update, delete: if isUserActive() && (
+        isAdmin() ||
+        (isProfessor() && resource.data.teacherId == request.auth.uid)
+      );
+    }
+
+    match /eadOfficeHours/{recordId} {
+      allow read: if isAuthenticated() && isUserActive();
+      allow create: if isUserActive() && (isProfessor() || isAdmin()) &&
+        request.resource.data.teacherId == request.auth.uid;
+      allow update, delete: if isUserActive() && (
+        isAdmin() ||
+        (isProfessor() && resource.data.teacherId == request.auth.uid)
+      );
+    }
+
+    match /eadPolls/{recordId} {
+      allow read: if isAuthenticated() && isUserActive();
+      allow write: if isUserActive() && (isProfessor() || isAdmin());
+    }
+
+    // Registros privados do aluno.
+    match /eadStudyItems/{recordId} {
+      allow read: if isUserActive() && (
+        isAdmin() || isProfessor() || resource.data.ownerId == request.auth.uid
+      );
+      allow create: if isUserActive() &&
+        request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if isUserActive() && (
+        isAdmin() || resource.data.ownerId == request.auth.uid
+      );
+    }
+
+    match /eadLessonProgress/{recordId} {
+      allow read: if isUserActive() && (
+        isAdmin() || isProfessor() || resource.data.ownerId == request.auth.uid
+      );
+      allow create: if isUserActive() &&
+        request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if isUserActive() && (
+        isAdmin() || resource.data.ownerId == request.auth.uid
+      );
+    }
+
+    match /eadLessonComments/{recordId} {
+      allow read: if isAuthenticated() && isUserActive();
+      allow create: if isUserActive() &&
+        request.resource.data.ownerId == request.auth.uid;
+      allow update: if isUserActive() &&
+        resource.data.ownerId == request.auth.uid;
+      allow delete: if isUserActive() && (
+        isAdmin() || isProfessor() || resource.data.ownerId == request.auth.uid
+      );
+    }
+
+    match /eadQuestionAttempts/{recordId} {
+      allow read: if isUserActive() && (
+        isAdmin() || isProfessor() || resource.data.ownerId == request.auth.uid
+      );
+      allow create: if isUserActive() &&
+        request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if isUserActive() && (
+        isAdmin() || resource.data.ownerId == request.auth.uid
+      );
+    }
+
+    match /eadQuestionFavorites/{recordId} {
+      allow read: if isUserActive() &&
+        resource.data.ownerId == request.auth.uid;
+      allow create: if isUserActive() &&
+        request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if isUserActive() &&
+        resource.data.ownerId == request.auth.uid;
+    }
+
+    match /eadQuestionNotes/{recordId} {
+      allow read: if isUserActive() &&
+        resource.data.ownerId == request.auth.uid;
+      allow create: if isUserActive() &&
+        request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if isUserActive() &&
+        resource.data.ownerId == request.auth.uid;
+    }
+
+    match /eadExamAttempts/{recordId} {
+      // Leitura autenticada permite ranking opcional e relatórios pedagógicos.
+      allow read: if isAuthenticated() && isUserActive();
+      allow create: if isUserActive() &&
+        request.resource.data.ownerId == request.auth.uid;
+      allow update: if isUserActive() && (
+        isAdmin() ||
+        resource.data.ownerId == request.auth.uid
+      );
+      allow delete: if isAdmin() && isUserActive();
+    }
+
+    match /eadEssays/{recordId} {
+      allow read: if isUserActive() && (
+        isAdmin() || isProfessor() || resource.data.ownerId == request.auth.uid
+      );
+      allow create: if isUserActive() &&
+        request.resource.data.ownerId == request.auth.uid;
+      allow update: if isUserActive() && (
+        isAdmin() || isProfessor() || resource.data.ownerId == request.auth.uid
+      );
+      allow delete: if isUserActive() && (
+        isAdmin() || resource.data.ownerId == request.auth.uid
+      );
+    }
+
+    match /eadEssayVersions/{recordId} {
+      allow read: if isUserActive() && (
+        isAdmin() || isProfessor() || resource.data.ownerId == request.auth.uid
+      );
+      allow create: if isUserActive() &&
+        request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // Aulas ao vivo: presença, perguntas e enquetes.
+    match /eadAttendance/{recordId} {
+      allow read: if isUserActive() && (
+        isAdmin() || isProfessor() || resource.data.ownerId == request.auth.uid
+      );
+      allow create: if isUserActive() &&
+        request.resource.data.ownerId == request.auth.uid;
+      allow update: if isUserActive() && (
+        isAdmin() || isProfessor() || resource.data.ownerId == request.auth.uid
+      );
+      allow delete: if isAdmin() && isUserActive();
+    }
+
+    match /eadLiveQuestions/{recordId} {
+      allow read: if isAuthenticated() && isUserActive();
+      allow create: if isUserActive() &&
+        request.resource.data.ownerId == request.auth.uid;
+      allow update: if isUserActive() && (
+        isAdmin() || isProfessor() || resource.data.ownerId == request.auth.uid
+      );
+      allow delete: if isAdmin() && isUserActive();
+    }
+
+    match /eadPollVotes/{recordId} {
+      allow read: if isUserActive() && (
+        isAdmin() || isProfessor() || resource.data.ownerId == request.auth.uid
+      );
+      allow create: if isUserActive() &&
+        request.resource.data.ownerId == request.auth.uid;
+      allow update: if isUserActive() &&
+        resource.data.ownerId == request.auth.uid;
+      allow delete: if isAdmin() && isUserActive();
+    }
+
+    // Fórum e comunicação pública da comunidade autenticada.
+    match /eadForumTopics/{recordId} {
+      allow read: if isAuthenticated() && isUserActive();
+      allow create: if isUserActive() &&
+        request.resource.data.authorId == request.auth.uid;
+      allow update: if isUserActive() && (
+        isAdmin() || isProfessor() || resource.data.authorId == request.auth.uid
+      );
+      allow delete: if isAdmin() && isUserActive();
+    }
+
+    match /eadForumReplies/{recordId} {
+      allow read: if isAuthenticated() && isUserActive();
+      allow create: if isUserActive() &&
+        request.resource.data.authorId == request.auth.uid;
+      allow update: if isUserActive() && (
+        isAdmin() || isProfessor() || resource.data.authorId == request.auth.uid
+      );
+      allow delete: if isAdmin() && isUserActive();
+    }
+
+    // Financeiro: aluno cria e lê suas cobranças; somente a direção confirma,
+    // cancela ou reembolsa pagamentos.
+    match /eadPlans/{recordId} {
+      allow read: if isAuthenticated() && isUserActive();
+      allow write: if isAdmin() && isUserActive();
+    }
+
+    match /eadCoupons/{recordId} {
+      allow read: if isAuthenticated() && isUserActive();
+      allow write: if isAdmin() && isUserActive();
+    }
+
+    match /eadCharges/{recordId} {
+      allow read: if isUserActive() && (
+        isAdmin() || resource.data.ownerId == request.auth.uid
+      );
+      allow create: if isUserActive() &&
+        request.resource.data.ownerId == request.auth.uid &&
+        request.resource.data.status == 'pendente';
+      allow update: if isUserActive() && (
+        isAdmin() ||
+        (resource.data.ownerId == request.auth.uid &&
+         request.resource.data.diff(resource.data).affectedKeys()
+           .hasOnly(['receiptDataUrl', 'updatedAt']))
+      );
+      allow delete: if isAdmin() && isUserActive();
+    }
+
+    // Suporte, auditoria e monitoramento de erros.
+    match /eadSupportTickets/{recordId} {
+      allow read: if isUserActive() && (
+        isAdmin() || resource.data.ownerId == request.auth.uid
+      );
+      allow create: if isUserActive() &&
+        request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if isAdmin() && isUserActive();
+    }
+
+    match /eadAuditLogs/{recordId} {
+      allow read: if isAdmin() && isUserActive();
+      allow create: if isUserActive() &&
+        request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    match /eadSystemErrors/{recordId} {
+      allow read, delete: if isAdmin() && isUserActive();
+      allow create: if isUserActive() &&
+        request.resource.data.userId == request.auth.uid;
+      allow update: if false;
+    }
   }
 }

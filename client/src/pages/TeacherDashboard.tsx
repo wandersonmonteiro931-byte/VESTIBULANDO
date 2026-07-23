@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { collection, where, addDoc, updateDoc, doc, query, onSnapshot } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage, storageAvailable } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -46,6 +45,7 @@ import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { getNowBrasiliaISO } from "@/lib/brasiliaTime";
 import { cn } from "@/lib/utils";
+import { fileToFirestoreDataUrl } from "@/lib/fileValidation";
 
 const tarefaFormSchema = z.object({
   titulo: z.string().min(1, "Título é obrigatório"),
@@ -127,12 +127,7 @@ export default function TeacherDashboard() {
       let arquivoNome = undefined;
       
       if (attachmentFile) {
-        if (!storageAvailable || !storage) {
-          throw new Error("O upload de arquivos não está disponível no plano gratuito. Crie tarefas sem anexos ou solicite que os alunos respondam diretamente.");
-        }
-        const storageRef = ref(storage, `tarefas/${userData.uid}/${Date.now()}_${attachmentFile.name}`);
-        await uploadBytes(storageRef, attachmentFile);
-        arquivoAnexo = await getDownloadURL(storageRef);
+        arquivoAnexo = await fileToFirestoreDataUrl(attachmentFile);
         arquivoNome = attachmentFile.name;
       }
       
@@ -265,6 +260,18 @@ export default function TeacherDashboard() {
                   <p className="text-sm font-semibold">{userData?.nome}</p>
                   <p className="text-xs text-muted-foreground">Professor</p>
                 </div>
+                <Link href="/ead/estudio">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="gap-2"
+                    data-testid="button-preparatorio-ead"
+                  >
+                    <GraduationCap className="h-4 w-4" />
+                    <span className="hidden lg:inline">Preparatório EAD</span>
+                    <span className="lg:hidden">EAD</span>
+                  </Button>
+                </Link>
                 <ThemeToggle />
                 <BrasiliaClock />
                 <Link href="/chat">

@@ -242,7 +242,7 @@ export function AnnouncementsTab() {
       const nextNumber = maxNumber + 1;
       const numeroAviso = nextNumber.toString().padStart(4, '0');
 
-      // Usar slides processados (com URLs do Storage ao invés de Base64)
+      // Usar os slides processados e validados.
       const slidesData = processedSlides;
 
       // Garantir que turmasSelecionadas seja um array de strings simples
@@ -343,7 +343,7 @@ export function AnnouncementsTab() {
         dataFim = undefined;
       }
 
-      // Usar slides processados (com URLs do Storage ao invés de Base64)
+      // Usar os slides processados e validados.
       const slidesData = processedSlides;
 
       // Garantir que turmasSelecionadas seja um array de strings simples

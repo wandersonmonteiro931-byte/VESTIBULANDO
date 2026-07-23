@@ -1,6 +1,0 @@
-VESTIBULANDO MAIN2 COM CHAT ATUAL - 20260722-234204
-Pasta: C:\Users\wande\Downloads\VESTIBULANDO-MAIN2-FIREBASE-CORRIGIDO\VESTIBULANDO-MAIN2-FIREBASE-CORRIGIDO
-Inicio: 22/07/2026 23:42:05,08
-[OK] Dependencias conferidas.
-[OK] Build 20260722-234204 gerado.
-[OK] Regras e indices do Firestore publicados.
