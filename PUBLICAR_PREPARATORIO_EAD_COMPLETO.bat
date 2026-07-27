@@ -7,6 +7,7 @@ set "REPO=https://github.com/wandersonmonteiro931-byte/VESTIBULANDO.git"
 set "BRANCH=main"
 set "SITE=https://vestibulando.pages.dev"
 set "FIREBASE_PROJECT=plataforma-enem-f3682"
+set "FIREBASE_TOOLS_VERSION=15.17.0"
 set "BUILD_DIR=dist\public"
 set "LOG=ATUALIZACAO_PREPARATORIO_EAD_LOG.txt"
 set "NPM_CONFIG_REGISTRY=https://registry.npmjs.org/"
@@ -20,6 +21,7 @@ if not defined DEPLOY_ID set "DEPLOY_ID=manual-%RANDOM%"
 > "%LOG%" echo VESTIBULANDO PREPARATORIO EAD COMPLETO COM CHAT ATUAL - %DEPLOY_ID%
 >> "%LOG%" echo Pasta: %CD%
 >> "%LOG%" echo Inicio: %DATE% %TIME%
+>> "%LOG%" echo Firebase CLI fixada: %FIREBASE_TOOLS_VERSION%
 
 cls
 echo ============================================================
@@ -88,7 +90,10 @@ if not exist "%BUILD_DIR%\deploy-version.json" goto ERRO_BUILD
 
 echo.
 echo [3/6] Publicando regras e indices do sistema no Firestore...
-call npx firebase deploy --only firestore:rules,firestore:indexes --project %FIREBASE_PROJECT%
+echo Usando Firebase CLI %FIREBASE_TOOLS_VERSION% compativel com Node.js 24.
+call npx --yes firebase-tools@%FIREBASE_TOOLS_VERSION% --version
+if errorlevel 1 goto ERRO_FIREBASE_CLI
+call npx --yes firebase-tools@%FIREBASE_TOOLS_VERSION% deploy --only firestore:rules,firestore:indexes --project %FIREBASE_PROJECT% --non-interactive
 if errorlevel 1 goto ERRO_FIRESTORE
 >> "%LOG%" echo [OK] Regras e indices do Firestore publicados.
 
@@ -189,8 +194,13 @@ goto FIM_ERRO
 echo ERRO: o sistema nao compilou. Nada foi enviado ao GitHub ou Cloudflare.
 goto FIM_ERRO
 
+:ERRO_FIREBASE_CLI
+echo ERRO: nao foi possivel iniciar a versao segura do Firebase CLI.
+echo Verifique a internet e execute novamente.
+goto FIM_ERRO
+
 :ERRO_FIRESTORE
-echo ERRO: nao foi possivel publicar as regras do Firestore.
+echo ERRO: nao foi possivel publicar as regras ou os indices do Firestore.
 echo Nenhum codigo foi enviado ao GitHub ou Cloudflare.
 echo Entre na conta Google que possui o projeto plataforma-enem-f3682 e tente novamente.
 goto FIM_ERRO

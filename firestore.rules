@@ -1067,6 +1067,25 @@ service cloud.firestore {
         );
     }
 
+    function professorHasScheduledDisciplineAccess(data) {
+      return getUserData().keys().hasAll(['materias']) &&
+        getUserData().materias is list &&
+        data.discipline is string &&
+        getUserData().materias.hasAny([data.discipline]);
+    }
+
+    function professorHasScheduledContentDisciplineAccess(data, recordId) {
+      return (
+        data.keys().hasAll(['discipline']) &&
+        professorHasScheduledDisciplineAccess(data)
+      ) || (
+        existsAfter(/databases/$(database)/documents/eadClassSchedules/$(recordId)) &&
+        professorHasScheduledDisciplineAccess(
+          getAfter(/databases/$(database)/documents/eadClassSchedules/$(recordId)).data
+        )
+      );
+    }
+
     match /eadClassSchedules/{recordId} {
       allow get, list: if isUserActive() && (
         isAdmin() ||
@@ -1081,7 +1100,9 @@ service cloud.firestore {
         request.resource.data.startAtTimestamp is timestamp &&
         request.resource.data.endAtTimestamp is timestamp && (
           isAdmin() ||
-          (isProfessor() && professorHasScheduledAudienceAccess(request.resource.data))
+          (isProfessor() &&
+           professorHasScheduledAudienceAccess(request.resource.data) &&
+           professorHasScheduledDisciplineAccess(request.resource.data))
         );
 
       allow update: if isUserActive() && (
@@ -1090,7 +1111,8 @@ service cloud.firestore {
          resource.data.teacherId == request.auth.uid &&
          request.resource.data.teacherId == request.auth.uid &&
          request.resource.data.createdBy == request.auth.uid &&
-         professorHasScheduledAudienceAccess(request.resource.data))
+         professorHasScheduledAudienceAccess(request.resource.data) &&
+         professorHasScheduledDisciplineAccess(request.resource.data))
       );
 
       allow delete: if isUserActive() && (
@@ -1116,7 +1138,9 @@ service cloud.firestore {
         request.resource.data.teacherId == request.auth.uid &&
         request.resource.data.releaseAtTimestamp is timestamp && (
           isAdmin() ||
-          (isProfessor() && professorHasScheduledAudienceAccess(request.resource.data))
+          (isProfessor() &&
+           professorHasScheduledAudienceAccess(request.resource.data) &&
+           professorHasScheduledContentDisciplineAccess(request.resource.data, recordId))
         );
 
       allow update: if isUserActive() && (
@@ -1124,7 +1148,8 @@ service cloud.firestore {
         (isProfessor() &&
          resource.data.teacherId == request.auth.uid &&
          request.resource.data.teacherId == request.auth.uid &&
-         professorHasScheduledAudienceAccess(request.resource.data))
+         professorHasScheduledAudienceAccess(request.resource.data) &&
+         professorHasScheduledContentDisciplineAccess(request.resource.data, recordId))
       );
 
       allow delete: if isUserActive() && (

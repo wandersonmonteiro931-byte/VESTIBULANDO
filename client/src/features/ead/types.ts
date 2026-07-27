@@ -205,24 +205,122 @@ export interface EadLiveClass {
 }
 
 export type EadScheduledResourceType =
-  | "video"
-  | "link"
+  | "videoaula"
+  | "video-gravado"
+  | "video-curto"
+  | "documentario"
+  | "animacao"
+  | "screencast"
+  | "demonstracao"
+  | "entrevista-video"
+  | "webinar-gravado"
+  | "transmissao-ao-vivo"
+  | "replay"
+  | "audioaula"
+  | "podcast"
+  | "audiolivro"
+  | "musica"
+  | "entrevista-audio"
+  | "gravacao-audio"
   | "pdf"
-  | "material"
-  | "audio"
   | "apostila"
   | "livro"
+  | "ebook"
+  | "capitulo-livro"
+  | "artigo"
+  | "artigo-cientifico"
+  | "resumo"
+  | "ficha-estudo"
+  | "roteiro-estudo"
+  | "guia"
+  | "manual"
+  | "texto"
+  | "documento-word"
+  | "planilha"
+  | "csv"
+  | "formulario-arquivo"
+  | "modelo-arquivo"
+  | "infografico"
   | "slides"
-  | "transmissao"
+  | "powerpoint"
+  | "apresentacao-google"
+  | "prezi"
+  | "link"
+  | "site"
+  | "plataforma"
+  | "simulador"
+  | "laboratorio-virtual"
+  | "jogo-educativo"
+  | "quiz"
+  | "questionario"
+  | "formulario-online"
+  | "flashcards"
+  | "mapa-mental"
+  | "linha-do-tempo"
+  | "mural"
+  | "lousa-digital"
+  | "objeto-3d"
+  | "realidade-aumentada"
+  | "realidade-virtual"
+  | "teams"
+  | "google-meet"
+  | "zoom"
+  | "webex"
   | "chamada"
-  | "teams";
+  | "videoconferencia"
+  | "sala-interna"
+  | "transmissao"
+  | "live-youtube"
+  | "webinar"
+  | "seminario"
+  | "palestra"
+  | "oficina"
+  | "treinamento"
+  | "plantao"
+  | "forum"
+  | "chat"
+  | "lista-exercicios"
+  | "atividade"
+  | "tarefa"
+  | "prova"
+  | "simulado"
+  | "banco-questoes"
+  | "caderno-erros"
+  | "rubrica"
+  | "gabarito"
+  | "estudo-caso"
+  | "projeto"
+  | "pesquisa"
+  | "imagem"
+  | "galeria"
+  | "fotografia"
+  | "mapa"
+  | "grafico"
+  | "tabela"
+  | "codigo-fonte"
+  | "software"
+  | "aplicativo"
+  | "arquivo-compactado"
+  | "material-fisico"
+  | "biblioteca"
+  | "referencia-bibliografica"
+  | "outro";
+
+export type EadScheduledResourceAccessMode = "link" | "arquivo" | "sem-link";
 
 export interface EadScheduledResource {
   id: string;
   title: string;
   type: EadScheduledResourceType;
-  url: string;
+  url?: string;
   description?: string;
+  accessMode?: EadScheduledResourceAccessMode;
+  customTypeLabel?: string;
+  fileDataUrl?: string;
+  fileName?: string;
+  fileMimeType?: string;
+  fileSize?: number;
+  contentText?: string;
 }
 
 export type EadScheduleAudienceType = "todos" | "turmas" | "aluno";
@@ -266,6 +364,7 @@ export interface EadClassScheduleContent {
   id: string;
   scheduleId: string;
   teacherId: string;
+  discipline?: string;
   audienceType: EadScheduleAudienceType;
   classIds: string[];
   classNames: string[];

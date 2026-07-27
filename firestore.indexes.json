@@ -12,7 +12,9 @@
           "fieldPath": "timestamp",
           "order": "ASCENDING"
         }
-      ]
+      ],
+      "apiScope": "ANY_API",
+      "density": "SPARSE_ALL"
     },
     {
       "collectionGroup": "userBlocks",
@@ -26,7 +28,9 @@
           "fieldPath": "ativo",
           "order": "ASCENDING"
         }
-      ]
+      ],
+      "apiScope": "ANY_API",
+      "density": "SPARSE_ALL"
     },
     {
       "collectionGroup": "userBlocks",
@@ -40,7 +44,9 @@
           "fieldPath": "ativo",
           "order": "ASCENDING"
         }
-      ]
+      ],
+      "apiScope": "ANY_API",
+      "density": "SPARSE_ALL"
     },
     {
       "collectionGroup": "webrtcSignals",
@@ -58,7 +64,9 @@
           "fieldPath": "timestamp",
           "order": "ASCENDING"
         }
-      ]
+      ],
+      "apiScope": "ANY_API",
+      "density": "SPARSE_ALL"
     },
     {
       "collectionGroup": "eadClassSchedules",
@@ -72,7 +80,9 @@
           "fieldPath": "audienceKeys",
           "arrayConfig": "CONTAINS"
         }
-      ]
+      ],
+      "apiScope": "ANY_API",
+      "density": "SPARSE_ALL"
     },
     {
       "collectionGroup": "eadClassSchedules",
@@ -86,7 +96,9 @@
           "fieldPath": "studentId",
           "order": "ASCENDING"
         }
-      ]
+      ],
+      "apiScope": "ANY_API",
+      "density": "SPARSE_ALL"
     },
     {
       "collectionGroup": "eadScheduleAttendance",
@@ -100,7 +112,9 @@
           "fieldPath": "scheduleId",
           "order": "ASCENDING"
         }
-      ]
+      ],
+      "apiScope": "ANY_API",
+      "density": "SPARSE_ALL"
     }
   ],
   "fieldOverrides": []
