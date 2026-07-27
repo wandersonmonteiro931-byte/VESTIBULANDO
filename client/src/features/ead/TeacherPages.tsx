@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "wouter";
 import { where } from "firebase/firestore";
 import {
   BarChart3,
@@ -343,6 +344,17 @@ export function TeacherStudioPage() {
         title="Estúdio de conteúdos e avaliações"
         description="Cadastre aulas, materiais, questões, simulados, temas de redação, transmissões e plantões em páginas organizadas."
       />
+
+      <Card className="border-primary/30 bg-primary/5">
+        <CardContent className="flex flex-col gap-5 p-6 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="font-bold">Precisa liberar uma aula por turma, aluno e horário?</p>
+            <p className="mt-1 text-sm text-muted-foreground">Use a Programação de aulas para reunir Microsoft Teams, sala interna, vídeos, PDFs, áudios, apostilas, livros e outros links com liberação automática.</p>
+          </div>
+          <Link href="/ead/programacao"><Button><CalendarPlus className="mr-2 h-4 w-4" />Abrir programação</Button></Link>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard label="Aulas" value={lessons.data.length} icon={BookOpen} />
         <StatCard label="Questões" value={remoteQuestions.data.filter((item) => item.createdBy === uid).length} icon={ClipboardCheck} />

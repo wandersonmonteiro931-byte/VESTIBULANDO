@@ -7,6 +7,7 @@ import { EssayWorkspacePage, ExamSimulatorPage } from "./ExamAndEssayPages";
 import { StudentHomePage, StudyPlanPage } from "./HomeAndPlanPages";
 import { ContentLibraryPage, QuestionBankPage } from "./LearningPages";
 import { CommunityPage, LiveClassesPage } from "./LiveAndCommunityPages";
+import { ScheduledLearningPage } from "./ScheduledLearningPages";
 import {
   AccessibilityPage,
   PerformancePage,
@@ -35,6 +36,7 @@ export default function EadPortalPage() {
   const pages: Record<string, ReactNode> = {
     inicio: <StudentHomePage />,
     plano: <StudyPlanPage />,
+    programacao: <ScheduledLearningPage />,
     conteudos: <ContentLibraryPage />,
     questoes: <QuestionBankPage />,
     simulados: <ExamSimulatorPage />,

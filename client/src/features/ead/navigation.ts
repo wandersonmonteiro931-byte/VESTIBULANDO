@@ -2,6 +2,7 @@ import {
   Accessibility,
   BarChart3,
   BookOpen,
+  CalendarClock,
   CalendarDays,
   CircleDollarSign,
   ClipboardCheck,
@@ -29,6 +30,7 @@ export interface EadNavigationItem {
 export const EAD_NAVIGATION: EadNavigationItem[] = [
   { id: "inicio", label: "Meu dia", icon: Home, roles: ["aluno"] },
   { id: "plano", label: "Plano de estudos", icon: CalendarDays, roles: ["aluno"] },
+  { id: "programacao", label: "Programação de aulas", icon: CalendarClock, roles: ["aluno", "professor", "diretor"] },
   { id: "conteudos", label: "Conteúdos", icon: BookOpen, roles: ["aluno", "professor", "diretor"] },
   { id: "questoes", label: "Banco de questões", icon: ClipboardCheck, roles: ["aluno"] },
   { id: "simulados", label: "Simulados", icon: GraduationCap, roles: ["aluno"] },

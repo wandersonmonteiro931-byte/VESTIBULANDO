@@ -204,6 +204,96 @@ export interface EadLiveClass {
   createdAt?: string;
 }
 
+export type EadScheduledResourceType =
+  | "video"
+  | "link"
+  | "pdf"
+  | "material"
+  | "audio"
+  | "apostila"
+  | "livro"
+  | "slides"
+  | "transmissao"
+  | "chamada"
+  | "teams";
+
+export interface EadScheduledResource {
+  id: string;
+  title: string;
+  type: EadScheduledResourceType;
+  url: string;
+  description?: string;
+}
+
+export type EadScheduleAudienceType = "todos" | "turmas" | "aluno";
+export type EadScheduleProvider = "conteudo" | "teams" | "interna" | "externa";
+export type EadTeacherPresence = "obrigatoria" | "opcional" | "sem-professor";
+export type EadScheduleAttendanceMode = "nao-controlar" | "registrar-entrada";
+
+export interface EadClassSchedule {
+  id: string;
+  title: string;
+  discipline: string;
+  description: string;
+  teacherId: string;
+  teacherName: string;
+  audienceType: EadScheduleAudienceType;
+  classIds: string[];
+  classNames: string[];
+  audienceKeys: string[];
+  studentId?: string;
+  studentName?: string;
+  audienceLabel: string;
+  startAt: string;
+  releaseAt: string;
+  endAt: string;
+  startAtTimestamp?: unknown;
+  releaseAtTimestamp?: unknown;
+  endAtTimestamp?: unknown;
+  durationMinutes: number;
+  provider: EadScheduleProvider;
+  teacherPresence: EadTeacherPresence;
+  attendanceMode: EadScheduleAttendanceMode;
+  resourceCount: number;
+  status: "agendada" | "cancelada";
+  published: boolean;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EadClassScheduleContent {
+  id: string;
+  scheduleId: string;
+  teacherId: string;
+  audienceType: EadScheduleAudienceType;
+  classIds: string[];
+  classNames: string[];
+  audienceKeys: string[];
+  studentId?: string;
+  releaseAt: string;
+  releaseAtTimestamp?: unknown;
+  provider: EadScheduleProvider;
+  roomUrl?: string;
+  resources: EadScheduledResource[];
+  status: "agendada" | "cancelada";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EadScheduleAttendance {
+  id: string;
+  scheduleId: string;
+  scheduleTitle: string;
+  ownerId: string;
+  ownerName: string;
+  teacherId: string;
+  joinedAt: string;
+  status: "presente" | "registrado";
+  source: "teams" | "interna" | "externa" | "conteudo";
+  updatedAt: string;
+}
+
 export interface EadForumTopic {
   id: string;
   authorId: string;

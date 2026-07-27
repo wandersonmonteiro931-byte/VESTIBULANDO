@@ -134,6 +134,16 @@ async function writeAudit(
   }
 }
 
+export async function auditEadAction(
+  actor: AuditActor | null | undefined,
+  action: string,
+  entity: string,
+  entityId?: string,
+  details?: string,
+) {
+  await writeAudit(actor, action, entity, entityId, details);
+}
+
 export async function createEadRecord<T extends DocumentData>(
   collectionName: string,
   data: T,

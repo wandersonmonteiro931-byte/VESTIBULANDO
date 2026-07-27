@@ -1030,6 +1030,150 @@ service cloud.firestore {
     // Conteúdo público para usuários autenticados; autoria pedagógica
     // restrita a professores e direção.
     // ================================================================
+    // Programação de aulas e liberação automática de conteúdos.
+    // A agenda é visível antecipadamente ao público correto; os links e
+    // materiais ficam em uma coleção separada e só podem ser lidos após
+    // o horário de liberação definido pelo professor.
+    function isScheduledAudience(data) {
+      return isAluno() && (
+        data.audienceType == 'todos' ||
+        (data.audienceType == 'turmas' &&
+         data.audienceKeys is list &&
+         data.audienceKeys.hasAny([getUserTurma()])) ||
+        (data.audienceType == 'aluno' &&
+         data.studentId == request.auth.uid)
+      );
+    }
+
+    function professorHasScheduledAudienceAccess(data) {
+      return getUserData().keys().hasAll(['turmas']) &&
+        getUserData().turmas is list && (
+          (data.audienceType == 'turmas' &&
+           data.classIds is list &&
+           data.classNames is list &&
+           data.audienceKeys is list &&
+           data.classIds.size() > 0 &&
+           data.classNames.size() == data.classIds.size() &&
+           (getUserData().turmas.hasAll(data.classIds) ||
+            getUserData().turmas.hasAll(data.classNames))) ||
+          (data.audienceType == 'aluno' &&
+           data.studentId is string &&
+           data.audienceKeys is list &&
+           exists(/databases/$(database)/documents/usuarios/$(data.studentId)) &&
+           data.audienceKeys.hasAny([
+             get(/databases/$(database)/documents/usuarios/$(data.studentId)).data.turma
+           ]) &&
+           getUserData().turmas.hasAny(data.audienceKeys))
+        );
+    }
+
+    match /eadClassSchedules/{recordId} {
+      allow get, list: if isUserActive() && (
+        isAdmin() ||
+        (isProfessor() && resource.data.teacherId == request.auth.uid) ||
+        isScheduledAudience(resource.data)
+      );
+
+      allow create: if isUserActive() &&
+        request.resource.data.teacherId == request.auth.uid &&
+        request.resource.data.createdBy == request.auth.uid &&
+        request.resource.data.releaseAtTimestamp is timestamp &&
+        request.resource.data.startAtTimestamp is timestamp &&
+        request.resource.data.endAtTimestamp is timestamp && (
+          isAdmin() ||
+          (isProfessor() && professorHasScheduledAudienceAccess(request.resource.data))
+        );
+
+      allow update: if isUserActive() && (
+        isAdmin() ||
+        (isProfessor() &&
+         resource.data.teacherId == request.auth.uid &&
+         request.resource.data.teacherId == request.auth.uid &&
+         request.resource.data.createdBy == request.auth.uid &&
+         professorHasScheduledAudienceAccess(request.resource.data))
+      );
+
+      allow delete: if isUserActive() && (
+        isAdmin() ||
+        (isProfessor() && resource.data.teacherId == request.auth.uid)
+      );
+    }
+
+    match /eadClassScheduleContent/{recordId} {
+      allow get: if isUserActive() && (
+        isAdmin() ||
+        (isProfessor() && resource.data.teacherId == request.auth.uid) ||
+        (isScheduledAudience(resource.data) &&
+         resource.data.status != 'cancelada' &&
+         resource.data.releaseAtTimestamp is timestamp &&
+         request.time >= resource.data.releaseAtTimestamp)
+      );
+
+      allow list: if isUserActive() && isAdmin();
+
+      allow create: if isUserActive() &&
+        recordId == request.resource.data.scheduleId &&
+        request.resource.data.teacherId == request.auth.uid &&
+        request.resource.data.releaseAtTimestamp is timestamp && (
+          isAdmin() ||
+          (isProfessor() && professorHasScheduledAudienceAccess(request.resource.data))
+        );
+
+      allow update: if isUserActive() && (
+        isAdmin() ||
+        (isProfessor() &&
+         resource.data.teacherId == request.auth.uid &&
+         request.resource.data.teacherId == request.auth.uid &&
+         professorHasScheduledAudienceAccess(request.resource.data))
+      );
+
+      allow delete: if isUserActive() && (
+        isAdmin() ||
+        (isProfessor() && resource.data.teacherId == request.auth.uid)
+      );
+    }
+
+    match /eadScheduleAttendance/{recordId} {
+      allow read: if isUserActive() && (
+        isAdmin() ||
+        (isProfessor() && resource.data.teacherId == request.auth.uid) ||
+        resource.data.ownerId == request.auth.uid
+      );
+
+      allow create: if isAluno() && isUserActive() &&
+        request.resource.data.ownerId == request.auth.uid &&
+        recordId == request.resource.data.scheduleId + '_' + request.auth.uid &&
+        request.resource.data.source in ['teams', 'interna', 'externa', 'conteudo'] &&
+        request.resource.data.status == 'presente' &&
+        exists(/databases/$(database)/documents/eadClassSchedules/$(request.resource.data.scheduleId)) &&
+        request.resource.data.teacherId == get(
+          /databases/$(database)/documents/eadClassSchedules/$(request.resource.data.scheduleId)
+        ).data.teacherId &&
+        get(/databases/$(database)/documents/eadClassSchedules/$(request.resource.data.scheduleId)).data.status != 'cancelada' &&
+        isScheduledAudience(
+          get(/databases/$(database)/documents/eadClassSchedules/$(request.resource.data.scheduleId)).data
+        ) &&
+        request.time >= get(
+          /databases/$(database)/documents/eadClassSchedules/$(request.resource.data.scheduleId)
+        ).data.releaseAtTimestamp;
+
+      allow update: if isUserActive() && (
+        isAdmin() ||
+        (isProfessor() && resource.data.teacherId == request.auth.uid) ||
+        (resource.data.ownerId == request.auth.uid &&
+         request.resource.data.ownerId == request.auth.uid &&
+         request.resource.data.scheduleId == resource.data.scheduleId &&
+         request.resource.data.teacherId == resource.data.teacherId &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+           'joinedAt', 'status', 'source', 'updatedAt'
+         ]) &&
+         request.resource.data.source in ['teams', 'interna', 'externa', 'conteudo'] &&
+         request.resource.data.status == 'presente')
+      );
+
+      allow delete: if isAdmin() && isUserActive();
+    }
+
     match /eadLessons/{recordId} {
       allow read: if isAuthenticated() && isUserActive();
       allow create: if isUserActive() && (isProfessor() || isAdmin()) &&
