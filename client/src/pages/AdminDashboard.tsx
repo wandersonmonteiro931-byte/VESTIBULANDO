@@ -39,6 +39,7 @@ import { queryClient } from "@/lib/queryClient";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { cn } from "@/lib/utils";
+import { useDashboardSection } from "@/hooks/useDashboardSection";
 import type { User, Turma, Maintenance, DiretorQuickAddAluno } from "@shared/schema";
 import { HORARIOS_DISPONIVEIS, MATERIAS_DISPONIVEIS, diretorQuickAddAlunoSchema } from "@shared/schema";
 import { useForm } from "react-hook-form";
@@ -166,7 +167,7 @@ function MaintenanceTimer({ startTime, onFinalize }: { startTime: string; onFina
 export default function AdminDashboard() {
   const { userData, signOut, refreshUserData } = useAuth();
   const { toast } = useToast();
-  const [selectedSection, setSelectedSection] = useState("aprovacoes");
+  const [selectedSection, setSelectedSection] = useDashboardSection("aprovacoes");
   
   const { hasUnread, latestMessage, showNotification, dismissNotification } = useUnreadMessages();
   const [createTurmaDialogOpen, setCreateTurmaDialogOpen] = useState(false);
@@ -2555,18 +2556,6 @@ export default function AdminDashboard() {
                   <p className="text-sm font-semibold">{userData?.nome}</p>
                   <p className="text-xs text-muted-foreground">Diretoria</p>
                 </div>
-                <Link href="/ead/gestao">
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="gap-2"
-                    data-testid="button-preparatorio-ead"
-                  >
-                    <GraduationCap className="h-4 w-4" />
-                    <span className="hidden lg:inline">Preparatório EAD</span>
-                    <span className="lg:hidden">EAD</span>
-                  </Button>
-                </Link>
                 <ThemeToggle />
                 <BrasiliaClock />
                 <Link href="/chat">

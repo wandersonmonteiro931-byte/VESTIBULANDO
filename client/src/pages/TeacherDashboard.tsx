@@ -19,7 +19,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { FileUploadZone } from "@/components/FileUploadZone";
 import { AnnouncementsCarousel } from "@/components/AnnouncementsCarousel";
 import { ChatNotificationBubble } from "@/components/ChatNotificationBubble";
-import { LogOut, Plus, FileText, Users, Download, Edit, Calendar, Award, MessageCircle, ClipboardList, GraduationCap, CalendarClock, AlertTriangle, ShieldAlert, CheckCircle } from "lucide-react";
+import { LogOut, Plus, FileText, Users, Download, Edit, Calendar, Award, MessageCircle, ClipboardList, CalendarClock, AlertTriangle, ShieldAlert, CheckCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AvaliacoesTab } from "@/components/AvaliacoesTab";
 import { BoletimTab } from "@/components/BoletimTab";
@@ -45,6 +45,7 @@ import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { getNowBrasiliaISO } from "@/lib/brasiliaTime";
 import { cn } from "@/lib/utils";
+import { useDashboardSection } from "@/hooks/useDashboardSection";
 import { fileToFirestoreDataUrl } from "@/lib/fileValidation";
 
 const tarefaFormSchema = z.object({
@@ -67,7 +68,7 @@ export default function TeacherDashboard() {
   const [gradeDialogOpen, setGradeDialogOpen] = useState(false);
   const [selectedEntrega, setSelectedEntrega] = useState<Entrega | null>(null);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
-  const [selectedSection, setSelectedSection] = useState("inicio");
+  const [selectedSection, setSelectedSection] = useDashboardSection("inicio");
   
   const { hasUnread, latestMessage, showNotification, dismissNotification } = useUnreadMessages();
 
@@ -250,7 +251,7 @@ export default function TeacherDashboard() {
                   </div>
                   <div>
                     <h1 className="text-lg font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">Vestibulando</h1>
-                    <p className="text-xs text-muted-foreground font-medium">Área do Professor</p>
+                    <p className="text-xs text-muted-foreground font-medium">Portal unificado · Área do Professor</p>
                   </div>
                 </div>
               </div>
@@ -260,18 +261,6 @@ export default function TeacherDashboard() {
                   <p className="text-sm font-semibold">{userData?.nome}</p>
                   <p className="text-xs text-muted-foreground">Professor</p>
                 </div>
-                <Link href="/ead/estudio">
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="gap-2"
-                    data-testid="button-preparatorio-ead"
-                  >
-                    <GraduationCap className="h-4 w-4" />
-                    <span className="hidden lg:inline">Preparatório EAD</span>
-                    <span className="lg:hidden">EAD</span>
-                  </Button>
-                </Link>
                 <ThemeToggle />
                 <BrasiliaClock />
                 <Link href="/chat">

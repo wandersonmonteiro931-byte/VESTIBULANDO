@@ -16,7 +16,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { FileUploadZone } from "@/components/FileUploadZone";
 import { AnnouncementsCarousel } from "@/components/AnnouncementsCarousel";
 import { ChatNotificationBubble } from "@/components/ChatNotificationBubble";
-import { LogOut, FileText, Upload, Download, Calendar, Award, CheckCircle2, Clock, AlertTriangle, MessageCircle, GraduationCap } from "lucide-react";
+import { LogOut, FileText, Upload, Download, Calendar, Award, CheckCircle2, Clock, AlertTriangle, MessageCircle } from "lucide-react";
 import { AlunoAvaliacoesTab } from "@/components/AlunoAvaliacoesTab";
 import { AlunoBoletimTab } from "@/components/AlunoBoletimTab";
 import { AlunoPresencasTab } from "@/components/AlunoPresencasTab";
@@ -37,6 +37,7 @@ import { LiveClassNotification } from "@/components/LiveClassNotification";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { fileToFirestoreDataUrl } from "@/lib/fileValidation";
+import { useDashboardSection } from "@/hooks/useDashboardSection";
 
 export default function StudentDashboard() {
   const { userData, signOut } = useAuth();
@@ -45,7 +46,7 @@ export default function StudentDashboard() {
   const [selectedTarefa, setSelectedTarefa] = useState<Tarefa | null>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [submissionDialogOpen, setSubmissionDialogOpen] = useState(false);
-  const [selectedSection, setSelectedSection] = useState("inicio");
+  const [selectedSection, setSelectedSection] = useDashboardSection("inicio");
   const warningAlertShownRef = useRef(false);
   
   const { hasUnread, latestMessage, showNotification, dismissNotification } = useUnreadMessages();
@@ -305,7 +306,7 @@ export default function StudentDashboard() {
                 </div>
                 <div>
                   <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">Vestibulando</h1>
-                  <p className="text-xs text-muted-foreground font-medium">Área do Aluno</p>
+                  <p className="text-xs text-muted-foreground font-medium">Portal unificado · Área do Aluno</p>
                 </div>
               </div>
               
@@ -324,18 +325,6 @@ export default function StudentDashboard() {
                   <Download className="h-4 w-4 mr-2" />
                   Declaração
                 </Button>
-                <Link href="/ead/inicio">
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="gap-2"
-                    data-testid="button-preparatorio-ead"
-                  >
-                    <GraduationCap className="h-4 w-4" />
-                    <span className="hidden lg:inline">Preparatório EAD</span>
-                    <span className="lg:hidden">EAD</span>
-                  </Button>
-                </Link>
                 <ThemeToggle />
                 <BrasiliaClock />
                 <Link href="/chat">

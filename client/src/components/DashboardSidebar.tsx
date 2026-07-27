@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, type ElementType } from "react";
+import { useLocation } from "wouter";
 import {
   Sidebar,
   SidebarContent,
@@ -17,6 +18,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { PendingIndicator } from "@/components/PendingIndicator";
+import { EAD_NAVIGATION } from "@/features/ead/navigation";
 import {
   Users,
   GraduationCap,
@@ -44,19 +46,20 @@ import {
   Home,
   Clock,
   Video,
+  Layers3,
 } from "lucide-react";
 
 export interface MenuItem {
   id: string;
   label: string;
-  icon?: React.ElementType;
+  icon?: ElementType;
   pendingCount?: number;
 }
 
 export interface MenuCategory {
   id: string;
   label: string;
-  icon: React.ElementType;
+  icon: ElementType;
   items: MenuItem[];
 }
 
@@ -67,6 +70,8 @@ interface DashboardSidebarProps {
   pendingCounts?: Record<string, number>;
   userName?: string;
   userRole?: string;
+  activeArea?: "escolar" | "ead";
+  eadSection?: string;
 }
 
 const diretorCategories: MenuCategory[] = [
@@ -244,12 +249,6 @@ const alunoCategories: MenuCategory[] = [
   },
 ];
 
-interface HomeItem {
-  id: string;
-  label: string;
-  icon: React.ElementType;
-}
-
 export function DashboardSidebar({
   role,
   selectedItem,
@@ -257,65 +256,91 @@ export function DashboardSidebar({
   pendingCounts = {},
   userName,
   userRole,
+  activeArea = "escolar",
+  eadSection,
 }: DashboardSidebarProps) {
-  const categories = role === "diretor" 
-    ? diretorCategories 
-    : role === "professor" 
-      ? professorCategories 
+  const [, navigate] = useLocation();
+  const categories = role === "diretor"
+    ? diretorCategories
+    : role === "professor"
+      ? professorCategories
       : alunoCategories;
 
   const showHomeItem = role === "professor" || role === "aluno";
+  const dashboardPath = role === "diretor" ? "/diretor" : role === "professor" ? "/professor" : "/aluno";
+  const eadItems = EAD_NAVIGATION.filter((item) => item.roles.includes(role));
 
   const [openCategory, setOpenCategory] = useState<string | null>(() => {
-    const found = categories.find(cat => 
-      cat.items.some(item => item.id === selectedItem)
+    if (activeArea === "ead") return "preparatorio-ead";
+    const found = categories.find((category) =>
+      category.items.some((item) => item.id === selectedItem),
     );
     return found?.id || null;
   });
 
   const toggleCategory = (categoryId: string) => {
-    setOpenCategory(prev => prev === categoryId ? null : categoryId);
+    setOpenCategory((previous) => previous === categoryId ? null : categoryId);
   };
 
-  const handleSelectItem = (itemId: string) => {
-    const parentCategory = categories.find(cat => 
-      cat.items.some(item => item.id === itemId)
+  const handleSchoolItem = (itemId: string) => {
+    const parentCategory = categories.find((category) =>
+      category.items.some((item) => item.id === itemId),
     );
-    if (parentCategory) {
-      setOpenCategory(parentCategory.id);
+    if (parentCategory) setOpenCategory(parentCategory.id);
+
+    if (activeArea === "ead") {
+      navigate(`${dashboardPath}?secao=${encodeURIComponent(itemId)}`);
+      return;
     }
     onSelectItem(itemId);
+  };
+
+  const handleSchoolHome = () => {
+    if (activeArea === "ead") {
+      navigate(`${dashboardPath}?secao=inicio`);
+      return;
+    }
+    onSelectItem("inicio");
+  };
+
+  const handleEadItem = (itemId: string) => {
+    setOpenCategory("preparatorio-ead");
+    navigate(`/ead/${itemId}`);
   };
 
   return (
     <Sidebar>
       <SidebarHeader className="border-b border-sidebar-border p-3">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
             <GraduationCap className="h-5 w-5" />
           </div>
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold">Vestibulando</span>
-            <span className="text-xs text-muted-foreground capitalize">
-              {userRole || role}
+          <div className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-semibold">Vestibulando</span>
+            <span className="block truncate text-xs text-muted-foreground">
+              Portal unificado · {userRole || role}
             </span>
           </div>
         </div>
       </SidebarHeader>
 
       <SidebarContent className="py-1">
+        <div className="px-3 pb-1 pt-2 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+          Portal escolar
+        </div>
+
         {showHomeItem && (
           <SidebarGroup className="py-0.5">
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  isActive={selectedItem === "inicio"}
-                  onClick={() => onSelectItem("inicio")}
+                  isActive={activeArea === "escolar" && selectedItem === "inicio"}
+                  onClick={handleSchoolHome}
                   data-testid="sidebar-item-inicio"
                   className="py-1.5"
                 >
                   <Home className="h-4 w-4" />
-                  <span>Início</span>
+                  <span>Início escolar</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -325,7 +350,7 @@ export function DashboardSidebar({
         {categories.map((category) => {
           const isOpen = openCategory === category.id;
           const categoryHasPending = category.items.some(
-            item => (pendingCounts[item.id] || 0) > 0
+            (item) => (pendingCounts[item.id] || 0) > 0,
           );
           const CategoryIcon = category.icon;
 
@@ -333,7 +358,7 @@ export function DashboardSidebar({
             <SidebarGroup key={category.id} className="py-0.5">
               <Collapsible open={isOpen} onOpenChange={() => toggleCategory(category.id)}>
                 <CollapsibleTrigger asChild>
-                  <SidebarGroupLabel className="cursor-pointer hover:bg-sidebar-accent/50 rounded-md transition-colors py-1.5 px-2 flex items-center justify-between w-full text-xs">
+                  <SidebarGroupLabel className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-xs transition-colors hover:bg-sidebar-accent/50">
                     <div className="flex items-center gap-1.5">
                       <CategoryIcon className="h-3.5 w-3.5" />
                       <span>{category.label}</span>
@@ -352,21 +377,19 @@ export function DashboardSidebar({
                       {category.items.map((item) => {
                         const ItemIcon = item.icon;
                         const pendingCount = pendingCounts[item.id] || 0;
-                        const isActive = selectedItem === item.id;
+                        const isActive = activeArea === "escolar" && selectedItem === item.id;
 
                         return (
                           <SidebarMenuItem key={item.id}>
                             <SidebarMenuButton
                               isActive={isActive}
-                              onClick={() => handleSelectItem(item.id)}
-                              className="pl-5 py-1"
+                              onClick={() => handleSchoolItem(item.id)}
+                              className="py-1 pl-5"
                               data-testid={`sidebar-item-${item.id}`}
                             >
                               {ItemIcon && <ItemIcon className="h-3.5 w-3.5" />}
                               <span className="flex-1 text-sm">{item.label}</span>
-                              {pendingCount > 0 && (
-                                <PendingIndicator size="sm" />
-                              )}
+                              {pendingCount > 0 && <PendingIndicator size="sm" />}
                             </SidebarMenuButton>
                           </SidebarMenuItem>
                         );
@@ -378,13 +401,61 @@ export function DashboardSidebar({
             </SidebarGroup>
           );
         })}
+
+        <div className="mx-3 my-2 h-px bg-sidebar-border" />
+        <div className="px-3 pb-1 pt-1 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+          Preparatório EAD
+        </div>
+
+        <SidebarGroup className="py-0.5">
+          <Collapsible
+            open={openCategory === "preparatorio-ead"}
+            onOpenChange={() => toggleCategory("preparatorio-ead")}
+          >
+            <CollapsibleTrigger asChild>
+              <SidebarGroupLabel className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-xs transition-colors hover:bg-sidebar-accent/50">
+                <div className="flex items-center gap-1.5">
+                  <Layers3 className="h-3.5 w-3.5" />
+                  <span>Módulos EAD</span>
+                </div>
+                {openCategory === "preparatorio-ead" ? (
+                  <ChevronDown className="h-3.5 w-3.5 transition-transform" />
+                ) : (
+                  <ChevronRight className="h-3.5 w-3.5 transition-transform" />
+                )}
+              </SidebarGroupLabel>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <SidebarGroupContent className="py-0.5">
+                <SidebarMenu>
+                  {eadItems.map((item) => {
+                    const ItemIcon = item.icon;
+                    const isActive = activeArea === "ead" && eadSection === item.id;
+                    return (
+                      <SidebarMenuItem key={item.id}>
+                        <SidebarMenuButton
+                          isActive={isActive}
+                          onClick={() => handleEadItem(item.id)}
+                          className="py-1 pl-5"
+                          data-testid={`sidebar-ead-item-${item.id}`}
+                        >
+                          <ItemIcon className="h-3.5 w-3.5" />
+                          <span className="flex-1 text-sm">{item.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </SidebarGroup>
       </SidebarContent>
 
       {userName && (
         <SidebarFooter className="border-t border-sidebar-border p-3">
-          <div className="text-xs text-muted-foreground truncate">
-            {userName}
-          </div>
+          <div className="truncate text-xs font-medium">{userName}</div>
+          <div className="text-[11px] text-muted-foreground">Portal escolar + EAD</div>
         </SidebarFooter>
       )}
     </Sidebar>
