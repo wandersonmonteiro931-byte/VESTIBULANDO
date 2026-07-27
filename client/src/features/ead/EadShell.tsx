@@ -236,7 +236,7 @@ export function EadShell({
       </header>
 
       <div className="mx-auto flex w-full max-w-[1600px]">
-        <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-64 shrink-0 border-r bg-background p-4 lg:block">
+        <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-64 shrink-0 overflow-y-auto overscroll-contain border-r bg-background p-4 [scrollbar-gutter:stable] lg:block">
           <div className="mb-4 rounded-xl border bg-gradient-to-br from-primary/10 to-primary/5 p-4">
             <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
               <GraduationCap className="h-5 w-5" />
