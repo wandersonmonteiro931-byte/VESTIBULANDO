@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { SuspensionAlertProvider } from "@/contexts/SuspensionAlertContext";
 import { WarningAlertProvider } from "@/contexts/WarningAlertContext";
 import { LiveClassProvider } from "@/contexts/LiveClassContext";
+import { PortalUpdatesProvider } from "@/contexts/PortalUpdatesContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { FirebaseErrorScreen } from "@/components/FirebaseErrorScreen";
 import { SuspensionAlertOverlay } from "@/components/SuspensionAlertOverlay";
@@ -135,14 +136,16 @@ function App() {
         <SuspensionAlertProvider>
           <WarningAlertProvider>
             <AuthProvider>
-              <LiveClassProvider>
-                <TooltipProvider>
-                  <Toaster />
-                  <SuspensionAlertOverlay />
-                  <WarningAlertOverlay />
-                  <Router />
-                </TooltipProvider>
-              </LiveClassProvider>
+              <PortalUpdatesProvider>
+                <LiveClassProvider>
+                  <TooltipProvider>
+                    <Toaster />
+                    <SuspensionAlertOverlay />
+                    <WarningAlertOverlay />
+                    <Router />
+                  </TooltipProvider>
+                </LiveClassProvider>
+              </PortalUpdatesProvider>
             </AuthProvider>
           </WarningAlertProvider>
         </SuspensionAlertProvider>

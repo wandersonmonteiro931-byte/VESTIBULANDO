@@ -38,6 +38,8 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { fileToFirestoreDataUrl } from "@/lib/fileValidation";
 import { useDashboardSection } from "@/hooks/useDashboardSection";
+import { UnifiedPortalOverview } from "@/components/UnifiedPortalOverview";
+import { StudentHomePage } from "@/features/ead/HomeAndPlanPages";
 
 export default function StudentDashboard() {
   const { userData, signOut } = useAuth();
@@ -367,29 +369,7 @@ export default function StudentDashboard() {
           <main className="container px-6 py-10 max-w-7xl mx-auto flex-1">
             {selectedSection === "inicio" && (
               <>
-                <div className="mb-10">
-                  <h2 className="text-4xl font-bold mb-3 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                    {(() => {
-                      const now = new Date();
-                      const brasiliaOffset = -3;
-                      const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-                      const brasiliaTime = new Date(utc + (3600000 * brasiliaOffset));
-                      const hour = brasiliaTime.getHours();
-                      
-                      let greeting = "";
-                      if (hour >= 5 && hour < 12) {
-                        greeting = "Bom dia";
-                      } else if (hour >= 12 && hour < 18) {
-                        greeting = "Boa tarde";
-                      } else {
-                        greeting = "Boa noite";
-                      }
-                      
-                      return `${greeting}, ${userData?.nome?.split(' ')[0]}!`;
-                    })()}
-                  </h2>
-                  <p className="text-muted-foreground text-lg">Acompanhe suas tarefas e progresso</p>
-                </div>
+                <UnifiedPortalOverview role="aluno" firstName={userData?.nome?.split(" ")[0]} />
 
                 <div className="mb-10">
                   <AnnouncementsCarousel userType="aluno" userTurma={userData?.turma} />
@@ -435,6 +415,8 @@ export default function StudentDashboard() {
                     </CardContent>
                   </Card>
                 </div>
+
+                <StudentHomePage embedded />
               </>
             )}
 

@@ -170,7 +170,7 @@ export function EadShell({
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold sm:text-base">Vestibulando</p>
                   <p className="truncate text-xs text-muted-foreground">
-                    Portal unificado · {current?.label || "Preparatório EAD"}
+                    Portal completo · {current?.label || "Área de estudos"}
                   </p>
                 </div>
               </div>

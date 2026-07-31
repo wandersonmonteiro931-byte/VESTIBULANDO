@@ -9,7 +9,6 @@ import {
   FilePenLine,
   GraduationCap,
   HelpCircle,
-  Home,
   LayoutDashboard,
   MessageCircle,
   Radio,
@@ -28,7 +27,6 @@ export interface EadNavigationItem {
 }
 
 export const EAD_NAVIGATION: EadNavigationItem[] = [
-  { id: "inicio", label: "Meu dia", icon: Home, roles: ["aluno"] },
   { id: "plano", label: "Plano de estudos", icon: CalendarDays, roles: ["aluno"] },
   { id: "programacao", label: "Programação de aulas", icon: CalendarClock, roles: ["aluno", "professor", "diretor"] },
   { id: "conteudos", label: "Conteúdos", icon: BookOpen, roles: ["aluno", "professor", "diretor"] },
@@ -41,7 +39,7 @@ export const EAD_NAVIGATION: EadNavigationItem[] = [
   { id: "estudio", label: "Estúdio do professor", icon: Sparkles, roles: ["professor"] },
   { id: "correcoes", label: "Correções", icon: FilePenLine, roles: ["professor"] },
   { id: "turmas", label: "Turmas e relatórios", icon: Users, roles: ["professor"] },
-  { id: "gestao", label: "Gestão EAD", icon: LayoutDashboard, roles: ["diretor"] },
+  { id: "gestao", label: "Gestão pedagógica", icon: LayoutDashboard, roles: ["diretor"] },
   { id: "financeiro", label: "Financeiro", icon: CircleDollarSign, roles: ["aluno", "diretor"] },
   { id: "seguranca", label: "Segurança e LGPD", icon: ShieldCheck, roles: ["diretor"] },
   { id: "acessibilidade", label: "Acessibilidade", icon: Accessibility, roles: ["aluno", "professor", "diretor"] },

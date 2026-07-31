@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AdminManagementPage, FinancePage, SecurityPage } from "./AdminAndFinancePages";
 import { EadShell } from "./EadShell";
 import { EssayWorkspacePage, ExamSimulatorPage } from "./ExamAndEssayPages";
-import { StudentHomePage, StudyPlanPage } from "./HomeAndPlanPages";
+import { StudyPlanPage } from "./HomeAndPlanPages";
 import { ContentLibraryPage, QuestionBankPage } from "./LearningPages";
 import { CommunityPage, LiveClassesPage } from "./LiveAndCommunityPages";
 import { ScheduledLearningPage } from "./ScheduledLearningPages";
@@ -23,18 +23,23 @@ export function EadIndexRedirect() {
   const { userData } = useAuth() as any;
   const destination =
     userData?.tipo === "diretor"
-      ? "/ead/gestao"
+      ? "/diretor"
       : userData?.tipo === "professor"
-        ? "/ead/estudio"
-        : "/ead/inicio";
+        ? "/professor"
+        : "/aluno";
   return <Redirect to={destination} />;
 }
 
 export default function EadPortalPage() {
   const { section = "inicio" } = useParams<{ section: string }>();
+  const { userData } = useAuth() as any;
+
+  if (section === "inicio") {
+    const destination = userData?.tipo === "diretor" ? "/diretor" : userData?.tipo === "professor" ? "/professor" : "/aluno";
+    return <Redirect to={destination} />;
+  }
 
   const pages: Record<string, ReactNode> = {
-    inicio: <StudentHomePage />,
     plano: <StudyPlanPage />,
     programacao: <ScheduledLearningPage />,
     conteudos: <ContentLibraryPage />,
@@ -54,5 +59,6 @@ export default function EadPortalPage() {
     suporte: <SupportPage />,
   };
 
-  return <EadShell section={section}>{pages[section] || pages.inicio}</EadShell>;
+  const fallbackSection = userData?.tipo === "diretor" ? "gestao" : userData?.tipo === "professor" ? "estudio" : "plano";
+  return <EadShell section={section}>{pages[section] || pages[fallbackSection]}</EadShell>;
 }

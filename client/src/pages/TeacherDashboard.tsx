@@ -47,6 +47,7 @@ import { getNowBrasiliaISO } from "@/lib/brasiliaTime";
 import { cn } from "@/lib/utils";
 import { useDashboardSection } from "@/hooks/useDashboardSection";
 import { fileToFirestoreDataUrl } from "@/lib/fileValidation";
+import { UnifiedPortalOverview } from "@/components/UnifiedPortalOverview";
 
 const tarefaFormSchema = z.object({
   titulo: z.string().min(1, "Título é obrigatório"),
@@ -236,7 +237,7 @@ export default function TeacherDashboard() {
           role="professor"
           selectedItem={selectedSection}
           onSelectItem={setSelectedSection}
-          pendingCounts={{ correcoes: pendingCount }}
+          pendingCounts={{ "escolar:correcoes": pendingCount }}
           userName={userData?.nome}
           userRole="Professor"
         />
@@ -304,22 +305,18 @@ export default function TeacherDashboard() {
             <div className="max-w-7xl mx-auto">
               {selectedSection === "inicio" && (
                 <>
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
-                    <div>
-                      <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                        Painel do Professor
-                      </h2>
-                      <p className="text-muted-foreground">Gerencie atividades e avalie entregas</p>
-                    </div>
-                    {activeSession && (
+                  <UnifiedPortalOverview role="professor" firstName={userData?.nome?.split(" ")[0]} />
+
+                  {activeSession && (
+                    <div className="mb-8 flex justify-end">
                       <Link href={`/sala-professor/${activeSession.id}`}>
-                        <Button className="bg-green-600 hover:bg-green-700 animate-pulse" data-testid="button-return-to-class">
-                          <CheckCircle className="h-4 w-4 mr-2" />
+                        <Button className="animate-pulse bg-green-600 hover:bg-green-700" data-testid="button-return-to-class">
+                          <CheckCircle className="mr-2 h-4 w-4" />
                           Voltar para Aula ({activeSession.materia})
                         </Button>
                       </Link>
-                    )}
-                  </div>
+                    </div>
+                  )}
 
                   <div className="mb-8">
                     <AnnouncementsCarousel userType="professor" />

@@ -58,7 +58,7 @@ function actorFromUser(userData: any) {
     : null;
 }
 
-export function StudentHomePage() {
+export function StudentHomePage({ embedded = false }: { embedded?: boolean } = {}) {
   const { userData, refreshUserData } = useAuth() as any;
   const { toast } = useToast();
   const uid = userData?.uid || "";
@@ -145,17 +145,33 @@ export function StudentHomePage() {
 
   return (
     <div className="space-y-8">
-      <SectionHeader
-        eyebrow="Área do aluno"
-        title={`Olá, ${userData?.nome?.split(" ")[0] || "estudante"}!`}
-        description="Veja o que estudar hoje, acompanhe seu progresso e continue exatamente de onde parou."
-        action={
-          <Button variant="outline" onClick={() => setProfileOpen(true)} className="gap-2">
+      {embedded ? (
+        <div className="flex flex-col gap-4 rounded-2xl border bg-card p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Preparação personalizada</p>
+            <h3 className="mt-1 text-2xl font-bold">Plano, progresso e continuidade</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Resumo do seu estudo EAD, metas, pendências, aulas recentes e próximos conteúdos.
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => setProfileOpen(true)} className="shrink-0 gap-2">
             <Settings2 className="h-4 w-4" />
             Meu objetivo
           </Button>
-        }
-      />
+        </div>
+      ) : (
+        <SectionHeader
+          eyebrow="Área do aluno"
+          title={`Olá, ${userData?.nome?.split(" ")[0] || "estudante"}!`}
+          description="Veja o que estudar hoje, acompanhe seu progresso e continue exatamente de onde parou."
+          action={
+            <Button variant="outline" onClick={() => setProfileOpen(true)} className="gap-2">
+              <Settings2 className="h-4 w-4" />
+              Meu objetivo
+            </Button>
+          }
+        />
+      )}
 
       {!profile.provaAlvo && (
         <Card className="border-primary/30 bg-primary/5">

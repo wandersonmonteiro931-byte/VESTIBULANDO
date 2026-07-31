@@ -31,6 +31,7 @@ import { CalendarioProgramacaoTab } from "@/components/CalendarioProgramacaoTab"
 import { PresencasTab } from "@/components/PresencasTab";
 import { ChatNotificationBubble } from "@/components/ChatNotificationBubble";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
+import { UnifiedPortalOverview } from "@/components/UnifiedPortalOverview";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, ArrowRightLeft, Clock, Search, Eye, AlertTriangle, Settings, Power, PowerOff, Archive, Download, ChevronDown, ChevronUp, MessageCircle, Camera, Upload, X, Copy, Shield, RotateCcw } from "lucide-react";
 import { Link } from "wouter";
@@ -167,7 +168,7 @@ function MaintenanceTimer({ startTime, onFinalize }: { startTime: string; onFina
 export default function AdminDashboard() {
   const { userData, signOut, refreshUserData } = useAuth();
   const { toast } = useToast();
-  const [selectedSection, setSelectedSection] = useDashboardSection("aprovacoes");
+  const [selectedSection, setSelectedSection] = useDashboardSection("inicio");
   
   const { hasUnread, latestMessage, showNotification, dismissNotification } = useUnreadMessages();
   const [createTurmaDialogOpen, setCreateTurmaDialogOpen] = useState(false);
@@ -2597,6 +2598,10 @@ export default function AdminDashboard() {
 
           <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-6">
             <div className="w-full">
+              {selectedSection === "inicio" && (
+                <UnifiedPortalOverview role="diretor" firstName={userData?.nome?.split(" ")[0]} />
+              )}
+
               {selectedSection === "aprovacoes" && (
                 <div className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">

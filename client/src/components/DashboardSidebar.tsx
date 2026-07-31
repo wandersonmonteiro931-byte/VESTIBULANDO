@@ -1,4 +1,4 @@
-import { useState, type ElementType } from "react";
+import { useEffect, useMemo, useState, type ElementType } from "react";
 import { useLocation } from "wouter";
 import {
   Sidebar,
@@ -17,36 +17,47 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { Badge } from "@/components/ui/badge";
 import { PendingIndicator } from "@/components/PendingIndicator";
-import { EAD_NAVIGATION } from "@/features/ead/navigation";
+import { usePortalUpdates } from "@/contexts/PortalUpdatesContext";
 import {
-  Users,
-  GraduationCap,
+  Accessibility,
   Activity,
-  Shield,
-  FileText,
+  AlertTriangle,
+  Award,
+  BarChart3,
   Bell,
-  Settings,
-  ClipboardList,
   BookOpen,
+  Calendar,
+  CalendarClock,
+  CalendarDays,
   CheckSquare,
   ChevronDown,
   ChevronRight,
-  UserCheck,
-  School,
-  Key,
-  AlertTriangle,
-  MessageSquare,
+  CircleDollarSign,
+  ClipboardCheck,
+  ClipboardList,
   Eye,
-  Flag,
-  Wrench,
-  Calendar,
   FileCheck,
-  Award,
+  FilePenLine,
+  FileText,
+  Flag,
+  GraduationCap,
+  HelpCircle,
   Home,
-  Clock,
+  Key,
+  LayoutDashboard,
+  MessageCircle,
+  Radio,
+  School,
+  Settings,
+  Shield,
+  ShieldCheck,
+  Sparkles,
+  UserCheck,
+  Users,
   Video,
-  Layers3,
+  Wrench,
 } from "lucide-react";
 
 export interface MenuItem {
@@ -54,6 +65,7 @@ export interface MenuItem {
   label: string;
   icon?: ElementType;
   pendingCount?: number;
+  area?: "escolar" | "ead";
 }
 
 export interface MenuCategory {
@@ -74,180 +86,225 @@ interface DashboardSidebarProps {
   eadSection?: string;
 }
 
+const school = (id: string, label: string, icon: ElementType): MenuItem => ({ id, label, icon, area: "escolar" });
+const ead = (id: string, label: string, icon: ElementType): MenuItem => ({ id, label, icon, area: "ead" });
+
 const diretorCategories: MenuCategory[] = [
   {
+    id: "visao-geral",
+    label: "Visão geral",
+    icon: Home,
+    items: [school("inicio", "Início", Home)],
+  },
+  {
     id: "gestao-usuarios",
-    label: "Gestão de Usuários",
+    label: "Pessoas e turmas",
     icon: Users,
     items: [
-      { id: "aprovacoes", label: "Aprovações", icon: UserCheck },
-      { id: "lista-espera", label: "Lista de Espera", icon: Clock },
-      { id: "usuarios", label: "Alunos", icon: Users },
-      { id: "professores", label: "Professores", icon: School },
-      { id: "senhas-logins", label: "Senhas", icon: Key },
-      { id: "turmas", label: "Turmas", icon: BookOpen },
+      school("aprovacoes", "Aprovações", UserCheck),
+      school("lista-espera", "Lista de espera", CalendarClock),
+      school("usuarios", "Alunos", Users),
+      school("professores", "Professores", School),
+      school("senhas-logins", "Senhas e logins", Key),
+      school("turmas", "Turmas", BookOpen),
     ],
   },
   {
     id: "academico",
-    label: "Acadêmico",
+    label: "Acadêmico e programação",
     icon: GraduationCap,
     items: [
-      { id: "horarios", label: "Grade Horária", icon: Clock },
-      { id: "calendario", label: "Calendário", icon: Calendar },
-      { id: "config-horarios", label: "Configurar Horários", icon: Settings },
-      { id: "presencas", label: "Registro de Presenças", icon: UserCheck },
-      { id: "bimestres", label: "Bimestres", icon: Calendar },
-      { id: "boletins", label: "Boletins", icon: FileCheck },
-      { id: "autorizacoes-notas", label: "Autorizações", icon: CheckSquare },
+      school("horarios", "Grade horária", CalendarClock),
+      school("calendario", "Calendário", Calendar),
+      school("config-horarios", "Configurar horários", Settings),
+      school("presencas", "Registro de presenças", UserCheck),
+      school("bimestres", "Bimestres", CalendarDays),
+      school("boletins", "Boletins", FileCheck),
+      school("autorizacoes-notas", "Autorizações de notas", CheckSquare),
+      ead("programacao", "Programação de aulas", CalendarClock),
+    ],
+  },
+  {
+    id: "ensino-ead",
+    label: "Ensino e conteúdos",
+    icon: BookOpen,
+    items: [
+      ead("conteudos", "Conteúdos e materiais", BookOpen),
+      ead("gestao", "Gestão pedagógica", LayoutDashboard),
+      ead("comunidade", "Dúvidas e fórum", MessageCircle),
+    ],
+  },
+  {
+    id: "financeiro-atendimento",
+    label: "Financeiro e atendimento",
+    icon: CircleDollarSign,
+    items: [
+      ead("financeiro", "Planos e cobranças", CircleDollarSign),
+      ead("suporte", "Ajuda e suporte", HelpCircle),
+      school("avisos", "Avisos", Bell),
     ],
   },
   {
     id: "monitoramento",
-    label: "Monitoramento",
-    icon: Activity,
+    label: "Monitoramento e segurança",
+    icon: ShieldCheck,
     items: [
-      { id: "monitoramento", label: "Frequência", icon: Eye },
-      { id: "auditoria-chat", label: "Auditoria", icon: MessageSquare },
+      school("monitoramento", "Frequência e atividade", Eye),
+      school("auditoria-chat", "Auditoria do chat", MessageCircle),
+      school("disciplinares", "Advertências", AlertTriangle),
+      school("pedidos-disciplinares", "Pedidos disciplinares", Flag),
+      school("denuncias", "Denúncias", Flag),
+      ead("seguranca", "Segurança e LGPD", ShieldCheck),
+      ead("acessibilidade", "Acessibilidade", Accessibility),
     ],
   },
   {
-    id: "disciplinar",
-    label: "Disciplinar",
-    icon: Shield,
-    items: [
-      { id: "disciplinares", label: "Advertências", icon: AlertTriangle },
-      { id: "pedidos-disciplinares", label: "Pedidos Professores", icon: Flag },
-      { id: "denuncias", label: "Denúncias", icon: Flag },
-    ],
-  },
-  {
-    id: "documentos",
-    label: "Documentos",
+    id: "documentos-sistema",
+    label: "Documentos e sistema",
     icon: FileText,
     items: [
-      { id: "documentos-internos", label: "Docs Internos", icon: FileText },
-      { id: "documentacao", label: "Documentação", icon: FileText },
-    ],
-  },
-  {
-    id: "avisos",
-    label: "Avisos",
-    icon: Bell,
-    items: [
-      { id: "avisos", label: "Gerenciar Avisos", icon: Bell },
-    ],
-  },
-  {
-    id: "sistema",
-    label: "Sistema",
-    icon: Settings,
-    items: [
-      { id: "manutencao", label: "Manutenção", icon: Wrench },
+      school("documentos-internos", "Documentos internos", FileText),
+      school("documentacao", "Documentação", FileText),
+      school("manutencao", "Manutenção", Wrench),
     ],
   },
 ];
 
 const professorCategories: MenuCategory[] = [
   {
-    id: "academico",
-    label: "Acadêmico",
-    icon: GraduationCap,
+    id: "visao-geral",
+    label: "Visão geral",
+    icon: Home,
+    items: [school("inicio", "Início", Home)],
+  },
+  {
+    id: "agenda-aulas",
+    label: "Agenda e aulas",
+    icon: CalendarClock,
     items: [
-      { id: "horarios", label: "Meus Horários", icon: Clock },
-      { id: "presencas", label: "Registro de Presenças", icon: UserCheck },
+      school("horarios", "Meus horários", CalendarClock),
+      school("presencas", "Registro de presenças", UserCheck),
+      school("aulaAoVivo", "Sala ao vivo interna", Video),
+      ead("programacao", "Programação de aulas", CalendarClock),
+      ead("ao-vivo", "Transmissões e encontros", Radio),
     ],
   },
   {
-    id: "aula-ao-vivo",
-    label: "Aula ao Vivo",
-    icon: Video,
+    id: "conteudo-pedagogico",
+    label: "Conteúdo pedagógico",
+    icon: BookOpen,
     items: [
-      { id: "aulaAoVivo", label: "Gerenciar Aula", icon: Video },
+      ead("estudio", "Estúdio do professor", Sparkles),
+      ead("conteudos", "Conteúdos e materiais", BookOpen),
     ],
   },
   {
-    id: "atividades",
-    label: "Atividades",
+    id: "atividades-correcoes",
+    label: "Atividades e correções",
     icon: ClipboardList,
     items: [
-      { id: "avaliacoes", label: "Atividades e Avaliações", icon: ClipboardList },
-      { id: "correcoes", label: "Correções Pendentes", icon: CheckSquare },
+      school("avaliacoes", "Atividades e avaliações", ClipboardList),
+      school("correcoes", "Correções escolares", CheckSquare),
+      ead("correcoes", "Correções de redação", FilePenLine),
+      school("bimestres", "Notas do bimestre", CalendarDays),
+      school("boletins", "Boletins", FileCheck),
     ],
   },
   {
-    id: "notas-boletins",
-    label: "Notas e Boletins",
-    icon: GraduationCap,
+    id: "turmas-comunicacao",
+    label: "Turmas e comunicação",
+    icon: Users,
     items: [
-      { id: "bimestres", label: "Notas Bimestre", icon: Calendar },
-      { id: "boletins", label: "Boletins", icon: FileCheck },
+      ead("turmas", "Turmas e relatórios", BarChart3),
+      ead("comunidade", "Dúvidas e fórum", MessageCircle),
+      school("disciplinar", "Ações disciplinares", Shield),
     ],
   },
   {
-    id: "disciplinar",
-    label: "Disciplinar",
-    icon: Shield,
+    id: "preferencias-suporte",
+    label: "Preferências e suporte",
+    icon: Settings,
     items: [
-      { id: "disciplinar", label: "Ações Disciplinares", icon: AlertTriangle },
+      ead("acessibilidade", "Acessibilidade", Accessibility),
+      ead("suporte", "Ajuda e suporte", HelpCircle),
     ],
   },
 ];
 
 const alunoCategories: MenuCategory[] = [
   {
-    id: "academico",
-    label: "Acadêmico",
-    icon: GraduationCap,
+    id: "visao-geral",
+    label: "Visão geral",
+    icon: Home,
+    items: [school("inicio", "Início", Home)],
+  },
+  {
+    id: "rotina",
+    label: "Minha rotina",
+    icon: CalendarDays,
     items: [
-      { id: "horarios", label: "Meu Horário", icon: Clock },
-      { id: "presencas", label: "Minhas Presenças", icon: UserCheck },
+      school("horarios", "Meu horário", CalendarClock),
+      school("presencas", "Minhas presenças", UserCheck),
+      ead("plano", "Plano de estudos", CalendarDays),
+      ead("programacao", "Programação de aulas", CalendarClock),
     ],
   },
   {
-    id: "aulas-ao-vivo",
-    label: "Aulas ao Vivo",
-    icon: Video,
+    id: "aulas-conteudos",
+    label: "Aulas e conteúdos",
+    icon: BookOpen,
     items: [
-      { id: "aulas", label: "Minhas Aulas", icon: Video },
+      school("aulas", "Minhas aulas escolares", Video),
+      ead("conteudos", "Conteúdos e materiais", BookOpen),
+      ead("ao-vivo", "Transmissões e encontros", Radio),
     ],
   },
   {
-    id: "tarefas",
-    label: "Tarefas",
-    icon: ClipboardList,
+    id: "atividades-provas",
+    label: "Atividades e provas",
+    icon: ClipboardCheck,
     items: [
-      { id: "todas", label: "Todas as Tarefas", icon: ClipboardList },
-      { id: "pendentes", label: "Pendentes", icon: CheckSquare },
-      { id: "entregues", label: "Entregues", icon: Award },
+      school("todas", "Todas as tarefas", ClipboardList),
+      school("pendentes", "Tarefas pendentes", CheckSquare),
+      school("entregues", "Tarefas entregues", Award),
+      school("avaliacoes", "Avaliações escolares", FileText),
+      ead("questoes", "Banco de questões", ClipboardCheck),
+      ead("simulados", "Simulados", GraduationCap),
+      ead("redacao", "Redação", FilePenLine),
     ],
   },
   {
-    id: "avaliacoes",
-    label: "Avaliações",
-    icon: FileText,
+    id: "resultados",
+    label: "Resultados e evolução",
+    icon: BarChart3,
     items: [
-      { id: "avaliacoes", label: "Minhas Avaliações", icon: FileText },
+      school("notas", "Minhas notas", Award),
+      school("boletim", "Meu boletim", FileCheck),
+      ead("desempenho", "Desempenho e evolução", BarChart3),
+      school("advertencias", "Advertências", AlertTriangle),
     ],
   },
   {
-    id: "notas-boletins",
-    label: "Notas e Boletins",
-    icon: GraduationCap,
+    id: "comunidade-servicos",
+    label: "Comunidade e serviços",
+    icon: MessageCircle,
     items: [
-      { id: "notas", label: "Notas", icon: Award },
-      { id: "boletim", label: "Boletim", icon: FileCheck },
-    ],
-  },
-  {
-    id: "disciplinar",
-    label: "Disciplinar",
-    icon: Shield,
-    items: [
-      { id: "advertencias", label: "Advertências", icon: AlertTriangle },
+      ead("comunidade", "Dúvidas e fórum", MessageCircle),
+      ead("financeiro", "Financeiro", CircleDollarSign),
+      ead("acessibilidade", "Acessibilidade", Accessibility),
+      ead("suporte", "Ajuda e suporte", HelpCircle),
     ],
   },
 ];
+
+function itemKey(item: MenuItem) {
+  return `${item.area || "escolar"}:${item.id}`;
+}
+
+function pendingForItem(item: MenuItem, pendingCounts: Record<string, number>) {
+  const area = item.area || "escolar";
+  return pendingCounts[`${area}:${item.id}`] ?? pendingCounts[item.id] ?? 0;
+}
 
 export function DashboardSidebar({
   role,
@@ -260,52 +317,50 @@ export function DashboardSidebar({
   eadSection,
 }: DashboardSidebarProps) {
   const [, navigate] = useLocation();
+  const { hasUpdate, markSeen, newCount } = usePortalUpdates();
   const categories = role === "diretor"
     ? diretorCategories
     : role === "professor"
       ? professorCategories
       : alunoCategories;
-
-  const showHomeItem = role === "professor" || role === "aluno";
   const dashboardPath = role === "diretor" ? "/diretor" : role === "professor" ? "/professor" : "/aluno";
-  const eadItems = EAD_NAVIGATION.filter((item) => item.roles.includes(role));
 
-  const [openCategory, setOpenCategory] = useState<string | null>(() => {
-    if (activeArea === "ead") return "preparatorio-ead";
-    const found = categories.find((category) =>
-      category.items.some((item) => item.id === selectedItem),
-    );
-    return found?.id || null;
-  });
+  const activeKey = activeArea === "ead"
+    ? `ead:${eadSection || ""}`
+    : `escolar:${selectedItem}`;
+
+  const activeCategoryId = useMemo(
+    () => categories.find((category) => category.items.some((item) => itemKey(item) === activeKey))?.id || "visao-geral",
+    [activeKey, categories],
+  );
+  const [openCategory, setOpenCategory] = useState<string | null>(activeCategoryId);
+
+  useEffect(() => {
+    setOpenCategory(activeCategoryId);
+  }, [activeCategoryId]);
+
+  useEffect(() => {
+    if (activeArea === "ead" && eadSection) markSeen("ead", eadSection);
+    if (activeArea === "escolar" && selectedItem) markSeen("escolar", selectedItem);
+  }, [activeArea, eadSection, markSeen, selectedItem]);
 
   const toggleCategory = (categoryId: string) => {
     setOpenCategory((previous) => previous === categoryId ? null : categoryId);
   };
 
-  const handleSchoolItem = (itemId: string) => {
-    const parentCategory = categories.find((category) =>
-      category.items.some((item) => item.id === itemId),
-    );
-    if (parentCategory) setOpenCategory(parentCategory.id);
-
-    if (activeArea === "ead") {
-      navigate(`${dashboardPath}?secao=${encodeURIComponent(itemId)}`);
+  const handleItem = (item: MenuItem) => {
+    const area = item.area || "escolar";
+    markSeen(area, item.id);
+    if (area === "ead") {
+      navigate(`/ead/${item.id}`);
       return;
     }
-    onSelectItem(itemId);
-  };
-
-  const handleSchoolHome = () => {
     if (activeArea === "ead") {
-      navigate(`${dashboardPath}?secao=inicio`);
+      const suffix = item.id === "inicio" ? "" : `?secao=${encodeURIComponent(item.id)}`;
+      navigate(`${dashboardPath}${suffix}`);
       return;
     }
-    onSelectItem("inicio");
-  };
-
-  const handleEadItem = (itemId: string) => {
-    setOpenCategory("preparatorio-ead");
-    navigate(`/ead/${itemId}`);
+    onSelectItem(item.id);
   };
 
   return (
@@ -318,39 +373,29 @@ export function DashboardSidebar({
           <div className="min-w-0 flex-1">
             <span className="block truncate text-sm font-semibold">Vestibulando</span>
             <span className="block truncate text-xs text-muted-foreground">
-              Portal unificado · {userRole || role}
+              Portal completo · {userRole || role}
             </span>
           </div>
+          {newCount > 0 && (
+            <Badge className="h-6 min-w-6 justify-center bg-amber-500 px-1.5 text-[10px] text-white">
+              {newCount > 99 ? "99+" : newCount}
+            </Badge>
+          )}
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="py-1">
+      <SidebarContent className="overflow-y-auto overflow-x-hidden py-1">
         <div className="px-3 pb-1 pt-2 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
-          Portal escolar
+          Navegação unificada
         </div>
-
-        {showHomeItem && (
-          <SidebarGroup className="py-0.5">
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={activeArea === "escolar" && selectedItem === "inicio"}
-                  onClick={handleSchoolHome}
-                  data-testid="sidebar-item-inicio"
-                  className="py-1.5"
-                >
-                  <Home className="h-4 w-4" />
-                  <span>Início escolar</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroup>
-        )}
 
         {categories.map((category) => {
           const isOpen = openCategory === category.id;
           const categoryHasPending = category.items.some(
-            (item) => (pendingCounts[item.id] || 0) > 0,
+            (item) => pendingForItem(item, pendingCounts) > 0,
+          );
+          const categoryHasUpdate = category.items.some(
+            (item) => hasUpdate(item.area || "escolar", item.id),
           );
           const CategoryIcon = category.icon;
 
@@ -359,15 +404,21 @@ export function DashboardSidebar({
               <Collapsible open={isOpen} onOpenChange={() => toggleCategory(category.id)}>
                 <CollapsibleTrigger asChild>
                   <SidebarGroupLabel className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-xs transition-colors hover:bg-sidebar-accent/50">
-                    <div className="flex items-center gap-1.5">
-                      <CategoryIcon className="h-3.5 w-3.5" />
-                      <span>{category.label}</span>
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <CategoryIcon className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">{category.label}</span>
                       {categoryHasPending && <PendingIndicator size="sm" />}
+                      {categoryHasUpdate && (
+                        <span className="relative flex h-2 w-2 shrink-0" aria-label="Há atualização nova">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
+                          <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
+                        </span>
+                      )}
                     </div>
                     {isOpen ? (
-                      <ChevronDown className="h-3.5 w-3.5 transition-transform" />
+                      <ChevronDown className="h-3.5 w-3.5 shrink-0 transition-transform" />
                     ) : (
-                      <ChevronRight className="h-3.5 w-3.5 transition-transform" />
+                      <ChevronRight className="h-3.5 w-3.5 shrink-0 transition-transform" />
                     )}
                   </SidebarGroupLabel>
                 </CollapsibleTrigger>
@@ -376,19 +427,28 @@ export function DashboardSidebar({
                     <SidebarMenu>
                       {category.items.map((item) => {
                         const ItemIcon = item.icon;
-                        const pendingCount = pendingCounts[item.id] || 0;
-                        const isActive = activeArea === "escolar" && selectedItem === item.id;
+                        const area = item.area || "escolar";
+                        const pendingCount = pendingForItem(item, pendingCounts);
+                        const isActive = area === "ead"
+                          ? activeArea === "ead" && eadSection === item.id
+                          : activeArea === "escolar" && selectedItem === item.id;
+                        const isUpdated = hasUpdate(area, item.id);
 
                         return (
-                          <SidebarMenuItem key={item.id}>
+                          <SidebarMenuItem key={itemKey(item)}>
                             <SidebarMenuButton
                               isActive={isActive}
-                              onClick={() => handleSchoolItem(item.id)}
-                              className="py-1 pl-5"
-                              data-testid={`sidebar-item-${item.id}`}
+                              onClick={() => handleItem(item)}
+                              className="min-h-8 py-1 pl-5"
+                              data-testid={`sidebar-${area}-item-${item.id}`}
                             >
-                              {ItemIcon && <ItemIcon className="h-3.5 w-3.5" />}
-                              <span className="flex-1 text-sm">{item.label}</span>
+                              {ItemIcon && <ItemIcon className="h-3.5 w-3.5 shrink-0" />}
+                              <span className="min-w-0 flex-1 truncate text-sm">{item.label}</span>
+                              {isUpdated && (
+                                <Badge className="h-5 shrink-0 bg-amber-500 px-1.5 text-[9px] font-bold text-white">
+                                  Novo
+                                </Badge>
+                              )}
                               {pendingCount > 0 && <PendingIndicator size="sm" />}
                             </SidebarMenuButton>
                           </SidebarMenuItem>
@@ -401,61 +461,12 @@ export function DashboardSidebar({
             </SidebarGroup>
           );
         })}
-
-        <div className="mx-3 my-2 h-px bg-sidebar-border" />
-        <div className="px-3 pb-1 pt-1 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
-          Preparatório EAD
-        </div>
-
-        <SidebarGroup className="py-0.5">
-          <Collapsible
-            open={openCategory === "preparatorio-ead"}
-            onOpenChange={() => toggleCategory("preparatorio-ead")}
-          >
-            <CollapsibleTrigger asChild>
-              <SidebarGroupLabel className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-xs transition-colors hover:bg-sidebar-accent/50">
-                <div className="flex items-center gap-1.5">
-                  <Layers3 className="h-3.5 w-3.5" />
-                  <span>Módulos EAD</span>
-                </div>
-                {openCategory === "preparatorio-ead" ? (
-                  <ChevronDown className="h-3.5 w-3.5 transition-transform" />
-                ) : (
-                  <ChevronRight className="h-3.5 w-3.5 transition-transform" />
-                )}
-              </SidebarGroupLabel>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <SidebarGroupContent className="py-0.5">
-                <SidebarMenu>
-                  {eadItems.map((item) => {
-                    const ItemIcon = item.icon;
-                    const isActive = activeArea === "ead" && eadSection === item.id;
-                    return (
-                      <SidebarMenuItem key={item.id}>
-                        <SidebarMenuButton
-                          isActive={isActive}
-                          onClick={() => handleEadItem(item.id)}
-                          className="py-1 pl-5"
-                          data-testid={`sidebar-ead-item-${item.id}`}
-                        >
-                          <ItemIcon className="h-3.5 w-3.5" />
-                          <span className="flex-1 text-sm">{item.label}</span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  })}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </CollapsibleContent>
-          </Collapsible>
-        </SidebarGroup>
       </SidebarContent>
 
       {userName && (
         <SidebarFooter className="border-t border-sidebar-border p-3">
           <div className="truncate text-xs font-medium">{userName}</div>
-          <div className="text-[11px] text-muted-foreground">Portal escolar + EAD</div>
+          <div className="text-[11px] text-muted-foreground">Ambiente acadêmico unificado</div>
         </SidebarFooter>
       )}
     </Sidebar>
