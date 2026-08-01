@@ -38,6 +38,7 @@ type SidebarContextProps = {
   openMobile: boolean
   setOpenMobile: (open: boolean) => void
   isMobile: boolean
+  pinnedOpen: boolean
   setHovering: (hovering: boolean) => void
   toggleSidebar: () => void
 }
@@ -112,12 +113,13 @@ function SidebarProvider({
       open,
       setOpen,
       isMobile,
+      pinnedOpen,
       openMobile,
       setOpenMobile,
       setHovering,
       toggleSidebar,
     }),
-    [state, open, setOpen, isMobile, openMobile, setOpenMobile, setHovering, toggleSidebar]
+    [state, open, setOpen, isMobile, pinnedOpen, openMobile, setOpenMobile, setHovering, toggleSidebar]
   )
 
   return (
@@ -157,7 +159,32 @@ function Sidebar({
   variant?: "sidebar" | "floating" | "inset"
   collapsible?: "offcanvas" | "icon" | "none"
 }) {
-  const { isMobile, state, openMobile, setOpenMobile, setHovering } = useSidebar()
+  const { isMobile, state, pinnedOpen, openMobile, setOpenMobile, setHovering } = useSidebar()
+  const hoverCloseTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const cancelHoverClose = React.useCallback(() => {
+    if (hoverCloseTimer.current) {
+      clearTimeout(hoverCloseTimer.current)
+      hoverCloseTimer.current = null
+    }
+  }, [])
+
+  const openFromHover = React.useCallback(() => {
+    cancelHoverClose()
+    setHovering(true)
+  }, [cancelHoverClose, setHovering])
+
+  const closeFromHover = React.useCallback(() => {
+    cancelHoverClose()
+    setHovering(false)
+  }, [cancelHoverClose, setHovering])
+
+  const scheduleHoverClose = React.useCallback(() => {
+    cancelHoverClose()
+    hoverCloseTimer.current = setTimeout(() => setHovering(false), 180)
+  }, [cancelHoverClose, setHovering])
+
+  React.useEffect(() => () => cancelHoverClose(), [cancelHoverClose])
 
   if (collapsible === "none") {
     return (
@@ -199,33 +226,52 @@ function Sidebar({
     )
   }
 
+  const collapsedGapClass = collapsible === "icon"
+    ? variant === "floating" || variant === "inset"
+      ? "w-[calc(var(--sidebar-width-icon)+var(--spacing-4))]"
+      : "w-[var(--sidebar-width-icon)]"
+    : "w-0"
+
   return (
     <div
       className="group peer text-sidebar-foreground hidden md:block"
       data-state={state}
-      onMouseEnter={() => setHovering(true)}
-      onMouseLeave={() => setHovering(false)}
+      data-pinned={pinnedOpen ? "true" : "false"}
       data-collapsible={state === "collapsed" ? collapsible : ""}
       data-variant={variant}
       data-side={side}
       data-slot="sidebar"
     >
-      {/* This is what handles the sidebar gap on desktop */}
+      {/* Quando o menu não está fixado, a página não reserva espaço.
+          A abertura por hover acontece por cima do conteúdo, sem saltos no layout. */}
       <div
         data-slot="sidebar-gap"
         className={cn(
-          "relative w-[var(--sidebar-width)] bg-transparent transition-[width] duration-200 ease-linear",
-          "group-data-[collapsible=offcanvas]:w-0",
+          "relative bg-transparent transition-[width] duration-200 ease-linear",
           "group-data-[side=right]:rotate-180",
-          variant === "floating" || variant === "inset"
-            ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+var(--spacing-4))]"
-            : "group-data-[collapsible=icon]:w-[var(--sidebar-width-icon)]"
+          pinnedOpen ? "w-[var(--sidebar-width)]" : collapsedGapClass
         )}
       />
+
+      {/* Faixa invisível de ativação no canto da tela. Substitui a barra de
+          48px com ícones que estava aparecendo cortada na versão anterior. */}
+      {!pinnedOpen && (
+        <div
+          data-slot="sidebar-hover-zone"
+          aria-hidden="true"
+          className={cn(
+            "fixed inset-y-0 z-30 hidden w-3 md:block",
+            side === "left" ? "left-0" : "right-0"
+          )}
+          onMouseEnter={openFromHover}
+          onMouseLeave={scheduleHoverClose}
+        />
+      )}
+
       <div
         data-slot="sidebar-container"
         className={cn(
-          "fixed inset-y-0 z-10 hidden h-svh w-[var(--sidebar-width)] transition-[left,right,width] duration-200 ease-linear md:flex",
+          "fixed inset-y-0 z-40 hidden h-svh w-[var(--sidebar-width)] transition-[left,right,width,box-shadow] duration-200 ease-linear md:flex",
           side === "left"
             ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
             : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
@@ -233,8 +279,11 @@ function Sidebar({
           variant === "floating" || variant === "inset"
             ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+var(--spacing-4)+2px)]"
             : "group-data-[collapsible=icon]:w-[var(--sidebar-width-icon)] group-data-[side=left]:border-r group-data-[side=right]:border-l",
+          !pinnedOpen && state === "expanded" && "shadow-2xl",
           className
         )}
+        onMouseEnter={openFromHover}
+        onMouseLeave={closeFromHover}
         {...props}
       >
         <div

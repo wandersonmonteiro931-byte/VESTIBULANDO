@@ -364,7 +364,7 @@ export function DashboardSidebar({
   };
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="offcanvas">
       <SidebarHeader className="border-b border-sidebar-border p-3 group-data-[collapsible=icon]:p-1.5">
         <div className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8">
