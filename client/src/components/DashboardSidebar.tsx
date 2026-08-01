@@ -364,20 +364,20 @@ export function DashboardSidebar({
   };
 
   return (
-    <Sidebar>
-      <SidebarHeader className="border-b border-sidebar-border p-3">
-        <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+    <Sidebar collapsible="icon">
+      <SidebarHeader className="border-b border-sidebar-border p-3 group-data-[collapsible=icon]:p-1.5">
+        <div className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8">
             <GraduationCap className="h-5 w-5" />
           </div>
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
             <span className="block truncate text-sm font-semibold">Vestibulando</span>
             <span className="block truncate text-xs text-muted-foreground">
               Portal completo · {userRole || role}
             </span>
           </div>
           {newCount > 0 && (
-            <Badge className="h-6 min-w-6 justify-center bg-amber-500 px-1.5 text-[10px] text-white">
+            <Badge className="h-6 min-w-6 justify-center bg-amber-500 px-1.5 text-[10px] text-white group-data-[collapsible=icon]:hidden">
               {newCount > 99 ? "99+" : newCount}
             </Badge>
           )}
@@ -385,7 +385,7 @@ export function DashboardSidebar({
       </SidebarHeader>
 
       <SidebarContent className="overflow-y-auto overflow-x-hidden py-1">
-        <div className="px-3 pb-1 pt-2 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+        <div className="px-3 pb-1 pt-2 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground group-data-[collapsible=icon]:hidden">
           Navegação unificada
         </div>
 
@@ -464,7 +464,7 @@ export function DashboardSidebar({
       </SidebarContent>
 
       {userName && (
-        <SidebarFooter className="border-t border-sidebar-border p-3">
+        <SidebarFooter className="border-t border-sidebar-border p-3 group-data-[collapsible=icon]:hidden">
           <div className="truncate text-xs font-medium">{userName}</div>
           <div className="text-[11px] text-muted-foreground">Ambiente acadêmico unificado</div>
         </SidebarFooter>
