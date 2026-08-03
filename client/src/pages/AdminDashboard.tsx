@@ -425,12 +425,14 @@ export default function AdminDashboard() {
 
   const pendingUsers = solicitacoes?.filter((sol: any) => !sol.status || sol.status === "pendente").map((sol: any) => ({
     ...sol,
-    docId: sol.id
+    docId: sol.id,
+    recordCollection: "solicitacoes" as const,
   }));
 
   const standbyUsers = solicitacoes?.filter((sol: any) => sol.status === "standby").map((sol: any) => ({
     ...sol,
-    docId: sol.id
+    docId: sol.id,
+    recordCollection: "solicitacoes" as const,
   }));
   
   const loadingPendingUsers = loadingSolicitacoes;
@@ -1079,35 +1081,90 @@ export default function AdminDashboard() {
 
   const deleteUserMutation = useMutation({
     mutationFn: async (user: any) => {
-      if (user.tipo === "diretor" && user.status === "aprovado") {
-        throw new Error("Não é permitido excluir diretores ativos");
-      }
-      const docId = user.docId || user.uid || user.id;
+      const isEnrollmentRequest = user.recordCollection === "solicitacoes";
+      const docId = user.docId || user.id || user.uid;
+
       if (!docId) {
         throw new Error("ID do documento não encontrado");
       }
-      
+
+      if (isEnrollmentRequest) {
+        const requestRef = doc(db, "solicitacoes", docId);
+        const requestSnapshot = await getDoc(requestRef);
+
+        if (!requestSnapshot.exists()) {
+          throw new Error("A solicitação já não existe ou foi excluída por outro usuário.");
+        }
+
+        await deleteDoc(requestRef);
+
+        // Confirma a remoção do documento que realmente bloqueia o acompanhamento
+        // e a reutilização do CPF/e-mail em uma nova solicitação de matrícula.
+        const verificationSnapshot = await getDoc(requestRef);
+        if (verificationSnapshot.exists()) {
+          throw new Error("A solicitação não pôde ser removida do Firestore.");
+        }
+
+        return {
+          deletedCollection: "solicitacoes" as const,
+          deletedId: docId,
+        };
+      }
+
+      if (user.tipo === "diretor" && user.status === "aprovado") {
+        throw new Error("Não é permitido excluir diretores ativos");
+      }
+
       if (user.tipo === "aluno" && user.turma) {
-        const turmaRef = doc(db, "turmas", user.turma);
+        const turmaId = user.turmaId || user.turma;
+        const turmaRef = doc(db, "turmas", turmaId);
         const turmaDoc = await getDoc(turmaRef);
         if (turmaDoc.exists()) {
+          const vagasAtuais = Number(turmaDoc.data().vagasPreenchidas || 0);
           await updateDoc(turmaRef, {
-            vagasPreenchidas: increment(-1)
+            vagasPreenchidas: Math.max(0, vagasAtuais - 1),
           });
         }
       }
-      
-      await deleteDoc(doc(db, "usuarios", docId));
+
+      const userRef = doc(db, "usuarios", docId);
+      const userSnapshot = await getDoc(userRef);
+      if (!userSnapshot.exists()) {
+        throw new Error("O usuário já não existe ou o registro selecionado não pertence à coleção de usuários.");
+      }
+
+      await deleteDoc(userRef);
+
+      const verificationSnapshot = await getDoc(userRef);
+      if (verificationSnapshot.exists()) {
+        throw new Error("O usuário não pôde ser removido do Firestore.");
+      }
+
+      return {
+        deletedCollection: "usuarios" as const,
+        deletedId: docId,
+      };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/usuarios/all"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/turmas"] });
+    onSuccess: async (result) => {
+      if (result.deletedCollection === "solicitacoes") {
+        queryClient.setQueryData<any[]>(["/api/solicitacoes"], (current = []) =>
+          current.filter((item: any) => item.id !== result.deletedId)
+        );
+        await queryClient.invalidateQueries({ queryKey: ["/api/solicitacoes"] });
+        await refetchSolicitacoes();
+      } else {
+        await queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
+        await queryClient.invalidateQueries({ queryKey: ["/api/usuarios/all"] });
+        await queryClient.invalidateQueries({ queryKey: ["/api/turmas"] });
+      }
+
       setDeleteDialogOpen(false);
       setUserToDelete(null);
       toast({
-        title: "Registro excluído",
-        description: "O registro foi removido da base de dados.",
+        title: result.deletedCollection === "solicitacoes" ? "Solicitação excluída" : "Registro excluído",
+        description: result.deletedCollection === "solicitacoes"
+          ? "A solicitação foi removida. O CPF e o e-mail estão liberados para uma nova matrícula."
+          : "O registro foi removido da base de dados e a vaga da turma foi atualizada.",
       });
     },
     onError: (error: any) => {
@@ -2661,9 +2718,9 @@ export default function AdminDashboard() {
                       </TableHeader>
                       <TableBody>
                         {pendingUsers.map((user) => (
-                          <TableRow key={user.uid} data-testid={`row-pending-${user.uid}`}>
+                          <TableRow key={user.docId || user.id} data-testid={`row-pending-${user.docId || user.id}`}>
                             <TableCell className="hidden md:table-cell">
-                              <code className="text-xs font-mono bg-muted px-1 py-0.5 rounded" data-testid={`code-${user.uid}`}>
+                              <code className="text-xs font-mono bg-muted px-1 py-0.5 rounded" data-testid={`code-${user.docId || user.id}`}>
                                 {user.matricula || "N/A"}
                               </code>
                             </TableCell>
@@ -5701,10 +5758,18 @@ export default function AdminDashboard() {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent data-testid="dialog-delete-user">
           <DialogHeader>
-            <DialogTitle>Excluir Aluno</DialogTitle>
+            <DialogTitle>
+              {userToDelete?.recordCollection === "solicitacoes"
+                ? "Excluir solicitação de matrícula"
+                : "Excluir aluno"}
+            </DialogTitle>
             <DialogDescription>
               Você está prestes a excluir <strong>{userToDelete?.nome}</strong>.
-              Esta ação não pode ser desfeita.
+              {userToDelete?.recordCollection === "solicitacoes" ? (
+                <> A solicitação pendente será removida e o CPF e o e-mail poderão ser usados em uma nova matrícula.</>
+              ) : (
+                <> Esta ação não pode ser desfeita.</>
+              )}
             </DialogDescription>
           </DialogHeader>
           
@@ -5754,7 +5819,11 @@ export default function AdminDashboard() {
               disabled={deleteUserMutation.isPending}
               data-testid="button-confirm-delete"
             >
-              {deleteUserMutation.isPending ? "Excluindo..." : "Excluir Aluno"}
+              {deleteUserMutation.isPending
+                ? "Excluindo..."
+                : userToDelete?.recordCollection === "solicitacoes"
+                  ? "Excluir solicitação"
+                  : "Excluir aluno"}
             </Button>
           </DialogFooter>
         </DialogContent>
