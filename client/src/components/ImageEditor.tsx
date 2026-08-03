@@ -1,4 +1,5 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Cropper from "react-easy-crop";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -118,19 +119,52 @@ export default function ImageEditor({
     setRotation((prev) => (prev + 90) % 360);
   };
 
-  return (
-    <div className="fixed inset-0 z-[10003] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-      <Card className="w-full max-w-2xl h-[90vh] flex flex-col overflow-hidden">
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onCancel();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onCancel]);
+
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[20000] flex items-center justify-center bg-black/80 p-2 backdrop-blur-sm sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Editor de foto"
+    >
+      <Card className="flex h-[calc(100dvh-1rem)] max-h-[900px] w-full max-w-2xl flex-col overflow-hidden sm:h-[90dvh]">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 shrink-0">
           <CardTitle>Editar Imagem</CardTitle>
-          <Button size="icon" variant="ghost" onClick={onCancel} data-testid="button-close-editor">
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onCancel();
+            }}
+            data-testid="button-close-editor"
+          >
             <X className="h-5 w-5" />
           </Button>
         </CardHeader>
 
         <Separator />
 
-        <CardContent className="flex-1 p-0 relative bg-black min-h-[200px] overflow-hidden">
+        <CardContent className="relative min-h-0 flex-1 overflow-hidden bg-black">
           <Cropper
             image={image}
             crop={crop}
@@ -157,7 +191,7 @@ export default function ImageEditor({
             </div>
             <Slider
               value={[zoom]}
-              onValueChange={(value) => setZoom(value[0])}
+              onValueChange={(value: number[]) => setZoom(value[0])}
               min={1}
               max={3}
               step={0.1}
@@ -172,9 +206,15 @@ export default function ImageEditor({
               Rotação: {rotation}°
             </Label>
             <Button
+              type="button"
               variant="outline"
               size="sm"
-              onClick={handleRotate}
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                handleRotate();
+              }}
               data-testid="button-rotate"
             >
               <RotateCw className="h-4 w-4 mr-2" />
@@ -187,15 +227,27 @@ export default function ImageEditor({
 
         <CardFooter className="flex gap-2 p-4 shrink-0">
           <Button
+            type="button"
             variant="outline"
-            onClick={onCancel}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onCancel();
+            }}
             className="flex-1"
             data-testid="button-cancel-edit"
           >
             Cancelar
           </Button>
           <Button
-            onClick={handleComplete}
+            type="button"
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              void handleComplete();
+            }}
             className="flex-1"
             data-testid="button-apply-edit"
           >
@@ -204,6 +256,7 @@ export default function ImageEditor({
           </Button>
         </CardFooter>
       </Card>
-    </div>
+    </div>,
+    document.body
   );
 }

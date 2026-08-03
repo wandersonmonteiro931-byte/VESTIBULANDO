@@ -141,6 +141,9 @@ export function PhotoUpload({
       onPublicChange(true);
       setShowEditor(false);
       setImageToEdit(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
       setIsCompressing(false);
     } catch (error) {
       console.error('Erro ao comprimir imagem:', error);

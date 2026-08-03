@@ -14,12 +14,13 @@ import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { PhotoUpload } from "@/components/PhotoUpload";
 import { Badge } from "@/components/ui/badge";
-import { GraduationCap, Loader2, Copy, Check, Search, AlertCircle, Shield, Users, CheckCircle, XCircle, Clock, Calendar, FileText, AlertTriangle, Wrench, PowerOff } from "lucide-react";
+import { GraduationCap, Loader2, Copy, Check, Search, AlertCircle, Shield, Users, CheckCircle, XCircle, Clock, Calendar, FileText, AlertTriangle, Wrench, PowerOff, Download } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { formatBrasiliaDateTime, getNowBrasiliaISO, brasiliaToUTC } from "@/lib/brasiliaTime";
 import { HORARIOS_DISPONIVEIS } from "@shared/schema";
+import { generateEnrollmentRequestPdf, type EnrollmentRequestPdfData } from "@/lib/enrollmentRequestPdf";
 
 // Verifica se uma matrícula já existe no banco de dados
 async function matriculaJaExiste(db: any, matricula: string): Promise<boolean> {
@@ -167,6 +168,8 @@ export default function Login() {
   const [mode, setMode] = useState<"login" | "register" | "forgotPassword" | "diretorLogin">("login");
   const [showCodeDialog, setShowCodeDialog] = useState(false);
   const [requestCode, setRequestCode] = useState("");
+  const [enrollmentReceipt, setEnrollmentReceipt] = useState<EnrollmentRequestPdfData | null>(null);
+  const [generatingEnrollmentPdf, setGeneratingEnrollmentPdf] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
   const [showRejectionDialog, setShowRejectionDialog] = useState(false);
   const [rejectionComment, setRejectionComment] = useState("");
@@ -444,6 +447,19 @@ export default function Login() {
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // No cadastro, somente o clique intencional no botão final pode enviar a solicitação.
+    // Isso impede que seleção/recorte de foto, tecla Enter ou qualquer controle interno
+    // do formulário disparem a matrícula automaticamente.
+    if (mode === "register") {
+      const nativeSubmitter = (e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
+      const explicitSubmit = nativeSubmitter?.dataset.enrollmentSubmit === "true";
+
+      if (!explicitSubmit) {
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
@@ -487,6 +503,10 @@ export default function Login() {
         const { collection, addDoc, updateDoc, getDocs, query, where, deleteDoc } = await import("firebase/firestore");
         
         let matricula: string;
+        const dataSolicitacaoAtual = getNowBrasiliaISO();
+        const turmaSelecionada = turmasDisponiveis.find(t => t.id === formData.turma);
+        const turmaNome = turmaSelecionada ? turmaSelecionada.nome : formData.turma;
+        const solicitacaoReenviada = Boolean(editingSolicitacaoId);
         
         try {
           
@@ -499,10 +519,6 @@ export default function Login() {
             if (solicitacaoDoc.exists()) {
               matricula = solicitacaoDoc.data().matricula;
               
-              // Buscar o nome da turma selecionada
-              const turmaSelecionada = turmasDisponiveis.find(t => t.id === formData.turma);
-              const turmaNome = turmaSelecionada ? turmaSelecionada.nome : formData.turma;
-              
               // Atualizar solicitação existente com status "pendente" novamente
               await updateDoc(solicitacaoRef, {
                 nome: formData.nome,
@@ -510,7 +526,7 @@ export default function Login() {
                 turma: turmaNome,
                 turmaId: formData.turma,
                 status: "pendente",
-                dataSolicitacao: getNowBrasiliaISO(),
+                dataSolicitacao: dataSolicitacaoAtual,
                 dataNascimento: formData.dataNascimento,
                 cpf: formData.cpf,
                 sexo: formData.sexo,
@@ -540,11 +556,6 @@ export default function Login() {
           } else {
             // Criar nova solicitação
             matricula = await generateUniqueMatricula(db);
-            const dataSolicitacao = getNowBrasiliaISO();
-            
-            // Buscar o nome da turma selecionada
-            const turmaSelecionada = turmasDisponiveis.find(t => t.id === formData.turma);
-            const turmaNome = turmaSelecionada ? turmaSelecionada.nome : formData.turma;
             
             // Limpar reprovações antigas (se existir)
             const reprovacaoSnapshot = await getDocs(query(collection(db, "reprovacoes"), where("email", "==", formData.email)));
@@ -563,7 +574,7 @@ export default function Login() {
               turmaId: formData.turma,
               status: "pendente",
               matricula: matricula,
-              dataSolicitacao: dataSolicitacao,
+              dataSolicitacao: dataSolicitacaoAtual,
               dataNascimento: formData.dataNascimento,
               cpf: formData.cpf,
               sexo: formData.sexo,
@@ -593,6 +604,27 @@ export default function Login() {
         }
         
         setRequestCode(matricula);
+        setEnrollmentReceipt({
+          matricula,
+          dataSolicitacao: dataSolicitacaoAtual,
+          nome: formData.nome,
+          dataNascimento: formData.dataNascimento,
+          cpf: formData.cpf,
+          sexo: formData.sexo,
+          escolaridade: formData.escolaridade,
+          telefone: formData.telefone,
+          email: formData.email,
+          cep: formData.cep,
+          rua: formData.rua,
+          bairro: formData.bairro,
+          cidade: formData.cidade,
+          estado: formData.estado,
+          turma: turmaNome,
+          disponibilidade: [...disponibilidade],
+          horarioEspecialObservacao: horarioEspecialObservacao || null,
+          fotoBase64: photoBase64,
+          reenviada: solicitacaoReenviada,
+        });
         setMode("login");
         setFormData({ 
           loginId: "",
@@ -1194,6 +1226,35 @@ export default function Login() {
         description: "Não foi possível copiar a matrícula.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleDownloadEnrollmentPdf = async () => {
+    if (!enrollmentReceipt) {
+      toast({
+        title: "Dados indisponíveis",
+        description: "Não foi possível localizar os dados da solicitação para gerar o PDF.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setGeneratingEnrollmentPdf(true);
+      await generateEnrollmentRequestPdf(enrollmentReceipt);
+      toast({
+        title: "PDF gerado",
+        description: "A solicitação de matrícula foi baixada no seu dispositivo.",
+      });
+    } catch (error) {
+      console.error("Erro ao gerar PDF da solicitação de matrícula:", error);
+      toast({
+        title: "Erro ao gerar PDF",
+        description: "Não foi possível gerar o formulário. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingEnrollmentPdf(false);
     }
   };
 
@@ -1893,6 +1954,9 @@ export default function Login() {
                     onPublicChange={setPhotoPublic}
                     required={false}
                   />
+                  <p className="text-xs text-muted-foreground" data-testid="text-photo-does-not-submit">
+                    Selecionar, recortar ou aplicar a foto apenas adiciona a imagem ao formulário. A solicitação só será enviada ao clicar em <strong>Solicitar Matrícula</strong>.
+                  </p>
 
                   <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
                     <div className="flex gap-2">
@@ -2015,7 +2079,13 @@ export default function Login() {
                 </>
               )}
               
-              <Button type="submit" className="w-full" disabled={loading} data-testid="button-submit">
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={loading}
+                data-testid="button-submit"
+                data-enrollment-submit={mode === "register" ? "true" : undefined}
+              >
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {mode === "register" ? "Solicitar Matrícula" : "Entrar"}
               </Button>
@@ -2240,6 +2310,27 @@ export default function Login() {
                 </code>
               </div>
             </div>
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm text-muted-foreground">
+              O formulário completo foi preparado com os dados informados. Baixe o PDF e guarde-o junto com o número da matrícula.
+            </div>
+            <Button
+              onClick={handleDownloadEnrollmentPdf}
+              className="w-full"
+              disabled={generatingEnrollmentPdf || !enrollmentReceipt}
+              data-testid="button-download-enrollment-pdf"
+            >
+              {generatingEnrollmentPdf ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Gerando PDF...
+                </>
+              ) : (
+                <>
+                  <Download className="mr-2 h-4 w-4" />
+                  Baixar solicitação de matrícula em PDF
+                </>
+              )}
+            </Button>
             <Button
               onClick={handleCopyCode}
               className="w-full"
