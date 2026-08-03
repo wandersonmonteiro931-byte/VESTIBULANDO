@@ -30,7 +30,7 @@ import type { Tarefa, Entrega, DisciplinaryAction } from "@shared/schema";
 import { format, formatDistanceToNow, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import jsPDF from "jspdf";
-import { addResponsibleStampToPdf } from "@/lib/pdfResponsibleStamp";
+import assinaturaComCarimboUrl from "@assets/assinatura_carimbo_novo_compacto_grande.png";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { AttendanceConfirmationModal } from "@/components/AttendanceConfirmationModal";
 import { LiveClassNotification } from "@/components/LiveClassNotification";
@@ -259,7 +259,15 @@ export default function StudentDashboard() {
     yPos += 10;
 
     try {
-      await addResponsibleStampToPdf(doc, { y: yPos, width: 120, label: "Diretoria Responsável" });
+      const assinaturaImg = new Image();
+      assinaturaImg.src = assinaturaComCarimboUrl;
+      await new Promise((resolve) => {
+        assinaturaImg.onload = resolve;
+        assinaturaImg.onerror = resolve;
+      });
+      const imgWidth = 140;
+      const imgHeight = 43;
+      doc.addImage(assinaturaImg, "PNG", (pageWidth - imgWidth) / 2, yPos, imgWidth, imgHeight);
     } catch (error) {
       console.error("Erro ao carregar assinatura:", error);
       yPos += 5;

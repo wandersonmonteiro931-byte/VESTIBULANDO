@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import logoUrl from "@assets/Blue and White Online School Logo (1)_1761189954480.png";
-import { addResponsibleStampToPdf } from "@/lib/pdfResponsibleStamp";
+import assinaturaComCarimboUrl from "@assets/assinatura_carimbo_novo_compacto_grande.png";
 
 export function DocumentationTab() {
   const { userData: currentUser } = useAuth();
@@ -566,9 +566,15 @@ export function DocumentationTab() {
     // ASSINATURA DO DIRETOR (no final da última página)
     yPos = (doc as any).lastAutoTable.finalY + 15;
 
-    // Adicionar assinatura/carimbo
+    // Adicionar assinatura com carimbo novo compacto
     try {
-      await addResponsibleStampToPdf(doc, { y: yPos, width: 92, label: "Diretoria Responsável" });
+      const assinaturaImg = new Image();
+      assinaturaImg.src = assinaturaComCarimboUrl;
+      await new Promise((resolve) => {
+        assinaturaImg.onload = resolve;
+        assinaturaImg.onerror = resolve;
+      });
+      doc.addImage(assinaturaImg, "PNG", pageWidth / 2 - 45, yPos, 90, 30);
     } catch (error) {
       console.error("Erro ao carregar assinatura:", error);
     }
@@ -656,10 +662,17 @@ export function DocumentationTab() {
 
     // Assinatura
     try {
-      await addResponsibleStampToPdf(doc, { y: yPos, width: 120, label: "Diretoria Responsável" });
+      const assinaturaImg = new Image();
+      assinaturaImg.src = assinaturaComCarimboUrl;
+      await new Promise((resolve) => {
+        assinaturaImg.onload = resolve;
+        assinaturaImg.onerror = resolve;
+      });
+      const imgWidth = 140;
+      const imgHeight = 43;
+      doc.addImage(assinaturaImg, "PNG", (pageWidth - imgWidth) / 2, yPos, imgWidth, imgHeight);
     } catch (error) {
       console.error("Erro ao carregar assinatura:", error);
-      // Adicionar linha e texto caso a assinatura não carregue
       yPos += 5;
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");

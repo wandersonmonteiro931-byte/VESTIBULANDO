@@ -214,7 +214,7 @@ export async function generateEnrollmentRequestPdf(data: EnrollmentRequestPdfDat
     pdf.addPage();
     stampY = 18;
   }
-  await addResponsibleStampToPdf(pdf, { y: stampY, width: 72, label: "Diretoria Responsável" });
+  await addResponsibleStampToPdf(pdf, { y: stampY, width: 34, label: "Diretoria Responsável" });
 
   const totalPages = pdf.getNumberOfPages();
   for (let page = 1; page <= totalPages; page += 1) {

@@ -172,8 +172,12 @@ export function AlunoBoletimTab() {
       yPos += obsLines.length * 5 + 10;
     }
 
-    yPos = Math.max(yPos, 236);
-    await addResponsibleStampToPdf(doc, { y: yPos, width: 76, label: "Assinatura da Diretoria" });
+    yPos = Math.max(yPos, 250);
+    const lineWidth = 70;
+    const lineX = (pageWidth - lineWidth) / 2;
+    doc.line(lineX, yPos, lineX + lineWidth, yPos);
+    doc.text("Assinatura da Diretoria", pageWidth / 2, yPos + 5, { align: "center" });
+    await addResponsibleStampToPdf(doc, { y: yPos - 18, x: lineX + lineWidth + 8, width: 20, label: "Assinatura da Diretoria" });
 
     doc.setFontSize(8);
     doc.text(
