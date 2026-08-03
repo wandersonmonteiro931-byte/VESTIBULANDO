@@ -30,7 +30,7 @@ import type { Tarefa, Entrega, DisciplinaryAction } from "@shared/schema";
 import { format, formatDistanceToNow, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import jsPDF from "jspdf";
-import assinaturaDeclaracaoUrl from "@assets/Captura de tela 2025-10-23 011843_1761193443162.png";
+import { addResponsibleStampToPdf } from "@/lib/pdfResponsibleStamp";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { AttendanceConfirmationModal } from "@/components/AttendanceConfirmationModal";
 import { LiveClassNotification } from "@/components/LiveClassNotification";
@@ -259,15 +259,7 @@ export default function StudentDashboard() {
     yPos += 10;
 
     try {
-      const assinaturaImg = new Image();
-      assinaturaImg.src = assinaturaDeclaracaoUrl;
-      await new Promise((resolve) => {
-        assinaturaImg.onload = resolve;
-        assinaturaImg.onerror = resolve;
-      });
-      const imgWidth = assinaturaImg.width * 0.18;
-      const imgHeight = assinaturaImg.height * 0.18;
-      doc.addImage(assinaturaImg, "PNG", (pageWidth - imgWidth) / 2, yPos, imgWidth, imgHeight);
+      await addResponsibleStampToPdf(doc, { y: yPos, width: 120, label: "Diretoria Responsável" });
     } catch (error) {
       console.error("Erro ao carregar assinatura:", error);
       yPos += 5;

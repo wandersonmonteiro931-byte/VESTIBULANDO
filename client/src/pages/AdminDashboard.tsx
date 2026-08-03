@@ -48,6 +48,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { brasiliaToUTC, utcToBrasilia, formatBrasiliaDateTime, getNowBrasilia, getNowBrasiliaISO } from "@/lib/brasiliaTime";
+import { generateEnrollmentRequestPdf } from "@/lib/enrollmentRequestPdf";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -206,6 +207,7 @@ export default function AdminDashboard() {
   const [bulkTransferTurma, setBulkTransferTurma] = useState("");
   const [viewDetailsDialogOpen, setViewDetailsDialogOpen] = useState(false);
   const [selectedSolicitacao, setSelectedSolicitacao] = useState<any>(null);
+  const [generatingSolicitacaoPdfId, setGeneratingSolicitacaoPdfId] = useState<string | null>(null);
   const [editSolicitacaoDialogOpen, setEditSolicitacaoDialogOpen] = useState(false);
   const [solicitacaoToEdit, setSolicitacaoToEdit] = useState<any>(null);
   const [standbyDialogOpen, setStandbyDialogOpen] = useState(false);
@@ -434,6 +436,69 @@ export default function AdminDashboard() {
     docId: sol.id,
     recordCollection: "solicitacoes" as const,
   }));
+
+  const handleDownloadSolicitacaoPdf = async (solicitacao: any) => {
+    const solicitacaoId = String(solicitacao?.docId || solicitacao?.id || solicitacao?.matricula || "solicitacao");
+    setGeneratingSolicitacaoPdfId(solicitacaoId);
+
+    try {
+      let dados = solicitacao;
+      const documentoId = solicitacao?.docId || solicitacao?.id;
+
+      if (documentoId) {
+        const snapshot = await getDoc(doc(db, "solicitacoes", documentoId));
+        if (snapshot.exists()) {
+          dados = { ...solicitacao, ...snapshot.data(), docId: snapshot.id };
+        }
+      }
+
+      await generateEnrollmentRequestPdf({
+        matricula: String(dados?.matricula || dados?.codigoSolicitacao || "Não informada"),
+        dataSolicitacao: String(dados?.dataSolicitacao || dados?.createdAt || getNowBrasiliaISO()),
+        nome: String(dados?.nome || "Não informado"),
+        dataNascimento: String(dados?.dataNascimento || ""),
+        cpf: String(dados?.cpf || "Não informado"),
+        sexo: String(dados?.sexo || "Não informado"),
+        escolaridade: String(dados?.escolaridade || "Não informada"),
+        telefone: String(dados?.telefone || "Não informado"),
+        email: String(dados?.email || "Não informado"),
+        cep: String(dados?.cep || "Não informado"),
+        rua: String(dados?.rua || "Não informada"),
+        bairro: String(dados?.bairro || "Não informado"),
+        cidade: String(dados?.cidade || "Não informada"),
+        estado: String(dados?.estado || "Não informado"),
+        turma: String(dados?.turma || getTurmaNome(dados?.turmaId) || "Não informada"),
+        disponibilidade: Array.isArray(dados?.disponibilidade) ? dados.disponibilidade : [],
+        horarioEspecialObservacao: dados?.horarioEspecialObservacao || null,
+        fotoBase64: dados?.fotoBase64 || null,
+        reenviada: Boolean(dados?.reenviada || dados?.dataReenvio || dados?.reenviadoEm),
+        situacao:
+          dados?.status === "standby"
+            ? "Em lista de espera"
+            : dados?.status === "devolvido"
+              ? "Devolvida para correção"
+              : dados?.status === "reprovado"
+                ? "Reprovada pela diretoria"
+                : dados?.status === "aprovado"
+                  ? "Aprovada pela diretoria"
+                  : "Aguardando análise da diretoria",
+      });
+
+      toast({
+        title: "PDF gerado",
+        description: `A solicitação de matrícula ${dados?.matricula || ""} foi baixada.`,
+      });
+    } catch (error) {
+      console.error("Erro ao gerar PDF da solicitação pela diretoria:", error);
+      toast({
+        title: "Erro ao gerar PDF",
+        description: "Não foi possível baixar a solicitação de matrícula. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingSolicitacaoPdfId(null);
+    }
+  };
   
   const loadingPendingUsers = loadingSolicitacoes;
 
@@ -2765,6 +2830,16 @@ export default function AdminDashboard() {
                                   <Eye className="h-4 w-4" />
                                 </Button>
                                 <Button
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() => void handleDownloadSolicitacaoPdf(user)}
+                                  disabled={generatingSolicitacaoPdfId === String(user.docId || user.id || user.matricula)}
+                                  data-testid={`button-download-enrollment-pdf-${user.docId || user.id}`}
+                                  title="Baixar solicitação de matrícula em PDF"
+                                >
+                                  <Download className="h-4 w-4" />
+                                </Button>
+                                <Button
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => {
@@ -4694,6 +4769,19 @@ export default function AdminDashboard() {
           )}
 
           <DialogFooter>
+            {selectedSolicitacao && (
+              <Button
+                type="button"
+                onClick={() => void handleDownloadSolicitacaoPdf(selectedSolicitacao)}
+                disabled={generatingSolicitacaoPdfId === String(selectedSolicitacao.docId || selectedSolicitacao.id || selectedSolicitacao.matricula)}
+                data-testid="button-download-enrollment-pdf-details"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                {generatingSolicitacaoPdfId === String(selectedSolicitacao.docId || selectedSolicitacao.id || selectedSolicitacao.matricula)
+                  ? "Gerando PDF..."
+                  : "Baixar solicitação em PDF"}
+              </Button>
+            )}
             <Button
               variant="outline"
               onClick={() => {

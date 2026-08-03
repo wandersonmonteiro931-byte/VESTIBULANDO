@@ -21,6 +21,7 @@ import { ptBR } from "date-fns/locale";
 import { formatNota } from "@/lib/utils";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { addResponsibleStampToPdf } from "@/lib/pdfResponsibleStamp";
 
 const PERIODOS_BIMESTRE = ["1º Bimestre", "2º Bimestre", "3º Bimestre", "4º Bimestre"];
 const PERIODOS_TRIMESTRE = ["1º Trimestre", "2º Trimestre", "3º Trimestre"];
@@ -83,7 +84,7 @@ export function AlunoBoletimTab() {
     });
   }, [boletins, filterAno, filterBimestre]);
 
-  const handlePrintBoletim = (boletim: Boletim) => {
+  const handlePrintBoletim = async (boletim: Boletim) => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const margin = 15;
@@ -171,11 +172,8 @@ export function AlunoBoletimTab() {
       yPos += obsLines.length * 5 + 10;
     }
 
-    yPos = Math.max(yPos, 250);
-    const lineWidth = 70;
-    const lineX = (pageWidth - lineWidth) / 2;
-    doc.line(lineX, yPos, lineX + lineWidth, yPos);
-    doc.text("Assinatura da Diretoria", pageWidth / 2, yPos + 5, { align: "center" });
+    yPos = Math.max(yPos, 236);
+    await addResponsibleStampToPdf(doc, { y: yPos, width: 76, label: "Assinatura da Diretoria" });
 
     doc.setFontSize(8);
     doc.text(

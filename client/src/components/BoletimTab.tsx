@@ -36,6 +36,7 @@ import { getNowBrasiliaISO } from "@/lib/brasiliaTime";
 import { formatNota } from "@/lib/utils";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { addResponsibleStampToPdf } from "@/lib/pdfResponsibleStamp";
 
 const PERIODOS_BIMESTRE = ["1º Bimestre", "2º Bimestre", "3º Bimestre", "4º Bimestre"];
 const PERIODOS_TRIMESTRE = ["1º Trimestre", "2º Trimestre", "3º Trimestre"];
@@ -578,7 +579,7 @@ export function BoletimTab() {
           ...selectedBoletim,
           ...boletimData,
         };
-        const pdfBase64 = generateBoletimPdfBase64(updatedBoletim);
+        const pdfBase64 = await generateBoletimPdfBase64(updatedBoletim);
         await saveBoletimDocumento(updatedBoletim, pdfBase64);
       }
     },
@@ -627,7 +628,7 @@ export function BoletimTab() {
       await updateDoc(doc(db, "boletins", boletimId), updateData);
       
       if (liberar) {
-        const pdfBase64 = generateBoletimPdfBase64(boletim);
+        const pdfBase64 = await generateBoletimPdfBase64(boletim);
         await saveBoletimDocumento(boletim, pdfBase64);
       } else {
         await removeBoletimDocumento(boletimId);
@@ -1205,7 +1206,7 @@ export function BoletimTab() {
     });
   };
 
-  const handlePrintBoletim = (boletim: Boletim) => {
+  const handlePrintBoletim = async (boletim: Boletim) => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const margin = 15;
@@ -1274,11 +1275,8 @@ export function BoletimTab() {
       yPos += obsLines.length * 5 + 10;
     }
 
-    yPos = Math.max(yPos, 250);
-    const lineWidth = 70;
-    const lineX = (pageWidth - lineWidth) / 2;
-    doc.line(lineX, yPos, lineX + lineWidth, yPos);
-    doc.text("Assinatura da Diretoria", pageWidth / 2, yPos + 5, { align: "center" });
+    yPos = Math.max(yPos, 236);
+    await addResponsibleStampToPdf(doc, { y: yPos, width: 76, label: "Assinatura da Diretoria" });
 
     doc.setFontSize(8);
     doc.text(
@@ -1291,7 +1289,7 @@ export function BoletimTab() {
     doc.save(`boletim_${boletim.alunoNome.replace(/\s+/g, "_")}_${boletim.anoLetivo}.pdf`);
   };
 
-  const generateBoletimPdfBase64 = (boletim: Boletim): string => {
+  const generateBoletimPdfBase64 = async (boletim: Boletim): Promise<string> => {
     const pdfDoc = new jsPDF();
     const pageWidth = pdfDoc.internal.pageSize.getWidth();
     const margin = 15;
@@ -1362,11 +1360,8 @@ export function BoletimTab() {
       yPos += obsLines.length * 5 + 10;
     }
 
-    yPos = Math.max(yPos, 250);
-    const lineWidth = 70;
-    const lineX = (pageWidth - lineWidth) / 2;
-    pdfDoc.line(lineX, yPos, lineX + lineWidth, yPos);
-    pdfDoc.text("Assinatura da Diretoria", pageWidth / 2, yPos + 5, { align: "center" });
+    yPos = Math.max(yPos, 236);
+    await addResponsibleStampToPdf(pdfDoc, { y: yPos, width: 76, label: "Assinatura da Diretoria" });
 
     pdfDoc.setFontSize(8);
     pdfDoc.text(

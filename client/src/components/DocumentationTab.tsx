@@ -16,8 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import logoUrl from "@assets/Blue and White Online School Logo (1)_1761189954480.png";
-import assinaturaUrl from "@assets/image_1761190362373.png";
-import assinaturaDeclaracaoUrl from "@assets/image_1761193127347.png";
+import { addResponsibleStampToPdf } from "@/lib/pdfResponsibleStamp";
 
 export function DocumentationTab() {
   const { userData: currentUser } = useAuth();
@@ -569,13 +568,7 @@ export function DocumentationTab() {
 
     // Adicionar assinatura/carimbo
     try {
-      const assinaturaImg = new Image();
-      assinaturaImg.src = assinaturaUrl;
-      await new Promise((resolve) => {
-        assinaturaImg.onload = resolve;
-        assinaturaImg.onerror = resolve;
-      });
-      doc.addImage(assinaturaImg, "PNG", pageWidth / 2 - 45, yPos, 90, 30);
+      await addResponsibleStampToPdf(doc, { y: yPos, width: 92, label: "Diretoria Responsável" });
     } catch (error) {
       console.error("Erro ao carregar assinatura:", error);
     }
@@ -663,16 +656,7 @@ export function DocumentationTab() {
 
     // Assinatura
     try {
-      const assinaturaImg = new Image();
-      assinaturaImg.src = assinaturaDeclaracaoUrl;
-      await new Promise((resolve) => {
-        assinaturaImg.onload = resolve;
-        assinaturaImg.onerror = resolve;
-      });
-      // Centralizar a assinatura - BEM GRANDE
-      const imgWidth = 140;
-      const imgHeight = 43;
-      doc.addImage(assinaturaImg, "PNG", (pageWidth - imgWidth) / 2, yPos, imgWidth, imgHeight);
+      await addResponsibleStampToPdf(doc, { y: yPos, width: 120, label: "Diretoria Responsável" });
     } catch (error) {
       console.error("Erro ao carregar assinatura:", error);
       // Adicionar linha e texto caso a assinatura não carregue

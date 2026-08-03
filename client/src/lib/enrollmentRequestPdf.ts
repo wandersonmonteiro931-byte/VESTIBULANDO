@@ -1,3 +1,5 @@
+import { addResponsibleStampToPdf } from "@/lib/pdfResponsibleStamp";
+
 export interface EnrollmentRequestPdfData {
   matricula: string;
   dataSolicitacao: string;
@@ -18,6 +20,7 @@ export interface EnrollmentRequestPdfData {
   horarioEspecialObservacao?: string | null;
   fotoBase64?: string | null;
   reenviada?: boolean;
+  situacao?: string;
 }
 
 function formatDateOnly(value: string): string {
@@ -65,6 +68,7 @@ export async function generateEnrollmentRequestPdf(data: EnrollmentRequestPdfDat
   const margin = 14;
   const photoWidth = 25;
   const photoHeight = 33;
+  const situacao = data.situacao?.trim() || "Aguardando análise da diretoria";
 
   pdf.setFillColor(91, 51, 255);
   pdf.rect(0, 0, pageWidth, 36, "F");
@@ -108,7 +112,7 @@ export async function generateEnrollmentRequestPdf(data: EnrollmentRequestPdfDat
   pdf.text(`Matrícula: ${data.matricula}`, margin, 47);
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(9.5);
-  pdf.text(`Situação: AGUARDANDO ANÁLISE DA DIRETORIA`, margin, 54);
+  pdf.text(`Situação: ${situacao.toUpperCase()}`, margin, 54);
   pdf.text(`Enviada em: ${formatDateTime(data.dataSolicitacao)}`, margin, 61);
   if (data.reenviada) {
     pdf.setTextColor(91, 51, 255);
@@ -159,7 +163,7 @@ export async function generateEnrollmentRequestPdf(data: EnrollmentRequestPdfDat
     ["Número de matrícula", data.matricula],
     ["Data e horário do envio", formatDateTime(data.dataSolicitacao)],
     ["Turma solicitada", data.turma],
-    ["Situação", "Pendente de análise da diretoria"],
+    ["Situação", situacao],
   ]);
 
   section("DADOS PESSOAIS", [
@@ -195,14 +199,22 @@ export async function generateEnrollmentRequestPdf(data: EnrollmentRequestPdfDat
     nextY = 20;
   }
 
+  const note = `Este documento registra os dados informados no pedido de matrícula. A geração do número não representa aprovação definitiva. Situação registrada no momento da emissão: ${situacao}. O acompanhamento pode ser realizado pela página inicial usando o número de matrícula acima.`;
+  const noteLines = pdf.splitTextToSize(note, pageWidth - margin * 2 - 8);
+  const noteHeight = Math.max(28, noteLines.length * 4.5 + 8);
   pdf.setFillColor(247, 247, 252);
-  pdf.roundedRect(margin, nextY, pageWidth - margin * 2, 28, 2, 2, "F");
+  pdf.roundedRect(margin, nextY, pageWidth - margin * 2, noteHeight, 2, 2, "F");
   pdf.setTextColor(65, 65, 75);
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(8.8);
-  const note = "Este documento registra os dados informados no pedido de matrícula. A geração do número não representa aprovação definitiva. O cadastro permanecerá aguardando análise da diretoria e poderá ser acompanhado pela página inicial usando o número de matrícula acima.";
-  const noteLines = pdf.splitTextToSize(note, pageWidth - margin * 2 - 8);
   pdf.text(noteLines, margin + 4, nextY + 7);
+
+  let stampY = nextY + noteHeight + 6;
+  if (stampY > pageHeight - 52) {
+    pdf.addPage();
+    stampY = 18;
+  }
+  await addResponsibleStampToPdf(pdf, { y: stampY, width: 72, label: "Diretoria Responsável" });
 
   const totalPages = pdf.getNumberOfPages();
   for (let page = 1; page <= totalPages; page += 1) {
