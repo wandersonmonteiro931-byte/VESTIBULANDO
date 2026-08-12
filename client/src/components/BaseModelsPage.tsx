@@ -327,7 +327,7 @@ export function BaseModelsPage() {
     const firstType = BASE_MODEL_TYPES.find((item) => item.categoryId === categoryId);
     setForm((previous) => ({
       ...previous,
-      categoriaId,
+      categoriaId: categoryId,
       tipoId: firstType?.id || "outro",
       aplicabilidade: firstType?.applicability || previous.aplicabilidade,
     }));
@@ -337,7 +337,7 @@ export function BaseModelsPage() {
     const type = getBaseModelType(typeId);
     setForm((previous) => ({
       ...previous,
-      tipoId,
+      tipoId: typeId,
       aplicabilidade: type?.applicability || previous.aplicabilidade,
     }));
   };
