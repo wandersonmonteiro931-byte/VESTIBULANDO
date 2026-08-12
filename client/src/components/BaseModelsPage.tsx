@@ -29,8 +29,9 @@ import {
   BASE_MODEL_CATEGORIES,
   BASE_MODEL_FILE_FORMATS,
   BASE_MODEL_TYPES,
-  getBaseModelCategory,
   getBaseModelType,
+  type BaseModelCategory,
+  type BaseModelTypeDefinition,
 } from "@/lib/baseModelCatalog";
 import type { MateriaCustomizada, ModeloBase, ModeloBaseDownload, Turma, User } from "@shared/schema";
 import { MATERIAS_DISPONIVEIS, MATERIAS_SEM_PROFESSOR } from "@shared/schema";
@@ -67,6 +68,22 @@ interface ModelFormState {
   criterioTurmas: TurmaCriterion;
   turmasSelecionadas: string[];
   ativo: boolean;
+}
+
+interface CustomBaseModelCategory extends BaseModelCategory {
+  ativo?: boolean;
+  criadoPor?: string;
+  criadoPorNome?: string;
+  criadoEm?: string;
+  atualizadoEm?: string;
+}
+
+interface CustomBaseModelType extends BaseModelTypeDefinition {
+  ativo?: boolean;
+  criadoPor?: string;
+  criadoPorNome?: string;
+  criadoEm?: string;
+  atualizadoEm?: string;
 }
 
 const emptyForm: ModelFormState = {
@@ -191,6 +208,14 @@ export function BaseModelsPage() {
   const [form, setForm] = useState<ModelFormState>(emptyForm);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+  const [catalogDialogOpen, setCatalogDialogOpen] = useState(false);
+  const [categoryName, setCategoryName] = useState("");
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [typeName, setTypeName] = useState("");
+  const [typeCategoryId, setTypeCategoryId] = useState("avaliacoes");
+  const [typeApplicability, setTypeApplicability] = useState("");
+  const [editingTypeId, setEditingTypeId] = useState<string | null>(null);
+  const [savingCatalog, setSavingCatalog] = useState(false);
 
   const { data: adminModels, isLoading: loadingAdmin } = useRealtimeQuery<ModeloBase>({
     collectionName: "modelosBase",
@@ -216,6 +241,18 @@ export function BaseModelsPage() {
     collectionName: "modelosBaseDownloads",
     queryKey: ["modelos-base-downloads"],
     enabled: isDirector,
+  });
+
+  const { data: customCategories } = useRealtimeQuery<CustomBaseModelCategory>({
+    collectionName: "modelosBaseCategorias",
+    queryKey: ["modelos-base-categorias"],
+    enabled: isDirector || isProfessor,
+  });
+
+  const { data: customTypes } = useRealtimeQuery<CustomBaseModelType>({
+    collectionName: "modelosBaseTipos",
+    queryKey: ["modelos-base-tipos"],
+    enabled: isDirector || isProfessor,
   });
 
   const { data: professors } = useRealtimeQuery<User>({
@@ -266,6 +303,23 @@ export function BaseModelsPage() {
     return counts;
   }, [downloads]);
 
+  const allCategories = useMemo<BaseModelCategory[]>(() => {
+    const custom = (customCategories || [])
+      .filter((item) => item.ativo !== false)
+      .map((item) => ({ id: item.id, label: item.label }));
+    return [...BASE_MODEL_CATEGORIES, ...custom];
+  }, [customCategories]);
+
+  const allTypes = useMemo<BaseModelTypeDefinition[]>(() => {
+    const custom = (customTypes || [])
+      .filter((item) => item.ativo !== false)
+      .map((item) => ({ id: item.id, categoryId: item.categoryId, label: item.label, applicability: item.applicability }));
+    return [...BASE_MODEL_TYPES, ...custom];
+  }, [customTypes]);
+
+  const getCategoryDefinition = (id: string) => allCategories.find((item) => item.id === id);
+  const getTypeDefinition = (id: string) => allTypes.find((item) => item.id === id);
+
   const filteredModels = useMemo(() => {
     const queryText = normalize(search);
     return models
@@ -286,8 +340,8 @@ export function BaseModelsPage() {
   }, [models, search, categoryFilter]);
 
   const selectedTypes = useMemo(
-    () => BASE_MODEL_TYPES.filter((item) => item.categoryId === form.categoriaId),
-    [form.categoriaId],
+    () => allTypes.filter((item) => item.categoryId === form.categoriaId),
+    [allTypes, form.categoriaId],
   );
 
   const resetDialog = () => {
@@ -324,22 +378,175 @@ export function BaseModelsPage() {
   };
 
   const updateCategory = (categoryId: string) => {
-    const firstType = BASE_MODEL_TYPES.find((item) => item.categoryId === categoryId);
+    const categoryTypes = allTypes.filter((item) => item.categoryId === categoryId);
+    const firstType = categoryTypes[0];
     setForm((previous) => ({
       ...previous,
       categoriaId: categoryId,
-      tipoId: firstType?.id || "outro",
-      aplicabilidade: firstType?.applicability || previous.aplicabilidade,
+      tipoId: firstType?.id || "",
+      aplicabilidade: firstType?.applicability || "",
     }));
   };
 
   const updateType = (typeId: string) => {
-    const type = getBaseModelType(typeId);
+    const type = getTypeDefinition(typeId);
     setForm((previous) => ({
       ...previous,
       tipoId: typeId,
       aplicabilidade: type?.applicability || previous.aplicabilidade,
     }));
+  };
+
+  const resetCategoryEditor = () => {
+    setEditingCategoryId(null);
+    setCategoryName("");
+  };
+
+  const resetTypeEditor = () => {
+    setEditingTypeId(null);
+    setTypeName("");
+    setTypeApplicability("");
+    setTypeCategoryId(allCategories[0]?.id || "avaliacoes");
+  };
+
+  const saveCustomCategory = async () => {
+    if (!isDirector || !userData) return;
+    const label = categoryName.trim();
+    if (!label) {
+      toast({ title: "Informe o nome da categoria", variant: "destructive" });
+      return;
+    }
+    const duplicate = allCategories.some((item) => item.id !== editingCategoryId && normalize(item.label) === normalize(label));
+    if (duplicate) {
+      toast({ title: "Categoria já existente", description: "Use outro nome para a categoria.", variant: "destructive" });
+      return;
+    }
+
+    setSavingCatalog(true);
+    try {
+      const now = getNowBrasiliaISO();
+      const ref = editingCategoryId
+        ? doc(db, "modelosBaseCategorias", editingCategoryId)
+        : doc(collection(db, "modelosBaseCategorias"));
+      const batch = writeBatch(db);
+      if (editingCategoryId) {
+        batch.update(ref, { label, ativo: true, atualizadoEm: now, atualizadoPor: userData.uid, atualizadoPorNome: userData.nome });
+        models.filter((item) => item.categoriaId === editingCategoryId).forEach((item) => {
+          batch.update(doc(db, "modelosBase", item.id), { categoriaLabel: label, atualizadoEm: now });
+        });
+      } else {
+        batch.set(ref, { label, ativo: true, criadoEm: now, criadoPor: userData.uid, criadoPorNome: userData.nome });
+      }
+      await batch.commit();
+      toast({ title: editingCategoryId ? "Categoria atualizada" : "Categoria criada", description: label });
+      if (!editingCategoryId) setTypeCategoryId(ref.id);
+      resetCategoryEditor();
+    } catch (error: any) {
+      console.error("Erro ao salvar categoria de Modelos Base:", error);
+      toast({ title: "Erro ao salvar categoria", description: error?.message || "Não foi possível salvar a categoria.", variant: "destructive" });
+    } finally {
+      setSavingCatalog(false);
+    }
+  };
+
+  const saveCustomType = async () => {
+    if (!isDirector || !userData) return;
+    const label = typeName.trim();
+    const applicability = typeApplicability.trim();
+    if (!typeCategoryId) {
+      toast({ title: "Selecione uma categoria", variant: "destructive" });
+      return;
+    }
+    if (!label) {
+      toast({ title: "Informe o nome do tipo", variant: "destructive" });
+      return;
+    }
+    if (!applicability) {
+      toast({ title: "Informe a aplicabilidade", description: "Explique em qual situação esse tipo deve ser utilizado.", variant: "destructive" });
+      return;
+    }
+    const duplicate = allTypes.some((item) => item.id !== editingTypeId && item.categoryId === typeCategoryId && normalize(item.label) === normalize(label));
+    if (duplicate) {
+      toast({ title: "Tipo já existente nesta categoria", variant: "destructive" });
+      return;
+    }
+
+    setSavingCatalog(true);
+    try {
+      const now = getNowBrasiliaISO();
+      const ref = editingTypeId
+        ? doc(db, "modelosBaseTipos", editingTypeId)
+        : doc(collection(db, "modelosBaseTipos"));
+      const batch = writeBatch(db);
+      if (editingTypeId) {
+        batch.update(ref, { categoryId: typeCategoryId, label, applicability, ativo: true, atualizadoEm: now, atualizadoPor: userData.uid, atualizadoPorNome: userData.nome });
+        models.filter((item) => item.tipoId === editingTypeId).forEach((item) => {
+          batch.update(doc(db, "modelosBase", item.id), { tipoLabel: label, categoriaId: typeCategoryId, categoriaLabel: getCategoryDefinition(typeCategoryId)?.label || item.categoriaLabel, atualizadoEm: now });
+        });
+      } else {
+        batch.set(ref, { categoryId: typeCategoryId, label, applicability, ativo: true, criadoEm: now, criadoPor: userData.uid, criadoPorNome: userData.nome });
+      }
+      await batch.commit();
+      toast({ title: editingTypeId ? "Tipo atualizado" : "Tipo criado", description: label });
+      resetTypeEditor();
+    } catch (error: any) {
+      console.error("Erro ao salvar tipo de Modelos Base:", error);
+      toast({ title: "Erro ao salvar tipo", description: error?.message || "Não foi possível salvar o tipo.", variant: "destructive" });
+    } finally {
+      setSavingCatalog(false);
+    }
+  };
+
+  const editCustomCategory = (item: CustomBaseModelCategory) => {
+    setEditingCategoryId(item.id);
+    setCategoryName(item.label);
+  };
+
+  const editCustomType = (item: CustomBaseModelType) => {
+    setEditingTypeId(item.id);
+    setTypeCategoryId(item.categoryId);
+    setTypeName(item.label);
+    setTypeApplicability(item.applicability);
+  };
+
+  const deleteCustomCategory = async (item: CustomBaseModelCategory) => {
+    if (!isDirector) return;
+    if ((customTypes || []).some((type) => type.categoryId === item.id)) {
+      toast({ title: "Categoria em uso", description: "Exclua ou mova os tipos personalizados desta categoria antes de apagá-la.", variant: "destructive" });
+      return;
+    }
+    if (models.some((model) => model.categoriaId === item.id)) {
+      toast({ title: "Categoria em uso", description: "Existem modelos publicados nesta categoria. Mova-os para outra categoria antes de apagar.", variant: "destructive" });
+      return;
+    }
+    if (!window.confirm(`Excluir a categoria “${item.label}”?`)) return;
+    try {
+      const batch = writeBatch(db);
+      batch.delete(doc(db, "modelosBaseCategorias", item.id));
+      await batch.commit();
+      if (form.categoriaId === item.id) updateCategory(BASE_MODEL_CATEGORIES[0].id);
+      toast({ title: "Categoria excluída" });
+    } catch (error: any) {
+      toast({ title: "Erro ao excluir categoria", description: error?.message || "Não foi possível excluir.", variant: "destructive" });
+    }
+  };
+
+  const deleteCustomType = async (item: CustomBaseModelType) => {
+    if (!isDirector) return;
+    if (models.some((model) => model.tipoId === item.id)) {
+      toast({ title: "Tipo em uso", description: "Existem modelos publicados com este tipo. Altere os modelos antes de apagar.", variant: "destructive" });
+      return;
+    }
+    if (!window.confirm(`Excluir o tipo “${item.label}”?`)) return;
+    try {
+      const batch = writeBatch(db);
+      batch.delete(doc(db, "modelosBaseTipos", item.id));
+      await batch.commit();
+      if (form.tipoId === item.id) updateCategory(form.categoriaId);
+      toast({ title: "Tipo excluído" });
+    } catch (error: any) {
+      toast({ title: "Erro ao excluir tipo", description: error?.message || "Não foi possível excluir.", variant: "destructive" });
+    }
   };
 
   const resolveEligibleProfessorIds = () => {
@@ -397,8 +604,8 @@ export function BaseModelsPage() {
 
     setSaving(true);
     try {
-      const type = getBaseModelType(form.tipoId);
-      const category = getBaseModelCategory(form.categoriaId);
+      const type = getTypeDefinition(form.tipoId);
+      const category = getCategoryDefinition(form.categoriaId);
       const eligibleProfessorIds = resolveEligibleProfessorIds();
       const globalForAllProfessors = form.criterioProfessores === "todos" && form.criterioTurmas === "todas";
 
@@ -643,10 +850,16 @@ export function BaseModelsPage() {
           </p>
         </div>
         {isDirector && (
-          <Button onClick={openNew} className="gap-2" data-testid="button-new-base-model">
-            <Plus className="h-4 w-4" />
-            Novo modelo
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => setCatalogDialogOpen(true)} className="gap-2" data-testid="button-manage-base-model-catalog">
+              <Archive className="h-4 w-4" />
+              Categorias e tipos
+            </Button>
+            <Button onClick={openNew} className="gap-2" data-testid="button-new-base-model">
+              <Plus className="h-4 w-4" />
+              Novo modelo
+            </Button>
+          </div>
         )}
       </div>
 
@@ -668,13 +881,13 @@ export function BaseModelsPage() {
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
             <div className="rounded-lg bg-primary/10 p-2"><BookOpen className="h-5 w-5 text-primary" /></div>
-            <div><p className="text-xs text-muted-foreground">Categorias escolares</p><p className="text-xl font-bold">{BASE_MODEL_CATEGORIES.length}</p></div>
+            <div><p className="text-xs text-muted-foreground">Categorias escolares</p><p className="text-xl font-bold">{allCategories.length}</p></div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
             <div className="rounded-lg bg-primary/10 p-2"><GraduationCap className="h-5 w-5 text-primary" /></div>
-            <div><p className="text-xs text-muted-foreground">Tipos cadastráveis</p><p className="text-xl font-bold">{BASE_MODEL_TYPES.length}</p></div>
+            <div><p className="text-xs text-muted-foreground">Tipos cadastráveis</p><p className="text-xl font-bold">{allTypes.length}</p></div>
           </CardContent>
         </Card>
       </div>
@@ -689,7 +902,7 @@ export function BaseModelsPage() {
             <SelectTrigger><SelectValue placeholder="Todas as categorias" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="todas">Todas as categorias</SelectItem>
-              {BASE_MODEL_CATEGORIES.map((category) => <SelectItem key={category.id} value={category.id}>{category.label}</SelectItem>)}
+              {allCategories.map((category) => <SelectItem key={category.id} value={category.id}>{category.label}</SelectItem>)}
             </SelectContent>
           </Select>
         </CardContent>
@@ -792,15 +1005,16 @@ export function BaseModelsPage() {
                   <Label>Categoria</Label>
                   <Select value={form.categoriaId} onValueChange={updateCategory}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{BASE_MODEL_CATEGORIES.map((category) => <SelectItem key={category.id} value={category.id}>{category.label}</SelectItem>)}</SelectContent>
+                    <SelectContent>{allCategories.map((category) => <SelectItem key={category.id} value={category.id}>{category.label}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <Label>Tipo do modelo</Label>
-                  <Select value={form.tipoId} onValueChange={updateType}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Select value={form.tipoId || undefined} onValueChange={updateType} disabled={selectedTypes.length === 0}>
+                    <SelectTrigger><SelectValue placeholder={selectedTypes.length ? "Selecione o tipo" : "Nenhum tipo nesta categoria"} /></SelectTrigger>
                     <SelectContent>{selectedTypes.map((item) => <SelectItem key={item.id} value={item.id}>{item.label}</SelectItem>)}</SelectContent>
                   </Select>
+                  {selectedTypes.length === 0 && <p className="text-xs text-muted-foreground">Crie um tipo para esta categoria em “Categorias e tipos”.</p>}
                 </div>
               </div>
 
@@ -910,6 +1124,124 @@ export function BaseModelsPage() {
             <DialogFooter>
               <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
               <Button onClick={() => void saveModel()} disabled={saving}>{saving ? "Salvando..." : editing ? "Salvar nova versão" : "Publicar modelo"}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {isDirector && (
+        <Dialog open={catalogDialogOpen} onOpenChange={(open) => {
+          setCatalogDialogOpen(open);
+          if (!open) {
+            resetCategoryEditor();
+            resetTypeEditor();
+          }
+        }}>
+          <DialogContent className="max-h-[92vh] max-w-5xl overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Gerenciar categorias e tipos de Modelos Base</DialogTitle>
+              <DialogDescription>
+                A Diretoria/Coordenação pode criar categorias e tipos próprios. Os itens padrão do sistema permanecem disponíveis e não podem ser apagados.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-6 py-2 lg:grid-cols-2">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">{editingCategoryId ? "Editar categoria personalizada" : "Nova categoria"}</CardTitle>
+                  <CardDescription>Crie uma organização própria para os modelos da instituição.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Nome da categoria</Label>
+                    <Input value={categoryName} onChange={(event) => setCategoryName(event.target.value)} placeholder="Ex.: Documentos do Ensino Médio" />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={() => void saveCustomCategory()} disabled={savingCatalog}>{editingCategoryId ? "Salvar categoria" : "Criar categoria"}</Button>
+                    {editingCategoryId && <Button variant="outline" onClick={resetCategoryEditor}>Cancelar edição</Button>}
+                  </div>
+
+                  <div className="border-t pt-4">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Categorias personalizadas</p>
+                    {(customCategories || []).length === 0 ? (
+                      <p className="text-sm text-muted-foreground">Nenhuma categoria personalizada criada.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {(customCategories || []).map((item) => (
+                          <div key={item.id} className="flex items-center justify-between gap-3 rounded-md border p-2.5">
+                            <span className="text-sm font-medium">{item.label}</span>
+                            <div className="flex gap-1">
+                              <Button size="icon" variant="ghost" onClick={() => editCustomCategory(item)} title="Editar categoria"><Edit className="h-4 w-4" /></Button>
+                              <Button size="icon" variant="ghost" onClick={() => void deleteCustomCategory(item)} title="Excluir categoria"><Trash2 className="h-4 w-4" /></Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">{editingTypeId ? "Editar tipo personalizado" : "Novo tipo de modelo"}</CardTitle>
+                  <CardDescription>Defina o nome do tipo e explique quando ele deve ser utilizado.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Categoria</Label>
+                    <Select value={typeCategoryId} onValueChange={setTypeCategoryId}>
+                      <SelectTrigger><SelectValue placeholder="Selecione a categoria" /></SelectTrigger>
+                      <SelectContent>{allCategories.map((category) => <SelectItem key={category.id} value={category.id}>{category.label}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Nome do tipo</Label>
+                    <Input value={typeName} onChange={(event) => setTypeName(event.target.value)} placeholder="Ex.: Cabeçalho de atividade prática" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Aplicabilidade / quando usar</Label>
+                    <Textarea value={typeApplicability} onChange={(event) => setTypeApplicability(event.target.value)} rows={3} placeholder="Explique a situação em que este tipo deve ser utilizado." />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={() => void saveCustomType()} disabled={savingCatalog}>{editingTypeId ? "Salvar tipo" : "Criar tipo"}</Button>
+                    {editingTypeId && <Button variant="outline" onClick={resetTypeEditor}>Cancelar edição</Button>}
+                  </div>
+
+                  <div className="border-t pt-4">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tipos personalizados</p>
+                    {(customTypes || []).length === 0 ? (
+                      <p className="text-sm text-muted-foreground">Nenhum tipo personalizado criado.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {(customTypes || []).map((item) => (
+                          <div key={item.id} className="rounded-md border p-2.5">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="text-sm font-medium">{item.label}</p>
+                                <p className="text-xs text-muted-foreground">{getCategoryDefinition(item.categoryId)?.label || "Categoria personalizada"}</p>
+                                <p className="mt-1 text-xs text-muted-foreground">{item.applicability}</p>
+                              </div>
+                              <div className="flex gap-1">
+                                <Button size="icon" variant="ghost" onClick={() => editCustomType(item)} title="Editar tipo"><Edit className="h-4 w-4" /></Button>
+                                <Button size="icon" variant="ghost" onClick={() => void deleteCustomType(item)} title="Excluir tipo"><Trash2 className="h-4 w-4" /></Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
+              O catálogo padrão possui {BASE_MODEL_CATEGORIES.length} categorias fixas e {BASE_MODEL_TYPES.length} tipos fixos. Categorias e tipos personalizados ficam salvos no Firestore e podem ser utilizados em novas publicações imediatamente.
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setCatalogDialogOpen(false)}>Fechar</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

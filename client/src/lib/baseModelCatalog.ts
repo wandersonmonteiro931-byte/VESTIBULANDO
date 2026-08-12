@@ -208,6 +208,7 @@ export const BASE_MODEL_TYPES: BaseModelTypeDefinition[] = [
   // Visuais
   { id: "cabecalho-prova", categoryId: "visuais", label: "Cabeçalho padrão de prova", applicability: "Padronizar identificação de prova, aluno, professor, turma, data, nota e período." },
   { id: "cabecalho-atividade", categoryId: "visuais", label: "Cabeçalho padrão de atividade", applicability: "Padronizar identificação e instruções em atividades escolares." },
+  { id: "cabecalho-atividade-avaliativa", categoryId: "visuais", label: "Cabeçalho padrão de Atividade Avaliativa", applicability: "Padronizar atividades avaliativas com identificação do aluno, disciplina, professor, turma, data, valor, nota e instruções da avaliação." },
   { id: "cabecalho-documento", categoryId: "visuais", label: "Cabeçalho institucional de documento", applicability: "Padronizar documentos oficiais, relatórios, comunicados e formulários." },
   { id: "rodape-documento", categoryId: "visuais", label: "Rodapé institucional", applicability: "Padronizar paginação, identificação, contatos e informações institucionais." },
   { id: "capa-trabalho", categoryId: "visuais", label: "Capa de trabalho", applicability: "Padronizar apresentação de trabalhos, pesquisas e projetos." },

@@ -557,6 +557,19 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin() && isUserActive();
     }
 
+    // Catálogo personalizável de categorias e tipos de Modelos Base.
+    // Professores podem consultar para exibir corretamente os modelos liberados,
+    // mas somente a Diretoria/Coordenação pode criar, editar ou excluir.
+    match /modelosBaseCategorias/{categoriaId} {
+      allow read: if isAuthenticated() && isUserActive() && (isAdmin() || isProfessor());
+      allow create, update, delete: if isAdmin() && isUserActive();
+    }
+
+    match /modelosBaseTipos/{tipoId} {
+      allow read: if isAuthenticated() && isUserActive() && (isAdmin() || isProfessor());
+      allow create, update, delete: if isAdmin() && isUserActive();
+    }
+
     // Conteúdo binário pequeno separado dos metadados. A lista de modelos não carrega
     // todos os arquivos em Base64; o conteúdo só é lido quando o usuário baixa.
     match /modelosBaseArquivos/{modeloId} {
