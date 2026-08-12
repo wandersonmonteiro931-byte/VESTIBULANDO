@@ -24,7 +24,7 @@ const DANGEROUS_MIME_TYPES = [
 // Extensões permitidas (whitelist)
 const ALLOWED_EXTENSIONS = [
   // Documentos
-  ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".odt", ".ods", ".odp",
+  ".pdf", ".doc", ".docx", ".dotx", ".xls", ".xlsx", ".xltx", ".csv", ".ppt", ".pptx", ".potx", ".ppsx", ".txt", ".rtf", ".odt", ".ott", ".ods", ".ots", ".odp", ".otp",
   // Imagens
   ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".svg", ".webp",
   // Vídeos

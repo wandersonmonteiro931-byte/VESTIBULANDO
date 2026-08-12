@@ -9,6 +9,7 @@ import {
   CircleDollarSign,
   ClipboardCheck,
   FileText,
+  FolderOpen,
   GraduationCap,
   LayoutDashboard,
   Radio,
@@ -50,6 +51,7 @@ const SUMMARY_BY_ROLE: Record<PortalRole, SummaryDefinition[]> = {
     { area: "ead", sectionId: "conteudos", label: "Conteúdos e materiais", helper: "aulas e materiais", icon: BookOpen },
     { area: "ead", sectionId: "correcoes", label: "Redações", helper: "correções pedagógicas", icon: FileText },
     { area: "ead", sectionId: "turmas", label: "Turmas e relatórios", helper: "acompanhamento dos alunos", icon: Users },
+    { area: "escolar", sectionId: "modelos-base", label: "Modelos Base", helper: "arquivos oficiais liberados", icon: FolderOpen },
   ],
   diretor: [
     { area: "escolar", sectionId: "aprovacoes", label: "Aprovações", helper: "cadastros e solicitações", icon: CheckCheck },
@@ -58,6 +60,7 @@ const SUMMARY_BY_ROLE: Record<PortalRole, SummaryDefinition[]> = {
     { area: "ead", sectionId: "programacao", label: "Programação", helper: "aulas liberadas", icon: CalendarClock },
     { area: "ead", sectionId: "conteudos", label: "Conteúdos e materiais", helper: "materiais publicados", icon: BookOpen },
     { area: "ead", sectionId: "financeiro", label: "Financeiro", helper: "planos e cobranças", icon: CircleDollarSign },
+    { area: "escolar", sectionId: "modelos-base", label: "Modelos Base", helper: "publicações institucionais", icon: FolderOpen },
   ],
 };
 

@@ -41,6 +41,7 @@ import {
   FileCheck,
   FilePenLine,
   FileText,
+  FolderOpen,
   Flag,
   GraduationCap,
   HelpCircle,
@@ -163,6 +164,7 @@ const diretorCategories: MenuCategory[] = [
     label: "Documentos e sistema",
     icon: FileText,
     items: [
+      school("modelos-base", "Modelos Base", FolderOpen),
       school("documentos-internos", "Documentos internos", FileText),
       school("documentacao", "Documentação", FileText),
       school("manutencao", "Manutenção", Wrench),
@@ -208,6 +210,7 @@ const professorCategories: MenuCategory[] = [
       ead("correcoes", "Correções de redação", FilePenLine),
       school("bimestres", "Notas do bimestre", CalendarDays),
       school("boletins", "Boletins", FileCheck),
+      school("modelos-base", "Modelos Base", FolderOpen),
     ],
   },
   {

@@ -99,6 +99,7 @@ const SECTION_META: SectionMeta[] = [
   { area: "escolar", sectionId: "entregues", label: "Tarefas entregues", roles: ["aluno"] },
   { area: "escolar", sectionId: "avaliacoes", label: "Atividades e avaliações", roles: ["aluno", "professor"] },
   { area: "escolar", sectionId: "correcoes", label: "Correções escolares", roles: ["professor"] },
+  { area: "escolar", sectionId: "modelos-base", label: "Modelos Base", roles: ["professor", "diretor"] },
 
   { area: "ead", sectionId: "plano", label: "Plano de estudos", roles: ["aluno"] },
   { area: "ead", sectionId: "programacao", label: "Programação de aulas", roles: ["aluno", "professor", "diretor"] },
@@ -396,6 +397,20 @@ function buildSources(role: PortalRole, userData: any): SourceConfig[] {
       { id: "teacher-live", collectionName: "eadLiveClasses", sectionKeys: [sectionKey("ead", "ao-vivo"), sectionKey("ead", "estudio")], enabled: enabledUser },
       { id: "teacher-forum", collectionName: "eadForumTopics", sectionKeys: [sectionKey("ead", "comunidade")], enabled: enabledUser },
       {
+        id: "teacher-base-models-global",
+        collectionName: "modelosBase",
+        sectionKeys: [sectionKey("escolar", "modelos-base")],
+        constraints: [where("ativo", "==", true), where("publicoTodosProfessores", "==", true)],
+        enabled: enabledUser,
+      },
+      {
+        id: "teacher-base-models-targeted",
+        collectionName: "modelosBase",
+        sectionKeys: [sectionKey("escolar", "modelos-base")],
+        constraints: uid ? [where("ativo", "==", true), where("professoresLiberados", "array-contains", uid)] : [],
+        enabled: enabledUser,
+      },
+      {
         id: "teacher-support",
         collectionName: "eadSupportTickets",
         sectionKeys: [sectionKey("ead", "suporte")],
@@ -418,6 +433,7 @@ function buildSources(role: PortalRole, userData: any): SourceConfig[] {
       { id: "admin-grade-authorizations", collectionName: "solicitacoesEdicaoNota", sectionKeys: [sectionKey("escolar", "autorizacoes-notas")], enabled: enabledUser },
       { id: "admin-disciplinary", collectionName: "disciplinaryActions", sectionKeys: [sectionKey("escolar", "disciplinares")], enabled: enabledUser },
       { id: "admin-disciplinary-requests", collectionName: "disciplinaryRequests", sectionKeys: [sectionKey("escolar", "pedidos-disciplinares")], enabled: enabledUser },
+      { id: "admin-base-models", collectionName: "modelosBase", sectionKeys: [sectionKey("escolar", "modelos-base")], enabled: enabledUser },
       { id: "admin-documents", collectionName: "boletimDocumentos", sectionKeys: [sectionKey("escolar", "documentos-internos"), sectionKey("escolar", "documentacao")], enabled: enabledUser },
       { id: "admin-maintenance", collectionName: "systemMaintenance", sectionKeys: [sectionKey("escolar", "manutencao")], enabled: enabledUser },
       { id: "admin-schedules", collectionName: "eadClassSchedules", sectionKeys: [sectionKey("escolar", "inicio"), sectionKey("ead", "programacao"), sectionKey("ead", "gestao")], enabled: enabledUser },

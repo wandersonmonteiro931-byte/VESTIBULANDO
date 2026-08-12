@@ -32,6 +32,7 @@ import { PresencasTab } from "@/components/PresencasTab";
 import { ChatNotificationBubble } from "@/components/ChatNotificationBubble";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { UnifiedPortalOverview } from "@/components/UnifiedPortalOverview";
+import { BaseModelsPage } from "@/components/BaseModelsPage";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { LogOut, Plus, Users, BookOpen, GraduationCap, FileText, Edit, Trash2, CheckCircle, XCircle, RefreshCw, ArrowRightLeft, Clock, Search, Eye, AlertTriangle, Settings, Power, PowerOff, Archive, Download, ChevronDown, ChevronUp, MessageCircle, Camera, Upload, X, Copy, Shield, RotateCcw } from "lucide-react";
 import { Link } from "wouter";
@@ -4006,6 +4007,10 @@ export default function AdminDashboard() {
                 <CardDescription>Funcionalidade em reconstrução</CardDescription>
               </CardHeader>
             </Card>
+          )}
+
+          {selectedSection === "modelos-base" && (
+            <BaseModelsPage />
           )}
 
           {selectedSection === "documentos-internos" && (

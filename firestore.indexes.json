@@ -115,6 +115,38 @@
       ],
       "apiScope": "ANY_API",
       "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "modelosBase",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "ativo",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "publicoTodosProfessores",
+          "order": "ASCENDING"
+        }
+      ],
+      "apiScope": "ANY_API",
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "modelosBase",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "ativo",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "professoresLiberados",
+          "arrayConfig": "CONTAINS"
+        }
+      ],
+      "apiScope": "ANY_API",
+      "density": "SPARSE_ALL"
     }
   ],
   "fieldOverrides": []

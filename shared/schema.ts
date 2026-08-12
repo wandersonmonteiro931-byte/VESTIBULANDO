@@ -1787,3 +1787,67 @@ export const insertWebrtcSignalSchema = webrtcSignalSchema.omit({ id: true });
 
 export type WebrtcSignal = z.infer<typeof webrtcSignalSchema>;
 export type InsertWebrtcSignal = z.infer<typeof insertWebrtcSignalSchema>;
+// ==================== MODELOS BASE ====================
+// Biblioteca institucional de modelos controlada pela diretoria/coordenação.
+export const modeloBaseSchema = z.object({
+  id: z.string(),
+  titulo: z.string().min(1),
+  categoriaId: z.string().min(1),
+  categoriaLabel: z.string().min(1),
+  tipoId: z.string().min(1),
+  tipoLabel: z.string().min(1),
+  aplicabilidade: z.string().min(1),
+  descricao: z.string().optional(),
+  origem: z.enum(["arquivo", "link"]),
+  formato: z.string().min(1),
+  extensao: z.string().optional(),
+  arquivoNomeOriginal: z.string().optional(),
+  arquivoNomePadronizado: z.string().min(1),
+  arquivoMimeType: z.string().optional(),
+  arquivoTamanhoBytes: z.number().optional(),
+  linkExterno: z.string().optional(),
+  criterioProfessores: z.enum(["todos", "materias", "selecionados"]),
+  materiasSelecionadas: z.array(z.string()).default([]),
+  professoresSelecionados: z.array(z.string()).default([]),
+  professoresLiberados: z.array(z.string()).default([]),
+  publicoTodosProfessores: z.boolean().default(false),
+  criterioTurmas: z.enum(["todas", "selecionadas"]),
+  turmasSelecionadas: z.array(z.string()).default([]),
+  ativo: z.boolean().default(true),
+  versao: z.number().default(1),
+  criadoPor: z.string(),
+  criadoPorNome: z.string(),
+  criadoEm: z.string(),
+  atualizadoPor: z.string().optional(),
+  atualizadoPorNome: z.string().optional(),
+  atualizadoEm: z.string().optional(),
+});
+
+export const insertModeloBaseSchema = modeloBaseSchema.omit({ id: true });
+export type ModeloBase = z.infer<typeof modeloBaseSchema>;
+export type InsertModeloBase = z.infer<typeof insertModeloBaseSchema>;
+
+export const modeloBaseArquivoSchema = z.object({
+  modeloId: z.string(),
+  dataUrl: z.string(),
+  nomeArquivo: z.string(),
+  mimeType: z.string().optional(),
+  tamanhoBytes: z.number().optional(),
+  atualizadoEm: z.string().optional(),
+});
+export type ModeloBaseArquivo = z.infer<typeof modeloBaseArquivoSchema>;
+
+export const modeloBaseDownloadSchema = z.object({
+  id: z.string(),
+  modeloId: z.string(),
+  modeloTitulo: z.string(),
+  arquivoNome: z.string(),
+  professorId: z.string(),
+  professorNome: z.string(),
+  baixadoEm: z.string(),
+});
+
+export const insertModeloBaseDownloadSchema = modeloBaseDownloadSchema.omit({ id: true });
+export type ModeloBaseDownload = z.infer<typeof modeloBaseDownloadSchema>;
+export type InsertModeloBaseDownload = z.infer<typeof insertModeloBaseDownloadSchema>;
+

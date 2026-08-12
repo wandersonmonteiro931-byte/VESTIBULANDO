@@ -539,6 +539,68 @@ service cloud.firestore {
       allow delete: if isAdmin() && isUserActive();
     }
     
+
+    // ==================== MODELOS BASE ====================
+    // Biblioteca institucional controlada pela Diretoria/Coordenação.
+    match /modelosBase/{modeloId} {
+      // Diretoria pode ler tudo. Professor só lê modelos ativos liberados para todos
+      // ou explicitamente resolvidos para seu UID no momento da publicação.
+      allow read: if isAuthenticated() && isUserActive() && (
+        isAdmin() ||
+        (isProfessor() && resource.data.ativo == true && (
+          resource.data.publicoTodosProfessores == true ||
+          (resource.data.professoresLiberados is list && request.auth.uid in resource.data.professoresLiberados)
+        ))
+      );
+
+      // Somente Diretoria/Coordenação gerencia publicações.
+      allow create, update, delete: if isAdmin() && isUserActive();
+    }
+
+    // Conteúdo binário pequeno separado dos metadados. A lista de modelos não carrega
+    // todos os arquivos em Base64; o conteúdo só é lido quando o usuário baixa.
+    match /modelosBaseArquivos/{modeloId} {
+      function professorPodeLerArquivo() {
+        return isProfessor() &&
+          exists(/databases/$(database)/documents/modelosBase/$(modeloId)) &&
+          get(/databases/$(database)/documents/modelosBase/$(modeloId)).data.ativo == true && (
+            get(/databases/$(database)/documents/modelosBase/$(modeloId)).data.publicoTodosProfessores == true ||
+            (
+              get(/databases/$(database)/documents/modelosBase/$(modeloId)).data.professoresLiberados is list &&
+              request.auth.uid in get(/databases/$(database)/documents/modelosBase/$(modeloId)).data.professoresLiberados
+            )
+          );
+      }
+
+      allow get: if isAuthenticated() && isUserActive() && (isAdmin() || professorPodeLerArquivo());
+      allow list: if isAdmin() && isUserActive();
+      allow create, update: if isAdmin() && isUserActive() &&
+        request.resource.data.keys().hasAll(['modeloId', 'dataUrl', 'nomeArquivo']) &&
+        request.resource.data.modeloId == modeloId &&
+        request.resource.data.dataUrl.size() <= 700000;
+      allow delete: if isAdmin() && isUserActive();
+    }
+
+    // Registro de downloads. O professor pode registrar somente o próprio download;
+    // não ganha permissão de editar ou excluir o modelo original.
+    match /modelosBaseDownloads/{downloadId} {
+      allow read: if isAuthenticated() && isUserActive() && (
+        isAdmin() || (isProfessor() && resource.data.professorId == request.auth.uid)
+      );
+      allow create: if isProfessor() && isUserActive() &&
+        request.resource.data.professorId == request.auth.uid &&
+        request.resource.data.modeloId is string &&
+        exists(/databases/$(database)/documents/modelosBase/$(request.resource.data.modeloId)) &&
+        get(/databases/$(database)/documents/modelosBase/$(request.resource.data.modeloId)).data.ativo == true && (
+          get(/databases/$(database)/documents/modelosBase/$(request.resource.data.modeloId)).data.publicoTodosProfessores == true ||
+          (
+            get(/databases/$(database)/documents/modelosBase/$(request.resource.data.modeloId)).data.professoresLiberados is list &&
+            request.auth.uid in get(/databases/$(database)/documents/modelosBase/$(request.resource.data.modeloId)).data.professoresLiberados
+          )
+        );
+      allow update, delete: if isAdmin() && isUserActive();
+    }
+
     // ==================== BOLETIM ESCOLAR ====================
     
     // Boletins collection - boletins escolares

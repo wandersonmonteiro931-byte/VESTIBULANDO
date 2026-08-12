@@ -48,6 +48,7 @@ import { cn } from "@/lib/utils";
 import { useDashboardSection } from "@/hooks/useDashboardSection";
 import { fileToFirestoreDataUrl } from "@/lib/fileValidation";
 import { UnifiedPortalOverview } from "@/components/UnifiedPortalOverview";
+import { BaseModelsPage } from "@/components/BaseModelsPage";
 
 const tarefaFormSchema = z.object({
   titulo: z.string().min(1, "Título é obrigatório"),
@@ -379,6 +380,10 @@ export default function TeacherDashboard() {
               <div className="space-y-6">
                 {selectedSection === "avaliacoes" && (
                   <AvaliacoesTab userType="professor" />
+                )}
+
+                {selectedSection === "modelos-base" && (
+                  <BaseModelsPage />
                 )}
 
                 {selectedSection === "horarios" && (
